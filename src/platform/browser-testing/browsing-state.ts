@@ -8,6 +8,7 @@ import {
   type TabGroupId,
   type TabId,
   type TabStatus,
+  type WindowBounds,
   type WindowId,
 } from "#platform/browser"
 
@@ -29,6 +30,8 @@ export interface TabRecord {
 
 export interface WindowRecord {
   readonly id: WindowId
+  readonly type: "normal" | "popup"
+  readonly bounds: WindowBounds
   /** タブストリップの並び順。配列の位置がそのまま Chrome の index になる。 */
   readonly tabs: ReadonlyArray<TabRecord>
   readonly activeTabId: Option.Option<TabId>
@@ -51,6 +54,9 @@ export interface BrowsingState {
   /** タブ・ウィンドウ・グループで共有する採番。種類の違う ID が偶然一致しないようにする。 */
   readonly lastIssuedId: number
 }
+
+/** 位置と大きさを指定せずに置いたウィンドウの位置と大きさ。 */
+export const DEFAULT_WINDOW_BOUNDS: WindowBounds = { left: 0, top: 0, width: 1280, height: 800 }
 
 export const emptyBrowsingState: BrowsingState = {
   windows: [],
@@ -404,7 +410,8 @@ export const allGroups = (state: BrowsingState): ReadonlyArray<BrowserTabGroup> 
 export const toBrowserWindow = (state: BrowsingState, window: WindowRecord): BrowserWindow => ({
   id: window.id,
   focused: Option.contains(focusedWindowId(state), window.id),
-  type: Option.some("normal"),
+  type: Option.some(window.type),
   state: Option.some("normal"),
   incognito: false,
+  bounds: Option.some(window.bounds),
 })

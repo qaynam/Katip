@@ -1,6 +1,6 @@
 import { assert, describe, layer } from "@effect/vitest"
 import { Effect, Option } from "effect"
-import { type BrowserEvent, Tabs, Windows } from "#platform/browser"
+import { type BrowserEvent, Tabs, WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "./fake-browser"
 
 const tagsOf = (events: ReadonlyArray<BrowserEvent>) => events.map(({ _tag }) => _tag)
@@ -36,6 +36,35 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
           (yield* tabs.query({ windowId: created.id })).map(({ url }) => url),
           [Option.some("https://example.com/")],
         )
+      }),
+    )
+
+    it.effect("popup で位置と大きさを指定すると、その種類・位置・大きさのウィンドウになる", () =>
+      Effect.gen(function* () {
+        const windows = yield* Windows
+
+        const created = yield* windows.create({
+          type: "popup",
+          left: 300,
+          top: 120,
+          width: 640,
+          height: 420,
+        })
+
+        assert.deepStrictEqual(
+          [created.type, created.bounds],
+          [Option.some("popup"), Option.some({ left: 300, top: 120, width: 640, height: 420 })],
+        )
+      }),
+    )
+
+    it.effect("種類を指定しなければ通常のウィンドウになる", () =>
+      Effect.gen(function* () {
+        const windows = yield* Windows
+
+        const created = yield* windows.create({})
+
+        assert.deepStrictEqual(created.type, Option.some("normal"))
       }),
     )
 
@@ -90,6 +119,60 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
         yield* windows.update(focused.windowId, { focused: false })
 
         assert.strictEqual((yield* windows.getLastFocused).id, earlier.windowId)
+      }),
+    )
+  })
+
+  describe("仕込んだウィンドウ", () => {
+    it.effect("位置と大きさを指定すれば、それを持つ", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const windows = yield* Windows
+        const bounds = { left: 40, top: 30, width: 1000, height: 700 }
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}], bounds })
+
+        const window = yield* windows.get(windowId)
+
+        assert.deepStrictEqual(window.bounds, Option.some(bounds))
+      }),
+    )
+  })
+
+  describe("拡張がウィンドウを閉じたとき", () => {
+    it.effect("中のタブは isWindowClosing で閉じ、最後に WindowRemoved が発火する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const windows = yield* Windows
+        yield* fake.seedWindow({ tabs: [{}] })
+        const closing = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        yield* windows.remove(closing.windowId)
+
+        const events = yield* fake.takeEmittedEvents
+        assert.deepStrictEqual(tagsOf(events), ["TabRemoved", "TabRemoved", "WindowRemoved"])
+        assert.isTrue(events.every((event) => event._tag !== "TabRemoved" || event.isWindowClosing))
+      }),
+    )
+
+    it.effect("閉じたウィンドウはもう取得できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const windows = yield* Windows
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+
+        yield* windows.remove(windowId)
+
+        assert.deepStrictEqual(yield* windows.getAll, [])
+      }),
+    )
+
+    it.effect("存在しないウィンドウを閉じようとすると失敗する", () =>
+      Effect.gen(function* () {
+        const windows = yield* Windows
+
+        const error = yield* Effect.flip(windows.remove(WindowId.make(999)))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
       }),
     )
   })

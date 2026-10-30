@@ -22,34 +22,29 @@ import {
   TabId,
   Tabs,
   type TabStatus,
+  WebSearch,
+  type WindowBounds,
   WindowId,
   Windows,
 } from "#platform/browser"
 import {
   allGroups,
   allTabs,
+  DEFAULT_WINDOW_BOUNDS,
   type GroupRecord,
   leastUsedColor,
   type TabRecord,
   toBrowserWindow,
 } from "./browsing-state"
-import {
-  closeWindowIfEmpty,
-  detachTab,
-  emitTabUpdated,
-  NEW_TAB_URL,
-  removeGroupIfEmpty,
-  requireTab,
-  requireWindow,
-  updateTab,
-} from "./browsing-steps"
+import { emitTabUpdated, NEW_TAB_URL, requireTab, updateTab } from "./browsing-steps"
 import { makeFakeAlarms } from "./fake-alarms"
 import { type BookmarkSeed, makeFakeBookmarks, type SeededBookmarks } from "./fake-bookmarks"
 import { makePortPair } from "./fake-port"
 import { makeFakeStorage } from "./fake-storage"
 import { makeFakeTabGroups } from "./fake-tab-groups"
 import { makeFakeTabs, requireTabSnapshot } from "./fake-tabs"
-import { makeFakeWindows } from "./fake-windows"
+import { makeFakeWebSearch } from "./fake-web-search"
+import { closeWindowWithTabs, makeFakeWindows } from "./fake-windows"
 import { type FakeApiName, type FakeWorld, makeFakeWorld, transact } from "./fake-world"
 
 export interface TabSeed {
@@ -94,6 +89,8 @@ export interface WindowSeed<
   readonly groups?: Groups
   /** 省略時は、ほかにウィンドウが無いときだけフォーカスされる。 */
   readonly focused?: boolean
+  /** 省略時は左上に置いた 1280×800 のウィンドウ。 */
+  readonly bounds?: WindowBounds
 }
 
 type SplitKeyOf<Seed> = Seed extends { readonly split: infer Key extends string } ? Key : never
@@ -271,7 +268,13 @@ const seedWindowInto = <
       yield* Ref.set(world.browsing, {
         windows: [
           ...state.windows,
-          { id: windowId, tabs, activeTabId: Array.get(tabIds, activeIndex) },
+          {
+            id: windowId,
+            type: "normal",
+            bounds: seed.bounds ?? DEFAULT_WINDOW_BOUNDS,
+            tabs,
+            activeTabId: Array.get(tabIds, activeIndex),
+          },
         ],
         groups: [...state.groups, ...groups],
         focusOrder: focused ? [windowId, ...state.focusOrder] : [...state.focusOrder, windowId],
@@ -314,7 +317,16 @@ export interface FakeBrowserOptions {
 }
 
 type FakeBrowserServices =
-  FakeBrowser | Tabs | TabGroups | Windows | Bookmarks | Storage | Alarms | BrowserEvents | Ports
+  | FakeBrowser
+  | Tabs
+  | TabGroups
+  | Windows
+  | Bookmarks
+  | Storage
+  | Alarms
+  | BrowserEvents
+  | Ports
+  | WebSearch
 
 const extensionPageSender: PortSender = {
   external: false,
@@ -402,28 +414,7 @@ export class FakeBrowser extends Context.Service<
           emit: (event) => world.publish([event]),
           takeEmittedEvents: world.takeEmitted,
           closeWindow: (windowId) =>
-            transact(
-              world,
-              "windows.remove",
-              Effect.fnUntraced(function* (tx) {
-                const window = yield* requireWindow(tx, windowId)
-                yield* Effect.forEach(
-                  window.tabs,
-                  Effect.fnUntraced(function* (tab) {
-                    yield* detachTab(tx, tab.id)
-                    yield* tx.emit({
-                      _tag: "TabRemoved",
-                      tabId: tab.id,
-                      windowId,
-                      isWindowClosing: true,
-                    })
-                    yield* removeGroupIfEmpty(tx, tab.groupId, windowId)
-                  }),
-                  { discard: true },
-                )
-                yield* closeWindowIfEmpty(tx, windowId)
-              }),
-            ),
+            transact(world, "windows.remove", (tx) => closeWindowWithTabs(tx, windowId)),
           updatePage: (tabId, update) =>
             transact(
               world,
@@ -454,6 +445,7 @@ export class FakeBrowser extends Context.Service<
           Context.add(Bookmarks, bookmarks.service),
           Context.add(Storage, storage.service),
           Context.add(Alarms, alarms.service),
+          Context.add(WebSearch, makeFakeWebSearch(world)),
           Context.add(
             BrowserEvents,
             BrowserEvents.of({

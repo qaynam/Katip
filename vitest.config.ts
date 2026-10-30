@@ -10,7 +10,7 @@ export default defineConfig({
           name: "core",
           environment: "node",
           include: ["src/**/*.test.ts"],
-          exclude: ["src/apps/sidepanel/**", "src/apps/options/**"],
+          exclude: ["src/apps/sidepanel/**", "src/apps/options/**", "src/apps/spotlight/**"],
         },
       },
       {
@@ -20,7 +20,11 @@ export default defineConfig({
         test: {
           name: "ui",
           environment: "jsdom",
-          include: ["src/apps/sidepanel/**/*.test.ts", "src/apps/options/**/*.test.ts"],
+          include: [
+            "src/apps/sidepanel/**/*.test.ts",
+            "src/apps/options/**/*.test.ts",
+            "src/apps/spotlight/**/*.test.ts",
+          ],
         },
       },
     ],

@@ -1,12 +1,13 @@
 import { Array, Effect, Match, Option, pipe } from "effect"
 import { trackedTab } from "#modules/workspace"
-import { Tabs, type BrowserTab, type TabId } from "#platform/browser"
+import { Tabs, Windows, type BrowserTab, type TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarView } from "#protocol"
 import { Clipboard } from "#platform/clipboard"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
 import { SidebarHub } from "./sidebar-hub"
 import { buildSidebarView } from "./sidebar-view-source"
+import { openSpotlight } from "./spotlight-window"
 import { urlOf } from "./tab-admission"
 
 export const KeyboardCommand = {
@@ -14,6 +15,7 @@ export const KeyboardCommand = {
   nextTabInSpace: "next-tab-in-space",
   previousTabInSpace: "previous-tab-in-space",
   copyCurrentUrl: "copy-current-url",
+  openSpotlight: "open-spotlight",
 } as const
 
 const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId> =>
@@ -21,6 +23,7 @@ const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId
     Match.valueTags(node, {
       PinnedItem: ({ openTab }) => (openTab === null ? [] : [openTab.tab.tabId]),
       PinnedSplit: ({ items }) => openTabIdsIn(items),
+      PinnedLiveFolder: () => [],
       PinnedFolder: ({ children }) => openTabIdsIn(children),
     }),
   )
@@ -68,20 +71,35 @@ const copyUrl = Effect.fnUntraced(function* (activeTab: BrowserTab) {
   yield* (yield* SidebarHub).notify("URL をコピーしました")
 })
 
+// devtools などタブを持たないウィンドウで押されたときも、最後に使っていたウィンドウの上に開く
+const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
+  Effect.flatMap(
+    Option.match(activeTab, {
+      onSome: (tab) => Effect.succeed(tab.windowId),
+      onNone: () => Windows.use((windows) => Effect.map(windows.getLastFocused, ({ id }) => id)),
+    }),
+    openSpotlight,
+  )
+
 /**
  * キーボードショートカットを実行する。サイドパネルが開いていなくても動く。
  *
  * @param activeTab - ショートカットを押したときにアクティブだったタブ。
  */
 export const runKeyboardCommand = (command: string, activeTab: Option.Option<BrowserTab>) =>
-  Option.match(activeTab, {
-    onNone: () => Effect.void,
-    onSome: (tab) =>
-      Match.value(command).pipe(
-        Match.when(KeyboardCommand.quickPinToggle, () => togglePin(tab)),
-        Match.when(KeyboardCommand.nextTabInSpace, () => stepWithinSpace(tab, 1)),
-        Match.when(KeyboardCommand.previousTabInSpace, () => stepWithinSpace(tab, -1)),
-        Match.when(KeyboardCommand.copyCurrentUrl, () => copyUrl(tab)),
-        Match.orElse(() => Effect.void),
-      ),
-  })
+  Match.value(command).pipe(
+    Match.when(KeyboardCommand.openSpotlight, () => openSpotlightFrom(activeTab)),
+    Match.orElse(() =>
+      Option.match(activeTab, {
+        onNone: () => Effect.void,
+        onSome: (tab) =>
+          Match.value(command).pipe(
+            Match.when(KeyboardCommand.quickPinToggle, () => togglePin(tab)),
+            Match.when(KeyboardCommand.nextTabInSpace, () => stepWithinSpace(tab, 1)),
+            Match.when(KeyboardCommand.previousTabInSpace, () => stepWithinSpace(tab, -1)),
+            Match.when(KeyboardCommand.copyCurrentUrl, () => copyUrl(tab)),
+            Match.orElse(() => Effect.void),
+          ),
+      }),
+    ),
+  )

@@ -10,4 +10,5 @@ export {
   type WindowSeed,
 } from "./fake-browser"
 export { makePortPair } from "./fake-port"
+export { fakeSearchUrl } from "./fake-web-search"
 export type { FakeApiName } from "./fake-world"

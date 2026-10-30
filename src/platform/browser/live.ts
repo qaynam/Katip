@@ -6,6 +6,7 @@ import { Ports } from "./browser-port"
 import { Storage } from "./storage"
 import { TabGroups } from "./tab-groups"
 import { Tabs } from "./tabs"
+import { WebSearch } from "./web-search"
 import { Windows } from "./windows"
 
 /** 実際の Chrome API を使う全サービス。`captured` はトップレベルで捕捉したイベント。 */
@@ -19,4 +20,5 @@ export const liveBrowserLayer = (captured: CapturedBrowserEvents) =>
     Bookmarks.layer,
     Storage.layer,
     Alarms.layer,
+    WebSearch.layer,
   )

@@ -10,6 +10,7 @@ import {
   type StorageAreaName,
   type TabGroups,
   type Tabs,
+  type WebSearch,
   type Windows,
 } from "#platform/browser"
 import { type BrowsingState, emptyBrowsingState } from "./browsing-state"
@@ -27,6 +28,7 @@ export type FakeApiName =
   | `bookmarks.${ApiNameOf<Bookmarks["Service"]>}`
   | `storage.${StorageAreaName}.${"get" | "set" | "remove"}`
   | `alarms.${ApiNameOf<Alarms["Service"]>}`
+  | `search.${ApiNameOf<WebSearch["Service"]>}`
 
 interface InjectedFailure {
   readonly api: string

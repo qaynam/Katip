@@ -8,6 +8,13 @@ export interface WindowCreateOptions {
   readonly url?: string
   /** 省略時は `true`。 */
   readonly focused?: boolean
+  /** `popup` はタブストリップもアドレスバーも無い、1 ページだけのウィンドウ。省略時は `normal`。 */
+  readonly type?: "normal" | "popup"
+  /** 位置と大きさは CSS ピクセル。省略した値は Chrome が決める。 */
+  readonly left?: number
+  readonly top?: number
+  readonly width?: number
+  readonly height?: number
 }
 
 export interface WindowUpdateOptions {
@@ -27,6 +34,8 @@ export class Windows extends Context.Service<
       windowId: WindowId,
       options: WindowUpdateOptions,
     ): Effect.Effect<BrowserWindow, BrowserApiError>
+    /** ウィンドウを中のタブごと閉じる。タブは `isWindowClosing: true` で閉じる。 */
+    remove(windowId: WindowId): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/platform/browser/Windows") {
   static readonly layer = Layer.succeed(
@@ -47,7 +56,15 @@ export class Windows extends Context.Service<
       ),
       create: Effect.fn("Windows.create")(function* (options) {
         const raw = yield* callChrome("windows.create", () =>
-          chrome.windows.create({ url: options.url, focused: options.focused }),
+          chrome.windows.create({
+            url: options.url,
+            focused: options.focused,
+            type: options.type,
+            left: options.left,
+            top: options.top,
+            width: options.width,
+            height: options.height,
+          }),
         )
         return yield* requirePresent(
           "windows.create",
@@ -63,6 +80,7 @@ export class Windows extends Context.Service<
           "the window has no id",
         )(fromChromeWindow(raw))
       }),
+      remove: (windowId) => callChrome("windows.remove", () => chrome.windows.remove(windowId)),
     }),
   )
 }

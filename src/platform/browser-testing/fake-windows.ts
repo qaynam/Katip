@@ -1,12 +1,39 @@
 import { Effect, Option, Ref } from "effect"
 import { WindowId, Windows } from "#platform/browser"
-import { focusedWindowId, issueId, toBrowserWindow } from "./browsing-state"
-import { blurWindow, createTab, focusWindow, NEW_TAB_URL, requireWindow } from "./browsing-steps"
+import { DEFAULT_WINDOW_BOUNDS, focusedWindowId, issueId, toBrowserWindow } from "./browsing-state"
+import {
+  blurWindow,
+  closeWindowIfEmpty,
+  createTab,
+  detachTab,
+  focusWindow,
+  NEW_TAB_URL,
+  removeGroupIfEmpty,
+  requireWindow,
+} from "./browsing-steps"
 import { type BrowsingTx, chromeCall, type FakeWorld, transact } from "./fake-world"
 
 const snapshotOf = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: WindowId) {
   const window = yield* requireWindow(tx, windowId)
   return toBrowserWindow(yield* tx.state, window)
+})
+
+/** ウィンドウを閉じる。タブは `isWindowClosing: true` で閉じ、閉じている途中で別のタブをアクティブにしない。 */
+export const closeWindowWithTabs = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  windowId: WindowId,
+) {
+  const window = yield* requireWindow(tx, windowId)
+  yield* Effect.forEach(
+    window.tabs,
+    Effect.fnUntraced(function* (tab) {
+      yield* detachTab(tx, tab.id)
+      yield* tx.emit({ _tag: "TabRemoved", tabId: tab.id, windowId, isWindowClosing: true })
+      yield* removeGroupIfEmpty(tx, tab.groupId, windowId)
+    }),
+    { discard: true },
+  )
+  yield* closeWindowIfEmpty(tx, windowId)
 })
 
 export const makeFakeWindows = (world: FakeWorld): Windows["Service"] =>
@@ -40,7 +67,21 @@ export const makeFakeWindows = (world: FakeWorld): Windows["Service"] =>
           const windowId = WindowId.make(id)
           yield* tx.setState({
             ...issued,
-            windows: [...issued.windows, { id: windowId, tabs: [], activeTabId: Option.none() }],
+            windows: [
+              ...issued.windows,
+              {
+                id: windowId,
+                type: options.type ?? "normal",
+                bounds: {
+                  left: options.left ?? DEFAULT_WINDOW_BOUNDS.left,
+                  top: options.top ?? DEFAULT_WINDOW_BOUNDS.top,
+                  width: options.width ?? DEFAULT_WINDOW_BOUNDS.width,
+                  height: options.height ?? DEFAULT_WINDOW_BOUNDS.height,
+                },
+                tabs: [],
+                activeTabId: Option.none(),
+              },
+            ],
             focusOrder: [...issued.focusOrder, windowId],
           })
           yield* tx.emit({ _tag: "WindowCreated", window: yield* snapshotOf(tx, windowId) })
@@ -68,4 +109,7 @@ export const makeFakeWindows = (world: FakeWorld): Windows["Service"] =>
           return yield* snapshotOf(tx, windowId)
         }),
       ),
+
+    remove: (windowId) =>
+      transact(world, "windows.remove", (tx) => closeWindowWithTabs(tx, windowId)),
   })

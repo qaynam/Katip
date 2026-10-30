@@ -1,0 +1,42 @@
+import { Array, Effect, Option } from "effect"
+import { spotlightBoundsOver } from "#modules/spotlight"
+import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
+import { callerWindowOfSpotlight, SPOTLIGHT_PAGE_PATH, spotlightPageUrl } from "#protocol"
+import { ExtensionInfo } from "./extension-info"
+import { urlOf } from "./tab-admission"
+
+const isSpotlightPage = (extensionOrigin: string) => (tab: BrowserTab) =>
+  urlOf(tab).startsWith(new URL(SPOTLIGHT_PAGE_PATH, extensionOrigin).href)
+
+/**
+ * `callerWindowId` のウィンドウの上に Spotlight を開く。
+ *
+ * @remarks
+ * 既にそのウィンドウのための Spotlight が開いていれば、新しく開かずに前面へ出す。
+ * 別のウィンドウのために開いていたものは閉じてから開き直す。
+ * Space を持たないウィンドウ（ポップアップや devtools）の上には開かない。
+ */
+export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowId: WindowId) {
+  const windows = yield* Windows
+  const { origin } = yield* ExtensionInfo
+  const opened = Array.findFirst(yield* (yield* Tabs).query({}), isSpotlightPage(origin))
+  if (Option.isSome(opened)) {
+    const spotlight = opened.value
+    const servesCaller =
+      spotlight.windowId === callerWindowId ||
+      Option.contains(callerWindowOfSpotlight(urlOf(spotlight)), callerWindowId)
+    if (servesCaller) {
+      yield* windows.update(spotlight.windowId, { focused: true })
+      return
+    }
+    yield* windows.remove(spotlight.windowId)
+  }
+  const caller = yield* windows.get(callerWindowId)
+  if (!Option.contains(caller.type, "normal")) return
+  yield* windows.create({
+    url: spotlightPageUrl(origin, callerWindowId),
+    type: "popup",
+    focused: true,
+    ...Option.getOrElse(Option.map(caller.bounds, spotlightBoundsOver), () => ({})),
+  })
+})

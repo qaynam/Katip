@@ -50,5 +50,6 @@ export {
   Tabs,
   type TabUpdateOptions,
 } from "./tabs"
-export { BrowserWindow, fromChromeWindow, WindowState, WindowType } from "./window"
+export { WebSearch } from "./web-search"
+export { BrowserWindow, fromChromeWindow, WindowBounds, WindowState, WindowType } from "./window"
 export { type WindowCreateOptions, Windows, type WindowUpdateOptions } from "./windows"

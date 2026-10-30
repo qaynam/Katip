@@ -10,6 +10,10 @@ const chromeWindow = (overrides: Partial<chrome.windows.Window> = {}): chrome.wi
   incognito: false,
   type: "normal",
   state: "normal",
+  left: 100,
+  top: 50,
+  width: 1200,
+  height: 800,
   ...overrides,
 })
 
@@ -26,6 +30,24 @@ describe("Chrome のウィンドウの変換", () => {
     assert.deepStrictEqual(
       Option.map(window, ({ id, focused }) => [id, focused]),
       Option.some([WindowId.make(10), false]),
+    )
+  })
+
+  it("位置と大きさがすべて分かるウィンドウはそれを持つ", () => {
+    const window = fromChromeWindow(chromeWindow({ left: 100, top: 50, width: 1200, height: 800 }))
+
+    assert.deepStrictEqual(
+      Option.flatMap(window, ({ bounds }) => bounds),
+      Option.some({ left: 100, top: 50, width: 1200, height: 800 }),
+    )
+  })
+
+  it("位置と大きさのどれかが分からなければ、位置と大きさを持たない", () => {
+    const window = fromChromeWindow(chromeWindow({ left: undefined }))
+
+    assert.deepStrictEqual(
+      Option.flatMap(window, ({ bounds }) => bounds),
+      Option.none(),
     )
   })
 })
