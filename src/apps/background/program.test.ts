@@ -3,7 +3,8 @@ import { Array, Effect, Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
-import { Bookmarks, Tabs, TabId } from "#platform/browser"
+import { OperationTimeLimit } from "./program"
+import { Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
 import type { PinnedItemView, SidebarView, SpaceView } from "#protocol"
 import {
   backgroundTestLayer,
@@ -95,6 +96,80 @@ describe("起動", () => {
         ])
       }),
     ),
+  )
+})
+
+describe("ブラウザの終了と再起動", () => {
+  it.live(
+    "フォルダにピン留めしたタブは、終了して開き直しても同じピンとして開いている",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const storage = yield* Storage
+          const first = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://mail.example/", title: "メール" },
+              { url: "https://other.example/", title: "その他" },
+            ],
+          })
+          // 1 回目のセッションの background は、スコープを閉じて確実に止める
+          yield* Effect.scoped(
+            Effect.gen(function* () {
+              yield* startBackground
+              const sidebar = yield* openSidebar(first.windowId)
+              const initial = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+              const folder = yield* sidebar.run({
+                _tag: "CreateFolder",
+                spaceId: initial.activeSpaceId,
+                parentId: null,
+              })
+              const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
+              yield* sidebar.run({
+                _tag: "PlaceTabInPinned",
+                tabId: first.tabIds[0],
+                placement: { spaceId: initial.activeSpaceId, parentId: folderId, index: 0 },
+              })
+              // 再起動用の記録の保存は遅延して行われるので、保存されるまで待つ
+              yield* Effect.sleep("1500 millis")
+
+              yield* fake.closeWindow(first.windowId)
+              yield* Effect.sleep("1500 millis")
+            }),
+          )
+          yield* storage.session.remove("katip/workspace")
+          yield* storage.session.remove("katip/restore-queue")
+          const restored = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://mail.example/", title: "メール" },
+              { url: "https://other.example/", title: "その他" },
+            ],
+          })
+          yield* startBackground
+          // fake は 1 回目の起動と同じ接続口を使い回すので、2 回目の background が接続の購読を
+          // 始める前に繋ぐと、その接続は誰にも届かない。実機では起動のたびに接続口が作られ、
+          // 購読まで溜められるため起きない
+          yield* Effect.sleep("300 millis")
+          const reopened = yield* openSidebar(restored.windowId)
+          const view = yield* reopened.viewWhere((v) =>
+            Option.exists(spaceNamed(v, "ホーム"), (space) => space.pinned._tag === "Available"),
+          )
+          const folderView = Option.getOrThrow(spaceNamed(view, "ホーム")).pinned
+          const pins =
+            folderView._tag === "Available"
+              ? folderView.nodes.flatMap((node) =>
+                  node._tag === "PinnedFolder" ? node.children : [],
+                )
+              : []
+
+          expect(
+            pins.map((pin) =>
+              pin._tag === "PinnedItem" ? [pin.title, pin.openTab?.tab.tabId] : pin,
+            ),
+          ).toStrictEqual([["メール", restored.tabIds[0]]])
+        }),
+      ),
+    20_000,
   )
 })
 
@@ -448,6 +523,41 @@ describe("分割ビュー", () => {
         const [left, right] = reopened.items.map((item) => item.openTab?.tab.splitViewId ?? null)
 
         expect([left !== null, left === right]).toStrictEqual([true, true])
+      }),
+    ),
+  )
+})
+
+describe("Chrome の API が応答しないとき", () => {
+  it.live("時間を超えた操作は打ち切られ、その後の操作は処理される", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://a.example/" }, { url: "https://b.example/" }],
+        })
+        const createSplitNeverReturns = Layer.effect(
+          Tabs,
+          Tabs.useSync((tabs) => Tabs.of({ ...tabs, createSplit: () => Effect.never })),
+        )
+        yield* startBackground.pipe(
+          Effect.provide(createSplitNeverReturns),
+          Effect.provideService(OperationTimeLimit, "200 millis"),
+        )
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const split = yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[1],
+          withTabId: tabIds[0],
+        })
+        const activate = yield* sidebar.run({ _tag: "ActivateTab", tabId: tabIds[1] })
+
+        expect([split, activate._tag]).toStrictEqual([
+          { _tag: "Failed", reason: "時間内に完了しませんでした" },
+          "Succeeded",
+        ])
       }),
     ),
   )

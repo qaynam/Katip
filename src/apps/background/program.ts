@@ -1,4 +1,4 @@
-import { Effect, Layer, Match, Semaphore, Stream } from "effect"
+import { Clock, Context, type Duration, Effect, Layer, Match, Ref, Semaphore, Stream } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
@@ -67,6 +67,14 @@ const logFailure =
   <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.asVoid(effect).pipe(Effect.catchCause((cause) => Effect.logError(label, cause)))
 
+const WINDOW_CLOSING_QUIET_MS = 5_000
+
+/** 状態を変える 1 回の処理に許す時間。 */
+export const OperationTimeLimit = Context.Reference<Duration.Input>(
+  "katip/background/OperationTimeLimit",
+  { defaultValue: () => "10 seconds" },
+)
+
 /**
  * background の本体。起動時の整合を取った後、ブラウザのイベント・サイドパネルの接続・
  * 設定の変更を処理し続ける。
@@ -76,13 +84,27 @@ const logFailure =
  */
 export const program = Effect.gen(function* () {
   const lock = yield* Semaphore.make(1)
-  const serialize = Semaphore.withPermits(lock, 1)
+  const timeLimit = yield* OperationTimeLimit
+  // 状態を変える処理は 1 つずつしか進まないので、Chrome の API 呼び出しが 1 つでも返って
+  // こないと、タブの切り替えも含めて以降のすべての操作が詰まる。時間を超えたら打ち切って
+  // ロックを手放し、次の操作へ進める
+  const serialize = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Semaphore.withPermits(lock, 1)(Effect.timeout(effect, timeLimit))
   const hub = yield* SidebarHub
   const events = yield* BrowserEvents
 
   const publishViews = yield* makeDebounced(hub.publish, "30 millis")
   const syncGroups = yield* makeDebounced(serialize(syncTabGroupsIfEnabled), "200 millis")
-  const persistSnapshot = yield* makeDebounced(serialize(saveSnapshot), "1 second")
+  // ブラウザを終了すると、全タブについてウィンドウを閉じたことによる TabRemoved が届く。
+  // その後で記録を取り直すと、再起動時に必要な記録が空で上書きされ、開き直したタブが
+  // ピンや Space に戻れなくなる。ウィンドウを閉じた直後は記録を取り直さず、直前の記録を残す
+  const lastWindowClosingAt = yield* Ref.make(Number.NEGATIVE_INFINITY)
+  const saveSnapshotUnlessClosing = Effect.gen(function* () {
+    const sinceClosing = (yield* Clock.currentTimeMillis) - (yield* Ref.get(lastWindowClosingAt))
+    if (sinceClosing < WINDOW_CLOSING_QUIET_MS) return
+    yield* saveSnapshot
+  })
+  const persistSnapshot = yield* makeDebounced(serialize(saveSnapshotUnlessClosing), "1 second")
   const afterChange = Effect.all([publishViews, syncGroups, persistSnapshot], { discard: true })
   const reconcileBookmarks = yield* makeDebounced(
     Effect.andThen(serialize(reconcileWithBookmarks), afterChange),
@@ -91,6 +113,14 @@ export const program = Effect.gen(function* () {
 
   const handleEvent = (event: BrowserEvent) =>
     Match.value(event).pipe(
+      Match.tag("TabRemoved", (removed) =>
+        Effect.andThen(
+          removed.isWindowClosing
+            ? Effect.flatMap(Clock.currentTimeMillis, (now) => Ref.set(lastWindowClosingAt, now))
+            : Effect.void,
+          serialize(handleBrowserEvent(removed)),
+        ),
+      ),
       Match.tag("AlarmFired", ({ alarm }) =>
         alarm.name === AUTO_ARCHIVE_ALARM ? serialize(runAutoArchive) : Effect.void,
       ),
@@ -107,7 +137,15 @@ export const program = Effect.gen(function* () {
       port.name === SIDEBAR_PORT_NAME
         ? Effect.forkScoped(
             hub.serve(port, (command) =>
-              Effect.tap(serialize(runSidebarCommand(command)), () => afterChange),
+              serialize(runSidebarCommand(command)).pipe(
+                Effect.catchTag("TimeoutError", () =>
+                  Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
+                    _tag: "Failed" as const,
+                    reason: "時間内に完了しませんでした",
+                  }),
+                ),
+                Effect.tap(() => afterChange),
+              ),
             ),
           )
         : port.disconnect,
