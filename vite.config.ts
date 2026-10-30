@@ -1,4 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte"
+import { writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig, type Plugin } from "vite"
 import { buildManifest } from "./src/apps/manifest"
@@ -16,11 +17,24 @@ const emitManifest = (mode: "development" | "production"): Plugin => ({
   },
 })
 
+// 開発ビルドの background はこの値の変化を見て自分を再読み込みする。全ファイルを書き終えた
+// 後に書くので、書きかけのビルドを読み込ませることはない
+const stampDevBuild = (): Plugin => ({
+  name: "katip:stamp-dev-build",
+  closeBundle() {
+    writeFileSync(fromRoot("./dist/dev-build-id.txt"), String(Date.now()))
+  },
+})
+
 export default defineConfig(({ mode }) => {
   const buildMode = mode === "development" ? "development" : "production"
   return {
     root: fromRoot("./src/apps"),
-    plugins: [svelte({ configFile: fromRoot("./svelte.config.js") }), emitManifest(buildMode)],
+    plugins: [
+      svelte({ configFile: fromRoot("./svelte.config.js") }),
+      emitManifest(buildMode),
+      ...(buildMode === "development" ? [stampDevBuild()] : []),
+    ],
     build: {
       outDir: fromRoot("./dist"),
       emptyOutDir: true,
