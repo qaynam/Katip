@@ -1,0 +1,172 @@
+:root {
+  color-scheme: light dark;
+
+  --font-ui:
+    system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", "Segoe UI", sans-serif;
+  --radius-row: 10px;
+
+  --text: #1f2328;
+  --text-muted: rgb(31 35 40 / 0.6);
+  --text-on-surface: #1f2328;
+  --surface-active: rgb(255 255 255 / 0.92);
+  --surface-raised: rgb(255 255 255 / 0.34);
+  --surface-raised-hover: rgb(255 255 255 / 0.52);
+  --shadow-active: 0 1px 2px rgb(16 22 30 / 0.12), 0 0 0 0.5px rgb(16 22 30 / 0.06);
+  --rule: rgb(31 35 40 / 0.14);
+  --drop-line: rgb(31 35 40 / 0.72);
+  --focus-ring: rgb(31 35 40 / 0.55);
+
+  --menu-bg: #ffffff;
+  --menu-text: #1f2328;
+  --text-muted-on-menu: rgb(31 35 40 / 0.62);
+  --menu-hover: #eef0f3;
+  --menu-border: rgb(0 0 0 / 0.08);
+  --menu-shadow: 0 10px 28px rgb(0 0 0 / 0.16), 0 1px 3px rgb(0 0 0 / 0.1);
+  --toast-bg: #24282d;
+  --toast-text: #f3f5f7;
+  --danger: #c8312b;
+  --danger-strong: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #eceff1;
+    --text-muted: rgb(236 239 241 / 0.62);
+    --text-on-surface: #16191c;
+    --surface-active: rgb(240 243 245 / 0.94);
+    --surface-raised: rgb(255 255 255 / 0.09);
+    --surface-raised-hover: rgb(255 255 255 / 0.15);
+    --shadow-active: 0 1px 2px rgb(0 0 0 / 0.35);
+    --rule: rgb(236 239 241 / 0.16);
+    --drop-line: rgb(236 239 241 / 0.85);
+    --focus-ring: rgb(236 239 241 / 0.7);
+
+    --menu-bg: #2a2d31;
+    --menu-text: #eceff1;
+    --text-muted-on-menu: rgb(236 239 241 / 0.65);
+    --menu-hover: #373b40;
+    --menu-border: rgb(255 255 255 / 0.08);
+    --menu-shadow: 0 10px 28px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.3);
+    --toast-bg: #eceff1;
+    --toast-text: #1f2328;
+    --danger: #ff8f86;
+    --danger-strong: #b3261e;
+  }
+}
+
+/* 背景は淡く、文字色との対比を保てる明度に揃えている。スウォッチは選択用に彩度を上げた別の色 */
+[data-space-color="grey"] {
+  --space-bg: #d6d9dd;
+  --space-swatch: #9ca3af;
+}
+[data-space-color="blue"] {
+  --space-bg: #b1cdf6;
+  --space-swatch: #60a5fa;
+}
+[data-space-color="red"] {
+  --space-bg: #f8b9b2;
+  --space-swatch: #f87171;
+}
+[data-space-color="yellow"] {
+  --space-bg: #f7e0a3;
+  --space-swatch: #fbbf24;
+}
+[data-space-color="green"] {
+  --space-bg: #b2e0bc;
+  --space-swatch: #34d399;
+}
+[data-space-color="pink"] {
+  --space-bg: #f7c3df;
+  --space-swatch: #f472b6;
+}
+[data-space-color="purple"] {
+  --space-bg: #dbc2f7;
+  --space-swatch: #a78bfa;
+}
+[data-space-color="cyan"] {
+  --space-bg: #b3e3e9;
+  --space-swatch: #22d3ee;
+}
+[data-space-color="orange"] {
+  --space-bg: #f9cba4;
+  --space-swatch: #fb923c;
+}
+[data-space-color] {
+  --space-bg-hover: color-mix(in srgb, var(--space-bg), #000 7%);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-space-color="grey"] {
+    --space-bg: #3f474f;
+  }
+  [data-space-color="blue"] {
+    --space-bg: #24496e;
+  }
+  [data-space-color="red"] {
+    --space-bg: #6e3232;
+  }
+  [data-space-color="yellow"] {
+    --space-bg: #685a2c;
+  }
+  [data-space-color="green"] {
+    --space-bg: #32593d;
+  }
+  [data-space-color="pink"] {
+    --space-bg: #6f3e5c;
+  }
+  [data-space-color="purple"] {
+    --space-bg: #4f4170;
+  }
+  [data-space-color="cyan"] {
+    --space-bg: #2c5b62;
+  }
+  [data-space-color="orange"] {
+    --space-bg: #6c4426;
+  }
+  [data-space-color] {
+    --space-bg-hover: color-mix(in srgb, var(--space-bg), #000 18%);
+  }
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+.katip-root {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden;
+  background: var(--space-bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 300ms ease;
+}
+
+.katip-root *,
+.katip-root *::before,
+.katip-root *::after {
+  box-sizing: border-box;
+}
+
+.katip-root button {
+  cursor: default;
+}
+
+.katip-root :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .katip-root {
+    transition: none;
+  }
+}
