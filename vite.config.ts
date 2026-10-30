@@ -47,7 +47,9 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       outDir: fromRoot("./dist"),
-      emptyOutDir: true,
+      // ウォッチ中は、失敗したビルドの開始時に出力先が空になり、動いていた拡張まで
+      // 読み込めなくなる。開発時は古いファイルが残るのを許して、空にしない
+      emptyOutDir: buildMode === "production",
       sourcemap: buildMode === "development" ? "inline" : false,
       minify: buildMode === "production",
       // サービスワーカーには document が無いため、Vite の preload ポリフィルを注入させない
