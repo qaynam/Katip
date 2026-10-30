@@ -102,7 +102,8 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
         hue: accentColor.hue,
       }),
     ),
-    grainOpacity: theme.grain * 0.35,
+    // ダイヤルを最大にしても、薄い色の文字が粒に埋もれて読めなくならない強さで頭打ちにする
+    grainOpacity: theme.grain * 0.6,
   }
 }
 

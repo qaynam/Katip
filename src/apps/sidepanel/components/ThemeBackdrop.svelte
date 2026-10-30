@@ -73,12 +73,13 @@
     animation: layer-in 320ms ease-out;
   }
 
+  /* overlay で重ねると白に近い背景ではほとんど変化せず、無彩色のライトテーマで粒が消える。
+     黒と白の粒を通常の合成で重ね、背景の明るさによらず同じくらい見えるようにする */
   .grain {
     position: absolute;
     inset: 0;
     background-image: var(--grain-image);
-    background-size: 180px 180px;
-    mix-blend-mode: overlay;
+    background-size: 200px 200px;
     transition: opacity 200ms ease;
   }
 
