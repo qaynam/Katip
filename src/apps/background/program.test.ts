@@ -3,8 +3,6 @@ import { Array, Effect, Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
-import { FakeHttp } from "#platform/http"
-import { FakePermissions } from "#platform/permissions"
 import { OperationTimeLimit } from "./program"
 import { Alarms, Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
 import type {
@@ -16,6 +14,7 @@ import type {
 } from "#protocol"
 import {
   backgroundTestLayer,
+  backgroundTestLayerWith,
   eventually,
   openSidebar,
   spaceNamed,
@@ -726,14 +725,7 @@ describe("分割ビューの API が無い Chrome", () => {
       ])
     }).pipe(
       Effect.scoped,
-      Effect.provide(
-        Layer.mergeAll(
-          FakeBrowser.layerWith({ supportsSplitView: false }),
-          ClipboardRecorder.layer,
-          FakeHttp.layer,
-          FakePermissions.layer,
-        ),
-      ),
+      Effect.provide(backgroundTestLayerWith(FakeBrowser.layerWith({ supportsSplitView: false }))),
     ),
   )
 })
@@ -784,6 +776,59 @@ describe("URL のコピー", () => {
         expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
           ["https://copy.example/page?q=1"],
           "URL をコピーしました",
+        ])
+      }),
+    ),
+  )
+
+  it.live("ショートカットで Markdown のリンクとしてコピーすると、[タイトル](URL) の形で入る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://copy.example/page", title: "コピーするページ", active: true }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        yield* fake.emit({
+          _tag: "CommandTriggered",
+          command: "copy-current-url-as-markdown",
+          tab: Option.some(yield* (yield* Tabs).get(tabIds[0])),
+        })
+        const notice = yield* sidebar.noticeWhere(() => true)
+
+        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+          ["[コピーするページ](https://copy.example/page)"],
+          "Markdown のリンクをコピーしました",
+        ])
+      }),
+    ),
+  )
+
+  it.live("URL の無いタブでショートカットを押すと、コピーできなかったと知らされる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://copy.example/", active: true }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        const tab = yield* (yield* Tabs).get(tabIds[0])
+
+        yield* fake.emit({
+          _tag: "CommandTriggered",
+          command: "copy-current-url",
+          tab: Option.some({ ...tab, url: Option.none(), pendingUrl: Option.none() }),
+        })
+        const notice = yield* sidebar.noticeWhere(() => true)
+
+        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+          [],
+          "コピーできませんでした",
         ])
       }),
     ),

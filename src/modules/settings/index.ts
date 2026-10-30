@@ -3,6 +3,7 @@ export {
   AutoArchiveSettings,
   defaultSettings,
   IdleMinutes,
+  PageShortcutSettings,
   Settings,
   type SettingsPatch,
 } from "./settings"

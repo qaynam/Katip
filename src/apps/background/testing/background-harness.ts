@@ -3,6 +3,7 @@ import { FakeBrowser } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHttp } from "#platform/http"
 import { FakePermissions } from "#platform/permissions"
+import { FakeScripting } from "#platform/scripting"
 import type { WindowId } from "#platform/browser"
 import {
   ClientMessage,
@@ -16,13 +17,21 @@ import {
 } from "#protocol"
 import { ExtensionInfo } from "../extension-info"
 import { applicationLayer, program } from "../program"
+import { BrowserLanguages } from "../translation"
 
-export const backgroundTestLayer = Layer.mergeAll(
-  FakeBrowser.layer,
-  ClipboardRecorder.layer,
-  FakeHttp.layer,
-  FakePermissions.layer,
-)
+/** ブラウザの fake だけを `browser` に差し替えた、background のテスト用のレイヤー。 */
+export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
+  Layer.mergeAll(
+    browser,
+    ClipboardRecorder.layer,
+    FakeHttp.layer,
+    FakePermissions.layer,
+    FakeScripting.layer,
+    // 知らせや操作の名前を、テストを動かす環境の言語によらず日本語で期待できるようにする
+    Layer.succeed(BrowserLanguages, ["ja"]),
+  )
+
+export const backgroundTestLayer = backgroundTestLayerWith(FakeBrowser.layer)
 
 /**
  * background を起動する。

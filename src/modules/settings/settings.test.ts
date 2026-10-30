@@ -15,6 +15,7 @@ describe("既定値", () => {
       autoArchive: { enabled: false, idleMinutes: 360 },
       defaultSpaceId: null,
       locale: "auto",
+      pageShortcuts: { copyUrl: false, copyMarkdownLink: false },
     })
   })
 })
@@ -28,6 +29,7 @@ describe("保存値の読み込み", () => {
       autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(30) },
       defaultSpaceId: SpaceId.make("work"),
       locale: "zh",
+      pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)
@@ -109,6 +111,17 @@ describe("applySettingsPatch", () => {
     const patched = applySettingsPatch(current, { autoArchive: { enabled: false } })
 
     expect(patched.autoArchive).toStrictEqual({ enabled: false, idleMinutes: 45 })
+  })
+
+  it("ページ上のショートカットの片方だけを有効にすると、もう片方は元の値のまま残る", () => {
+    const current: Settings = {
+      ...defaultSettings,
+      pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
+    }
+
+    const patched = applySettingsPatch(current, { pageShortcuts: { copyMarkdownLink: true } })
+
+    expect(patched.pageShortcuts).toStrictEqual({ copyUrl: true, copyMarkdownLink: true })
   })
 
   it("既定の Space を null に戻せる", () => {

@@ -52,4 +52,8 @@ export const en = {
     "Assign keys for opening the side panel, Spotlight, and more on Chrome’s extension shortcuts page.",
 
   "options.version.label": "Version",
+
+  "actions.copied.url": "Copied URL",
+  "actions.copied.markdownLink": "Copied Markdown link",
+  "actions.copyFailed": "Couldn’t copy",
 } as const satisfies Readonly<Record<string, Message>>

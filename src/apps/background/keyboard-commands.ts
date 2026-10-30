@@ -2,19 +2,18 @@ import { Array, Effect, Match, Option, pipe } from "effect"
 import { trackedTab } from "#modules/workspace"
 import { Tabs, Windows, type BrowserTab, type TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarView } from "#protocol"
-import { Clipboard } from "#platform/clipboard"
+import { copyTabWithNotice } from "./copy-tab"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
-import { SidebarHub } from "./sidebar-hub"
 import { buildSidebarView } from "./sidebar-view-source"
 import { openSpotlight } from "./spotlight-window"
-import { urlOf } from "./tab-admission"
 
 export const KeyboardCommand = {
   quickPinToggle: "quick-pin-toggle",
   nextTabInSpace: "next-tab-in-space",
   previousTabInSpace: "previous-tab-in-space",
   copyCurrentUrl: "copy-current-url",
+  copyCurrentUrlAsMarkdown: "copy-current-url-as-markdown",
   openSpotlight: "open-spotlight",
 } as const
 
@@ -64,13 +63,6 @@ const togglePin = Effect.fnUntraced(function* (activeTab: BrowserTab) {
   )
 })
 
-const copyUrl = Effect.fnUntraced(function* (activeTab: BrowserTab) {
-  const url = urlOf(activeTab)
-  if (url === "") return
-  yield* (yield* Clipboard).writeText(url)
-  yield* (yield* SidebarHub).notify("URL をコピーしました")
-})
-
 // devtools などタブを持たないウィンドウで押されたときも、最後に使っていたウィンドウの上に開く
 const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
   Effect.flatMap(
@@ -97,7 +89,10 @@ export const runKeyboardCommand = (command: string, activeTab: Option.Option<Bro
             Match.when(KeyboardCommand.quickPinToggle, () => togglePin(tab)),
             Match.when(KeyboardCommand.nextTabInSpace, () => stepWithinSpace(tab, 1)),
             Match.when(KeyboardCommand.previousTabInSpace, () => stepWithinSpace(tab, -1)),
-            Match.when(KeyboardCommand.copyCurrentUrl, () => copyUrl(tab)),
+            Match.when(KeyboardCommand.copyCurrentUrl, () => copyTabWithNotice(tab, "Url")),
+            Match.when(KeyboardCommand.copyCurrentUrlAsMarkdown, () =>
+              copyTabWithNotice(tab, "MarkdownLink"),
+            ),
             Match.orElse(() => Effect.void),
           ),
       }),

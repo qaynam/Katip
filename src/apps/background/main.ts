@@ -3,6 +3,7 @@ import { captureBrowserEvents, liveBrowserLayer } from "#platform/browser"
 import { Clipboard } from "#platform/clipboard"
 import { Http } from "#platform/http"
 import { Permissions } from "#platform/permissions"
+import { Scripting } from "#platform/scripting"
 import { exposeLogsForDevelopment } from "./dev-log"
 import { reloadOnRebuild } from "./dev-reload"
 import { ExtensionInfo } from "./extension-info"
@@ -24,6 +25,7 @@ const layer = applicationLayer.pipe(
       Clipboard.layer,
       Http.layer,
       Permissions.layer,
+      Scripting.layer,
     ),
   ),
 )

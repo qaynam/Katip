@@ -52,4 +52,8 @@ export const ja: Catalog = {
     "サイドパネルや Spotlight を開くキーなどは、Chrome の拡張機能のショートカット設定で割り当てます。",
 
   "options.version.label": "バージョン",
+
+  "actions.copied.url": "URL をコピーしました",
+  "actions.copied.markdownLink": "Markdown のリンクをコピーしました",
+  "actions.copyFailed": "コピーできませんでした",
 }

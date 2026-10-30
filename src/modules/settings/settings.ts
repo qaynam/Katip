@@ -32,6 +32,17 @@ export const AutoArchiveSettings = withDefaultsOfAllFields(
 export type AutoArchiveSettings = typeof AutoArchiveSettings.Type
 
 /**
+ * Web ページの上で使うショートカット。すべてのサイトへのアクセスの許可が要るので、既定では使わない。
+ */
+export const PageShortcutSettings = withDefaultsOfAllFields(
+  Schema.Struct({
+    copyUrl: withDefault(Schema.Boolean, false),
+    copyMarkdownLink: withDefault(Schema.Boolean, false),
+  }),
+)
+export type PageShortcutSettings = typeof PageShortcutSettings.Type
+
+/**
  * ユーザー設定。
  *
  * decode は失敗しない。値が無い・オブジェクトでない場合は全体を、欠けた項目や壊れた項目は
@@ -46,18 +57,21 @@ export const Settings = withDefaultsOfAllFields(
     // null は「指定なし」。新しいタブの行き先が決まらないときの扱いは呼び出し側が決める
     defaultSpaceId: withDefault(Schema.NullOr(SpaceId), null),
     locale: withDefault(LocalePreference, "auto"),
+    pageShortcuts: PageShortcutSettings,
   }),
 )
 export type Settings = typeof Settings.Type
 
 export const defaultSettings: Settings = Schema.decodeUnknownSync(Settings)({})
 
-export type SettingsPatch = Partial<Omit<Settings, "autoArchive">> & {
+export type SettingsPatch = Partial<Omit<Settings, "autoArchive" | "pageShortcuts">> & {
   readonly autoArchive?: Partial<AutoArchiveSettings>
+  readonly pageShortcuts?: Partial<PageShortcutSettings>
 }
 
 export const applySettingsPatch = (settings: Settings, patch: SettingsPatch): Settings => ({
   ...settings,
   ...patch,
   autoArchive: { ...settings.autoArchive, ...patch.autoArchive },
+  pageShortcuts: { ...settings.pageShortcuts, ...patch.pageShortcuts },
 })

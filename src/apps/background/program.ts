@@ -7,19 +7,20 @@ import {
   Match,
   Option,
   Ref,
+  Schema,
   Semaphore,
   Stream,
 } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
-import { SettingsRepository } from "#modules/settings"
+import { PageShortcutSettings, SettingsRepository } from "#modules/settings"
 import { desiredGroupsFor, TabGroupSync } from "#modules/tab-group-sync"
 import { takeSnapshot } from "#modules/workspace"
 import { Array, Order } from "effect"
 import { BrowserEvents, Tabs, type BrowserEvent, type BrowserTab } from "#platform/browser"
 import { Permissions } from "#platform/permissions"
-import { SIDEBAR_PORT_NAME, SPOTLIGHT_PORT_NAME } from "#protocol"
+import { PAGE_SHORTCUT_PORT_NAME, SIDEBAR_PORT_NAME, SPOTLIGHT_PORT_NAME } from "#protocol"
 import { AUTO_ARCHIVE_ALARM, runAutoArchive, scheduleAutoArchive } from "./auto-archive"
 import { pruneStaleBindings } from "./bindings"
 import { handleBrowserEvent, isBookmarkEvent } from "./browser-event-handler"
@@ -35,6 +36,8 @@ import {
   scheduleLiveFolderRefresh,
 } from "./live-folder-refresh"
 import { runKeyboardCommand } from "./keyboard-commands"
+import { makePageShortcutServer } from "./page-shortcut-requests"
+import { makePageShortcutSync } from "./page-shortcut-sync"
 import { runSidebarCommand } from "./sidebar-commands"
 import { SidebarHub } from "./sidebar-hub"
 import { runSpotlightChoice } from "./spotlight-choice"
@@ -115,6 +118,8 @@ export const program = Effect.gen(function* () {
   const hub = yield* SidebarHub
   const spotlight = yield* SpotlightHub
   const events = yield* BrowserEvents
+  const syncPageShortcuts = yield* makePageShortcutSync
+  const servePageShortcut = yield* makePageShortcutServer
 
   const publishViews = yield* makeDebounced(hub.publish, "30 millis")
   const syncGroups = yield* makeDebounced(serialize(syncTabGroupsIfEnabled), "200 millis")
@@ -161,6 +166,15 @@ export const program = Effect.gen(function* () {
       Match.tag("CommandTriggered", ({ command, tab }) =>
         serialize(runKeyboardCommand(command, tab)),
       ),
+      // 拡張機能を更新すると、開いているページに入れたスクリプトは background に接続できなくなる
+      Match.tag("RuntimeInstalled", (installed) =>
+        Effect.andThen(
+          serialize(handleBrowserEvent(installed)),
+          installed.reason === "update"
+            ? logFailure("ページのショートカットを入れ直せなかった")(syncPageShortcuts("Always"))
+            : Effect.void,
+        ),
+      ),
       Match.orElse((other) =>
         isBookmarkEvent(other) ? reconcileBookmarks : serialize(handleBrowserEvent(other)),
       ),
@@ -206,7 +220,9 @@ export const program = Effect.gen(function* () {
                   ),
                 ),
               )
-            : port.disconnect,
+            : port.name === PAGE_SHORTCUT_PORT_NAME
+              ? Effect.forkScoped(servePageShortcut(port))
+              : port.disconnect,
     ),
     Effect.forkScoped(),
   )
@@ -235,6 +251,25 @@ export const program = Effect.gen(function* () {
       Effect.andThen(logFailure(`${event._tag} の処理に失敗した`)(handleEvent(event)), afterChange),
     ),
     Effect.forkScoped(),
+  )
+
+  // 購読した時点の設定も流れるので、起動時の同期も兼ねる
+  yield* (yield* SettingsRepository).changes.pipe(
+    Stream.map((settings) => settings.pageShortcuts),
+    Stream.changesWith(Schema.toEquivalence(PageShortcutSettings)),
+    Stream.runForEach(() =>
+      logFailure("ページのショートカットを同期できなかった")(syncPageShortcuts("WhenNewlyEnabled")),
+    ),
+    logFailure("ページのショートカットの設定の購読が止まった"),
+    Effect.forkScoped(),
+  )
+
+  // すべてのサイトへのアクセスは設定画面で求めるので、許可の変化でも有効なショートカットが変わる
+  yield* (yield* Permissions).originChanges.pipe(
+    Stream.runForEach(() =>
+      logFailure("ページのショートカットを同期できなかった")(syncPageShortcuts("WhenNewlyEnabled")),
+    ),
+    Effect.forkScoped,
   )
 
   yield* (yield* SettingsRepository).changes.pipe(

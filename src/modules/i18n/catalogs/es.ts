@@ -56,4 +56,8 @@ export const es: Catalog = {
     "Asigna teclas para abrir el panel lateral, Spotlight y otras acciones en la página de combinaciones de teclas de extensiones de Chrome.",
 
   "options.version.label": "Versión",
+
+  "actions.copied.url": "URL copiada",
+  "actions.copied.markdownLink": "Enlace Markdown copiado",
+  "actions.copyFailed": "No se pudo copiar",
 }

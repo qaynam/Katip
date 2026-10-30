@@ -52,4 +52,8 @@ export const zh: Catalog = {
     "打开侧边栏、Spotlight 等操作所用的按键，可以在 Chrome 的扩展程序快捷键页面中设置。",
 
   "options.version.label": "版本",
+
+  "actions.copied.url": "已复制网址",
+  "actions.copied.markdownLink": "已复制 Markdown 链接",
+  "actions.copyFailed": "无法复制",
 }

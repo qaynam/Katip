@@ -21,12 +21,15 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "offscreen",
     "clipboardWrite",
     "search",
+    "scripting",
   ],
-  // ライブフォルダの取得元。作るときにだけ許可を求め、使わない人には要求しない
+  // 使う機能を有効にしたときにだけ許可を求め、使わない人には要求しない。ライブフォルダの
+  // 取得元と、ページ上のショートカットのためにスクリプトを注入するすべてのサイト
   optional_host_permissions: [
     "https://mail.google.com/*",
     "https://github.com/*",
     "https://api.github.com/*",
+    "*://*/*",
   ],
   side_panel: { default_path: "sidepanel/index.html" },
   action: { default_title: "Katip" },
@@ -49,6 +52,9 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "next-tab-in-space": { description: "Space の中で次のタブへ移る" },
     "previous-tab-in-space": { description: "Space の中で前のタブへ移る" },
     "copy-current-url": { description: "アクティブなタブの URL をコピーする" },
+    "copy-current-url-as-markdown": {
+      description: "アクティブなタブの URL を Markdown のリンクとしてコピーする",
+    },
   },
   // 拡張ページはブラウザ自動操作ツールから開けないため、開発ビルドに限り localhost の
   // 検証用ページから background へ接続できるようにする。接続先の ID を読み込んだ場所に
