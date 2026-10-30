@@ -1,10 +1,11 @@
 <script lang="ts">
   import { Option } from "effect"
   import type { PinnedLiveFolderView } from "#protocol"
-  import { edgeAt, slotAt, type PinnedPosition } from "../logic/drag-drop"
+  import { edgeAt, slotAt, type DragSource, type PinnedPosition } from "../logic/drag-drop"
   import { bookmarkTitleChange } from "../logic/drafts"
   import { unseenBadgeText, unseenCount } from "../logic/live-folders"
   import { pointRect } from "../logic/menu-position"
+  import { selfAndDescendantFolderIds } from "../logic/view-queries"
   import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderSearchButton from "./FolderSearchButton.svelte"
@@ -26,6 +27,13 @@
   let headerRow = $state<HTMLDivElement>()
   const key = $derived(`live-folder:${folder.bookmarkId}`)
   const dropZone = $derived(ctx.drag.zoneFor(key))
+  const isDragged = $derived(ctx.drag.sourceKey === key)
+  const dragSource: DragSource = $derived({
+    _tag: "PinnedFolder",
+    bookmarkId: folder.bookmarkId,
+    position,
+    selfAndDescendantIds: selfAndDescendantFolderIds(folder),
+  })
   const unseen = $derived(unseenCount(folder))
   const failure = $derived(folder.status._tag === "Failed" ? folder.status : null)
   const title = $derived(folder.title || messages.liveFolder.untitled)
@@ -85,7 +93,7 @@
   }
 </script>
 
-<li class="live-folder">
+<li class="live-folder" class:dragged={isDragged}>
   <div
     class="header-row"
     class:searchable={!folder.isExpanded}
@@ -109,9 +117,12 @@
         class:drop-after={dropZone === "after"}
         type="button"
         aria-expanded={folder.isExpanded}
+        draggable="true"
         onclick={toggle}
         ondblclick={startRename}
         oncontextmenu={openMenu}
+        ondragstart={(event) => ctx.drag.begin(event, key, dragSource)}
+        ondragend={() => ctx.drag.end()}
         ondragover={onHeaderDragOver}
       >
         <span class="glyph"><LiveSourceGlyph kind={folder.source._tag} /></span>
@@ -178,6 +189,11 @@
 <style>
   .live-folder {
     list-style: none;
+    transition: opacity 120ms ease;
+  }
+
+  .live-folder.dragged {
+    opacity: 0.4;
   }
 
   .header-row {

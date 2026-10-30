@@ -77,12 +77,15 @@ describe("アーカイブパネル", () => {
 })
 
 describe("自動アーカイブの設定", () => {
-  const minutesInput = () =>
-    screen.getByRole<HTMLInputElement>("textbox", { name: "自動でアーカイブするまでの時間（分）" })
+  const durationSelect = () =>
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "自動でアーカイブするまでの時間" })
+  const optionTexts = () =>
+    [...durationSelect().options].map((option) => option.textContent?.trim())
+  const selectedText = () => durationSelect().selectedOptions[0]?.textContent?.trim()
 
   it("オンにすると、今の時間設定のまま有効にする", async () => {
     const { connection } = await renderArchive({
-      autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(90) },
+      autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) },
     })
 
     await fireEvent.click(
@@ -90,66 +93,53 @@ describe("自動アーカイブの設定", () => {
     )
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "UpdateAutoArchive", enabled: true, idleMinutes: 90 },
+      { _tag: "UpdateAutoArchive", enabled: true, idleMinutes: 360 },
     ])
   })
 
-  it("分数を書き換えて確定すると、その分数に変える", async () => {
+  it("時間は、割り切れる最も大きい単位で選択肢に並べる", async () => {
+    await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(360) } })
+
+    expect(optionTexts()).toStrictEqual([
+      "30 分",
+      "1 時間",
+      "3 時間",
+      "6 時間",
+      "12 時間",
+      "1 日",
+      "3 日",
+      "1 週間",
+    ])
+  })
+
+  it("今の設定の時間が選択中になる", async () => {
+    await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(3 * 1440) } })
+
+    expect(selectedText()).toBe("3 日")
+  })
+
+  it("時間を選ぶと、選んだ分数に変える", async () => {
     const { connection } = await renderArchive({
-      autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) },
+      autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(360) },
     })
 
-    await fireEvent.input(minutesInput(), { target: { value: "30" } })
-    await fireEvent.change(minutesInput())
+    await fireEvent.change(durationSelect(), { target: { value: "1440" } })
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "UpdateAutoArchive", enabled: true, idleMinutes: 30 },
+      { _tag: "UpdateAutoArchive", enabled: true, idleMinutes: 1440 },
     ])
   })
 
-  it("不正な分数はコマンドを送らず、その場で理由を示す", async () => {
-    const { connection } = await renderArchive({
-      autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) },
-    })
-
-    await fireEvent.input(minutesInput(), { target: { value: "0" } })
-    await fireEvent.change(minutesInput())
-
-    expect(connection.sentCommands).toStrictEqual([])
-    expect(screen.getByRole("alert").textContent).toBe("1 分以上にしてください")
-    expect(minutesInput().getAttribute("aria-invalid")).toBe("true")
-  })
-
-  it("理由を示したあとで書き直し始めると、理由を消す", async () => {
+  it("選択肢に無い保存値も、選択中として表示する", async () => {
     await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) } })
-    await fireEvent.input(minutesInput(), { target: { value: "1.5" } })
-    await fireEvent.change(minutesInput())
 
-    await fireEvent.input(minutesInput(), { target: { value: "15" } })
-
-    expect(screen.queryByRole("alert")).toBeNull()
-  })
-
-  it("入力中に新しいビューが届いても、入力中の分数は消えない", async () => {
-    const { pushView } = await renderArchive({
-      autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) },
-    })
-    await fireEvent.input(minutesInput(), { target: { value: "4" } })
-
-    await pushView(
-      sidebarView({
-        spaces: [work, hobby],
-        archive: archived,
-        autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(120) },
-      }),
-    )
-
-    expect(minutesInput().value).toBe("4")
+    expect(selectedText()).toBe("90 分")
+    expect(optionTexts().slice(0, 3)).toStrictEqual(["30 分", "1 時間", "90 分"])
   })
 
   it("オフの間は時間を変えられない", async () => {
-    await renderArchive({ autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(90) } })
+    await renderArchive({ autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) } })
 
-    expect(minutesInput().disabled).toBe(true)
+    expect(durationSelect().disabled).toBe(true)
   })
 })

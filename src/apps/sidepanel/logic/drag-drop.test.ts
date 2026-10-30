@@ -45,6 +45,18 @@ const pinnedSplit = (
     options.openSplitViewId === undefined ? null : splitViewId(options.openSplitViewId),
   position: options.position ?? { parentId: null, index: 0 },
 })
+const pinnedFolderSource = (
+  id: string,
+  options: {
+    readonly position?: PinnedPosition
+    readonly descendantIds?: ReadonlyArray<string>
+  } = {},
+): DragSource => ({
+  _tag: "PinnedFolder",
+  bookmarkId: bookmarkId(id),
+  position: options.position ?? { parentId: null, index: 0 },
+  selfAndDescendantIds: [id, ...(options.descendantIds ?? [])].map(bookmarkId),
+})
 const favorite = (id: number, index: number): DragSource => ({
   _tag: "Favorite",
   tabId: tabId(id),
@@ -187,6 +199,48 @@ describe("ピンをドラッグしたとき", () => {
       tabId: tabId(7),
       index: 0,
     })
+  })
+})
+
+describe("フォルダをドラッグしたとき", () => {
+  it("別のフォルダの中に落とすと、そのフォルダの中の落とした位置へ移す", () => {
+    const source = pinnedFolderSource("docs", { position: { parentId: null, index: 0 } })
+
+    expect(drop(source, pinnedTarget("projects", 2))).toStrictEqual({
+      _tag: "MovePinnedItem",
+      bookmarkId: bookmarkId("docs"),
+      placement: { spaceId, parentId: bookmarkId("projects"), index: 2 },
+    })
+  })
+
+  it("同じ親の中で後ろへ動かすと、自分が抜けた分を詰めた位置へ移す", () => {
+    const source = pinnedFolderSource("docs", { position: { parentId: null, index: 1 } })
+
+    expect(drop(source, pinnedTarget(null, 4))).toStrictEqual({
+      _tag: "MovePinnedItem",
+      bookmarkId: bookmarkId("docs"),
+      placement: { spaceId, parentId: null, index: 3 },
+    })
+  })
+
+  it("自分自身の中には落とせない", () => {
+    expect(drop(pinnedFolderSource("docs"), pinnedTarget("docs", 0))).toBeNull()
+  })
+
+  it("自分の中にあるフォルダの中には落とせない", () => {
+    const source = pinnedFolderSource("docs", { descendantIds: ["minutes", "inbox"] })
+
+    expect(drop(source, pinnedTarget("minutes", 0))).toBeNull()
+    expect(drop(source, pinnedTarget("inbox", 0))).toBeNull()
+  })
+
+  it("一時タブ・Favorites・分割ビュー・Space の印には落とせない", () => {
+    const source = pinnedFolderSource("docs")
+
+    expect(drop(source, belowTab(2))).toBeNull()
+    expect(drop(source, { _tag: "Favorites", slot: 0 })).toBeNull()
+    expect(drop(source, splitWith(2))).toBeNull()
+    expect(drop(source, { _tag: "SpaceBar", slot: 0 })).toBeNull()
   })
 })
 

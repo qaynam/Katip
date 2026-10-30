@@ -126,6 +126,39 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "design-docs")?.children[0]?.bookmarkId).toBe("calendar")
   })
 
+  it("フォルダを別のフォルダの中へ、中身ごと動かせる", () => {
+    const next = viewAfter({
+      _tag: "MovePinnedItem",
+      bookmarkId: BookmarkId.make("design-docs"),
+      placement: {
+        spaceId: SpaceId.make("work"),
+        parentId: BookmarkId.make("empty-folder"),
+        index: 0,
+      },
+    })
+
+    const moved = rootFolder(next, "empty-folder")?.children[0]
+    expect(moved?.bookmarkId).toBe("design-docs")
+    expect(moved?._tag === "PinnedFolder" && moved.children.length).toBe(
+      rootFolder(view, "design-docs")?.children.length,
+    )
+    expect(rootFolder(next, "design-docs")).toBeUndefined()
+  })
+
+  it("ライブフォルダをフォルダの中へ動かせる", () => {
+    const next = viewAfter({
+      _tag: "MovePinnedItem",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      placement: {
+        spaceId: SpaceId.make("work"),
+        parentId: BookmarkId.make("empty-folder"),
+        index: 0,
+      },
+    })
+
+    expect(rootFolder(next, "empty-folder")?.children[0]?.bookmarkId).toBe("live-inbox")
+  })
+
   it("別の Space のタブをアクティブにすると、その Space に切り替わる", () => {
     const next = viewAfter({ _tag: "ActivateTab", tabId: TabId.make(41) })
 

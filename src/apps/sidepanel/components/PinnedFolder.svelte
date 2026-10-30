@@ -4,12 +4,13 @@
   import {
     folderDropTarget,
     folderZoneAt,
+    type DragSource,
     type DropTarget,
     type PinnedPosition,
   } from "../logic/drag-drop"
   import { bookmarkTitleChange } from "../logic/drafts"
   import { pointRect } from "../logic/menu-position"
-  import { childPosition } from "../logic/view-queries"
+  import { childPosition, selfAndDescendantFolderIds } from "../logic/view-queries"
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderGlyph from "./FolderGlyph.svelte"
@@ -32,6 +33,13 @@
   const key = $derived(`folder:${folder.bookmarkId}`)
   const emptyKey = $derived(`folder-empty:${folder.bookmarkId}`)
   const dropZone = $derived(ctx.drag.zoneFor(key))
+  const isDragged = $derived(ctx.drag.sourceKey === key)
+  const dragSource: DragSource = $derived({
+    _tag: "PinnedFolder",
+    bookmarkId: folder.bookmarkId,
+    position,
+    selfAndDescendantIds: selfAndDescendantFolderIds(folder),
+  })
   const intoFolder: DropTarget = $derived({
     _tag: "Pinned",
     parentId: folder.bookmarkId,
@@ -97,13 +105,13 @@
       zone,
     )
     ctx.drag.offer(event, key, zone, target)
-    if (zone === "into" && !folder.isExpanded && ctx.drag.source !== null) {
+    if (zone === "into" && !folder.isExpanded && ctx.drag.accepts(target)) {
       ctx.drag.hoverFor(key, () => setExpanded(true))
     }
   }
 </script>
 
-<li class="folder">
+<li class="folder" class:dragged={isDragged}>
   <div class="header-row" class:searchable={!folder.isExpanded} bind:this={headerRow}>
     {#if isEditing}
       <div class="header editing">
@@ -124,9 +132,12 @@
         class:drop-first-child={dropZone === "firstChild"}
         type="button"
         aria-expanded={folder.isExpanded}
+        draggable="true"
         onclick={toggle}
         ondblclick={() => (isEditing = true)}
         oncontextmenu={openMenu}
+        ondragstart={(event) => ctx.drag.begin(event, key, dragSource)}
+        ondragend={() => ctx.drag.end()}
         ondragover={onHeaderDragOver}
         ondragleave={() => ctx.drag.cancelHover()}
       >
@@ -167,6 +178,11 @@
 <style>
   .folder {
     list-style: none;
+    transition: opacity 120ms ease;
+  }
+
+  .folder.dragged {
+    opacity: 0.4;
   }
 
   .header-row {

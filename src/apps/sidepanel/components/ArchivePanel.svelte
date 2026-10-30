@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { Option, Result } from "effect"
-  import type { IdleMinutes } from "#modules/settings"
+  import { Option } from "effect"
+  import { idleDurationOf, idleMinutesChoicesWith, type IdleMinutes } from "#modules/settings"
   import type { SpaceId } from "#modules/space"
-  import { idleMinutesFrom } from "../logic/drafts"
   import { describeElapsed } from "../logic/elapsed-time"
   import { themeSwatch } from "../logic/space-themes"
   import { archiveEntriesFor, hostOf, type ArchiveScope } from "../logic/view-queries"
+  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
   import Icon from "./Icon.svelte"
@@ -20,43 +20,27 @@
   const ids = $props.id()
 
   let scope = $state<ArchiveScope>("currentSpace")
-  // 入力中は手元の文字を表示し、新しいビューが届いても書き換えない
-  let minutesDraft = $state<string | null>(null)
-  let minutesError = $state<string | null>(null)
 
   const autoArchive = $derived(ctx.view.autoArchive)
+  const minutesChoices = $derived(idleMinutesChoicesWith(autoArchive.idleMinutes))
   const entries = $derived(archiveEntriesFor(ctx.view.archive, scope, spaceId))
   const spaceById = $derived(new Map(ctx.view.spaces.map((space) => [space.id, space])))
 
   const updateAutoArchive = (enabled: boolean, idleMinutes: IdleMinutes) =>
     void ctx.run({ _tag: "UpdateAutoArchive", enabled, idleMinutes })
 
-  const discardMinutesDraft = () => {
-    minutesDraft = null
-    minutesError = null
-  }
+  const toggle = (enabled: boolean) => updateAutoArchive(enabled, autoArchive.idleMinutes)
 
-  const toggle = (enabled: boolean) => {
-    discardMinutesDraft()
-    updateAutoArchive(enabled, autoArchive.idleMinutes)
-  }
-
-  const commitMinutes = () => {
-    if (minutesDraft === null) return
-    const parsed = idleMinutesFrom(minutesDraft)
-    if (Result.isFailure(parsed)) {
-      minutesError = parsed.failure
-      return
-    }
-    discardMinutesDraft()
-    if (parsed.success !== autoArchive.idleMinutes) {
-      updateAutoArchive(autoArchive.enabled, parsed.success)
+  const chooseMinutes = (value: string) => {
+    const chosen = minutesChoices.find((minutes) => String(minutes) === value)
+    if (chosen !== undefined && chosen !== autoArchive.idleMinutes) {
+      updateAutoArchive(autoArchive.enabled, chosen)
     }
   }
 
-  const editMinutes = (draft: string) => {
-    minutesDraft = draft
-    minutesError = null
+  const durationText = (minutes: IdleMinutes) => {
+    const { value, unit } = idleDurationOf(minutes)
+    return messages.autoArchive.durationUnits[unit](value)
   }
 </script>
 
@@ -72,24 +56,20 @@
       />
       <span>使っていないタブを自動でアーカイブ</span>
     </label>
-    <label class="minutes" class:disabled={!autoArchive.enabled}>
-      <input
-        type="text"
-        inputmode="numeric"
-        aria-label="自動でアーカイブするまでの時間（分）"
-        aria-invalid={minutesError !== null}
-        aria-describedby={minutesError === null ? undefined : `${ids}-minutes-error`}
+    <label class="duration" class:disabled={!autoArchive.enabled}>
+      <select
+        aria-label={messages.autoArchive.duration}
         disabled={!autoArchive.enabled}
-        value={minutesDraft ?? String(autoArchive.idleMinutes)}
-        oninput={(event) => editMinutes(event.currentTarget.value)}
-        onchange={commitMinutes}
-        onblur={commitMinutes}
-      />
-      <span>分間使われなかったら</span>
+        onchange={(event) => chooseMinutes(event.currentTarget.value)}
+      >
+        {#each minutesChoices as minutes (minutes)}
+          <option value={String(minutes)} selected={minutes === autoArchive.idleMinutes}>
+            {durationText(minutes)}
+          </option>
+        {/each}
+      </select>
+      <span>{messages.autoArchive.durationSuffix}</span>
     </label>
-    {#if minutesError !== null}
-      <p id="{ids}-minutes-error" class="minutes-error" role="alert">{minutesError}</p>
-    {/if}
   </div>
 
   <div class="scope" role="radiogroup" aria-label="表示する範囲">
@@ -192,38 +172,28 @@
   }
 
   .toggle,
-  .minutes {
+  .duration {
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  .minutes.disabled {
+  .duration.disabled {
     color: var(--text-muted);
   }
 
-  .minutes input {
-    width: 64px;
+  .duration select {
     height: 24px;
-    padding: 0 6px;
+    padding: 0 4px;
     border: none;
     border-radius: 6px;
     background: var(--surface-active);
+    color: inherit;
+    font: inherit;
   }
 
-  .minutes input:disabled {
+  .duration select:disabled {
     opacity: 0.5;
-  }
-
-  .minutes input[aria-invalid="true"] {
-    outline: 2px solid var(--danger);
-  }
-
-  .minutes-error {
-    margin: -2px 0 0;
-    color: var(--danger);
-    font-size: 11.5px;
-    font-weight: 600;
   }
 
   .scope {

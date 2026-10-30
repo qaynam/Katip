@@ -30,6 +30,14 @@ export type DragSource =
       readonly openSplitViewId: SplitViewId | null
       readonly position: PinnedPosition
     }
+  // 普通のフォルダもライブフォルダも、ブックマークのフォルダとして同じように動かす
+  | {
+      readonly _tag: "PinnedFolder"
+      readonly bookmarkId: BookmarkId
+      readonly position: PinnedPosition
+      /** 自分と、中にあるすべてのフォルダ。どれの中にも落とせない */
+      readonly selfAndDescendantIds: ReadonlyArray<BookmarkId>
+    }
   | { readonly _tag: "Favorite"; readonly tabId: TabId; readonly index: number }
   | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
 
@@ -128,6 +136,7 @@ const singleTabOf = (source: DragSource): Option.Option<TabId> =>
     TemporarySplit: () => Option.none(),
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId),
     PinnedSplit: () => Option.none(),
+    PinnedFolder: () => Option.none(),
     Favorite: ({ tabId }) => Option.some(tabId),
     SpaceMark: () => Option.none(),
   })
@@ -138,6 +147,7 @@ const temporaryTabsOf = (source: DragSource): ReadonlyArray<TabId> =>
     TemporarySplit: ({ tabIds }) => tabIds,
     PinnedItem: () => [],
     PinnedSplit: () => [],
+    PinnedFolder: () => [],
     Favorite: () => [],
     SpaceMark: () => [],
   })
@@ -169,6 +179,7 @@ const dropOnTemporary = (
       Option.fromNullishOr(openSplitViewId).pipe(Option.map(placeSplit)),
     TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
+    PinnedFolder: () => Option.none(),
     Favorite: ({ tabId }) => Option.some(placeTab(tabId)),
     SpaceMark: () => Option.none(),
   })
@@ -214,6 +225,10 @@ const dropOnPinned = (
   return Match.valueTags(source, {
     PinnedItem: ({ bookmarkId, position }) => movePinned(bookmarkId, position),
     PinnedSplit: ({ bookmarkId, position }) => movePinned(bookmarkId, position),
+    PinnedFolder: ({ bookmarkId, position, selfAndDescendantIds }) =>
+      target.parentId !== null && selfAndDescendantIds.includes(target.parentId)
+        ? Option.none()
+        : movePinned(bookmarkId, position),
     TemporarySplit: ({ splitViewId }) =>
       Option.some<SidebarCommand>({
         _tag: "PlaceSplitInPinned",

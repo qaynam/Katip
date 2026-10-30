@@ -1,4 +1,5 @@
 import type { GitHubQuery, LiveSort, LiveSource } from "#modules/live-folders"
+import type { IdleDuration } from "#modules/settings"
 
 type LiveSourceKind = LiveSource["_tag"]
 
@@ -85,6 +86,16 @@ export const messages = {
       TokenRequired: "トークンを入力してください",
       TokenHasWhitespace: "トークンに空白は含められません",
     },
+  },
+  autoArchive: {
+    duration: "自動でアーカイブするまでの時間",
+    durationSuffix: "使われなかったら",
+    durationUnits: {
+      minute: (value: number) => `${value} 分`,
+      hour: (value: number) => `${value} 時間`,
+      day: (value: number) => `${value} 日`,
+      week: (value: number) => `${value} 週間`,
+    } satisfies Record<IdleDuration["unit"], (value: number) => string>,
   },
   folderSearch: {
     open: "フォルダ内を検索",

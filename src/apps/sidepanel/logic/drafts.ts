@@ -1,5 +1,4 @@
-import { Option, Result, Schema } from "effect"
-import { IdleMinutes } from "#modules/settings"
+import { Option, Schema } from "effect"
 import { SpaceName } from "#modules/space"
 
 const decodeSpaceName = Schema.decodeUnknownOption(SpaceName)
@@ -18,15 +17,4 @@ export const tabTitleChange = (draft: string, current: string): Option.Option<st
 export const bookmarkTitleChange = (draft: string, current: string): Option.Option<string> => {
   const title = draft.trim()
   return title === "" || title === current ? Option.none() : Option.some(title)
-}
-
-const decodeIdleMinutes = Schema.decodeUnknownOption(IdleMinutes)
-
-/** 受け付けられない入力は、その理由をユーザーに見せる文として返す */
-export const idleMinutesFrom = (draft: string): Result.Result<IdleMinutes, string> => {
-  const text = draft.trim()
-  if (text === "") return Result.fail("分数を入力してください")
-  const minutes = Number(text)
-  if (!Number.isInteger(minutes)) return Result.fail("分は整数で入力してください")
-  return Result.fromOption(decodeIdleMinutes(minutes), () => "1 分以上にしてください")
 }

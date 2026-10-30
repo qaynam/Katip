@@ -6,11 +6,19 @@ import { SplitViewId } from "#platform/browser"
 import {
   archiveEntry,
   openPinnedTab,
+  pinnedFolder,
   pinnedItem,
+  pinnedLiveFolder,
   pinnedSplit,
   tabView,
 } from "../testing/view-builders"
-import { archiveEntriesFor, hostOf, openSplitViewOf, pinnedItemDisplay } from "./view-queries"
+import {
+  archiveEntriesFor,
+  hostOf,
+  openSplitViewOf,
+  pinnedItemDisplay,
+  selfAndDescendantFolderIds,
+} from "./view-queries"
 
 describe("archiveEntriesFor", () => {
   const work = SpaceId.make("work")
@@ -103,5 +111,22 @@ describe("openSplitViewOf", () => {
 
     expect(openSplitViewOf(apart)).toBeNull()
     expect(openSplitViewOf(elsewhere)).toBeNull()
+  })
+})
+
+describe("selfAndDescendantFolderIds", () => {
+  it("フォルダ自身と、入れ子になったフォルダやライブフォルダをすべて含む", () => {
+    const folder = pinnedFolder("docs", {
+      children: [
+        pinnedItem("spec"),
+        pinnedFolder("minutes", { children: [pinnedLiveFolder("inbox")] }),
+      ],
+    })
+
+    expect(selfAndDescendantFolderIds(folder)).toStrictEqual(["docs", "minutes", "inbox"])
+  })
+
+  it("ライブフォルダは自分だけ", () => {
+    expect(selfAndDescendantFolderIds(pinnedLiveFolder("inbox"))).toStrictEqual(["inbox"])
   })
 })

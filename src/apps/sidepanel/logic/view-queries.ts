@@ -5,6 +5,7 @@ import type { BookmarkId, SplitViewId } from "#platform/browser"
 import type {
   PinnedFolderView,
   PinnedItemView,
+  PinnedLiveFolderView,
   PinnedNodeView,
   PinnedSplitView,
   SidebarView,
@@ -88,3 +89,18 @@ export const findPinnedNode = (
   }
   return Option.none()
 }
+
+/** フォルダ自身と、その中に入れ子になったすべてのフォルダ（ライブフォルダを含む） */
+export const selfAndDescendantFolderIds = (
+  folder: PinnedFolderView | PinnedLiveFolderView,
+): ReadonlyArray<BookmarkId> =>
+  folder._tag === "PinnedLiveFolder"
+    ? [folder.bookmarkId]
+    : [
+        folder.bookmarkId,
+        ...folder.children.flatMap((child) =>
+          child._tag === "PinnedFolder" || child._tag === "PinnedLiveFolder"
+            ? selfAndDescendantFolderIds(child)
+            : [],
+        ),
+      ]
