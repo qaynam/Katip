@@ -14,6 +14,7 @@ import {
   PinnedBookmarks,
   PinnedParent,
   SpaceFolders,
+  type FolderNestingRule,
   type PinnedNode,
   type PinnedPosition,
   type PinnedSplit,
@@ -300,6 +301,18 @@ const pinnedPosition = Effect.fnUntraced(function* (
   }
 })
 
+const currentNestingRule = Effect.map(
+  SettingsRepository.use((settings) => settings.get),
+  (settings): FolderNestingRule => ({ isTabGroupSyncEnabled: settings.syncTabGroups }),
+)
+
+const movePinnedNode = Effect.fnUntraced(function* (
+  bookmarkId: BookmarkId,
+  position: PinnedPosition,
+) {
+  yield* (yield* PinnedBookmarks).moveNode(bookmarkId, position, yield* currentNestingRule)
+})
+
 const placeInPinned = Effect.fnUntraced(function* (
   tabId: TabId,
   spaceId: SpaceId,
@@ -314,7 +327,7 @@ const placeInPinned = Effect.fnUntraced(function* (
     Option.fromNullishOr(tracked.pinned),
   )
   if (Option.isSome(binding)) {
-    yield* pinned.moveBookmark(binding.value.bookmarkId, position)
+    yield* movePinnedNode(binding.value.bookmarkId, position)
   } else {
     const url = urlOf(tab)
     const bookmarkId = yield* pinned.createBookmark(position, { title: titleOf(tab), url })
@@ -325,13 +338,13 @@ const placeInPinned = Effect.fnUntraced(function* (
   yield* state.workspace.update((workspace) => assignTab(workspace, tabId, spaceId, now))
 })
 
-/** ピンのノードのうち、開いているタブが結びつきうるブックマークの ID。 */
+/** ノードとその配下で、開いているタブが結びつきうるブックマークの ID。 */
 const pinnedIdsOf = (node: PinnedNode): ReadonlyArray<BookmarkId> =>
   Match.valueTags(node, {
     PinnedBookmark: ({ id }): ReadonlyArray<BookmarkId> => [id],
     PinnedSplit: ({ items }) => items.map((item) => item.id),
     PinnedLiveFolder: () => [],
-    PinnedFolder: ({ id }) => [id],
+    PinnedFolder: ({ children }) => children.flatMap(pinnedIdsOf),
   })
 
 const requireSplitSupport = Tabs.use((tabs) =>
@@ -474,7 +487,7 @@ const splitCommands = {
     const position = yield* pinnedPosition(command.placement)
     const existing = yield* sharedSplitPin(left, right)
     if (Option.isSome(existing)) {
-      yield* pinned.moveBookmark(existing.value, position)
+      yield* movePinnedNode(existing.value, position)
     } else {
       // それぞれが別々にピン留めされていたら、その 2 つのピンは外して 1 つの分割ピンにまとめる
       yield* Effect.forEach(
@@ -551,7 +564,7 @@ const tabCommands = {
     const space = yield* findSpace(spaceId)
     const tracked = yield* trackedOrReject(tabId)
     if (tracked.pinned !== null) {
-      yield* (yield* PinnedBookmarks).moveBookmark(tracked.pinned.bookmarkId, {
+      yield* movePinnedNode(tracked.pinned.bookmarkId, {
         parent: PinnedParent.SpaceRoot({ space }),
       })
     }
@@ -673,7 +686,9 @@ const pinnedCommands = {
     const state = yield* KatipState
     const pinned = yield* PinnedBookmarks
     const boundIds = pinnedIdsOf((yield* pinned.locate(bookmarkId)).node)
-    yield* pinned.moveBookmark(bookmarkId, yield* pinnedPosition(placement))
+    yield* movePinnedNode(bookmarkId, yield* pinnedPosition(placement)).pipe(
+      Effect.catchTag("FolderDepthExceeded", () => reject("これ以上深い階層には入れられません")),
+    )
     yield* state.workspace.update((workspace) =>
       boundIds
         .flatMap((id) => tabsBoundTo(workspace, id))
@@ -728,12 +743,11 @@ const pinnedCommands = {
     spaceId: SpaceId
     parentId: BookmarkId | null
   }) {
-    const settings = yield* (yield* SettingsRepository).get
     const position = yield* pinnedPosition({ spaceId, parentId, index: Number.MAX_SAFE_INTEGER })
     return yield* (yield* PinnedBookmarks).createFolder(
       { parent: position.parent },
       { title: "新しいフォルダ" },
-      { isTabGroupSyncEnabled: settings.syncTabGroups },
+      yield* currentNestingRule,
     )
   }),
 
@@ -907,6 +921,7 @@ const reasonFor = (error: { readonly _tag: string }): string =>
     Match.when("LastSpaceRemoval", () => "最後の Space は削除できません"),
     Match.when("PinnedNodeNotFound", () => "ピン留めが見つかりません"),
     Match.when("FolderDepthExceeded", () => "これ以上深い階層にはフォルダを作れません"),
+    Match.when("MoveIntoDescendant", () => "フォルダをそのフォルダ自身の中へは移せません"),
     Match.orElse(() => "操作を完了できませんでした"),
   )
 

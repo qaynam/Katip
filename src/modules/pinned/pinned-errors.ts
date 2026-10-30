@@ -22,3 +22,9 @@ export class FolderDepthExceeded extends Schema.TaggedError<FolderDepthExceeded>
   "FolderDepthExceeded",
   { depth: Schema.Int, maxDepth: Schema.Int },
 ) {}
+
+/** フォルダを、そのフォルダ自身かその配下のフォルダの中へ移そうとした。 */
+export class MoveIntoDescendant extends Schema.TaggedError<MoveIntoDescendant>()(
+  "MoveIntoDescendant",
+  { folderId: BookmarkId, parentId: BookmarkId },
+) {}

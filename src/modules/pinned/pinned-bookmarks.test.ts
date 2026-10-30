@@ -7,6 +7,7 @@ import { BookmarkId, Bookmarks, type BookmarkFolderType } from "#platform/browse
 import { FakeBrowser } from "#platform/browser-testing"
 import { isFolderExpanded } from "./folder-expansion"
 import { FolderExpansionStore } from "./folder-expansion-store"
+import { FolderDepthExceeded } from "./pinned-errors"
 import { LiveFolderStore } from "./live-folder-store"
 import { PinnedBookmarks, PinnedParent } from "./pinned-bookmarks"
 import type { PinnedNode, PinnedTree } from "./pinned-node"
@@ -318,7 +319,7 @@ describe("ブックマークの移動", () => {
       yield* addPin(spaceFolderId, "b")
       yield* addPin(spaceFolderId, "c")
 
-      yield* (yield* PinnedBookmarks).moveBookmark(a, { parent: spaceRoot(work), index: 2 })
+      yield* (yield* PinnedBookmarks).moveNode(a, { parent: spaceRoot(work), index: 2 }, syncOff)
 
       assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["b", "c", "a"])
     }).pipe(Effect.provide(TestLayer)),
@@ -331,7 +332,7 @@ describe("ブックマークの移動", () => {
       yield* addPin(spaceFolderId, "b")
       const c = yield* addPin(spaceFolderId, "c")
 
-      yield* (yield* PinnedBookmarks).moveBookmark(c, { parent: spaceRoot(work), index: 0 })
+      yield* (yield* PinnedBookmarks).moveNode(c, { parent: spaceRoot(work), index: 0 }, syncOff)
 
       assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["c", "a", "b"])
     }).pipe(Effect.provide(TestLayer)),
@@ -343,10 +344,11 @@ describe("ブックマークの移動", () => {
       const hobbyFolderId = yield* addFolder(yield* spaceFolderOf(hobby), "資料")
       yield* addPin(hobbyFolderId, "x")
 
-      yield* (yield* PinnedBookmarks).moveBookmark(pinId, {
-        parent: inFolder(hobbyFolderId),
-        index: 0,
-      })
+      yield* (yield* PinnedBookmarks).moveNode(
+        pinId,
+        { parent: inFolder(hobbyFolderId), index: 0 },
+        syncOff,
+      )
 
       assert.deepStrictEqual(yield* titlesIn(hobbyFolderId), ["a", "x"])
       assert.strictEqual((yield* (yield* PinnedBookmarks).locate(pinId)).spaceId, hobby.id)
@@ -360,7 +362,7 @@ describe("ブックマークの移動", () => {
       const pinId = yield* addPin(spaceFolderId, "a")
       yield* addPin(folderId, "x")
 
-      yield* (yield* PinnedBookmarks).moveBookmark(pinId, { parent: inFolder(folderId) })
+      yield* (yield* PinnedBookmarks).moveNode(pinId, { parent: inFolder(folderId) }, syncOff)
 
       assert.deepStrictEqual(yield* titlesIn(folderId), ["x", "a"])
     }).pipe(Effect.provide(TestLayer)),
@@ -372,7 +374,7 @@ describe("ブックマークの移動", () => {
       const outsideId = yield* addPin(barId, "outside")
 
       const error = yield* Effect.flip(
-        (yield* PinnedBookmarks).moveBookmark(outsideId, { parent: spaceRoot(work) }),
+        (yield* PinnedBookmarks).moveNode(outsideId, { parent: spaceRoot(work) }, syncOff),
       )
 
       assert.strictEqual(error._tag, "PinnedNodeNotFound")
@@ -386,23 +388,158 @@ describe("ブックマークの移動", () => {
       const outsideId = yield* addFolder(yield* outsideFolderId("bookmarks-bar"), "outside")
 
       const error = yield* Effect.flip(
-        (yield* PinnedBookmarks).moveBookmark(pinId, { parent: inFolder(outsideId) }),
+        (yield* PinnedBookmarks).moveNode(pinId, { parent: inFolder(outsideId) }, syncOff),
       )
 
       assert.strictEqual(error._tag, "PinnedNodeNotFound")
       assert.deepStrictEqual(yield* titlesIn(outsideId), [])
     }).pipe(Effect.provide(TestLayer)),
   )
+})
 
-  it.effect("フォルダは移動できない", () =>
+describe("フォルダの移動", () => {
+  it.effect("フォルダを、中身ごと別のフォルダの中へ移せる", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const spaceFolderId = yield* spaceFolderOf(work)
+      const moving = yield* addFolder(spaceFolderId, "資料")
+      yield* addPin(moving, "x")
+      const target = yield* addFolder(spaceFolderId, "まとめ")
 
-      const error = yield* Effect.flip(
-        (yield* PinnedBookmarks).moveBookmark(folderId, { parent: spaceRoot(hobby) }),
+      yield* (yield* PinnedBookmarks).moveNode(moving, { parent: inFolder(target) }, syncOff)
+
+      const location = yield* (yield* PinnedBookmarks).locate(moving)
+      assert.deepStrictEqual(
+        [yield* titlesIn(target), yield* titlesIn(moving), location.depth],
+        [["資料"], ["x"], 2],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("同じ親の中で後ろへ動かすと、フォルダも指定した位置に入る", () =>
+    Effect.gen(function* () {
+      const spaceFolderId = yield* spaceFolderOf(work)
+      const folderId = yield* addFolder(spaceFolderId, "f1")
+      yield* addPin(spaceFolderId, "p")
+      yield* addFolder(spaceFolderId, "f2")
+
+      yield* (yield* PinnedBookmarks).moveNode(
+        folderId,
+        { parent: spaceRoot(work), index: 2 },
+        syncOff,
       )
 
-      assert.strictEqual(error._tag, "PinnedNodeNotFound")
+      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["p", "f2", "f1"])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("別の Space へ移すと、中身ごとその Space のピン留めになる", () =>
+    Effect.gen(function* () {
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const pinId = yield* addPin(folderId, "x")
+
+      yield* (yield* PinnedBookmarks).moveNode(folderId, { parent: spaceRoot(hobby) }, syncOff)
+
+      const pinned = yield* PinnedBookmarks
+      assert.deepStrictEqual(
+        [(yield* pinned.locate(folderId)).spaceId, (yield* pinned.locate(pinId)).spaceId],
+        [hobby.id, hobby.id],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("配下にフォルダを持つフォルダを、上限を超える深さへは移せない", () =>
+    Effect.gen(function* () {
+      const spaceFolderId = yield* spaceFolderOf(work)
+      const outer = yield* addFolder(spaceFolderId, "外")
+      yield* addFolder(outer, "内")
+      const target = yield* addFolder(spaceFolderId, "まとめ")
+
+      const error = yield* Effect.flip(
+        (yield* PinnedBookmarks).moveNode(outer, { parent: inFolder(target) }, syncOff),
+      )
+
+      assert.deepStrictEqual(
+        [error, yield* titlesIn(target)],
+        [new FolderDepthExceeded({ depth: 3, maxDepth: 2 }), []],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("中の分割ピンとライブフォルダは深さに数えず、上限の深さまで移せる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const outer = yield* pinned.createFolder(
+        { parent: spaceRoot(work) },
+        { title: "外" },
+        syncOff,
+      )
+      yield* pinned.createSplit(
+        { parent: inFolder(outer) },
+        {
+          title: "メール | 予定",
+          left: { title: "メール", url: "https://mail.example/" },
+          right: { title: "予定", url: "https://calendar.example/" },
+        },
+      )
+      yield* pinned.createLiveFolder(
+        { parent: inFolder(outer) },
+        { title: "レビュー依頼", source: { _tag: "GitHub", query: "review-requested" } },
+      )
+      const target = yield* pinned.createFolder(
+        { parent: spaceRoot(work) },
+        { title: "まとめ" },
+        syncOff,
+      )
+
+      yield* pinned.moveNode(outer, { parent: inFolder(target) }, syncOff)
+
+      assert.strictEqual((yield* pinned.locate(outer)).depth, 2)
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("タブグループ同期が ON のときは、フォルダをフォルダの中へ移せない", () =>
+    Effect.gen(function* () {
+      const spaceFolderId = yield* spaceFolderOf(work)
+      const moving = yield* addFolder(spaceFolderId, "資料")
+      const target = yield* addFolder(spaceFolderId, "まとめ")
+
+      const error = yield* Effect.flip(
+        (yield* PinnedBookmarks).moveNode(moving, { parent: inFolder(target) }, syncOn),
+      )
+
+      assert.deepStrictEqual(error, new FolderDepthExceeded({ depth: 2, maxDepth: 1 }))
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("すでに上限より深いフォルダも、同じ深さの中でなら並べ替えられる", () =>
+    Effect.gen(function* () {
+      const spaceFolderId = yield* spaceFolderOf(work)
+      const outer = yield* addFolder(spaceFolderId, "外")
+      yield* addFolder(outer, "内")
+      yield* addPin(spaceFolderId, "p")
+
+      yield* (yield* PinnedBookmarks).moveNode(outer, { parent: spaceRoot(work), index: 1 }, syncOn)
+
+      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["p", "外"])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("自分自身や自分の子孫の中へは移せない", () =>
+    Effect.gen(function* () {
+      const outer = yield* addFolder(yield* spaceFolderOf(work), "外")
+      const inner = yield* addFolder(outer, "内")
+      const pinned = yield* PinnedBookmarks
+
+      const errors = [
+        yield* Effect.flip(pinned.moveNode(outer, { parent: inFolder(inner) }, syncOff)),
+        yield* Effect.flip(pinned.moveNode(outer, { parent: inFolder(outer) }, syncOff)),
+      ]
+
+      assert.deepStrictEqual(
+        errors.map((error) => error._tag),
+        ["MoveIntoDescendant", "MoveIntoDescendant"],
+      )
+      assert.deepStrictEqual(yield* titlesIn(inner), [])
     }).pipe(Effect.provide(TestLayer)),
   )
 })
@@ -557,7 +694,7 @@ describe("分割ビューのピン留め", () => {
         syncOff,
       )
 
-      yield* pinned.moveBookmark(created.folderId, { parent: inFolder(folder) })
+      yield* pinned.moveNode(created.folderId, { parent: inFolder(folder) }, syncOff)
       const location = yield* pinned.locate(created.folderId)
 
       assert.deepStrictEqual(
@@ -629,7 +766,7 @@ describe("ライブフォルダ", () => {
         syncOff,
       )
 
-      yield* pinned.moveBookmark(folderId, { parent: inFolder(folder) })
+      yield* pinned.moveNode(folderId, { parent: inFolder(folder) }, syncOff)
       const location = yield* pinned.locate(folderId)
 
       assert.deepStrictEqual(

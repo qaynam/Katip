@@ -178,3 +178,15 @@ export const liveFoldersIn = (tree: PinnedTree): ReadonlyArray<PinnedLiveFolder>
       PinnedFolder: (folder) => liveFoldersIn(folder.children),
     }),
   )
+
+/**
+ * フォルダ自身を 1 段目として数えた、配下のフォルダの段数。
+ *
+ * 分割ピンとライブフォルダは 1 つのピンとして扱い、段に数えない。
+ */
+export const folderHeight = (folder: PinnedFolder): number =>
+  1 +
+  Math.max(
+    0,
+    ...folder.children.map((child) => (child._tag === "PinnedFolder" ? folderHeight(child) : 0)),
+  )

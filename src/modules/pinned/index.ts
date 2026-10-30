@@ -17,7 +17,12 @@ export {
   type PinnedLocation,
   type PinnedPosition,
 } from "./pinned-bookmarks"
-export { FolderDepthExceeded, PinnedNodeNotFound, PinnedTreeUnavailable } from "./pinned-errors"
+export {
+  FolderDepthExceeded,
+  MoveIntoDescendant,
+  PinnedNodeNotFound,
+  PinnedTreeUnavailable,
+} from "./pinned-errors"
 export {
   findPinnedNode,
   liveFoldersIn,

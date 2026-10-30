@@ -4,9 +4,11 @@ import type { LiveSource } from "#modules/live-folders"
 import { BookmarkId, type BookmarkFolder, type BookmarkNode } from "#platform/browser"
 import {
   findPinnedNode,
+  folderHeight,
   folderIdsWithin,
   liveFoldersIn,
   pinnedTreeFrom,
+  type PinnedBookmark,
   type PinnedFolder,
   type PinnedNode,
 } from "./pinned-node"
@@ -296,5 +298,46 @@ describe("ライブフォルダとして作ったフォルダ", () => {
     )
 
     expect(liveFoldersIn(tree).map((live) => live.id)).toStrictEqual(["inner", "outer"])
+  })
+})
+
+describe("フォルダの段数", () => {
+  const bookmarkPin = (id: string): PinnedBookmark => ({
+    _tag: "PinnedBookmark",
+    id: bookmarkId(id),
+    title: id,
+    url: `https://example.com/${id}`,
+  })
+
+  it("中にフォルダの無いフォルダは 1 段", () => {
+    expect(folderHeight(pinFolder("f1", [pin("b1")]))).toBe(1)
+  })
+
+  it("いちばん深い枝の段数になる", () => {
+    const folder = pinFolder("f1", [
+      pinFolder("f2", []),
+      pinFolder("f3", [pinFolder("f4", [pin("b1")])]),
+    ])
+
+    expect(folderHeight(folder)).toBe(3)
+  })
+
+  it("分割ピンとライブフォルダは段に数えない", () => {
+    const folder = pinFolder("f1", [
+      {
+        _tag: "PinnedSplit",
+        id: bookmarkId("split"),
+        title: "split",
+        items: [bookmarkPin("left"), bookmarkPin("right")],
+      },
+      {
+        _tag: "PinnedLiveFolder",
+        id: bookmarkId("live"),
+        title: "live",
+        source: { _tag: "GitHub", query: "mentioned" },
+      },
+    ])
+
+    expect(folderHeight(folder)).toBe(1)
   })
 })

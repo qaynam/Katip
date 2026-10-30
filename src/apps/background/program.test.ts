@@ -7,7 +7,13 @@ import { FakeHttp } from "#platform/http"
 import { FakePermissions } from "#platform/permissions"
 import { OperationTimeLimit } from "./program"
 import { Alarms, Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
-import type { PinnedItemView, SidebarView, SpaceView } from "#protocol"
+import type {
+  CommandOutcome,
+  PinnedItemView,
+  PinnedNodeView,
+  SidebarView,
+  SpaceView,
+} from "#protocol"
 import {
   backgroundTestLayer,
   eventually,
@@ -525,6 +531,138 @@ describe("分割ビュー", () => {
         const [left, right] = reopened.items.map((item) => item.openTab?.tab.splitViewId ?? null)
 
         expect([left !== null, left === right]).toStrictEqual([true, true])
+      }),
+    ),
+  )
+})
+
+describe("フォルダの移動", () => {
+  const pinnedNodesOf = (view: SidebarView, spaceName: string): ReadonlyArray<PinnedNodeView> =>
+    Option.match(spaceNamed(view, spaceName), {
+      onNone: () => [],
+      onSome: (space) => (space.pinned._tag === "Available" ? space.pinned.nodes : []),
+    })
+
+  const createdIdOf = (outcome: CommandOutcome) =>
+    outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null
+      ? Effect.succeed(outcome.createdBookmarkId)
+      : Effect.die(new Error("フォルダを作れなかった"))
+
+  it.live("別の Space のフォルダへ移すと、中で開いているピンのタブもその Space に移る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://mail.example/", title: "メール" }, { url: "https://b.example/" }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+        const folderId = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+        )
+        yield* sidebar.run({
+          _tag: "PlaceTabInPinned",
+          tabId: tabIds[0],
+          placement: { spaceId: home, parentId: folderId, index: 0 },
+        })
+        yield* sidebar.run({ _tag: "CreateSpace", windowId })
+        const work = Option.getOrThrow(
+          spaceNamed(yield* sidebar.viewWhere((v) => v.spaces.length === 2), "スペース 2"),
+        ).id
+        const targetId = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: work, parentId: null }),
+        )
+
+        const outcome = yield* sidebar.run({
+          _tag: "MovePinnedItem",
+          bookmarkId: folderId,
+          placement: { spaceId: work, parentId: targetId, index: 0 },
+        })
+        const openPinsInMovedFolder = (view: SidebarView) =>
+          pinnedNodesOf(view, "スペース 2").flatMap((target) =>
+            target._tag === "PinnedFolder"
+              ? target.children.flatMap((moved) =>
+                  moved._tag === "PinnedFolder"
+                    ? moved.children.flatMap((pin) =>
+                        pin._tag === "PinnedItem" && pin.openTab !== null
+                          ? [[pin.title, pin.openTab.tab.tabId] as const]
+                          : [],
+                      )
+                    : [],
+                )
+              : [],
+          )
+        const view = yield* sidebar.viewWhere((v) => openPinsInMovedFolder(v).length > 0)
+
+        expect({
+          outcome: outcome._tag,
+          moved: openPinsInMovedFolder(view),
+          leftInHome: pinnedNodesOf(view, "ホーム").length,
+        }).toStrictEqual({
+          outcome: "Succeeded",
+          moved: [["メール", tabIds[0]]],
+          leftInHome: 0,
+        })
+      }),
+    ),
+  )
+
+  it.live("配下にフォルダを持つフォルダを上限より深くへ移そうとすると、理由つきで断られる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+        const outer = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+        )
+        yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: outer })
+        const target = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+        )
+
+        const outcome = yield* sidebar.run({
+          _tag: "MovePinnedItem",
+          bookmarkId: outer,
+          placement: { spaceId: home, parentId: target, index: 0 },
+        })
+
+        expect(outcome).toStrictEqual({
+          _tag: "Failed",
+          reason: "これ以上深い階層には入れられません",
+        })
+      }),
+    ),
+  )
+
+  it.live("フォルダを自分の中のフォルダへ移そうとすると、理由つきで断られる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+        const outer = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+        )
+        const inner = yield* createdIdOf(
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: outer }),
+        )
+
+        const outcome = yield* sidebar.run({
+          _tag: "MovePinnedItem",
+          bookmarkId: outer,
+          placement: { spaceId: home, parentId: inner, index: 0 },
+        })
+
+        expect(outcome).toStrictEqual({
+          _tag: "Failed",
+          reason: "フォルダをそのフォルダ自身の中へは移せません",
+        })
       }),
     ),
   )

@@ -10,13 +10,20 @@ import {
 } from "./folder-depth"
 import { FolderExpansionStore } from "./folder-expansion-store"
 import { LiveFolderStore } from "./live-folder-store"
-import { FolderDepthExceeded, PinnedNodeNotFound, PinnedTreeUnavailable } from "./pinned-errors"
+import {
+  FolderDepthExceeded,
+  MoveIntoDescendant,
+  PinnedNodeNotFound,
+  PinnedTreeUnavailable,
+} from "./pinned-errors"
 import {
   findPinnedNode,
+  folderHeight,
   folderIdsWithin,
   liveFoldersIn,
   pinnedTreeFrom,
   splitIdsWithin,
+  type PinnedFolder,
   type PinnedNodeLocation,
   type PinnedTree,
 } from "./pinned-node"
@@ -121,11 +128,21 @@ export class PinnedBookmarks extends Context.Service<
       draft: { readonly title: string },
       rule: FolderNestingRule,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | FolderDepthExceeded | BrowserApiError>
-    /** ブックマーク・分割ピン・ライブフォルダを移す。別の Space へも移せる。フォルダは移せない。 */
-    moveBookmark(
+    /**
+     * ピン留めのノード（ブックマーク・分割ピン・ライブフォルダ・フォルダ）を移す。別の Space へも移せる。
+     *
+     * フォルダは、移した後に配下のいちばん深いフォルダが `rule` の深さの上限を超え、かつ今より
+     * 深くなるなら {@link FolderDepthExceeded} で断る。今すでに上限より深いフォルダでも、同じ深さか
+     * 浅い所へは移せる。自身や配下のフォルダの中へは {@link MoveIntoDescendant} で断る。
+     */
+    moveNode(
       bookmarkId: BookmarkId,
       position: PinnedPosition,
-    ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
+      rule: FolderNestingRule,
+    ): Effect.Effect<
+      void,
+      PinnedNodeNotFound | FolderDepthExceeded | MoveIntoDescendant | BrowserApiError
+    >
     /** ブックマークとフォルダのどちらにも使える。Space フォルダの改名は {@link SpaceFolders} で行う。 */
     rename(
       bookmarkId: BookmarkId,
@@ -221,6 +238,28 @@ export class PinnedBookmarks extends Context.Service<
             Effect.map(locateFolder(folderId), ({ depth }) => ({ folderId, depth })),
         })
 
+      const requireFolderFits = Effect.fnUntraced(function* (
+        folder: PinnedFolder,
+        currentDepth: number,
+        to: { readonly folderId: BookmarkId; readonly depth: number },
+        rule: FolderNestingRule,
+      ) {
+        if (folderIdsWithin(folder).includes(to.folderId)) {
+          return yield* new MoveIntoDescendant({ folderId: folder.id, parentId: to.folderId })
+        }
+        const height = folderHeight(folder)
+        const deepestAfter = to.depth + height
+        const deepestNow = currentDepth + height - 1
+        // 上限を超えるかだけで断ると、タブグループ同期を ON にする前に作った入れ子のフォルダを
+        // 同じ親の中で並べ替えることすらできなくなる。今より深くする移動だけを断る
+        if (deepestAfter > maxFolderDepth(rule) && deepestAfter > deepestNow) {
+          return yield* new FolderDepthExceeded({
+            depth: deepestAfter,
+            maxDepth: maxFolderDepth(rule),
+          })
+        }
+      })
+
       return PinnedBookmarks.of({
         loadSpaceTree: Effect.fn("PinnedBookmarks.loadSpaceTree")(function* (spaceId) {
           const unavailable = new PinnedTreeUnavailable({ spaceId })
@@ -296,9 +335,12 @@ export class PinnedBookmarks extends Context.Service<
           yield* folderExpansion.setExpanded(created.id, true)
           return created.id
         }),
-        moveBookmark: Effect.fn("PinnedBookmarks.moveBookmark")(function* (bookmarkId, position) {
-          const from = yield* locateItem(bookmarkId)
+        moveNode: Effect.fn("PinnedBookmarks.moveNode")(function* (bookmarkId, position, rule) {
+          const from = yield* locate(bookmarkId)
           const to = yield* resolveParent(position.parent)
+          if (from.node._tag === "PinnedFolder") {
+            yield* requireFolderFits(from.node, from.depth, to, rule)
+          }
           yield* bookmarks.move(bookmarkId, {
             parentId: to.folderId,
             ...atIndex(chromeMoveIndex(from, position)),
