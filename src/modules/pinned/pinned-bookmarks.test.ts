@@ -509,3 +509,77 @@ describe("削除", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 })
+
+describe("分割ビューのピン留め", () => {
+  const draft = {
+    title: "メール | 予定",
+    left: { title: "メール", url: "https://mail.example/" },
+    right: { title: "予定", url: "https://calendar.example/" },
+  }
+
+  it.effect("2 つのブックマークを持つ分割ピンとして作られ、ツリーで 1 つのピンとして読める", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+
+      yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
+      const tree = yield* pinned.loadSpaceTree(work.id)
+
+      assert.deepStrictEqual(
+        tree.map((node) =>
+          node._tag === "PinnedSplit" ? [node.title, node.items.map((item) => item.title)] : node,
+        ),
+        [["メール | 予定", ["メール", "予定"]]],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("深さの上限に達したフォルダの中にも作れる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "外" }, syncOn)
+
+      const created = yield* pinned.createSplit({ parent: inFolder(outer) }, draft)
+      const location = yield* pinned.locate(created.folderId)
+
+      assert.deepStrictEqual([location.node._tag, location.depth], ["PinnedSplit", 2])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("別の Space のフォルダへ移せる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const created = yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
+      const folder = yield* pinned.createFolder(
+        { parent: spaceRoot(hobby) },
+        { title: "旅" },
+        syncOff,
+      )
+
+      yield* pinned.moveBookmark(created.folderId, { parent: inFolder(folder) })
+      const location = yield* pinned.locate(created.folderId)
+
+      assert.deepStrictEqual(
+        [location.spaceId, location.parentFolderId, location.node._tag],
+        [hobby.id, Option.some(folder), "PinnedSplit"],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("削除すると中の 2 つのブックマークも消える", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const created = yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
+
+      yield* pinned.removeBookmark(created.folderId)
+
+      assert.deepStrictEqual(
+        [
+          yield* exists(created.folderId),
+          yield* exists(created.left),
+          yield* exists(created.right),
+        ],
+        [false, false, false],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})

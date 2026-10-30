@@ -9,7 +9,9 @@ export { FolderExpansionStore } from "./folder-expansion-store"
 export {
   PinnedBookmarks,
   PinnedParent,
+  type CreatedSplit,
   type PinnedBookmarkDraft,
+  type PinnedSplitDraft,
   type PinnedLocation,
   type PinnedPosition,
 } from "./pinned-bookmarks"
@@ -20,7 +22,9 @@ export {
   type PinnedFolder,
   type PinnedNode,
   type PinnedNodeLocation,
+  type PinnedSplit,
   type PinnedTree,
 } from "./pinned-node"
 export { hasNavigatedAway } from "./pinned-url"
 export { SpaceFolders, type SpaceFolderOwner } from "./space-folders"
+export { SplitFolderStore } from "./split-folder-store"

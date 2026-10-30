@@ -179,3 +179,61 @@ describe("フォルダ配下のフォルダ ID", () => {
     expect(folderIdsWithin(folder)).toStrictEqual(["f1", "f2"])
   })
 })
+
+describe("分割ビューとしてピン留めしたフォルダ", () => {
+  const splitIds = new Set([bookmarkId("split")])
+
+  it("印の付いたフォルダの中身が 2 つのブックマークなら、左右の順で分割ピンになる", () => {
+    const spaceFolder = loadedFolder("space", [
+      loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")], "左 | 右"),
+    ])
+
+    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+
+    expect(tree).toStrictEqual(
+      Option.some([
+        {
+          _tag: "PinnedSplit",
+          id: bookmarkId("split"),
+          title: "左 | 右",
+          items: [pin("left"), pin("right")],
+        },
+      ]),
+    )
+  })
+
+  it("印の付いたフォルダでも、中身が 2 つのブックマークでなくなっていたら普通のフォルダになる", () => {
+    const spaceFolder = loadedFolder("space", [loadedFolder("split", [chromeBookmark("only")])])
+
+    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+
+    expect(tree).toStrictEqual(Option.some([pinFolder("split", [pin("only")])]))
+  })
+
+  it("印の無いフォルダは、中身が 2 つのブックマークでも普通のフォルダになる", () => {
+    const spaceFolder = loadedFolder("space", [
+      loadedFolder("folder", [chromeBookmark("a"), chromeBookmark("b")]),
+    ])
+
+    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+
+    expect(tree).toStrictEqual(Option.some([pinFolder("folder", [pin("a"), pin("b")])]))
+  })
+
+  it("分割ピンの中のブックマークも、分割ピンを親として見つかる", () => {
+    const tree = Option.getOrThrow(
+      pinnedTreeFrom(
+        loadedFolder("space", [
+          loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")]),
+        ]),
+        splitIds,
+      ),
+    )
+
+    const found = findPinnedNode(tree, bookmarkId("right"))
+
+    expect(Option.map(found, (l) => [l.parentFolderId, l.index])).toStrictEqual(
+      Option.some([Option.some(bookmarkId("split")), 1]),
+    )
+  })
+})

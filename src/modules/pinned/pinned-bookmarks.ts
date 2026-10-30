@@ -13,9 +13,11 @@ import {
   findPinnedNode,
   folderIdsWithin,
   pinnedTreeFrom,
+  splitIdsWithin,
   type PinnedNodeLocation,
   type PinnedTree,
 } from "./pinned-node"
+import { SplitFolderStore } from "./split-folder-store"
 import { SpaceFolders, type SpaceFolderOwner } from "./space-folders"
 
 export type PinnedParent = Data.TaggedEnum<{
@@ -38,6 +40,18 @@ export interface PinnedLocation extends PinnedNodeLocation {
 export interface PinnedBookmarkDraft {
   readonly title: string
   readonly url: string
+}
+
+export interface PinnedSplitDraft {
+  readonly title: string
+  readonly left: PinnedBookmarkDraft
+  readonly right: PinnedBookmarkDraft
+}
+
+export interface CreatedSplit {
+  readonly folderId: BookmarkId
+  readonly left: BookmarkId
+  readonly right: BookmarkId
 }
 
 const atIndex = (index: number | undefined) => (index === undefined ? {} : { index })
@@ -75,13 +89,22 @@ export class PinnedBookmarks extends Context.Service<
       position: PinnedPosition,
       draft: PinnedBookmarkDraft,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | BrowserApiError>
+    /**
+     * 分割ビューとしてピン留めする。2 つのブックマークを入れたフォルダを作り、分割の印を付ける。
+     *
+     * フォルダの深さ制限は受けない（ユーザーが中身を整理するフォルダではなく、1 つのピンとして扱う）。
+     */
+    createSplit(
+      position: PinnedPosition,
+      draft: PinnedSplitDraft,
+    ): Effect.Effect<CreatedSplit, PinnedNodeNotFound | BrowserApiError>
     /** 作ったフォルダは開いた状態で保存する。 */
     createFolder(
       position: PinnedPosition,
       draft: { readonly title: string },
       rule: FolderNestingRule,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | FolderDepthExceeded | BrowserApiError>
-    /** 別の Space へも移せる。フォルダは移せない。 */
+    /** ブックマークと分割ピンを移す。別の Space へも移せる。フォルダは移せない。 */
     moveBookmark(
       bookmarkId: BookmarkId,
       position: PinnedPosition,
@@ -95,6 +118,7 @@ export class PinnedBookmarks extends Context.Service<
       bookmarkId: BookmarkId,
       draft: PinnedBookmarkDraft,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
+    /** ブックマークか分割ピンを削除する。分割ピンは中の 2 つのブックマークごと消える。 */
     removeBookmark(
       bookmarkId: BookmarkId,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
@@ -108,14 +132,17 @@ export class PinnedBookmarks extends Context.Service<
       const bookmarks = yield* Bookmarks
       const spaceFolders = yield* SpaceFolders
       const folderExpansion = yield* FolderExpansionStore
+      const splitFolders = yield* SplitFolderStore
 
-      const readableSpaceTrees = Effect.map(spaceFolders.readSpaceSubtrees, (subtrees) =>
-        Array.getSomes(
+      const readableSpaceTrees = Effect.gen(function* () {
+        const subtrees = yield* spaceFolders.readSpaceSubtrees
+        const splitIds = yield* splitFolders.load
+        return Array.getSomes(
           Array.fromIterable(subtrees).map(([spaceId, folder]) =>
-            Option.map(pinnedTreeFrom(folder), (tree) => ({ spaceId, tree })),
+            Option.map(pinnedTreeFrom(folder, splitIds), (tree) => ({ spaceId, tree })),
           ),
-        ),
-      )
+        )
+      })
 
       const locate = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
         const spaceTrees = yield* readableSpaceTrees
@@ -131,6 +158,14 @@ export class PinnedBookmarks extends Context.Service<
       const locateBookmark = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
         const location = yield* locate(bookmarkId)
         if (location.node._tag !== "PinnedBookmark") {
+          return yield* new PinnedNodeNotFound({ bookmarkId })
+        }
+        return location
+      })
+
+      const locateItem = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
+        const location = yield* locate(bookmarkId)
+        if (location.node._tag === "PinnedFolder") {
           return yield* new PinnedNodeNotFound({ bookmarkId })
         }
         return location
@@ -164,8 +199,11 @@ export class PinnedBookmarks extends Context.Service<
         loadSpaceTree: Effect.fn("PinnedBookmarks.loadSpaceTree")(function* (spaceId) {
           const unavailable = new PinnedTreeUnavailable({ spaceId })
           const subtrees = yield* Effect.mapError(spaceFolders.readSpaceSubtrees, () => unavailable)
+          const splitIds = yield* Effect.mapError(splitFolders.load, () => unavailable)
           return yield* Effect.fromOption(
-            Option.flatMap(Option.fromNullishOr(subtrees.get(spaceId)), pinnedTreeFrom),
+            Option.flatMap(Option.fromNullishOr(subtrees.get(spaceId)), (folder) =>
+              pinnedTreeFrom(folder, splitIds),
+            ),
             () => unavailable,
           )
         }),
@@ -191,6 +229,18 @@ export class PinnedBookmarks extends Context.Service<
           })
           return created.id
         }),
+        createSplit: Effect.fn("PinnedBookmarks.createSplit")(function* (position, draft) {
+          const parent = yield* resolveParent(position.parent)
+          const folder = yield* bookmarks.create({
+            parentId: parent.folderId,
+            title: draft.title,
+            ...atIndex(position.index),
+          })
+          const left = yield* bookmarks.create({ parentId: folder.id, ...draft.left })
+          const right = yield* bookmarks.create({ parentId: folder.id, ...draft.right })
+          yield* splitFolders.mark(folder.id)
+          return { folderId: folder.id, left: left.id, right: right.id }
+        }),
         createFolder: Effect.fn("PinnedBookmarks.createFolder")(function* (position, draft, rule) {
           const parent = yield* resolveParent(position.parent)
           if (!canCreateFolderInside(parent.depth, rule)) {
@@ -208,7 +258,7 @@ export class PinnedBookmarks extends Context.Service<
           return created.id
         }),
         moveBookmark: Effect.fn("PinnedBookmarks.moveBookmark")(function* (bookmarkId, position) {
-          const from = yield* locateBookmark(bookmarkId)
+          const from = yield* locateItem(bookmarkId)
           const to = yield* resolveParent(position.parent)
           yield* bookmarks.move(bookmarkId, {
             parentId: to.folderId,
@@ -224,21 +274,28 @@ export class PinnedBookmarks extends Context.Service<
           yield* bookmarks.update(bookmarkId, { title: draft.title, url: draft.url })
         }),
         removeBookmark: Effect.fn("PinnedBookmarks.removeBookmark")(function* (bookmarkId) {
-          yield* locateBookmark(bookmarkId)
+          const location = yield* locateItem(bookmarkId)
+          if (location.node._tag === "PinnedSplit") {
+            yield* bookmarks.removeTree(bookmarkId)
+            yield* splitFolders.forget([bookmarkId])
+            return
+          }
           yield* bookmarks.remove(bookmarkId)
         }),
         removeFolder: Effect.fn("PinnedBookmarks.removeFolder")(function* (folderId) {
           const location = yield* locateFolder(folderId)
           yield* bookmarks.removeTree(folderId)
           yield* folderExpansion.forget(folderIdsWithin(location.node))
+          yield* splitFolders.forget(splitIdsWithin(location.node))
         }),
       })
     }),
   )
 
-  /** {@link SpaceFolders} と {@link FolderExpansionStore} も合わせて提供する。 */
+  /** {@link SpaceFolders}、{@link FolderExpansionStore}、{@link SplitFolderStore} も合わせて提供する。 */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(SpaceFolders.layer),
     Layer.provideMerge(FolderExpansionStore.layer),
+    Layer.provideMerge(SplitFolderStore.layer),
   )
 }
