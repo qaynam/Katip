@@ -7,7 +7,7 @@ import type { SidebarConnection } from "../sidepanel/connection/sidebar-connecti
 import { respondInFixture } from "./fixture-backend"
 import { fixtureView } from "./fixture-view"
 
-const DEFAULT_EXTENSION_ID = "dbkahiplpmkdlehegaogbiddbompnalc"
+const DEFAULT_EXTENSION_ID = "hggfdjnidgfpigakapgkgolnjemijaed"
 
 type Mode = "fixture" | "extension"
 
