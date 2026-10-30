@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
+import { IdleMinutes } from "#modules/settings"
 import { SpaceColor, SpaceId, SpaceName } from "#modules/space"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
@@ -99,9 +100,6 @@ export const SidebarView = Schema.Struct({
   spaces: Schema.Array(SpaceView),
   favorites: Schema.Array(FavoriteView),
   archive: Schema.Array(ArchiveEntry),
-  autoArchive: Schema.Struct({
-    enabled: Schema.Boolean,
-    idleMinutes: Schema.Number,
-  }),
+  autoArchive: Schema.Struct({ enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
 })
 export type SidebarView = typeof SidebarView.Type

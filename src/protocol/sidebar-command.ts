@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
+import { IdleMinutes } from "#modules/settings"
 import { SpaceColor, SpaceId, SpaceName } from "#modules/space"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
@@ -17,6 +18,7 @@ export const PinnedPlacement = Schema.Struct({
   spaceId: SpaceId,
   // null は Space 直下を表す
   parentId: Schema.NullOr(BookmarkId),
+  // 移動・作成した後に親の中で占める位置。同じ親の中で後ろへ動かすなら、自分が抜けた分を詰めて数える
   index: Schema.Int,
 })
 export type PinnedPlacement = typeof PinnedPlacement.Type
@@ -67,10 +69,7 @@ export const SidebarCommand = Schema.Union([
 
   Schema.TaggedStruct("RestoreArchiveEntry", { windowId: WindowId, entryId: ArchiveEntryId }),
   Schema.TaggedStruct("RemoveArchiveEntry", { entryId: ArchiveEntryId }),
-  Schema.TaggedStruct("UpdateAutoArchive", {
-    enabled: Schema.Boolean,
-    idleMinutes: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1))),
-  }),
+  Schema.TaggedStruct("UpdateAutoArchive", { enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
   Schema.TaggedStruct("OpenSettings", {}),
 ])
 export type SidebarCommand = typeof SidebarCommand.Type
