@@ -2,10 +2,12 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte"
 import { Effect, Layer, ManagedRuntime, Option } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
+import type { KeyboardPlatform } from "#modules/page-shortcuts"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
 import { BrowserApiError, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import App from "./App.svelte"
+import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 
 const VERSION = "1.2.3"
 
@@ -36,6 +38,7 @@ interface RenderOptions {
   readonly browserLanguages?: ReadonlyArray<string>
   readonly rejectedStorageOperation?: "get" | "set"
   readonly supportsSplitView?: boolean
+  readonly keyboardPlatform?: KeyboardPlatform
 }
 
 const makeRuntime = ({
@@ -48,7 +51,11 @@ const makeRuntime = ({
       ? browser
       : storageRejecting(rejectedStorageOperation).pipe(Layer.provide(browser))
   const runtime = ManagedRuntime.make(
-    Layer.mergeAll(SettingsRepository.layer.pipe(Layer.provide(storage)), browser),
+    Layer.mergeAll(
+      SettingsRepository.layer.pipe(Layer.provide(storage)),
+      browser,
+      FakeOptionalPermissions.layer,
+    ),
   )
   runtimes.push(runtime)
   return runtime
@@ -57,18 +64,22 @@ const makeRuntime = ({
 const renderOptions = async ({
   saved = {},
   browserLanguages = ["ja-JP"],
+  keyboardPlatform = "mac",
   ...runtimeOptions
 }: RenderOptions = {}) => {
   const runtime = makeRuntime(runtimeOptions)
   const update = (patch: SettingsPatch) =>
     runtime.runPromise(SettingsRepository.use((repository) => repository.update(patch)))
   if (runtimeOptions.rejectedStorageOperation === undefined) await update(saved)
-  render(App, { props: { runtime, version: VERSION, browserLanguages } })
+  render(App, { props: { runtime, version: VERSION, browserLanguages, keyboardPlatform } })
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
     saveElsewhere: update,
     browser: <A>(use: (browser: FakeBrowser["Service"]) => Effect.Effect<A, unknown>) =>
       runtime.runPromise(FakeBrowser.use(use)),
+    permissions: <A>(
+      use: (permissions: FakeOptionalPermissions["Service"]) => Effect.Effect<A, unknown>,
+    ) => runtime.runPromise(FakeOptionalPermissions.use(use)),
   }
 }
 
@@ -341,6 +352,135 @@ describe("自動アーカイブ", () => {
       expect(optionLabelsOf(popUpNamed(popUpName))).toEqual(expect.arrayContaining(expected))
     },
   )
+})
+
+describe("ページ上のショートカット", () => {
+  it("URL のコピーを ON にすると、すべてのサイトへの許可を求め、許可されたら有効として保存される", async () => {
+    const { readSaved, permissions } = await renderLoaded()
+
+    await fireEvent.click(switchNamed("URL をコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts).toStrictEqual({
+        copyUrl: true,
+        copyMarkdownLink: false,
+      })
+    })
+    expect(await permissions((fake) => fake.requested)).toStrictEqual(["AllSites"])
+    expect(switchNamed("URL をコピー").checked).toBe(true)
+  })
+
+  it("Markdown のリンクとしてのコピーも、許可されたら有効として保存される", async () => {
+    const { readSaved } = await renderLoaded()
+
+    await fireEvent.click(switchNamed("URL を Markdown のリンクとしてコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts.copyMarkdownLink).toBe(true)
+    })
+  })
+
+  it("許可を断られたら OFF のまま保存せず、そのことを知らせる", async () => {
+    const { readSaved, permissions } = await renderLoaded()
+    await permissions((fake) => fake.answerRequestsWith("Deny"))
+
+    await fireEvent.click(switchNamed("URL をコピー"))
+
+    expect(
+      await screen.findByText(
+        "すべてのサイトへのアクセスが許可されなかったため、オフのままにしました",
+      ),
+    ).toBeTruthy()
+    expect(switchNamed("URL をコピー").checked).toBe(false)
+    expect((await readSaved()).pageShortcuts.copyUrl).toBe(false)
+  })
+
+  it("OFF にすると保存され、すべてのサイトへの許可は外さない", async () => {
+    const { readSaved, permissions } = await renderLoaded({
+      saved: { pageShortcuts: { copyUrl: true } },
+    })
+    await permissions((fake) => fake.grantElsewhere("AllSites"))
+
+    await fireEvent.click(switchNamed("URL をコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts.copyUrl).toBe(false)
+    })
+    expect(await permissions((fake) => fake.removed)).toStrictEqual([])
+  })
+
+  it.each([
+    ["mac", "⇧⌘C", "⌥⇧⌘C"],
+    ["other", "Ctrl+Shift+C", "Ctrl+Shift+Alt+C"],
+  ] as const)(
+    "%s のキーボードでは、URL のコピーを %s、Markdown のリンクのコピーを %s と表示する",
+    async (keyboardPlatform, copyUrlKeys, copyMarkdownLinkKeys) => {
+      await renderLoaded({ keyboardPlatform })
+
+      expect(screen.getByText(copyUrlKeys)).toBeTruthy()
+      expect(screen.getByText(copyMarkdownLinkKeys)).toBeTruthy()
+    },
+  )
+})
+
+describe("閲覧履歴の検索", () => {
+  const historySwitch = () => switchNamed("閲覧履歴も検索する")
+
+  it("閲覧履歴の許可が無ければ OFF と表示される", async () => {
+    await renderLoaded()
+
+    expect(historySwitch().checked).toBe(false)
+  })
+
+  it("ON にすると閲覧履歴の許可を求め、許可されたら ON になる", async () => {
+    const { permissions } = await renderLoaded()
+
+    await fireEvent.click(historySwitch())
+
+    await waitFor(() => {
+      expect(historySwitch().checked).toBe(true)
+    })
+    expect(await permissions((fake) => fake.requested)).toStrictEqual(["History"])
+  })
+
+  it("許可を断られたら OFF に戻り、そのことを知らせる", async () => {
+    const { permissions } = await renderLoaded()
+    await permissions((fake) => fake.answerRequestsWith("Deny"))
+
+    await fireEvent.click(historySwitch())
+
+    expect(await screen.findByText("閲覧履歴へのアクセスが許可されませんでした")).toBeTruthy()
+    expect(historySwitch().checked).toBe(false)
+  })
+
+  it("OFF にすると閲覧履歴の許可を外す", async () => {
+    const { permissions } = await renderLoaded()
+    await permissions((fake) => fake.grantElsewhere("History"))
+    await waitFor(() => {
+      expect(historySwitch().checked).toBe(true)
+    })
+
+    await fireEvent.click(historySwitch())
+
+    await waitFor(async () => {
+      expect(await permissions((fake) => fake.removed)).toStrictEqual(["History"])
+    })
+    expect(historySwitch().checked).toBe(false)
+  })
+
+  it("別の画面で許可が変わると、表示が追従する", async () => {
+    const { permissions } = await renderLoaded()
+
+    await permissions((fake) => fake.grantElsewhere("History"))
+    await waitFor(() => {
+      expect(historySwitch().checked).toBe(true)
+    })
+
+    await permissions((fake) => fake.revokeElsewhere("History"))
+    await waitFor(() => {
+      expect(historySwitch().checked).toBe(false)
+    })
+  })
 })
 
 describe("キーボードショートカット", () => {

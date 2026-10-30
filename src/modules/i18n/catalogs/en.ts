@@ -51,6 +51,17 @@ export const en = {
   "options.shortcuts.footnote":
     "Assign keys for opening the side panel, Spotlight, and more on Chrome’s extension shortcuts page.",
 
+  "options.pageShortcuts.heading": "Shortcuts",
+  "options.pageShortcuts.footnote":
+    "Available while you’re viewing a web page. Turning one on asks for access to all sites, which is used only to receive these keys. They don’t work on chrome:// pages, the New Tab page, or the Chrome Web Store.",
+  "options.pageShortcuts.denied": "Access to all sites wasn’t allowed, so the shortcut stays off.",
+
+  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.history.label": "Search browsing history too",
+  "options.spotlight.history.footnote":
+    "Turning this on asks for permission to read your browsing history. Turning it off removes the permission.",
+  "options.spotlight.history.denied": "Access to browsing history wasn’t allowed.",
+
   "options.version.label": "Version",
 
   "actions.copyUrl": "Copy URL",

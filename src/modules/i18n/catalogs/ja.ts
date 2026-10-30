@@ -51,6 +51,18 @@ export const ja: Catalog = {
   "options.shortcuts.footnote":
     "サイドパネルや Spotlight を開くキーなどは、Chrome の拡張機能のショートカット設定で割り当てます。",
 
+  "options.pageShortcuts.heading": "ショートカット",
+  "options.pageShortcuts.footnote":
+    "Web ページを見ている間に使えます。オンにすると、すべてのサイトへのアクセスの許可を求めます（キーを受け取るためだけに使います）。chrome:// のページ、新しいタブ、Chrome ウェブストアでは使えません。",
+  "options.pageShortcuts.denied":
+    "すべてのサイトへのアクセスが許可されなかったため、オフのままにしました",
+
+  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.history.label": "閲覧履歴も検索する",
+  "options.spotlight.history.footnote":
+    "オンにすると、閲覧履歴を読む許可を求めます。オフにすると、その許可を外します。",
+  "options.spotlight.history.denied": "閲覧履歴へのアクセスが許可されませんでした",
+
   "options.version.label": "バージョン",
 
   "actions.copyUrl": "URL をコピー",

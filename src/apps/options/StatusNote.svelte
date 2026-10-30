@@ -1,7 +1,8 @@
 <script lang="ts" module>
   export interface Note {
     readonly text: string
-    readonly tone: "Quiet" | "Alert"
+    /** Done は済んだことを、Info は操作の結果を控えめに、Alert は失敗を知らせる。 */
+    readonly tone: "Done" | "Info" | "Alert"
   }
 </script>
 
@@ -13,7 +14,7 @@
 <div class="status" role="status">
   {#if note !== null}
     <p class="note" class:alert={note.tone === "Alert"}>
-      {#if note.tone === "Quiet"}
+      {#if note.tone === "Done"}
         <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.75 6.25l2.25 2.25 4.25-5" /></svg>
       {/if}
       {note.text}

@@ -11,6 +11,12 @@
     resolveLocale,
   } from "#modules/i18n"
   import {
+    type KeyboardPlatform,
+    PAGE_SHORTCUTS,
+    type PageShortcut,
+    pageShortcutLabel,
+  } from "#modules/page-shortcuts"
+  import {
     applySettingsPatch,
     idleDurationOf,
     idleMinutesChoicesWith,
@@ -20,6 +26,7 @@
   } from "#modules/settings"
   import { appearanceOf, type ColorScheme, neutralTheme } from "#modules/theme"
   import { Tabs } from "#platform/browser"
+  import { OptionalPermissions } from "./optional-permissions"
   import type { OptionsRuntime } from "./options-runtime"
   import PopUpButton, { type PopUpOption } from "./PopUpButton.svelte"
   import PushButton from "./PushButton.svelte"
@@ -34,24 +41,52 @@
     runtime,
     version,
     browserLanguages,
+    keyboardPlatform,
   }: {
     runtime: OptionsRuntime
     version: string
     /** `navigator.languages` と同じく、優先する順に並んだ BCP 47 の言語タグ。 */
     browserLanguages: ReadonlyArray<string>
+    keyboardPlatform: KeyboardPlatform
   } = $props()
 
-  type Outcome = "Saved" | "SaveFailed" | "ShortcutsUnavailable"
+  type Outcome =
+    "Saved" | "SaveFailed" | "ShortcutsUnavailable" | "AllSitesDenied" | "HistoryDenied"
 
-  const outcomeMessages = {
-    Saved: "options.saved",
-    SaveFailed: "options.saveFailed",
-    ShortcutsUnavailable: "options.shortcuts.openFailed",
-  } as const satisfies Record<Outcome, MessageKey>
+  const outcomeNotes = {
+    Saved: { message: "options.saved", tone: "Done" },
+    SaveFailed: { message: "options.saveFailed", tone: "Alert" },
+    ShortcutsUnavailable: { message: "options.shortcuts.openFailed", tone: "Alert" },
+    AllSitesDenied: { message: "options.pageShortcuts.denied", tone: "Info" },
+    HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
+  } as const satisfies Record<Outcome, { message: MessageKey; tone: Note["tone"] }>
+
+  const pageShortcutSettings = {
+    CopyUrl: {
+      label: "actions.copyUrl",
+      isEnabled: (current: Settings) => current.pageShortcuts.copyUrl,
+      patch: (enabled: boolean): SettingsPatch => ({ pageShortcuts: { copyUrl: enabled } }),
+    },
+    CopyMarkdownLink: {
+      label: "actions.copyMarkdownLink",
+      isEnabled: (current: Settings) => current.pageShortcuts.copyMarkdownLink,
+      patch: (enabled: boolean): SettingsPatch => ({
+        pageShortcuts: { copyMarkdownLink: enabled },
+      }),
+    },
+  } as const satisfies Record<
+    PageShortcut,
+    {
+      readonly label: MessageKey
+      readonly isEnabled: (current: Settings) => boolean
+      readonly patch: (enabled: boolean) => SettingsPatch
+    }
+  >
 
   let settings = $state<Settings | null>(null)
   let loadFailed = $state(false)
   let supportsSplitView = $state<boolean | null>(null)
+  let searchesHistory = $state<boolean | null>(null)
   let systemScheme = $state<ColorScheme>(currentSystemScheme())
   let outcome = $state<Outcome | null>(null)
   let hideSavedTimer: ReturnType<typeof setTimeout> | undefined
@@ -64,7 +99,7 @@
   const note = $derived<Note | null>(
     outcome === null
       ? null
-      : { text: t(outcomeMessages[outcome]), tone: outcome === "Saved" ? "Quiet" : "Alert" },
+      : { text: t(outcomeNotes[outcome].message), tone: outcomeNotes[outcome].tone },
   )
 
   const languageOptions = $derived<ReadonlyArray<PopUpOption<LocalePreference>>>([
@@ -103,6 +138,23 @@
     ),
   )
 
+  $effect(() =>
+    runtime.runCallback(
+      OptionalPermissions.use((permissions) =>
+        Stream.runForEach(Stream.merge(Stream.succeed(undefined), permissions.changes), () =>
+          permissions.contains("History").pipe(
+            Effect.tap((allowed) =>
+              Effect.sync(() => {
+                searchesHistory = allowed
+              }),
+            ),
+            Effect.ignore,
+          ),
+        ),
+      ),
+    ),
+  )
+
   $effect(() => {
     const cancel = runtime.runCallback(
       SettingsRepository.use((repository) =>
@@ -135,9 +187,7 @@
 
   // チェックボックスはクリックした時点で DOM 上は切り替わっている。保存を待ってから状態を
   // 変える方式だと、失敗して元の値に戻すときに状態が変化しないので、表示が戻らない
-  const save = async (patch: SettingsPatch) => {
-    if (settings === null) return
-    const beforeSave = settings
+  const saveOver = async (beforeSave: Settings, patch: SettingsPatch) => {
     settings = applySettingsPatch(beforeSave, patch)
     const saved = await runtime.runPromiseExit(
       SettingsRepository.use((repository) => repository.update(patch)),
@@ -149,6 +199,45 @@
       settings = beforeSave
       announce("SaveFailed")
     }
+  }
+
+  const save = (patch: SettingsPatch) => (settings === null ? undefined : saveOver(settings, patch))
+
+  // オフにするときにすべてのサイトへの許可を外さない。ライブフォルダの取得元へのアクセスが
+  // この許可で賄われていることがあり、外すとそちらまで読めなくなる。もう一方のショートカットも
+  // 同じ許可を使っている
+  const setPageShortcut = async (shortcut: PageShortcut, enabled: boolean) => {
+    const patch = pageShortcutSettings[shortcut].patch(enabled)
+    if (settings === null) return
+    if (!enabled) return saveOver(settings, patch)
+    const beforeRequest = settings
+    settings = applySettingsPatch(beforeRequest, patch)
+    const granted = await runtime.runPromiseExit(
+      OptionalPermissions.use((permissions) => permissions.request("AllSites")),
+    )
+    if (Exit.isSuccess(granted) && granted.value) return saveOver(beforeRequest, patch)
+    settings = beforeRequest
+    announce(Exit.isSuccess(granted) ? "AllSitesDenied" : "SaveFailed")
+  }
+
+  const setHistorySearch = async (enabled: boolean) => {
+    searchesHistory = enabled
+    const allowed = await runtime.runPromiseExit(
+      OptionalPermissions.use((permissions) =>
+        Effect.andThen(
+          enabled ? permissions.request("History") : permissions.remove("History"),
+          permissions.contains("History"),
+        ),
+      ),
+    )
+    if (Exit.isFailure(allowed)) {
+      searchesHistory = !enabled
+      announce("SaveFailed")
+      return
+    }
+    searchesHistory = allowed.value
+    if (allowed.value === enabled) announce("Saved")
+    else announce(enabled ? "HistoryDenied" : "SaveFailed")
   }
 
   const openShortcutSettings = async () => {
@@ -281,6 +370,37 @@
         </SettingRow>
       </SettingsSection>
 
+      {#if searchesHistory !== null}
+        <SettingsSection
+          heading={t("options.spotlight.heading")}
+          footnote={t("options.spotlight.history.footnote")}
+        >
+          <SettingRow label={t("options.spotlight.history.label")}>
+            {#snippet children(control)}
+              <Switch {...control} checked={searchesHistory === true} onchange={setHistorySearch} />
+            {/snippet}
+          </SettingRow>
+        </SettingsSection>
+      {/if}
+
+      <SettingsSection
+        heading={t("options.pageShortcuts.heading")}
+        footnote={t("options.pageShortcuts.footnote")}
+      >
+        {#each PAGE_SHORTCUTS as shortcut (shortcut)}
+          <SettingRow label={t(pageShortcutSettings[shortcut].label)}>
+            {#snippet children(control)}
+              <kbd class="keys">{pageShortcutLabel(shortcut, keyboardPlatform)}</kbd>
+              <Switch
+                {...control}
+                checked={pageShortcutSettings[shortcut].isEnabled(current)}
+                onchange={(enabled) => setPageShortcut(shortcut, enabled)}
+              />
+            {/snippet}
+          </SettingRow>
+        {/each}
+      </SettingsSection>
+
       <SettingsSection footnote={t("options.shortcuts.footnote")}>
         <SettingRow label={t("options.shortcuts.label")} labelsControl={false}>
           {#snippet children(control)}
@@ -388,6 +508,19 @@
     font-variant-numeric: tabular-nums;
     text-align: end;
     user-select: text;
+  }
+
+  .keys {
+    margin-right: 10px;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .load-problem {

@@ -55,6 +55,18 @@ export const es: Catalog = {
   "options.shortcuts.footnote":
     "Asigna teclas para abrir el panel lateral, Spotlight y otras acciones en la página de combinaciones de teclas de extensiones de Chrome.",
 
+  "options.pageShortcuts.heading": "Atajos",
+  "options.pageShortcuts.footnote":
+    "Disponibles mientras ves una página web. Al activar uno, se solicita acceso a todos los sitios, que solo se usa para recibir estas teclas. No funcionan en las páginas chrome://, en la página Nueva pestaña ni en Chrome Web Store.",
+  "options.pageShortcuts.denied":
+    "No se permitió el acceso a todos los sitios, así que el atajo sigue desactivado.",
+
+  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.history.label": "Buscar también en el historial",
+  "options.spotlight.history.footnote":
+    "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",
+  "options.spotlight.history.denied": "No se permitió el acceso al historial de navegación.",
+
   "options.version.label": "Versión",
 
   "actions.copyUrl": "Copiar URL",

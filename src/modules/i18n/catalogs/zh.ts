@@ -51,6 +51,16 @@ export const zh: Catalog = {
   "options.shortcuts.footnote":
     "打开侧边栏、Spotlight 等操作所用的按键，可以在 Chrome 的扩展程序快捷键页面中设置。",
 
+  "options.pageShortcuts.heading": "快捷键",
+  "options.pageShortcuts.footnote":
+    "在浏览网页时可用。开启时会请求访问所有网站的权限（仅用于接收这些按键）。在 chrome:// 页面、新标签页和 Chrome 应用商店中无法使用。",
+  "options.pageShortcuts.denied": "未获得访问所有网站的权限，因此保持关闭。",
+
+  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.history.label": "同时搜索浏览历史记录",
+  "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
+  "options.spotlight.history.denied": "未获得访问浏览历史记录的权限。",
+
   "options.version.label": "版本",
 
   "actions.copyUrl": "复制网址",
