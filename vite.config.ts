@@ -1,18 +1,28 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte"
 import { writeFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { defineConfig, type Plugin } from "vite"
-import { buildManifest } from "./src/apps/manifest"
+import type { buildManifest } from "./src/apps/manifest"
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
+const manifestSource = fromRoot("./src/apps/manifest.ts")
+
+// 設定ファイルから静的に import すると、ウォッチビルドは起動時のマニフェストを使い続ける。
+// ビルドのたびに読み直し、マニフェストの変更も再ビルドのきっかけにする
 const emitManifest = (mode: "development" | "production"): Plugin => ({
   name: "katip:emit-manifest",
-  generateBundle() {
+  buildStart() {
+    this.addWatchFile(manifestSource)
+  },
+  async generateBundle() {
+    const latest: { buildManifest: typeof buildManifest } = await import(
+      `${pathToFileURL(manifestSource).href}?t=${Date.now()}`
+    )
     this.emitFile({
       type: "asset",
       fileName: "manifest.json",
-      source: JSON.stringify(buildManifest(mode), null, 2),
+      source: JSON.stringify(latest.buildManifest(mode), null, 2),
     })
   },
 })
