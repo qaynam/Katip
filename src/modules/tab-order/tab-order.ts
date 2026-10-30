@@ -45,24 +45,42 @@ const toIndexAnchor = (
   )
 }
 
+// 分割ビューの 2 つのタブの間に割り込むと分割が解けてしまう。基準が分割の片方なら、
+// 前に置くときは左のタブ、後ろに置くときは右のタブを基準にして、2 つの外側に置く
+const outerEdgeOf = (
+  anchor: IndexAnchor,
+  windowTabs: ReadonlyArray<TabId>,
+  unitOf: (tabId: TabId) => ReadonlyArray<TabId>,
+): IndexAnchor => {
+  const unit = windowTabs.filter((tab) => unitOf(anchor.tabId).includes(tab))
+  const edge = anchor.side === "before" ? Array.head(unit) : Array.last(unit)
+  return { ...anchor, tabId: Option.getOrElse(edge, () => anchor.tabId) }
+}
+
 /**
  * 表示順で指定された置き場所を、`chrome.tabs.move` に渡す index に換算する。
  *
  * @param windowTabs - ウィンドウの全タブを index 順に並べたもの（固定タブや他 Space のタブも含む）。
  * @param spaceTabs - 移動先 Space の一時タブを index 順に並べたもの。
- * @returns 移動後にそのタブが占める index。基準のタブが無いなど、動かす必要が無いときは none。
+ * @param moving - 動かすタブ。分割ビューなら 2 つを index 順に渡す。
+ * @param unitOf - そのタブと一緒に動く（同じ分割ビューの）タブ。省略時はそのタブだけ。
+ * @returns 移動後に先頭のタブが占める index。基準のタブが無いなど、動かす必要が無いときは none。
  */
 export const moveIndexFor = (params: {
   readonly windowTabs: ReadonlyArray<TabId>
   readonly spaceTabs: ReadonlyArray<TabId>
-  readonly moving: TabId
+  readonly moving: ReadonlyArray<TabId>
   readonly placement: DisplayPlacement
   readonly newestOnTop: boolean
+  readonly unitOf?: (tabId: TabId) => ReadonlyArray<TabId>
 }): Option.Option<number> => {
-  const withoutMoving = (tabs: ReadonlyArray<TabId>) => tabs.filter((tab) => tab !== params.moving)
+  const unitOf = params.unitOf ?? ((tabId: TabId) => [tabId])
+  const withoutMoving = (tabs: ReadonlyArray<TabId>) =>
+    tabs.filter((tab) => !params.moving.includes(tab))
   const remaining = withoutMoving(params.windowTabs)
   return pipe(
     toIndexAnchor(params.placement, withoutMoving(params.spaceTabs), params.newestOnTop),
+    Option.map((anchor) => outerEdgeOf(anchor, remaining, unitOf)),
     Option.flatMap((anchor) =>
       Option.map(
         Array.findFirstIndex(remaining, (tab) => tab === anchor.tabId),

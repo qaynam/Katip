@@ -34,7 +34,7 @@ describe("moveIndexFor", () => {
         moveIndexFor({
           windowTabs,
           spaceTabs,
-          moving: TabId.make(6),
+          moving: ids(6),
           placement,
           newestOnTop: false,
         }),
@@ -64,7 +64,7 @@ describe("moveIndexFor", () => {
         moveIndexFor({
           windowTabs,
           spaceTabs,
-          moving: TabId.make(6),
+          moving: ids(6),
           placement,
           newestOnTop: true,
         }),
@@ -92,7 +92,7 @@ describe("moveIndexFor", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs,
-      moving: TabId.make(6),
+      moving: ids(6),
       placement: above(99),
       newestOnTop: false,
     })
@@ -104,7 +104,7 @@ describe("moveIndexFor", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs,
-      moving: TabId.make(6),
+      moving: ids(6),
       placement: above(6),
       newestOnTop: false,
     })
@@ -116,11 +116,69 @@ describe("moveIndexFor", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs: ids(6),
-      moving: TabId.make(6),
+      moving: ids(6),
       placement: { _tag: "Top" },
       newestOnTop: false,
     })
 
     expect(index).toStrictEqual(Option.none())
+  })
+})
+
+describe("分割ビューのタブ", () => {
+  // Chrome の index 順に [固定 1][一時 2][分割 3, 4][一時 5]
+  const windowWithSplit = ids(1, 2, 3, 4, 5)
+  const spaceWithSplit = ids(2, 3, 4, 5)
+  const splitPair = ids(3, 4)
+  const unitOf = (tabId: TabId) => (splitPair.includes(tabId) ? splitPair : [tabId])
+
+  const finalOrder = (moving: ReadonlyArray<TabId>, target: number) => {
+    const rest = windowWithSplit.filter((tab) => !moving.includes(tab))
+    return [...rest.slice(0, target), ...moving, ...rest.slice(target)]
+  }
+
+  it("分割の右のタブの上に置いても、分割の 2 つの間には割り込まない", () => {
+    const index = moveIndexFor({
+      windowTabs: windowWithSplit,
+      spaceTabs: spaceWithSplit,
+      moving: ids(5),
+      placement: above(4),
+      newestOnTop: false,
+      unitOf,
+    })
+
+    expect(Option.map(index, (i) => finalOrder(ids(5), i))).toStrictEqual(
+      Option.some(ids(1, 2, 5, 3, 4)),
+    )
+  })
+
+  it("分割の左のタブの下に置いても、分割の 2 つの後ろに並ぶ", () => {
+    const index = moveIndexFor({
+      windowTabs: windowWithSplit,
+      spaceTabs: spaceWithSplit,
+      moving: ids(2),
+      placement: below(3),
+      newestOnTop: false,
+      unitOf,
+    })
+
+    expect(Option.map(index, (i) => finalOrder(ids(2), i))).toStrictEqual(
+      Option.some(ids(1, 3, 4, 2, 5)),
+    )
+  })
+
+  it("分割の 2 つを一緒に動かすと、並びを保ったまま指定した位置に入る", () => {
+    const index = moveIndexFor({
+      windowTabs: windowWithSplit,
+      spaceTabs: spaceWithSplit,
+      moving: splitPair,
+      placement: { _tag: "Bottom" },
+      newestOnTop: false,
+      unitOf,
+    })
+
+    expect(Option.map(index, (i) => finalOrder(splitPair, i))).toStrictEqual(
+      Option.some(ids(1, 2, 5, 3, 4)),
+    )
   })
 })
