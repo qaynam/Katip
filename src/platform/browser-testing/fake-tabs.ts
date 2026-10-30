@@ -1,0 +1,299 @@
+import { Array, Effect, Option, Order, Ref } from "effect"
+import {
+  type BrowserApiError,
+  type BrowserTab,
+  TabGroupId,
+  type TabId,
+  type TabQuery,
+  Tabs,
+  type WindowId,
+} from "#platform/browser"
+import {
+  allTabs,
+  type BrowsingState,
+  findGroup,
+  focusedWindowId,
+  groupIdsInWindow,
+  issueId,
+  leastUsedColor,
+  newGroupDestination,
+  sameGroup,
+  tabSnapshot,
+  toBrowserTabGroup,
+  windowOfGroup,
+} from "./browsing-state"
+import {
+  activateTab,
+  createTab,
+  emitTabUpdated,
+  moveTab,
+  moveTabsAndSetGroup,
+  NEW_TAB_URL,
+  removeTab,
+  requireFocusedWindow,
+  requireGroup,
+  requireTab,
+  requireWindow,
+  setPinned,
+  transferTab,
+  updateTab,
+} from "./browsing-steps"
+import { type BrowsingTx, chromeCall, type FakeWorld, transact } from "./fake-world"
+
+const unspecifiedOr = <A>(expected: A | undefined, actual: A) =>
+  expected === undefined || expected === actual
+
+const matchesTabQuery = (state: BrowsingState, query: TabQuery) => (tab: BrowserTab) =>
+  unspecifiedOr(query.windowId, tab.windowId) &&
+  unspecifiedOr(query.lastFocusedWindow, Option.contains(focusedWindowId(state), tab.windowId)) &&
+  unspecifiedOr(query.active, tab.active) &&
+  unspecifiedOr(query.pinned, tab.pinned) &&
+  unspecifiedOr(query.audible, tab.audible) &&
+  unspecifiedOr(query.discarded, tab.discarded) &&
+  (query.groupId === undefined || sameGroup(query.groupId, tab.groupId))
+
+export const requireTabSnapshot = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  tabId: TabId,
+): Effect.fn.Return<BrowserTab, BrowserApiError> {
+  const tab = tabSnapshot(yield* tx.state, tabId)
+  if (Option.isNone(tab)) return yield* tx.reject(`No tab with id: ${tabId}.`)
+  return tab.value
+})
+
+const createGroup = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: WindowId) {
+  const window = yield* requireWindow(tx, windowId)
+  const [id, issued] = issueId(yield* tx.state)
+  const colorsInUse = groupIdsInWindow(window).flatMap((groupId) =>
+    Option.toArray(findGroup(issued, groupId)).map(({ color }) => color),
+  )
+  const group = {
+    id: TabGroupId.make(id),
+    title: Option.none(),
+    color: leastUsedColor(colorsInUse),
+    collapsed: false,
+  }
+  yield* tx.setState({ ...issued, groups: [...issued.groups, group] })
+  yield* tx.emit({ _tag: "TabGroupCreated", group: toBrowserTabGroup(group, windowId) })
+  return group.id
+})
+
+const windowOfExistingGroup = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  groupId: TabGroupId,
+): Effect.fn.Return<WindowId, BrowserApiError> {
+  yield* requireGroup(tx, groupId)
+  const window = windowOfGroup(yield* tx.state, groupId)
+  if (Option.isNone(window)) return yield* tx.reject(`No group with id: ${groupId}.`)
+  return window.value.id
+})
+
+/**
+ * グループの左半分にあるタブはグループの左へ、右半分にあるタブは右へ出す。
+ * グループの途中でタブを抜くと、グループが 2 つに分かれてしまうため。
+ */
+const ungroupFrom = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  groupId: TabGroupId,
+  tabIds: ReadonlyArray<TabId>,
+) {
+  const window = windowOfGroup(yield* tx.state, groupId)
+  if (Option.isNone(window)) return
+  const indexed = window.value.tabs.map((tab, index) => ({ tab, index }))
+  const memberIndices = indexed
+    .filter(({ tab }) => Option.contains(tab.groupId, groupId))
+    .map(({ index }) => index)
+  const first = Option.getOrElse(Array.head(memberIndices), () => 0)
+  const last = Option.getOrElse(Array.last(memberIndices), () => 0)
+  const half = Math.floor((last - first + 1) / 2)
+  const targets = indexed.filter(({ tab }) => tabIds.includes(tab.id))
+  yield* moveTabsAndSetGroup(
+    tx,
+    targets.filter(({ index }) => index - first < half).map(({ tab }) => tab.id),
+    first,
+    Option.none(),
+  )
+  yield* moveTabsAndSetGroup(
+    tx,
+    targets.filter(({ index }) => index - first >= half).map(({ tab }) => tab.id),
+    last + 1,
+    Option.none(),
+  )
+})
+
+export const makeFakeTabs = (world: FakeWorld): Tabs["Service"] =>
+  Tabs.of({
+    query: (query) =>
+      chromeCall(
+        world,
+        "tabs.query",
+        Effect.map(Ref.get(world.browsing), (state) =>
+          allTabs(state).filter(matchesTabQuery(state, query)),
+        ),
+      ),
+
+    get: (tabId) => transact(world, "tabs.get", (tx) => requireTabSnapshot(tx, tabId)),
+
+    create: (options) =>
+      transact(
+        world,
+        "tabs.create",
+        Effect.fnUntraced(function* (tx) {
+          const windowId = options.windowId ?? (yield* requireFocusedWindow(tx))
+          if (options.openerTabId !== undefined) {
+            const opener = yield* requireTab(tx, options.openerTabId)
+            if (opener.window.id !== windowId) {
+              return yield* tx.reject("Tab opener must be in the same window as the created tab.")
+            }
+          }
+          const tabId = yield* createTab(tx, {
+            windowId,
+            index: options.index ?? "end",
+            url: options.url ?? NEW_TAB_URL,
+            active: options.active ?? true,
+            pinned: options.pinned ?? false,
+            openerTabId: Option.fromUndefinedOr(options.openerTabId),
+          })
+          return yield* requireTabSnapshot(tx, tabId)
+        }),
+      ),
+
+    update: (tabId, options) =>
+      transact(
+        world,
+        "tabs.update",
+        Effect.fnUntraced(function* (tx) {
+          const { tab } = yield* requireTab(tx, tabId)
+          if (options.url !== undefined && !Option.contains(tab.url, options.url)) {
+            const url = options.url
+            yield* updateTab(tx, tabId, (record) => ({ ...record, url: Option.some(url) }))
+            yield* emitTabUpdated(tx, tabId, { url })
+          }
+          if (options.active === true) yield* activateTab(tx, tabId)
+          if (options.pinned !== undefined) yield* setPinned(tx, tabId, options.pinned)
+          if (options.muted !== undefined && options.muted !== tab.muted) {
+            const muted = options.muted
+            yield* updateTab(tx, tabId, (record) => ({ ...record, muted }))
+            yield* emitTabUpdated(tx, tabId, { muted })
+          }
+          return yield* requireTabSnapshot(tx, tabId)
+        }),
+      ),
+
+    remove: (tabIds) =>
+      Effect.forEach(
+        tabIds,
+        (tabId) => transact(world, "tabs.remove", (tx) => removeTab(tx, tabId)),
+        { discard: true },
+      ),
+
+    move: (tabIds, options) =>
+      Effect.gen(function* () {
+        const windowId = Option.fromUndefinedOr(options.windowId)
+        yield* Effect.reduce(
+          tabIds,
+          (): number | "end" => options.index,
+          (target, tabId) =>
+            Effect.map(
+              transact(world, "tabs.move", (tx) => moveTab(tx, tabId, target, windowId)),
+              (placed) => placed + 1,
+            ),
+        )
+        const state = yield* Ref.get(world.browsing)
+        return Array.getSomes(tabIds.map((tabId) => tabSnapshot(state, tabId)))
+      }),
+
+    group: (options) =>
+      transact(
+        world,
+        "tabs.group",
+        Effect.fnUntraced(function* (tx) {
+          const tabIds = Array.dedupe(options.tabIds)
+          yield* Effect.forEach(tabIds, (tabId) => requireTab(tx, tabId), { discard: true })
+          const windowId =
+            options.groupId === undefined
+              ? (options.windowId ?? (yield* requireFocusedWindow(tx)))
+              : yield* windowOfExistingGroup(tx, options.groupId)
+          yield* requireWindow(tx, windowId)
+          yield* Effect.forEach(
+            tabIds,
+            Effect.fnUntraced(function* (tabId) {
+              const { window } = yield* requireTab(tx, tabId)
+              if (window.id !== windowId) yield* transferTab(tx, tabId, windowId, "end", false)
+            }),
+            { discard: true },
+          )
+          const groupId = options.groupId ?? (yield* createGroup(tx, windowId))
+          const { tabs } = yield* requireWindow(tx, windowId)
+          const joining = tabs
+            .map((tab, index) => ({ tab, index }))
+            .filter(({ tab }) => tabIds.includes(tab.id) && !Option.contains(tab.groupId, groupId))
+          const destination =
+            options.groupId === undefined
+              ? newGroupDestination(
+                  tabs,
+                  Option.getOrElse(Array.head(joining), () => ({ index: 0 })).index,
+                )
+              : Option.getOrElse(
+                  Array.findLastIndex(tabs, (tab) => Option.contains(tab.groupId, groupId)),
+                  () => tabs.length - 1,
+                ) + 1
+          yield* moveTabsAndSetGroup(
+            tx,
+            joining.map(({ tab }) => tab.id),
+            destination,
+            Option.some(groupId),
+          )
+          return groupId
+        }),
+      ),
+
+    ungroup: (tabIds) =>
+      transact(
+        world,
+        "tabs.ungroup",
+        Effect.fnUntraced(function* (tx) {
+          const locations = yield* Effect.forEach(Array.dedupe(tabIds), (tabId) =>
+            requireTab(tx, tabId),
+          )
+          const grouped = locations.flatMap(({ tab }) =>
+            Option.toArray(Option.map(tab.groupId, (groupId) => ({ tabId: tab.id, groupId }))),
+          )
+          const groupIds = Array.sort(
+            Array.dedupe(grouped.map(({ groupId }) => groupId)),
+            Order.Number,
+          )
+          yield* Effect.forEach(
+            groupIds,
+            (groupId) =>
+              ungroupFrom(
+                tx,
+                groupId,
+                grouped.filter((entry) => entry.groupId === groupId).map(({ tabId }) => tabId),
+              ),
+            { discard: true },
+          )
+        }),
+      ),
+
+    discard: (tabId) =>
+      transact(
+        world,
+        "tabs.discard",
+        Effect.fnUntraced(function* (tx) {
+          const { window, tab } = yield* requireTab(tx, tabId)
+          if (Option.contains(window.activeTabId, tabId)) {
+            return yield* tx.reject(`Cannot discard tab with id: ${tabId}.`)
+          }
+          if (!tab.discarded) {
+            yield* updateTab(tx, tabId, (record) => ({
+              ...record,
+              discarded: true,
+              status: "unloaded",
+            }))
+            yield* emitTabUpdated(tx, tabId, { discarded: true, status: "unloaded" })
+          }
+          return yield* requireTabSnapshot(tx, tabId)
+        }),
+      ),
+  })
