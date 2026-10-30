@@ -5,6 +5,7 @@ import type { BookmarkId, SplitViewId } from "#platform/browser"
 import type {
   PinnedFolderView,
   PinnedItemView,
+  PinnedNodeView,
   PinnedSplitView,
   SidebarView,
   SpaceView,
@@ -72,4 +73,18 @@ export const childPosition = (
 export const openSplitViewOf = ({ items: [left, right] }: PinnedSplitView): SplitViewId | null => {
   const splitViewId = left.openTab?.tab.splitViewId ?? null
   return splitViewId !== null && splitViewId === right.openTab?.tab.splitViewId ? splitViewId : null
+}
+
+/** フォルダの中も探す。分割ビューのピンの中の片側は探さない */
+export const findPinnedNode = (
+  nodes: ReadonlyArray<PinnedNodeView>,
+  bookmarkId: BookmarkId,
+): Option.Option<PinnedNodeView> => {
+  for (const node of nodes) {
+    if (node.bookmarkId === bookmarkId) return Option.some(node)
+    if (node._tag !== "PinnedFolder") continue
+    const found = findPinnedNode(node.children, bookmarkId)
+    if (Option.isSome(found)) return found
+  }
+  return Option.none()
 }

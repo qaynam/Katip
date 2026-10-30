@@ -8,6 +8,7 @@ import {
   createMemoryConnection,
   type MemoryConnectionOptions,
 } from "../connection/memory-connection"
+import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 
 // jsdom はレイアウトを持たず scrollIntoView も実装していない
 beforeEach(() => {
@@ -16,18 +17,24 @@ beforeEach(() => {
 
 export const renderSidebar = async (
   view: SidebarView | null,
-  options: Pick<MemoryConnectionOptions, "respond"> = {},
+  options: Pick<MemoryConnectionOptions, "respond"> & {
+    /** 取得元へのアクセスを求められたときに許可するか。既定は許可する */
+    readonly grantsAccess?: boolean
+  } = {},
 ) => {
+  const { grantsAccess = true, ...connectionOptions } = options
   const connection = createMemoryConnection({
     ...(view === null ? {} : { view }),
-    ...options,
+    ...connectionOptions,
   })
+  const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
   const onReload = vi.fn()
-  const result = render(App, { props: { connection, onReload } })
+  const result = render(App, { props: { connection, originAccess, onReload } })
   await tick()
   return {
     ...result,
     connection,
+    originAccess,
     onReload,
     pushView: async (next: SidebarView) => {
       connection.pushView(next)

@@ -1,8 +1,10 @@
 import { Option } from "effect"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
-import type { PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
+import type { PinnedLiveFolderView, PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
+import { sourceOrigins, unseenCount, type LiveSourceKind } from "../logic/live-folders"
 import { themeSwatch } from "../logic/space-themes"
 import { openSplitViewOf, otherSpaces } from "../logic/view-queries"
+import { messages } from "../messages"
 import { action, separator, submenu, type MenuEntry } from "../state/menu-controller.svelte"
 import type { SidebarContext } from "../state/sidebar-context"
 import type { SpaceSetupSteps } from "../state/space-setup.svelte"
@@ -111,6 +113,77 @@ export const createFolder = async (ctx: SidebarContext, parentId: BookmarkId | n
   }
 }
 
+const liveSourceKinds: ReadonlyArray<LiveSourceKind> = ["Gmail", "GitHub"]
+
+export const addLiveFolderMenu = (ctx: SidebarContext, parentId: BookmarkId | null): MenuEntry =>
+  submenu(
+    messages.liveFolder.addMenu,
+    liveSourceKinds.map((kind) =>
+      action(messages.liveFolder.sourceNames[kind], () =>
+        ctx.liveFolderDialog.open({ _tag: "Create", kind, spaceId: ctx.activeSpace.id, parentId }),
+      ),
+    ),
+  )
+
+/**
+ * 取得元へのアクセスを求め、許可されたら取得し直す。Chrome はユーザー操作の処理中にしか
+ * 尋ねないので、クリックなどのハンドラから同期的に呼ぶ。
+ */
+export const grantAccessAndRefresh = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
+  const isGranted = await ctx.originAccess.request(sourceOrigins(folder.source._tag))
+  if (!isGranted) {
+    ctx.toasts.show(messages.liveFolder.accessDenied(folder.source._tag), "error")
+    return
+  }
+  await ctx.run({ _tag: "RefreshLiveFolder", bookmarkId: folder.bookmarkId })
+}
+
+const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
+  const title = folder.title || messages.liveFolder.untitled
+  const confirmed = await ctx.dialog.confirm({
+    title: messages.liveFolder.removeTitle,
+    message: messages.liveFolder.removeMessage(title),
+    confirmLabel: messages.common.delete,
+  })
+  if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
+}
+
+export const liveFolderMenu = (
+  ctx: SidebarContext,
+  folder: PinnedLiveFolderView,
+  options: { readonly startRename: () => void },
+): ReadonlyArray<MenuEntry> => {
+  const { bookmarkId, status } = folder
+  const failure = status._tag === "Failed" ? status : null
+  return [
+    action(
+      messages.liveFolder.refreshNow,
+      () => void ctx.run({ _tag: "RefreshLiveFolder", bookmarkId }),
+      { disabled: status._tag === "Refreshing" },
+    ),
+    action(
+      messages.liveFolder.markAllSeen,
+      () => void ctx.run({ _tag: "MarkLiveFolderSeen", bookmarkId }),
+      { disabled: unseenCount(folder) === 0 },
+    ),
+    ...(failure?.needsPermission === true
+      ? [action(messages.liveFolder.grantAccess, () => void grantAccessAndRefresh(ctx, folder))]
+      : []),
+    ...(failure?.needsToken === true
+      ? [
+          action(messages.liveFolder.setToken, () =>
+            ctx.liveFolderDialog.open({ _tag: "SetGitHubToken", bookmarkId }),
+          ),
+        ]
+      : []),
+    action(messages.common.rename, options.startRename),
+    separator,
+    action(messages.liveFolder.remove, () => void confirmLiveFolderRemoval(ctx, folder), {
+      tone: "danger",
+    }),
+  ]
+}
+
 const confirmSpaceDeletion = async (ctx: SidebarContext, space: SpaceView) => {
   const confirmed = await ctx.dialog.confirm({
     title: `「${space.name}」を削除しますか？`,
@@ -140,7 +213,9 @@ export const spaceMenuEntries = (
   return [
     action("テーマを編集", setUpSpace(ctx, space, { rename: false, editTheme: true })),
     action("名前を変更", setUpSpace(ctx, space, { rename: true, editTheme: false })),
-    ...(canCreateFolder ? [action("新しいフォルダ", () => void createFolder(ctx, null))] : []),
+    ...(canCreateFolder
+      ? [action("新しいフォルダ", () => void createFolder(ctx, null)), addLiveFolderMenu(ctx, null)]
+      : []),
     separator,
     action("Space を削除", () => void confirmSpaceDeletion(ctx, space), {
       tone: "danger",

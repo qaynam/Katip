@@ -1,9 +1,9 @@
 import { Option } from "effect"
-import type { SidebarCommand } from "#protocol"
 import {
-  commandForDrop,
+  dropOutcome,
   type DragSource,
   type DropContext,
+  type DropOutcome,
   type DropTarget,
   type FolderZone,
   type RowZone,
@@ -22,7 +22,7 @@ export class DragSession {
   source = $state.raw<DragSource | null>(null)
   sourceKey = $state.raw<string | null>(null)
   indicator = $state.raw<DropIndicator | null>(null)
-  #command: SidebarCommand | null = null
+  #outcome: DropOutcome | null = null
   #hover: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null
   readonly #context: () => DropContext
 
@@ -44,37 +44,35 @@ export class DragSession {
   offer(event: DragEvent, key: string, zone: DropZone, target: DropTarget | null) {
     event.stopPropagation()
     if (this.#hover !== null && this.#hover.key !== key) this.cancelHover()
-    const command = target === null ? Option.none() : this.#commandFor(target)
-    if (Option.isNone(command)) {
+    const outcome = target === null ? Option.none() : this.#outcomeFor(target)
+    if (Option.isNone(outcome)) {
       this.reject()
       return
     }
     event.preventDefault()
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move"
-    this.#command = command.value
+    this.#outcome = outcome.value
     if (this.indicator?.key !== key || this.indicator.zone !== zone) {
       this.indicator = { key, zone }
     }
   }
 
   accepts(target: DropTarget): boolean {
-    return Option.isSome(this.#commandFor(target))
+    return Option.isSome(this.#outcomeFor(target))
   }
 
-  #commandFor(target: DropTarget): Option.Option<SidebarCommand> {
-    return this.source === null
-      ? Option.none()
-      : commandForDrop(this.source, target, this.#context())
+  #outcomeFor(target: DropTarget): Option.Option<DropOutcome> {
+    return this.source === null ? Option.none() : dropOutcome(this.source, target, this.#context())
   }
 
   /** 行と行の隙間では直前の候補を保つ。候補が一瞬消えて挿入線がちらつくのを防ぐ */
   keep(event: DragEvent) {
     event.stopPropagation()
-    if (this.#command !== null) event.preventDefault()
+    if (this.#outcome !== null) event.preventDefault()
   }
 
   reject() {
-    this.#command = null
+    this.#outcome = null
     this.indicator = null
   }
 
@@ -82,16 +80,16 @@ export class DragSession {
     return this.indicator?.key === key ? this.indicator.zone : null
   }
 
-  /** 直前に受け付けたドロップ先へのコマンドを取り出し、ドラッグを終える */
-  takeCommand(): SidebarCommand | null {
-    const command = this.#command
+  /** 直前に受け付けたドロップ先での結果を取り出し、ドラッグを終える */
+  takeOutcome(): DropOutcome | null {
+    const outcome = this.#outcome
     this.end()
-    return command
+    return outcome
   }
 
   end() {
     this.cancelHover()
-    this.#command = null
+    this.#outcome = null
     this.indicator = null
     this.source = null
     this.sourceKey = null

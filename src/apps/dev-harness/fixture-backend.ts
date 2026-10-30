@@ -1,10 +1,13 @@
 import { Array, Match, Option } from "effect"
+import type { LiveSource } from "#modules/live-folders"
 import { SpaceId, SpaceName } from "#modules/space"
 import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type {
+  LiveItemView,
   PinnedFolderView,
   PinnedItemView,
+  PinnedLiveFolderView,
   PinnedNodeView,
   PinnedPlacement,
   PinnedSplitView,
@@ -18,10 +21,13 @@ import type {
 import type { CommandResponse } from "../sidepanel/connection/memory-connection"
 import { suggestedTheme } from "../sidepanel/logic/space-themes"
 import { hostOf } from "../sidepanel/logic/view-queries"
+import { messages } from "../sidepanel/messages"
 import {
+  liveItem,
   openPinnedTab,
   pinnedFolder,
   pinnedItem,
+  pinnedLiveFolder,
   pinnedSplit,
   tabView,
   temporaryTab,
@@ -40,26 +46,38 @@ const mapSpaces = (view: SidebarView, update: (space: SpaceView) => SpaceView): 
 const mapSpace = (view: SidebarView, spaceId: SpaceId, update: (space: SpaceView) => SpaceView) =>
   mapSpaces(view, (space) => (space.id === spaceId ? update(space) : space))
 
+interface TreeUpdates {
+  readonly onItem?: (item: PinnedItemView) => PinnedItemView
+  readonly onFolder?: (folder: PinnedFolderView) => PinnedFolderView
+  readonly onLiveFolder?: (folder: PinnedLiveFolderView) => PinnedLiveFolderView
+}
+
 const mapTree = (
   nodes: ReadonlyArray<PinnedNodeView>,
-  onItem: (item: PinnedItemView) => PinnedItemView,
-  onFolder: (folder: PinnedFolderView) => PinnedFolderView = (folder) => folder,
-): ReadonlyArray<PinnedNodeView> =>
-  nodes.map((node) =>
+  updates: TreeUpdates,
+): ReadonlyArray<PinnedNodeView> => {
+  const {
+    onItem = (item) => item,
+    onFolder = (folder) => folder,
+    onLiveFolder = (folder) => folder,
+  } = updates
+  return nodes.map((node) =>
     Match.valueTags(node, {
       PinnedItem: onItem,
       PinnedSplit: (split): PinnedNodeView => ({
         ...split,
         items: [onItem(split.items[0]), onItem(split.items[1])],
       }),
+      PinnedLiveFolder: onLiveFolder,
       PinnedFolder: (folder) =>
         onFolder({
           ...folder,
-          children: mapTree(folder.children, onItem, onFolder),
+          children: mapTree(folder.children, updates),
           peekedItems: folder.peekedItems.map(onItem),
         }),
     }),
   )
+}
 
 const mapPinned = (
   space: SpaceView,
@@ -98,10 +116,12 @@ const mapOpenTabs = (view: SidebarView, update: (tab: TabView) => TabView | null
         temporaryEntries: space.temporaryEntries.flatMap((entry) => updateEntry(entry, update)),
       },
       (nodes) =>
-        mapTree(nodes, (item) => {
-          if (item.openTab === null) return item
-          const tab = update(item.openTab.tab)
-          return { ...item, openTab: tab === null ? null : { ...item.openTab, tab } }
+        mapTree(nodes, {
+          onItem: (item) => {
+            if (item.openTab === null) return item
+            const tab = update(item.openTab.tab)
+            return { ...item, openTab: tab === null ? null : { ...item.openTab, tab } }
+          },
         }),
     ),
   )
@@ -114,6 +134,7 @@ const flattenNodes = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<Pinne
     Match.valueTags(node, {
       PinnedItem: (item): ReadonlyArray<PinnedNodeView> => [item],
       PinnedSplit: (split): ReadonlyArray<PinnedNodeView> => [split, ...split.items],
+      PinnedLiveFolder: (folder): ReadonlyArray<PinnedNodeView> => [folder],
       PinnedFolder: (folder): ReadonlyArray<PinnedNodeView> => [
         folder,
         ...flattenNodes(folder.children),
@@ -445,6 +466,7 @@ const openPinned = (view: SidebarView, bookmarkId: BookmarkId): SidebarView => {
               ],
             }
           : split,
+      PinnedLiveFolder: (folder): PinnedNodeView => folder,
       PinnedFolder: (folder) => ({
         ...folder,
         children: folder.children.map(open),
@@ -457,6 +479,7 @@ const openPinned = (view: SidebarView, bookmarkId: BookmarkId): SidebarView => {
       Match.valueTags(node, {
         PinnedItem: (item) => item.openTab?.tab,
         PinnedSplit: (split) => split.items[0].openTab?.tab,
+        PinnedLiveFolder: () => undefined,
         PinnedFolder: () => undefined,
       }),
     ),
@@ -501,17 +524,127 @@ const createFolder = (
     mapPinned(space, (nodes) =>
       parentId === null
         ? [...nodes, folder]
-        : mapTree(
-            nodes,
-            (item) => item,
-            (candidate) =>
+        : mapTree(nodes, {
+            onFolder: (candidate) =>
               candidate.bookmarkId === parentId
                 ? { ...candidate, isExpanded: true, children: [...candidate.children, folder] }
                 : candidate,
-          ),
+          }),
     ),
   )
   return succeeded(next, folder.bookmarkId)
+}
+
+const MINUTE_MS = 60_000
+
+/** 取得元から読んだことにする見本の項目。新しい順に並べ、先頭の 2 件を未読にする */
+const sampleLiveItems = (source: LiveSource, now: number): ReadonlyArray<LiveItemView> => {
+  const samples = Match.valueTags(source, {
+    Gmail: ({ accountIndex }) =>
+      [
+        ["来週の打ち合わせの件", "佐藤 花子"],
+        ["請求書をお送りします", "経理部"],
+        ["勉強会のお知らせ", "コミュニティ運営"],
+      ].map(([title, from], index) => ({
+        id: `mail-${index}`,
+        title: title ?? "",
+        subtitle: from ?? "",
+        url: `https://mail.google.com/mail/u/${accountIndex}/#inbox/mail-${index}`,
+      })),
+    GitHub: ({ query }) =>
+      [
+        ["サイドパネルにライブフォルダを表示する", "katip/katip#212"],
+        ["分割ビューの解除で順序が崩れる", "katip/katip#198"],
+        ["Spotlight の候補に Space を出す", "katip/katip#187"],
+      ].map(([title, repository], index) => ({
+        id: `${query}-${index}`,
+        title: title ?? "",
+        subtitle: repository ?? "",
+        url: `https://github.com/katip/katip/pull/${212 - index}`,
+      })),
+  })
+  return samples.map((sample, index) =>
+    liveItem(sample.id, {
+      ...sample,
+      updatedAt: now - (index * 90 + 12) * MINUTE_MS,
+      isUnseen: index < 2,
+    }),
+  )
+}
+
+const defaultLiveFolderTitle = (source: LiveSource): string =>
+  Match.valueTags(source, {
+    Gmail: ({ label }) => label ?? "受信トレイ",
+    GitHub: ({ query }) => messages.liveFolder.gitHubQueries[query],
+  })
+
+const createLiveFolder = (
+  view: SidebarView,
+  spaceId: SpaceId,
+  parentId: BookmarkId | null,
+  source: LiveSource,
+  now: number,
+): CommandResponse => {
+  const folder = pinnedLiveFolder(freshId("live", bookmarkIds(view)), {
+    title: defaultLiveFolderTitle(source),
+    source,
+    status: { _tag: "Ready", refreshedAt: now },
+    items: sampleLiveItems(source, now),
+  })
+  const next = mapSpace(view, spaceId, (space) =>
+    mapPinned(space, (nodes) =>
+      parentId === null
+        ? [...nodes, folder]
+        : mapTree(nodes, {
+            onFolder: (candidate) =>
+              candidate.bookmarkId === parentId
+                ? { ...candidate, children: [...candidate.children, folder] }
+                : candidate,
+          }),
+    ),
+  )
+  return succeeded(next, folder.bookmarkId)
+}
+
+const mapLiveFolder = (
+  view: SidebarView,
+  bookmarkId: BookmarkId,
+  update: (folder: PinnedLiveFolderView) => PinnedLiveFolderView,
+): SidebarView =>
+  mapSpaces(view, (space) =>
+    mapPinned(space, (nodes) =>
+      mapTree(nodes, {
+        onLiveFolder: (folder) => (folder.bookmarkId === bookmarkId ? update(folder) : folder),
+      }),
+    ),
+  )
+
+const refreshLiveFolder = (folder: PinnedLiveFolderView, now: number): PinnedLiveFolderView => ({
+  ...folder,
+  status: { _tag: "Ready", refreshedAt: now },
+  items: folder.items.length === 0 ? sampleLiveItems(folder.source, now) : folder.items,
+})
+
+const openLiveItem = (view: SidebarView, bookmarkId: BookmarkId, itemId: string): SidebarView => {
+  const item = findNode(view, bookmarkId).pipe(
+    Option.flatMap((node) =>
+      node._tag === "PinnedLiveFolder"
+        ? Array.findFirst(node.items, (candidate) => candidate.id === itemId)
+        : Option.none(),
+    ),
+  )
+  if (Option.isNone(item)) return view
+  const seen = mapLiveFolder(view, bookmarkId, (folder) => ({
+    ...folder,
+    items: folder.items.map((candidate) =>
+      candidate.id === itemId ? { ...candidate, isUnseen: false } : candidate,
+    ),
+  }))
+  return openTemporaryTab(
+    seen,
+    view.activeSpaceId,
+    tabView(nextTabId(view), { title: item.value.title, url: item.value.url }),
+  )
 }
 
 const moveSpace = (view: SidebarView, spaceId: SpaceId, toIndex: number): SidebarView => {
@@ -543,8 +676,14 @@ const notReproduced = (view: SidebarView, command: SidebarCommand): CommandRespo
 
 /**
  * 検証ページで見た目を確かめるための、素朴なコマンドの解釈。background の規則は再現しない。
+ *
+ * @param now - 取得し直したライブフォルダの時刻に使う
  */
-export const respondInFixture = (command: SidebarCommand, view: SidebarView): CommandResponse =>
+export const respondInFixture = (
+  command: SidebarCommand,
+  view: SidebarView,
+  now: number,
+): CommandResponse =>
   Match.value(command)
     .pipe(
       Match.tag("SwitchSpace", ({ spaceId }) => succeeded({ ...view, activeSpaceId: spaceId })),
@@ -559,11 +698,12 @@ export const respondInFixture = (command: SidebarCommand, view: SidebarView): Co
         succeeded(
           mapSpaces(view, (space) =>
             mapPinned(space, (nodes) =>
-              mapTree(
-                nodes,
-                (item) => item,
-                (folder) => (folder.bookmarkId === bookmarkId ? { ...folder, isExpanded } : folder),
-              ),
+              mapTree(nodes, {
+                onFolder: (folder) =>
+                  folder.bookmarkId === bookmarkId ? { ...folder, isExpanded } : folder,
+                onLiveFolder: (folder) =>
+                  folder.bookmarkId === bookmarkId ? { ...folder, isExpanded } : folder,
+              }),
             ),
           ),
         ),
@@ -633,21 +773,44 @@ export const respondInFixture = (command: SidebarCommand, view: SidebarView): Co
         succeeded(
           mapSpaces(view, (space) =>
             mapPinned(space, (nodes) =>
-              mapTree(
-                nodes,
-                (item) => (item.bookmarkId === bookmarkId ? { ...item, title } : item),
-                (folder) => (folder.bookmarkId === bookmarkId ? { ...folder, title } : folder),
-              ),
+              mapTree(nodes, {
+                onItem: (item) => (item.bookmarkId === bookmarkId ? { ...item, title } : item),
+                onFolder: (folder) =>
+                  folder.bookmarkId === bookmarkId ? { ...folder, title } : folder,
+                onLiveFolder: (folder) =>
+                  folder.bookmarkId === bookmarkId ? { ...folder, title } : folder,
+              }),
             ),
           ),
         ),
       ),
       Match.tag("CreateFolder", ({ spaceId, parentId }) => createFolder(view, spaceId, parentId)),
+      Match.tag("DeleteFolder", ({ bookmarkId }) => succeeded(removePinned(view, bookmarkId))),
       Match.tag("RemoveArchiveEntry", ({ entryId }) =>
         succeeded({ ...view, archive: view.archive.filter((entry) => entry.id !== entryId) }),
       ),
       Match.tag("UpdateAutoArchive", ({ enabled, idleMinutes }) =>
         succeeded({ ...view, autoArchive: { enabled, idleMinutes } }),
       ),
+    )
+    .pipe(
+      Match.tag("CreateLiveFolder", ({ spaceId, parentId, source }) =>
+        createLiveFolder(view, spaceId, parentId, source, now),
+      ),
+      Match.tag("RefreshLiveFolder", ({ bookmarkId }) =>
+        succeeded(mapLiveFolder(view, bookmarkId, (folder) => refreshLiveFolder(folder, now))),
+      ),
+      Match.tag("MarkLiveFolderSeen", ({ bookmarkId }) =>
+        succeeded(
+          mapLiveFolder(view, bookmarkId, (folder) => ({
+            ...folder,
+            items: folder.items.map((item) => ({ ...item, isUnseen: false })),
+          })),
+        ),
+      ),
+      Match.tag("OpenLiveItem", ({ bookmarkId, itemId }) =>
+        succeeded(openLiveItem(view, bookmarkId, itemId)),
+      ),
+      Match.tag("SetGitHubToken", () => succeeded(view)),
       Match.orElse(() => notReproduced(view, command)),
     )

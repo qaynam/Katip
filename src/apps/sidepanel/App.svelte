@@ -6,6 +6,7 @@
   import Sidebar from "./components/Sidebar.svelte"
   import ThemedSurface from "./components/ThemedSurface.svelte"
   import Toasts from "./components/Toasts.svelte"
+  import type { OriginAccess } from "./connection/origin-access"
   import type { SidebarConnection } from "./connection/sidebar-connection"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
   import { findActiveSpace } from "./logic/view-queries"
@@ -13,12 +14,14 @@
 
   interface Props {
     connection: SidebarConnection
+    originAccess: OriginAccess
     faviconUrl?: FaviconResolver
     onReload?: () => void
   }
 
   const {
     connection,
+    originAccess,
     faviconUrl = noFaviconResolver,
     onReload = () => location.reload(),
   }: Props = $props()
@@ -42,7 +45,7 @@
 </script>
 
 {#if view !== null && activeSpace !== null}
-  <Sidebar {view} {activeSpace} {run} {toasts} {faviconUrl} {onReload} />
+  <Sidebar {view} {activeSpace} {run} {toasts} {originAccess} {faviconUrl} {onReload} />
 {:else}
   <ThemedSurface theme={neutralTheme} transitionKey="waiting">
     <div class="waiting">

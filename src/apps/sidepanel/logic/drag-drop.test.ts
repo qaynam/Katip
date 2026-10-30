@@ -4,6 +4,7 @@ import { SpaceId } from "#modules/space"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import {
   commandForDrop,
+  dropOutcome,
   edgeAt,
   folderDropTarget,
   folderZoneAt,
@@ -259,6 +260,32 @@ describe("タブを一時タブの行の中央に落としたとき", () => {
 
   it("分割ビューを作れない環境では分割しない", () => {
     expect(drop(temporaryTab(1), splitWith(2), { canSplit: false })).toBeNull()
+  })
+})
+
+describe("分割ビューを作れない環境で、分割の位置に落としたとき", () => {
+  const outcomeOf = (source: DragSource, target: DropTarget) =>
+    Option.getOrNull(dropOutcome(source, target, { spaceId, canSplit: false }))
+
+  it("分割できたはずのタブなら、並べ替えずに対応していないことを知らせる", () => {
+    expect(outcomeOf(temporaryTab(1), splitWith(2))).toStrictEqual({ _tag: "SplitUnsupported" })
+  })
+
+  it("対応していても分割にならないドロップは、知らせずに受け付けない", () => {
+    expect(outcomeOf(temporaryTab(2), splitWith(2))).toBeNull()
+    expect(outcomeOf(pinnedItem("a"), splitWith(2))).toBeNull()
+  })
+
+  it("分割の位置以外へのドロップは、いつも通りのコマンドになる", () => {
+    expect(outcomeOf(temporaryTab(1), belowTab(2))).toStrictEqual({
+      _tag: "Run",
+      command: {
+        _tag: "PlaceTabInTemporary",
+        tabId: tabId(1),
+        spaceId,
+        placement: { _tag: "Below", tabId: tabId(2) },
+      },
+    })
   })
 })
 

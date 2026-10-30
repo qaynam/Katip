@@ -138,7 +138,8 @@
   class:dragged={isDragged}
   class:drop-before={dropZone === "before"}
   class:drop-after={dropZone === "after"}
-  class:drop-split={dropZone === "split"}
+  class:drop-split={dropZone === "split" && ctx.view.canSplit}
+  class:drop-split-unsupported={dropZone === "split" && !ctx.view.canSplit}
   data-tab-id={tabId}
   draggable={!isEditing}
   ondragstart={(event) => ctx.drag.begin(event, rowKey, dragSource)}
@@ -411,6 +412,11 @@
   .row.drop-split .close,
   .row.drop-split .audio {
     display: none;
+  }
+
+  .row.drop-split-unsupported {
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--drop-line) 30%, transparent);
+    opacity: 0.6;
   }
 
   .row :global(.title-editor) {

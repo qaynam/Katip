@@ -262,3 +262,26 @@ export const commandForDrop = (
     Favorites: ({ slot }) => dropOnFavorites(source, slot),
     SpaceBar: ({ slot }) => dropOnSpaceBar(source, slot),
   })
+
+export type DropOutcome =
+  | { readonly _tag: "Run"; readonly command: SidebarCommand }
+  // 分割ビューに対応した環境なら分割になったドロップ。前後への並べ替えに読み替えると、
+  // 分割しようとした人には意図しない並べ替えに見えるので、対応していないことを知らせる
+  | { readonly _tag: "SplitUnsupported" }
+
+/** 結果が None のドロップは受け付けない */
+export const dropOutcome = (
+  source: DragSource,
+  target: DropTarget,
+  context: DropContext,
+): Option.Option<DropOutcome> =>
+  commandForDrop(source, target, context).pipe(
+    Option.map((command): DropOutcome => ({ _tag: "Run", command })),
+    Option.orElse(() =>
+      target._tag === "SplitWith" &&
+      !context.canSplit &&
+      Option.isSome(dropOnSplit(source, target.tabId, true))
+        ? Option.some<DropOutcome>({ _tag: "SplitUnsupported" })
+        : Option.none(),
+    ),
+  )

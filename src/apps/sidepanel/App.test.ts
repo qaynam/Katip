@@ -56,6 +56,14 @@ describe("サイドバー全体", () => {
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenNewTab", windowId: 1 }])
   })
+
+  it("上部の「検索」で、このウィンドウに Spotlight を開く", async () => {
+    const { connection } = await renderSidebar(sidebarView())
+
+    await fireEvent.click(screen.getByRole("button", { name: "検索" }))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenSpotlight", windowId: 1 }])
+  })
 })
 
 describe("Space のテーマ", () => {

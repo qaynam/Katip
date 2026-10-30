@@ -1,13 +1,16 @@
 import { ArchiveEntryId, type ArchiveEntry } from "#modules/archive"
+import type { LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
+  LiveItemView,
   OpenPinnedTab,
   PinnedFolderView,
   PinnedItemView,
+  PinnedLiveFolderView,
   PinnedNodeView,
   PinnedSplitView,
   SidebarView,
@@ -85,6 +88,32 @@ export const pinnedFolder = (
   canCreateSubfolder: true,
   children: [],
   peekedItems: [],
+  ...overrides,
+})
+
+export const liveItem = (id: string, overrides: Partial<LiveItemView> = {}): LiveItemView => ({
+  id,
+  title: `項目 ${id}`,
+  subtitle: "",
+  url: `https://mail.google.com/mail/u/0/#inbox/${id}`,
+  updatedAt: 0,
+  isUnseen: false,
+  ...overrides,
+})
+
+const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
+
+export const pinnedLiveFolder = (
+  id: string,
+  overrides: Partial<Omit<PinnedLiveFolderView, "_tag" | "bookmarkId">> = {},
+): PinnedLiveFolderView => ({
+  _tag: "PinnedLiveFolder",
+  bookmarkId: BookmarkId.make(id),
+  title: `ライブフォルダ ${id}`,
+  source: inbox,
+  isExpanded: true,
+  status: { _tag: "Ready", refreshedAt: 0 },
+  items: [],
   ...overrides,
 })
 

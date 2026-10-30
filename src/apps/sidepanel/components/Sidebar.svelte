@@ -1,10 +1,14 @@
 <script lang="ts">
   import { Option } from "effect"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
+  import type { OriginAccess } from "../connection/origin-access"
   import type { FaviconResolver } from "../logic/favicon"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
+  import { messages } from "../messages"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
+  import { FolderSearchController } from "../state/folder-search.svelte"
+  import { LiveFolderDialogController } from "../state/live-folder-dialog.svelte"
   import { MenuController } from "../state/menu-controller.svelte"
   import { PendingRename } from "../state/pending-rename.svelte"
   import { setSidebarContext } from "../state/sidebar-context"
@@ -18,8 +22,11 @@
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
+  import FolderSearch from "./FolderSearch.svelte"
+  import LiveFolderDialog from "./LiveFolderDialog.svelte"
   import PinnedSection from "./PinnedSection.svelte"
   import SpaceTitle from "./SpaceTitle.svelte"
+  import SpotlightButton from "./SpotlightButton.svelte"
   import TemporarySection from "./TemporarySection.svelte"
   import ThemedSurface from "./ThemedSurface.svelte"
   import ThemePicker from "./ThemePicker.svelte"
@@ -31,11 +38,12 @@
     activeSpace: SpaceView
     run: (command: SidebarCommand) => Promise<CommandOutcome>
     toasts: ToastQueue
+    originAccess: OriginAccess
     faviconUrl: FaviconResolver
     onReload: () => void
   }
 
-  const { view, activeSpace, run, toasts, faviconUrl, onReload }: Props = $props()
+  const { view, activeSpace, run, toasts, originAccess, faviconUrl, onReload }: Props = $props()
 
   const menu = new MenuController()
   const dialog = new DialogController()
@@ -45,6 +53,8 @@
     run({ _tag: "SetSpaceTheme", spaceId: draft.spaceId, theme: draft.theme }),
   )
   const tooltip = new TooltipController()
+  const liveFolderDialog = new LiveFolderDialogController()
+  const folderSearch = new FolderSearchController()
   setSidebarContext({
     run: (command) => run(command),
     get view() {
@@ -64,6 +74,14 @@
     get faviconUrl() {
       return faviconUrl
     },
+    get toasts() {
+      return toasts
+    },
+    get originAccess() {
+      return originAccess
+    },
+    liveFolderDialog,
+    folderSearch,
   })
 
   let isArchiveOpen = $state(false)
@@ -95,10 +113,11 @@
     void run({ _tag: "SwitchSpace", windowId: view.windowId, spaceId: destination.value })
   }
 
-  const dropAcceptedCommand = (event: DragEvent) => {
+  const dropAccepted = (event: DragEvent) => {
     event.preventDefault()
-    const command = drag.takeCommand()
-    if (command !== null) void run(command)
+    const outcome = drag.takeOutcome()
+    if (outcome?._tag === "Run") void run(outcome.command)
+    else if (outcome?._tag === "SplitUnsupported") toasts.show(messages.split.unsupported)
   }
 
   const forgetDropTargetWhenLeaving = (event: DragEvent) => {
@@ -109,13 +128,14 @@
 <ThemedSurface theme={displayedTheme} transitionKey={activeSpace.id}>
   <main
     class="sidebar"
-    inert={dialog.current !== null}
+    inert={dialog.current !== null || liveFolderDialog.current !== null}
     onwheel={switchByWheel}
     ondragover={() => drag.reject()}
-    ondrop={dropAcceptedCommand}
+    ondrop={dropAccepted}
     ondragleave={forgetDropTargetWhenLeaving}
     ondragstart={() => tooltip.hide()}
   >
+    <SpotlightButton />
     <FavoritesGrid favorites={view.favorites} />
 
     {#key activeSpace.id}
@@ -145,6 +165,8 @@
 
   <ThemePicker />
   <ContextMenu />
+  <FolderSearch />
+  <LiveFolderDialog />
   <ConfirmDialog />
   <Tooltip />
 </ThemedSurface>

@@ -293,7 +293,7 @@ describe("ドラッグ＆ドロップ", () => {
     ])
   })
 
-  it("分割ビューを作れない環境では、中央に落としても分割ビューにせず並べ替える", async () => {
+  it("分割ビューを作れない環境で分割の位置に落とすと、並べ替えずに対応していないことを知らせる", async () => {
     const { connection } = await renderSidebar(
       viewWithEntries([temporaryTab(tabView(1)), temporaryTab(tabView(2))], { canSplit: false }),
     )
@@ -302,8 +302,29 @@ describe("ドラッグ＆ドロップ", () => {
     await dragOverAt(rowOf("タブ 1"), 0.5)
     await fireEvent.drop(rowOf("タブ 1"))
 
-    expect(commandsOf(connection.sentCommands, "SplitTabs")).toStrictEqual([])
-    expect(commandsOf(connection.sentCommands, "PlaceTabInTemporary")).toHaveLength(1)
+    expect(connection.sentCommands).toStrictEqual([])
+    expect(screen.getByRole("status").textContent).toContain(
+      "このブラウザは分割ビューに対応していません（Chrome 155 以降で使えます）",
+    )
+  })
+
+  it("分割ビューを作れない環境でも、行の上端に落とせばその上へ並べ替える", async () => {
+    const { connection } = await renderSidebar(
+      viewWithEntries([temporaryTab(tabView(1)), temporaryTab(tabView(2))], { canSplit: false }),
+    )
+
+    await fireEvent.dragStart(rowOf("タブ 2"))
+    await dragOverAt(rowOf("タブ 1"), 0.1)
+    await fireEvent.drop(rowOf("タブ 1"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceTabInTemporary",
+        tabId: TabId.make(2),
+        spaceId: "work",
+        placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
+    ])
   })
 
   it("分割ビューの行の中央に落としても、3 つ目のタブは並べず前後へ並べ替える", async () => {

@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest"
 import { SpaceId } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
-import type { SidebarView } from "#protocol"
+import type { PinnedLiveFolderView, PinnedNodeView, SidebarView } from "#protocol"
 import { respondInFixture } from "./fixture-backend"
 import { fixtureView } from "./fixture-view"
 
-const view = fixtureView(0)
+const NOW = 0
+const view = fixtureView(NOW)
 
 const viewAfter = (command: Parameters<typeof respondInFixture>[0], from: SidebarView = view) => {
-  const { view: next } = respondInFixture(command, from)
+  const { view: next } = respondInFixture(command, from, NOW)
   if (next === undefined) throw new Error("ビューが返らなかった")
   return next
 }
@@ -32,6 +33,25 @@ const rootFolder = (next: SidebarView, bookmarkId: string) => {
   return pinned.nodes
     .flatMap((node) => (node._tag === "PinnedFolder" ? [node] : []))
     .find((folder) => folder.bookmarkId === bookmarkId)
+}
+
+const liveFoldersIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<PinnedLiveFolderView> =>
+  nodes.flatMap((node) =>
+    node._tag === "PinnedLiveFolder"
+      ? [node]
+      : node._tag === "PinnedFolder"
+        ? liveFoldersIn(node.children)
+        : [],
+  )
+
+const liveFolder = (next: SidebarView, bookmarkId: string) => {
+  const found = next.spaces
+    .flatMap((space) =>
+      space.pinned._tag === "Available" ? liveFoldersIn(space.pinned.nodes) : [],
+    )
+    .find((folder) => folder.bookmarkId === bookmarkId)
+  if (found === undefined) throw new Error(`ライブフォルダ ${bookmarkId} が無い`)
+  return found
 }
 
 describe("フィクスチャの素朴な応答", () => {
@@ -116,6 +136,7 @@ describe("フィクスチャの素朴な応答", () => {
     const response = respondInFixture(
       { _tag: "CreateFolder", spaceId: SpaceId.make("work"), parentId: null },
       view,
+      NOW,
     )
 
     expect(response.outcome._tag === "Succeeded" && response.outcome.createdBookmarkId).toBeTruthy()
@@ -141,8 +162,93 @@ describe("フィクスチャの素朴な応答", () => {
     expect(next.spaces).toHaveLength(view.spaces.length + 1)
   })
 
+  it("フォルダを削除すると、ピン留めから消える", () => {
+    const next = viewAfter({ _tag: "DeleteFolder", bookmarkId: BookmarkId.make("design-docs") })
+
+    expect(rootFolder(next, "design-docs")).toBeUndefined()
+  })
+
+  it("作ったライブフォルダは取得元の項目を並べた状態で現れ、その ID を結果として返す", () => {
+    const response = respondInFixture(
+      {
+        _tag: "CreateLiveFolder",
+        spaceId: SpaceId.make("work"),
+        parentId: null,
+        source: { _tag: "GitHub", query: "assigned-issues" },
+      },
+      view,
+      NOW,
+    )
+    if (response.outcome._tag !== "Succeeded" || response.outcome.createdBookmarkId === null) {
+      throw new Error("ライブフォルダの ID が返らなかった")
+    }
+    if (response.view === undefined) throw new Error("ビューが返らなかった")
+
+    const created = liveFolder(response.view, response.outcome.createdBookmarkId)
+    expect(created.status._tag).toBe("Ready")
+    expect(created.items.length).toBeGreaterThan(0)
+  })
+
+  it("ライブフォルダも開閉できる", () => {
+    const next = viewAfter({
+      _tag: "SetFolderExpanded",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      isExpanded: false,
+    })
+
+    expect(liveFolder(next, "live-inbox").isExpanded).toBe(false)
+  })
+
+  it("ライブフォルダの名前を変えられる", () => {
+    const next = viewAfter({
+      _tag: "RenamePinnedItem",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      title: "メール",
+    })
+
+    expect(liveFolder(next, "live-inbox").title).toBe("メール")
+  })
+
+  it("取得に失敗したライブフォルダを取得し直すと、取得済みになる", () => {
+    const next = viewAfter({
+      _tag: "RefreshLiveFolder",
+      bookmarkId: BookmarkId.make("live-my-prs"),
+    })
+
+    expect(liveFolder(next, "live-my-prs").status).toStrictEqual({
+      _tag: "Ready",
+      refreshedAt: NOW,
+    })
+  })
+
+  it("すべて既読にすると、未読の項目が無くなる", () => {
+    const next = viewAfter({
+      _tag: "MarkLiveFolderSeen",
+      bookmarkId: BookmarkId.make("live-inbox"),
+    })
+
+    expect(liveFolder(next, "live-inbox").items.some((item) => item.isUnseen)).toBe(false)
+  })
+
+  it("ライブフォルダの項目を開くと一時タブとして開き、その項目は既読になる", () => {
+    const [first] = liveFolder(view, "live-inbox").items
+    if (first === undefined) throw new Error("フィクスチャの受信トレイが空")
+
+    const next = viewAfter({
+      _tag: "OpenLiveItem",
+      windowId: view.windowId,
+      bookmarkId: BookmarkId.make("live-inbox"),
+      itemId: first.id,
+    })
+
+    expect(activeSpace(next)?.temporaryEntries[0]).toMatchObject({
+      tab: { url: first.url, isActive: true },
+    })
+    expect(liveFolder(next, "live-inbox").items[0]?.isUnseen).toBe(false)
+  })
+
   it("再現していないコマンドは、そのことを通知する", () => {
-    const response = respondInFixture({ _tag: "ArchiveTab", tabId: TabId.make(31) }, view)
+    const response = respondInFixture({ _tag: "ArchiveTab", tabId: TabId.make(31) }, view, NOW)
 
     expect(response.notice).toContain("ArchiveTab")
   })

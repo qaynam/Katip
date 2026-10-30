@@ -13,7 +13,8 @@
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderGlyph from "./FolderGlyph.svelte"
-  import { createFolder } from "./menus"
+  import FolderSearchButton from "./FolderSearchButton.svelte"
+  import { addLiveFolderMenu, createFolder } from "./menus"
   import PinnedItemRow from "./PinnedItemRow.svelte"
   import PinnedNodes from "./PinnedNodes.svelte"
   import TitleEditor from "./TitleEditor.svelte"
@@ -27,6 +28,7 @@
   const ctx = getSidebarContext()
 
   let isEditing = $state(false)
+  let headerRow = $state<HTMLDivElement>()
   const key = $derived(`folder:${folder.bookmarkId}`)
   const emptyKey = $derived(`folder-empty:${folder.bookmarkId}`)
   const dropZone = $derived(ctx.drag.zoneFor(key))
@@ -78,7 +80,9 @@
       anchor: pointRect({ x: event.clientX, y: event.clientY }),
       trigger: null,
       entries: [
-        ...(folder.canCreateSubfolder ? [action("新しいフォルダ", createSubfolder)] : []),
+        ...(folder.canCreateSubfolder
+          ? [action("新しいフォルダ", createSubfolder), addLiveFolderMenu(ctx, folder.bookmarkId)]
+          : []),
         action("名前を変更", () => (isEditing = true)),
         action("フォルダを削除", () => void confirmDeletion(), { tone: "danger" }),
       ],
@@ -100,35 +104,40 @@
 </script>
 
 <li class="folder">
-  {#if isEditing}
-    <div class="header editing">
-      <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
-      <TitleEditor
-        initial={folder.title}
-        label="フォルダの名前"
-        onCommit={rename}
-        onCancel={() => (isEditing = false)}
-      />
-    </div>
-  {:else}
-    <button
-      class="header"
-      class:drop-before={dropZone === "before"}
-      class:drop-after={dropZone === "after"}
-      class:drop-into={dropZone === "into"}
-      class:drop-first-child={dropZone === "firstChild"}
-      type="button"
-      aria-expanded={folder.isExpanded}
-      onclick={toggle}
-      ondblclick={() => (isEditing = true)}
-      oncontextmenu={openMenu}
-      ondragover={onHeaderDragOver}
-      ondragleave={() => ctx.drag.cancelHover()}
-    >
-      <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
-      <span class="title">{folder.title || "名前のないフォルダ"}</span>
-    </button>
-  {/if}
+  <div class="header-row" class:searchable={!folder.isExpanded} bind:this={headerRow}>
+    {#if isEditing}
+      <div class="header editing">
+        <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
+        <TitleEditor
+          initial={folder.title}
+          label="フォルダの名前"
+          onCommit={rename}
+          onCancel={() => (isEditing = false)}
+        />
+      </div>
+    {:else}
+      <button
+        class="header"
+        class:drop-before={dropZone === "before"}
+        class:drop-after={dropZone === "after"}
+        class:drop-into={dropZone === "into"}
+        class:drop-first-child={dropZone === "firstChild"}
+        type="button"
+        aria-expanded={folder.isExpanded}
+        onclick={toggle}
+        ondblclick={() => (isEditing = true)}
+        oncontextmenu={openMenu}
+        ondragover={onHeaderDragOver}
+        ondragleave={() => ctx.drag.cancelHover()}
+      >
+        <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
+        <span class="title">{folder.title || "名前のないフォルダ"}</span>
+      </button>
+      {#if !folder.isExpanded && headerRow !== undefined}
+        <FolderSearchButton bookmarkId={folder.bookmarkId} anchor={headerRow} />
+      {/if}
+    {/if}
+  </div>
 
   {#if folder.isExpanded}
     {#if folder.children.length === 0}
@@ -158,6 +167,14 @@
 <style>
   .folder {
     list-style: none;
+  }
+
+  .header-row {
+    position: relative;
+  }
+
+  .header-row.searchable .header {
+    padding-right: 34px;
   }
 
   .header {

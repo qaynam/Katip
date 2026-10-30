@@ -2,6 +2,7 @@ import { mount } from "svelte"
 import { SIDEBAR_PORT_NAME, type SidebarCommand } from "#protocol"
 import App from "../sidepanel/App.svelte"
 import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
+import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
 import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
 import { respondInFixture } from "./fixture-backend"
@@ -22,13 +23,26 @@ const element = <E extends HTMLElement>(selector: string): E => {
 }
 
 const commandLog = element<HTMLOListElement>("#command-log")
+const denyAccess = element<HTMLInputElement>("#deny-access")
 
-const logCommand = (command: SidebarCommand) => {
+const log = (text: string) => {
   const entry = document.createElement("li")
-  entry.textContent = JSON.stringify(command)
+  entry.textContent = text
   commandLog.prepend(entry)
   while (commandLog.children.length > 50) commandLog.lastElementChild?.remove()
 }
+
+const logCommand = (command: SidebarCommand) => log(JSON.stringify(command))
+
+// このページは拡張のページではないので chrome.permissions を使えない。許可するかどうかは
+// ツールバーのチェックで決め、求められたオリジンを記録に残す
+const originAccess = createMemoryOriginAccess({
+  decide: (origins) => {
+    const isGranted = !denyAccess.checked
+    log(`permissions.request ${JSON.stringify(origins)} → ${isGranted ? "許可" : "拒否"}`)
+    return isGranted
+  },
+})
 
 const withCommandLog = (connection: SidebarConnection): SidebarConnection => ({
   listen: connection.listen,
@@ -44,7 +58,7 @@ const fixtureConnection = () =>
     respond: (command, view) =>
       view === null
         ? { outcome: { _tag: "Failed", reason: "ビューがありません" } }
-        : respondInFixture(command, view),
+        : respondInFixture(command, view, Date.now()),
   })
 
 // 拡張の外のページでは、externally_connectable に一致する拡張が入っているときだけ
@@ -82,5 +96,5 @@ if (connection === null) {
   frame.textContent =
     "拡張に接続できません。Katip (dev) を読み込んだ Chrome でこのページを開き、拡張 ID を確認してください。"
 } else {
-  mount(App, { target: frame, props: { connection: withCommandLog(connection) } })
+  mount(App, { target: frame, props: { connection: withCommandLog(connection), originAccess } })
 }

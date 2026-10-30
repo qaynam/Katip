@@ -4,6 +4,7 @@
   import { slotAt } from "../logic/drag-drop"
   import PinnedFolder from "./PinnedFolder.svelte"
   import PinnedItemRow from "./PinnedItemRow.svelte"
+  import PinnedLiveFolder from "./PinnedLiveFolder.svelte"
   import PinnedSplitRow from "./PinnedSplitRow.svelte"
 
   interface Props {
@@ -18,6 +19,8 @@
   {#each nodes as node, index (node.bookmarkId)}
     {#if node._tag === "PinnedFolder"}
       <PinnedFolder folder={node} position={{ parentId, index }} />
+    {:else if node._tag === "PinnedLiveFolder"}
+      <PinnedLiveFolder folder={node} position={{ parentId, index }} />
     {:else if node._tag === "PinnedSplit"}
       <PinnedSplitRow
         split={node}

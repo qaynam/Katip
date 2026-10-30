@@ -2,6 +2,7 @@ import { mount } from "svelte"
 import { WindowId } from "#platform/browser"
 import { SIDEBAR_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
+import { chromeOriginAccess } from "./connection/origin-access"
 import { createPortConnection, type SidebarPort } from "./connection/port-connection"
 
 const openPort = (): SidebarPort => {
@@ -27,6 +28,7 @@ mount(App, {
       openPort,
       windowId: currentWindow.id === undefined ? null : WindowId.make(currentWindow.id),
     }),
+    originAccess: chromeOriginAccess,
     faviconUrl,
   },
 })
