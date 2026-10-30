@@ -112,7 +112,11 @@
   const onDragOver = (event: DragEvent & { currentTarget: HTMLLIElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const canSplitInCenter = splitTarget !== null && ctx.drag.accepts(splitTarget)
-    const zone = rowZoneAt(event.clientY - bounds.top, bounds.height, canSplitInCenter)
+    const zone = rowZoneAt(
+      { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+      bounds,
+      canSplitInCenter,
+    )
     ctx.drag.offer(event, rowKey, zone, zone === "split" ? splitTarget : dropTargetAt(zone))
   }
 

@@ -369,19 +369,27 @@ describe("edgeAt", () => {
 })
 
 describe("一時タブの行に重ねたとき", () => {
-  it("分割ビューにできる行では、中央に重ねると分割ビューにする", () => {
-    expect(rowZoneAt(9, 36, true)).toBe("split")
-    expect(rowZoneAt(27, 36, true)).toBe("split")
+  const row = { width: 200, height: 40 }
+
+  it("分割ビューにできる行では、右寄りの上下中央に重ねると分割ビューにする", () => {
+    expect(rowZoneAt({ x: 190, y: 20 }, row, true)).toBe("split")
+    expect(rowZoneAt({ x: 70, y: 8 }, row, true)).toBe("split")
+    expect(rowZoneAt({ x: 70, y: 32 }, row, true)).toBe("split")
+  })
+
+  it("分割ビューにできる行でも、左端に重ねると上下の半分で並べ替える", () => {
+    expect(rowZoneAt({ x: 69, y: 19 }, row, true)).toBe("before")
+    expect(rowZoneAt({ x: 69, y: 21 }, row, true)).toBe("after")
   })
 
   it("分割ビューにできる行でも、上下の端に重ねると前後に並べ替える", () => {
-    expect(rowZoneAt(8.9, 36, true)).toBe("before")
-    expect(rowZoneAt(27.1, 36, true)).toBe("after")
+    expect(rowZoneAt({ x: 190, y: 7.9 }, row, true)).toBe("before")
+    expect(rowZoneAt({ x: 190, y: 32.1 }, row, true)).toBe("after")
   })
 
   it("分割ビューにできない行では、上半分なら前、下半分なら後ろに並べ替える", () => {
-    expect(rowZoneAt(17.9, 36, false)).toBe("before")
-    expect(rowZoneAt(18, 36, false)).toBe("after")
+    expect(rowZoneAt({ x: 190, y: 19.9 }, row, false)).toBe("before")
+    expect(rowZoneAt({ x: 190, y: 20 }, row, false)).toBe("after")
   })
 })
 

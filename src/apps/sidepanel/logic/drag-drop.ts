@@ -2,6 +2,7 @@ import { Match, Option } from "effect"
 import type { SpaceId } from "#modules/space"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
+import type { Point, Size } from "./menu-position"
 
 export interface PinnedPosition {
   readonly parentId: BookmarkId | null
@@ -59,14 +60,17 @@ export const temporaryPlacementAt = (tabId: TabId, edge: Edge): TemporaryPlaceme
 
 export type RowZone = Edge | "split"
 
-// 分割ビューにできる行は、上下の 1/4 だけを前後への並べ替えに使い、中央を分割ビューに使う。
-// 分割できない行まで中央を空けると、並べ替えの当たり判定が無駄に狭くなる
-export const rowZoneAt = (offset: number, size: number, canSplitInCenter: boolean): RowZone => {
-  if (!canSplitInCenter) return edgeAt(offset, size)
-  const ratio = offset / size
-  if (ratio < 0.25) return "before"
-  if (ratio > 0.75) return "after"
-  return "split"
+// 分割ビューにできる行は、上下中央の帯のうち左端を除いた部分（行の右寄り）を分割ビューに使う。
+// 分割したタブは右側に入るので、右へ持っていく動きで分割できるようにする。左端と上下の端は
+// 並べ替えに残し、つまんだ位置のまま縦に動かす並べ替えが分割に化けないようにする。
+// 分割できない行まで帯を空けると、並べ替えの当たり判定が無駄に狭くなる
+export const rowZoneAt = (offset: Point, size: Size, canSplit: boolean): RowZone => {
+  const vertical = edgeAt(offset.y, size.height)
+  if (!canSplit) return vertical
+  const verticalRatio = offset.y / size.height
+  const isInMiddleBand = verticalRatio >= 0.2 && verticalRatio <= 0.8
+  const isTowardRight = offset.x >= size.width * 0.35
+  return isInMiddleBand && isTowardRight ? "split" : vertical
 }
 
 export type FolderZone = "before" | "into" | "after" | "firstChild"

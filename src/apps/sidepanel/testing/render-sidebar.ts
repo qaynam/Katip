@@ -56,7 +56,14 @@ export const shownAppearance = (container: HTMLElement) => {
  * 要素の上から ratio（0〜1）の高さの位置にドラッグ中のポインタを重ねる。
  * jsdom はレイアウトを持たず DragEvent も無いので、要素の矩形と座標付きのマウスイベントで代用する
  */
-export const dragOverAt = async (element: HTMLElement, ratio: number) => {
+/**
+ * 要素の上に重ねたことにする。位置は要素の大きさに対する割合で、横の既定は右寄り。
+ */
+export const dragOverAt = async (
+  element: HTMLElement,
+  verticalRatio: number,
+  horizontalRatio = 0.75,
+) => {
   const bounds = new DOMRect(0, 100, 240, 36)
   vi.spyOn(element, "getBoundingClientRect").mockReturnValue(bounds)
   await fireEvent(
@@ -64,7 +71,8 @@ export const dragOverAt = async (element: HTMLElement, ratio: number) => {
     new MouseEvent("dragover", {
       bubbles: true,
       cancelable: true,
-      clientY: bounds.top + bounds.height * ratio,
+      clientX: bounds.left + bounds.width * horizontalRatio,
+      clientY: bounds.top + bounds.height * verticalRatio,
     }),
   )
 }
