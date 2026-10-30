@@ -18,6 +18,7 @@
     moon: "M12.9 9.6A5.25 5.25 0 1 1 6.4 3.1a4.25 4.25 0 0 0 6.5 6.5z",
     search: "M7.1 2.75a4.35 4.35 0 1 1 0 8.7 4.35 4.35 0 0 1 0-8.7zM10.25 10.25l3 3",
     alert: "M8 2.75l5.75 10H2.25zM8 6.75v2.75M8 11.25h.01",
+    check: "M3.5 8.25l3 3 6-6.5",
   } as const
 
   export type IconName = keyof typeof paths

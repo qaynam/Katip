@@ -1,5 +1,5 @@
-import { Array, Match, Option } from "effect"
-import type { LiveSource } from "#modules/live-folders"
+import { Array, Match, Option, Order } from "effect"
+import type { LiveSort, LiveSource } from "#modules/live-folders"
 import { SpaceId, SpaceName } from "#modules/space"
 import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
@@ -619,11 +619,37 @@ const mapLiveFolder = (
     ),
   )
 
-const refreshLiveFolder = (folder: PinnedLiveFolderView, now: number): PinnedLiveFolderView => ({
+const byUpdatedAt = Order.mapInput(Order.Number, (item: LiveItemView) => item.updatedAt)
+const byTitle = Order.mapInput(Order.String, (item: LiveItemView) => item.title)
+// GitHub の補足には番号も入るので、リポジトリは URL から取る
+const repositoryOrSender = (item: LiveItemView): string =>
+  /^https:\/\/github\.com\/([^/]+\/[^/]+)\//.exec(item.url)?.[1] ?? item.subtitle
+const bySource = Order.mapInput(Order.String, repositoryOrSender)
+
+const liveItemOrder = (sort: LiveSort): Order.Order<LiveItemView> =>
+  Match.value(sort).pipe(
+    Match.when("newest", () => Order.flip(byUpdatedAt)),
+    Match.when("oldest", () => byUpdatedAt),
+    Match.when("title", () => byTitle),
+    Match.when("source", () => Order.combine(bySource, Order.flip(byUpdatedAt))),
+    Match.exhaustive,
+  )
+
+const sortLiveFolder = (folder: PinnedLiveFolderView, sort: LiveSort): PinnedLiveFolderView => ({
   ...folder,
-  status: { _tag: "Ready", refreshedAt: now },
-  items: folder.items.length === 0 ? sampleLiveItems(folder.source, now) : folder.items,
+  sort,
+  items: Array.sort(folder.items, liveItemOrder(sort)),
 })
+
+const refreshLiveFolder = (folder: PinnedLiveFolderView, now: number): PinnedLiveFolderView =>
+  sortLiveFolder(
+    {
+      ...folder,
+      status: { _tag: "Ready", refreshedAt: now },
+      items: folder.items.length === 0 ? sampleLiveItems(folder.source, now) : folder.items,
+    },
+    folder.sort,
+  )
 
 const openLiveItem = (view: SidebarView, bookmarkId: BookmarkId, itemId: string): SidebarView => {
   const item = findNode(view, bookmarkId).pipe(
@@ -810,6 +836,18 @@ export const respondInFixture = (
       ),
       Match.tag("OpenLiveItem", ({ bookmarkId, itemId }) =>
         succeeded(openLiveItem(view, bookmarkId, itemId)),
+      ),
+      Match.tag("SetLiveFolderSort", ({ bookmarkId, sort }) =>
+        succeeded(mapLiveFolder(view, bookmarkId, (folder) => sortLiveFolder(folder, sort))),
+      ),
+      Match.tag("OpenUrl", ({ url }) =>
+        succeeded(
+          openTemporaryTab(
+            view,
+            view.activeSpaceId,
+            tabView(nextTabId(view), { title: Option.getOrElse(hostOf(url), () => url), url }),
+          ),
+        ),
       ),
       Match.tag("SetGitHubToken", () => succeeded(view)),
       Match.orElse(() => notReproduced(view, command)),

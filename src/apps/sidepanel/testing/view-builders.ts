@@ -113,6 +113,7 @@ export const pinnedLiveFolder = (
   source: inbox,
   isExpanded: true,
   status: { _tag: "Ready", refreshedAt: 0 },
+  sort: "newest",
   items: [],
   ...overrides,
 })

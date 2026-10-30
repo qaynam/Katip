@@ -11,7 +11,7 @@
   import Icon from "./Icon.svelte"
   import LiveItemRow from "./LiveItemRow.svelte"
   import LiveSourceGlyph from "./LiveSourceGlyph.svelte"
-  import { grantAccessAndRefresh, liveFolderMenu } from "./menus"
+  import { grantAccessAndRefresh, liveFolderMenu, openSignInPage } from "./menus"
   import TitleEditor from "./TitleEditor.svelte"
 
   interface Props {
@@ -142,6 +142,12 @@
           {#if failure.needsPermission}
             <button type="button" onclick={() => void grantAccessAndRefresh(ctx, folder)}>
               {messages.liveFolder.grantAccess}
+            </button>
+          {/if}
+          {#if failure.signInUrl !== null}
+            {@const signInUrl = failure.signInUrl}
+            <button type="button" onclick={() => openSignInPage(ctx, signInUrl)}>
+              {messages.liveFolder.signIn}
             </button>
           {/if}
           {#if failure.needsToken}

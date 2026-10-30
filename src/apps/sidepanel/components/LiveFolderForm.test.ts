@@ -4,7 +4,7 @@ import { BookmarkId } from "#platform/browser"
 import type { PinnedNodeView, SidebarCommand } from "#protocol"
 import type { CommandResponse } from "../connection/memory-connection"
 import { commandsOf, renderSidebar } from "../testing/render-sidebar"
-import { pinnedFolder, pinnedLiveFolder, sidebarView, spaceView } from "../testing/view-builders"
+import { pinnedFolder, sidebarView, spaceView } from "../testing/view-builders"
 
 const viewWithPins = (...nodes: ReadonlyArray<PinnedNodeView>) =>
   sidebarView({ spaces: [spaceView("work", { pinnedNodes: nodes })] })
@@ -110,7 +110,7 @@ describe("Gmail のライブフォルダを作るとき", () => {
 })
 
 describe("GitHub のライブフォルダを作るとき", () => {
-  it("選んだ種類で、GitHub へのアクセスを求めてから作る", async () => {
+  it("選んだ種類で、ブラウザのログインを使えるよう github.com へのアクセスを求めてから作る", async () => {
     const { connection, originAccess } = await renderSidebar(viewWithPins(), {
       respond: createdLiveFolder,
     })
@@ -119,9 +119,9 @@ describe("GitHub のライブフォルダを作るとき", () => {
     await fireEvent.click(screen.getByRole("radio", { name: "担当の Issue" }))
     await fireEvent.click(screen.getByRole("button", { name: "作成" }))
 
-    expect(originAccess.requestedOrigins).toStrictEqual([["https://api.github.com/*"]])
+    expect(originAccess.requestedOrigins).toStrictEqual([["https://github.com/*"]])
     await vi.waitFor(() =>
-      expect(commandsOf(connection.sentCommands, "CreateLiveFolder")).toStrictEqual([
+      expect(connection.sentCommands).toStrictEqual([
         {
           _tag: "CreateLiveFolder",
           spaceId: "work",
@@ -132,44 +132,23 @@ describe("GitHub のライブフォルダを作るとき", () => {
     )
   })
 
-  it("トークンを入れたら、作る前にトークンを保存する", async () => {
-    const { connection } = await renderSidebar(viewWithPins(), { respond: createdLiveFolder })
-
-    await chooseFromSpaceMenu("GitHub")
-    await fillIn("アクセストークン", "ghp_secret")
-    await fireEvent.click(screen.getByRole("button", { name: "作成" }))
-
-    await vi.waitFor(() =>
-      expect(connection.sentCommands.map((command) => command._tag)).toStrictEqual([
-        "SetGitHubToken",
-        "CreateLiveFolder",
-      ]),
-    )
-    expect(commandsOf(connection.sentCommands, "SetGitHubToken")).toStrictEqual([
-      { _tag: "SetGitHubToken", token: "ghp_secret" },
-    ])
-  })
-
-  it("トークンの作り方と発行ページへのリンクを示す", async () => {
+  it("トークンを求めない", async () => {
     await renderSidebar(viewWithPins())
 
     await chooseFromSpaceMenu("GitHub")
 
-    expect(
-      screen.getByRole<HTMLAnchorElement>("link", { name: "github.com でトークンを発行する" }).href,
-    ).toMatch(/^https:\/\/github\.com\/settings\/tokens\/new/)
+    expect(screen.queryByLabelText("アクセストークン")).toBeNull()
+    expect(screen.queryByRole("link", { name: "github.com でトークンを発行する" })).toBeNull()
   })
 
-  it("取得に成功した GitHub のライブフォルダがあれば、トークンの欄を出さない", async () => {
-    await renderSidebar(
-      viewWithPins(
-        pinnedLiveFolder("reviews", { source: { _tag: "GitHub", query: "review-requested" } }),
-      ),
-    )
+  it("ブラウザで GitHub にログインしていれば使えることを示す", async () => {
+    await renderSidebar(viewWithPins())
 
     await chooseFromSpaceMenu("GitHub")
 
-    expect(screen.queryByLabelText("アクセストークン")).toBeNull()
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "ブラウザで GitHub にログインしていれば使えます。",
+    )
   })
 })
 

@@ -87,6 +87,7 @@ const reviewRequests = (now: number): PinnedLiveFolderView =>
     title: "レビュー依頼",
     source: { _tag: "GitHub", query: "review-requested" },
     isExpanded: false,
+    sort: "source",
     status: { _tag: "Ready", refreshedAt: now - 5 * MINUTE_MS },
     items: [
       pullRequest(
@@ -116,9 +117,24 @@ const myPullRequests: PinnedLiveFolderView = pinnedLiveFolder("live-my-prs", {
   source: { _tag: "GitHub", query: "authored-pull-requests" },
   status: {
     _tag: "Failed",
-    reason: "GitHub のトークンが設定されていないか、期限が切れています。",
+    reason: "このブラウザで GitHub にログインしていません。",
     needsPermission: false,
-    needsToken: true,
+    needsToken: false,
+    signInUrl: "https://github.com/login",
+  },
+})
+
+const teamInbox: PinnedLiveFolderView = pinnedLiveFolder("live-team-inbox", {
+  title: "チームの受信トレイ",
+  source: { _tag: "Gmail", accountIndex: 2, label: null },
+  isExpanded: false,
+  status: {
+    _tag: "Failed",
+    reason: "このブラウザで 3 番目の Google アカウント（u/2）にログインしていません。",
+    needsPermission: false,
+    needsToken: false,
+    signInUrl:
+      "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F2%2F",
   },
 })
 
@@ -130,6 +146,7 @@ const newsletters: PinnedLiveFolderView = pinnedLiveFolder("live-newsletters", {
     reason: "mail.google.com へのアクセスが許可されていません。",
     needsPermission: true,
     needsToken: false,
+    signInUrl: null,
   },
 })
 
@@ -176,6 +193,7 @@ const workSpace = (now: number) =>
       workInbox(now),
       reviewRequests(now),
       mentions,
+      teamInbox,
       pinnedItem("tracker", {
         title: "Issue トラッカー",
         url: "https://tracker.example.com/board",

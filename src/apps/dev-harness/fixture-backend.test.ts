@@ -247,6 +247,45 @@ describe("フィクスチャの素朴な応答", () => {
     expect(liveFolder(next, "live-inbox").items[0]?.isUnseen).toBe(false)
   })
 
+  it("ライブフォルダの並べ方を変えると、その並べ方で項目が並び直る", () => {
+    const next = viewAfter({
+      _tag: "SetLiveFolderSort",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      sort: "oldest",
+    })
+
+    const folder = liveFolder(next, "live-inbox")
+    const updatedAts = folder.items.map((item) => item.updatedAt)
+    expect(folder.sort).toBe("oldest")
+    expect(updatedAts).toStrictEqual([...updatedAts].sort((a, b) => a - b))
+  })
+
+  it("リポジトリ順では、同じリポジトリの項目をまとめて新しい順に並べる", () => {
+    const next = viewAfter({
+      _tag: "SetLiveFolderSort",
+      bookmarkId: BookmarkId.make("live-reviews"),
+      sort: "source",
+    })
+
+    expect(liveFolder(next, "live-reviews").items.map((item) => item.subtitle)).toStrictEqual([
+      "katip/katip #214",
+      "katip/katip #209",
+      "katip/website #77",
+    ])
+  })
+
+  it("URL を開くと、表示中の Space の一時タブとして開く", () => {
+    const next = viewAfter({
+      _tag: "OpenUrl",
+      windowId: view.windowId,
+      url: "https://github.com/login",
+    })
+
+    expect(activeSpace(next)?.temporaryEntries[0]).toMatchObject({
+      tab: { url: "https://github.com/login", isActive: true },
+    })
+  })
+
   it("再現していないコマンドは、そのことを通知する", () => {
     const response = respondInFixture({ _tag: "ArchiveTab", tabId: TabId.make(31) }, view, NOW)
 

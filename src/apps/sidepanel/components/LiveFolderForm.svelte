@@ -8,13 +8,8 @@
     gitHubTokenFrom,
     gmailSourceFrom,
     type LiveFolderDraftError,
-    type TokenRequirement,
   } from "../logic/live-folder-drafts"
-  import {
-    GITHUB_TOKEN_PAGE_URL,
-    hasRefreshedGitHubFolder,
-    sourceOrigins,
-  } from "../logic/live-folders"
+  import { GITHUB_TOKEN_PAGE_URL, sourceOrigins } from "../logic/live-folders"
   import { findPinnedNode } from "../logic/view-queries"
   import { messages } from "../messages"
   import type { LiveFolderDialogRequest } from "../state/live-folder-dialog.svelte"
@@ -30,16 +25,9 @@
   const ids = $props.id()
   const text = messages.liveFolderDialog
 
-  // 開いている間に依頼もビューも変わりうるが、入力欄の構成は開いた時点で決めて、途中で出し入れしない
+  // 開いている間に依頼が変わりうるが、入力欄の構成は開いた時点で決めて、途中で出し入れしない
   const initial = untrack(() => request)
   const kind = initial._tag === "Create" ? initial.kind : "GitHub"
-  const tokenRequirement: TokenRequirement | null = untrack(() =>
-    initial._tag === "SetGitHubToken"
-      ? "required"
-      : kind === "GitHub" && !hasRefreshedGitHubFolder(ctx.view)
-        ? "optional"
-        : null,
-  )
   const title =
     initial._tag === "SetGitHubToken"
       ? text.tokenTitle
@@ -57,11 +45,6 @@
   const showDraftError = (reason: LiveFolderDraftError) => {
     error = text.errors[reason]
   }
-
-  const tokenDraft = () =>
-    tokenRequirement === null
-      ? Result.succeed(Option.none<string>())
-      : gitHubTokenFrom(token, tokenRequirement)
 
   const sourceDraft = (): Result.Result<LiveSource, LiveFolderDraftError> =>
     kind === "Gmail"
@@ -89,7 +72,7 @@
   }
 
   const create = (target: Extract<LiveFolderDialogRequest, { _tag: "Create" }>) => {
-    const draft = Result.all({ source: sourceDraft(), token: tokenDraft() })
+    const draft = sourceDraft()
     if (Result.isFailure(draft)) {
       showDraftError(draft.failure)
       return
@@ -101,15 +84,11 @@
         error = text.accessDenied(kind)
         return
       }
-      const { source, token: newToken } = draft.success
-      if (Option.isSome(newToken)) {
-        if (!(await succeeds({ _tag: "SetGitHubToken", token: newToken.value }))) return
-      }
       const isCreated = await succeeds({
         _tag: "CreateLiveFolder",
         spaceId: target.spaceId,
         parentId: target.parentId,
-        source,
+        source: draft.success,
       })
       if (!isCreated) return
       expandFolder(target.parentId)
@@ -118,15 +97,13 @@
   }
 
   const saveToken = (bookmarkId: BookmarkId) => {
-    const draft = tokenDraft()
+    const draft = gitHubTokenFrom(token)
     if (Result.isFailure(draft)) {
       showDraftError(draft.failure)
       return
     }
     void whileSubmitting(async () => {
-      if (Option.isSome(draft.success)) {
-        if (!(await succeeds({ _tag: "SetGitHubToken", token: draft.success.value }))) return
-      }
+      if (!(await succeeds({ _tag: "SetGitHubToken", token: draft.success }))) return
       void ctx.run({ _tag: "RefreshLiveFolder", bookmarkId })
       onClose()
     })
@@ -186,6 +163,7 @@
           <p id="{ids}-label-hint" class="hint">{text.labelHint}</p>
         </div>
       {:else if initial._tag === "Create"}
+        <p class="description">{text.gitHubDescription}</p>
         <fieldset class="queries">
           <legend class="label">{text.queryLegend}</legend>
           {#each GitHubQuery.literals as option (option)}
@@ -197,7 +175,7 @@
         </fieldset>
       {/if}
 
-      {#if tokenRequirement !== null}
+      {#if initial._tag === "SetGitHubToken"}
         <div class="field">
           <label class="label" for="{ids}-token">{text.token}</label>
           <input
@@ -208,10 +186,7 @@
             aria-describedby="{ids}-token-help"
             bind:value={token}
           />
-          <p id="{ids}-token-help" class="hint">
-            {text.tokenHowTo}
-            {#if tokenRequirement === "optional"}{text.tokenOptionalHint}{/if}
-          </p>
+          <p id="{ids}-token-help" class="hint">{text.tokenHowTo}</p>
         </div>
         <a class="token-link" href={GITHUB_TOKEN_PAGE_URL} target="_blank" rel="noreferrer">
           {text.tokenLink}

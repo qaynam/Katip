@@ -9,6 +9,8 @@ export type MenuEntry =
       readonly disabled?: boolean
       /** 項目の前に置く色の見本（CSS の背景） */
       readonly swatch?: string
+      /** 指定すると、いくつかから 1 つを選ぶ項目になり、true の項目に印が付く */
+      readonly checked?: boolean
     }
   | { readonly _tag: "Separator" }
   | { readonly _tag: "Submenu"; readonly label: string; readonly entries: ReadonlyArray<MenuEntry> }
@@ -20,6 +22,7 @@ export const action = (
     readonly tone?: "danger"
     readonly disabled?: boolean
     readonly swatch?: string
+    readonly checked?: boolean
   } = {},
 ): MenuEntry => ({ _tag: "Action", label, onSelect, ...options })
 

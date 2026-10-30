@@ -1,4 +1,5 @@
 import { Option } from "effect"
+import { LiveSort } from "#modules/live-folders"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { PinnedLiveFolderView, PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
 import { sourceOrigins, unseenCount, type LiveSourceKind } from "../logic/live-folders"
@@ -148,6 +149,25 @@ const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveF
   if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
 }
 
+/** 取得元のログインページを、このウィンドウの一時タブとして開く */
+export const openSignInPage = (ctx: SidebarContext, url: string) =>
+  void ctx.run({ _tag: "OpenUrl", windowId: ctx.view.windowId, url })
+
+const sortLabel = (sort: LiveSort, kind: LiveSourceKind): string =>
+  sort === "source" ? messages.liveFolder.sortsBySource[kind] : messages.liveFolder.sorts[sort]
+
+const liveFolderSortMenu = (ctx: SidebarContext, folder: PinnedLiveFolderView): MenuEntry =>
+  submenu(
+    messages.liveFolder.sortMenu,
+    LiveSort.literals.map((sort) =>
+      action(
+        sortLabel(sort, folder.source._tag),
+        () => void ctx.run({ _tag: "SetLiveFolderSort", bookmarkId: folder.bookmarkId, sort }),
+        { checked: sort === folder.sort },
+      ),
+    ),
+  )
+
 export const liveFolderMenu = (
   ctx: SidebarContext,
   folder: PinnedLiveFolderView,
@@ -155,6 +175,7 @@ export const liveFolderMenu = (
 ): ReadonlyArray<MenuEntry> => {
   const { bookmarkId, status } = folder
   const failure = status._tag === "Failed" ? status : null
+  const signInUrl = failure?.signInUrl ?? null
   return [
     action(
       messages.liveFolder.refreshNow,
@@ -166,8 +187,12 @@ export const liveFolderMenu = (
       () => void ctx.run({ _tag: "MarkLiveFolderSeen", bookmarkId }),
       { disabled: unseenCount(folder) === 0 },
     ),
+    liveFolderSortMenu(ctx, folder),
     ...(failure?.needsPermission === true
       ? [action(messages.liveFolder.grantAccess, () => void grantAccessAndRefresh(ctx, folder))]
+      : []),
+    ...(signInUrl !== null
+      ? [action(messages.liveFolder.signIn, () => openSignInPage(ctx, signInUrl))]
       : []),
     ...(failure?.needsToken === true
       ? [

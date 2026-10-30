@@ -1,4 +1,4 @@
-import { Option, Result } from "effect"
+import { Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { gitHubTokenFrom, gmailSourceFrom, type GmailDraft } from "./live-folder-drafts"
 
@@ -48,26 +48,20 @@ describe("gmailSourceFrom", () => {
 })
 
 describe("gitHubTokenFrom", () => {
-  const failureOf = (input: string, requirement: "required" | "optional") => {
-    const parsed = gitHubTokenFrom(input, requirement)
+  const failureOf = (input: string) => {
+    const parsed = gitHubTokenFrom(input)
     return Result.isFailure(parsed) ? parsed.failure : null
   }
 
   it("前後の空白を除いたトークンを送る", () => {
-    expect(Result.getOrNull(gitHubTokenFrom("  ghp_abc  ", "required"))).toStrictEqual(
-      Option.some("ghp_abc"),
-    )
+    expect(Result.getOrNull(gitHubTokenFrom("  ghp_abc  "))).toBe("ghp_abc")
   })
 
-  it("必須の欄が空ならトークンの入力を求める", () => {
-    expect(failureOf("  ", "required")).toBe("TokenRequired")
-  })
-
-  it("任意の欄が空ならトークンを送らない", () => {
-    expect(Result.getOrNull(gitHubTokenFrom("", "optional"))).toStrictEqual(Option.none())
+  it("空ならトークンの入力を求める", () => {
+    expect(failureOf("  ")).toBe("TokenRequired")
   })
 
   it("途中に空白を含むトークンは受け付けない", () => {
-    expect(failureOf("ghp_abc def", "optional")).toBe("TokenHasWhitespace")
+    expect(failureOf("ghp_abc def")).toBe("TokenHasWhitespace")
   })
 })

@@ -1,4 +1,4 @@
-import { Option, Result } from "effect"
+import { Result } from "effect"
 import type { LiveSource } from "#modules/live-folders"
 
 export type LiveFolderDraftError = "InvalidAccountIndex" | "TokenRequired" | "TokenHasWhitespace"
@@ -26,17 +26,9 @@ export const gmailSourceFrom = (
   return Result.succeed({ _tag: "Gmail", accountIndex, label: label === "" ? null : label })
 }
 
-export type TokenRequirement = "required" | "optional"
-
-/** 任意の欄が空なら、トークンを送らない（設定済みのトークンを変えない）ことを表す None を返す */
-export const gitHubTokenFrom = (
-  draft: string,
-  requirement: TokenRequirement,
-): Result.Result<Option.Option<string>, LiveFolderDraftError> => {
+export const gitHubTokenFrom = (draft: string): Result.Result<string, LiveFolderDraftError> => {
   const token = draft.trim()
-  if (token === "") {
-    return requirement === "required" ? Result.fail("TokenRequired") : Result.succeed(Option.none())
-  }
+  if (token === "") return Result.fail("TokenRequired")
   if (/\s/.test(token)) return Result.fail("TokenHasWhitespace")
-  return Result.succeed(Option.some(token))
+  return Result.succeed(token)
 }

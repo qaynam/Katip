@@ -124,10 +124,16 @@
           class="item"
           class:danger={entry.tone === "danger"}
           type="button"
-          role="menuitem"
+          role={entry.checked === undefined ? "menuitem" : "menuitemradio"}
+          aria-checked={entry.checked}
           disabled={entry.disabled === true}
           onclick={() => select(entry)}
         >
+          {#if entry.checked !== undefined}
+            <span class="check">
+              {#if entry.checked}<Icon name="check" size={13} />{/if}
+            </span>
+          {/if}
           {#if entry.swatch !== undefined}
             <span class="dot" style:background={entry.swatch}></span>
           {/if}
@@ -208,6 +214,14 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .check {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 14px;
+    margin-left: -3px;
   }
 
   .dot {
