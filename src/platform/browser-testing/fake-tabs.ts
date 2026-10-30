@@ -2,6 +2,7 @@ import { Array, Effect, Option, Order, Ref } from "effect"
 import {
   type BrowserApiError,
   type BrowserTab,
+  type TabCreateOptions,
   TabGroupId,
   type TabId,
   type TabQuery,
@@ -16,8 +17,11 @@ import {
   groupIdsInWindow,
   issueId,
   leastUsedColor,
+  locateTab,
   newGroupDestination,
   sameGroup,
+  splitViewMembers,
+  splitViewProblems,
   tabSnapshot,
   toBrowserTabGroup,
   windowOfGroup,
@@ -35,7 +39,9 @@ import {
   requireTab,
   requireWindow,
   setPinned,
+  splitTabs,
   transferTab,
+  unsplitTabs,
   updateTab,
 } from "./browsing-steps"
 import { type BrowsingTx, chromeCall, type FakeWorld, transact } from "./fake-world"
@@ -121,8 +127,98 @@ const ungroupFrom = Effect.fnUntraced(function* (
   )
 })
 
-export const makeFakeTabs = (world: FakeWorld): Tabs["Service"] =>
-  Tabs.of({
+const requireOpenerIn = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  openerTabId: TabId | undefined,
+  windowId: WindowId,
+) {
+  if (openerTabId === undefined) return
+  const opener = yield* requireTab(tx, openerTabId)
+  if (opener.window.id !== windowId) {
+    return yield* tx.reject("Tab opener must be in the same window as the created tab.")
+  }
+})
+
+const createSplitWith = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  partnerId: TabId,
+  options: TabCreateOptions,
+) {
+  const partner = yield* requireTab(tx, partnerId)
+  if (Option.isSome(partner.tab.splitViewId)) {
+    return yield* tx.reject("The split-with tab is already in a split view.")
+  }
+  if (options.windowId !== undefined && options.windowId !== partner.window.id) {
+    return yield* tx.reject("The split-with tab must be in the same window as the created tab.")
+  }
+  const index = options.index ?? partner.index + 1
+  if (index !== partner.index && index !== partner.index + 1) {
+    return yield* tx.reject("The index must be adjacent to the split-with tab.")
+  }
+  // Chrome が食い違うピン留めをどちらに揃えるのか確かめられないので、黙って片方に揃えずに失敗させる
+  if (options.pinned !== undefined && options.pinned !== partner.tab.pinned) {
+    return yield* tx.reject("Split tabs must have matching pinned states.")
+  }
+  yield* requireOpenerIn(tx, options.openerTabId, partner.window.id)
+  const tabId = yield* createTab(tx, {
+    windowId: partner.window.id,
+    index,
+    url: options.url ?? NEW_TAB_URL,
+    active: options.active ?? true,
+    pinned: partner.tab.pinned,
+    openerTabId: Option.fromUndefinedOr(options.openerTabId),
+    groupId: partner.tab.groupId,
+  })
+  yield* splitTabs(tx, [partnerId, tabId])
+  return tabId
+})
+
+const areSplitPartners = (state: BrowsingState, a: TabId, b: TabId) => {
+  const splitViewOf = (tabId: TabId) =>
+    Option.flatMap(locateTab(state, tabId), ({ tab }) => tab.splitViewId)
+  return Option.exists(splitViewOf(a), (splitViewId) =>
+    Option.contains(splitViewOf(b), splitViewId),
+  )
+}
+
+/**
+ * `tabs.move` の 1 回の操作で動かすタブのまとまり。続けて指定された分割ビューの 2 つのタブを 1 つにまとめる。
+ *
+ * @remarks
+ * 両方を一緒に動かしても分割が残るのは推測。1 タブずつ別の操作にすると、先に動かしたタブが
+ * 隣から離れた時点で分割が解けてしまうので、まとめて動かしてから条件を判定させる。
+ */
+const moveUnits = (
+  state: BrowsingState,
+  tabIds: ReadonlyArray<TabId>,
+): ReadonlyArray<Array.NonEmptyReadonlyArray<TabId>> =>
+  tabIds.reduce<ReadonlyArray<Array.NonEmptyReadonlyArray<TabId>>>(
+    (units, tabId) =>
+      Option.match(
+        Option.filter(
+          Array.last(units),
+          (unit) => unit.length === 1 && areSplitPartners(state, unit[0], tabId),
+        ),
+        {
+          onNone: () => [...units, [tabId]],
+          onSome: (single) => [...units.slice(0, -1), [...single, tabId]],
+        },
+      ),
+    [],
+  )
+
+export interface FakeTabsOptions {
+  readonly supportsSplitView: boolean
+}
+
+export const makeFakeTabs = (
+  world: FakeWorld,
+  { supportsSplitView }: FakeTabsOptions,
+): Tabs["Service"] => {
+  const requireSplitViewApi = (tx: BrowsingTx) =>
+    supportsSplitView ? Effect.void : tx.reject("Split View API requires Chrome 155 or later")
+
+  return Tabs.of({
     query: (query) =>
       chromeCall(
         world,
@@ -139,13 +235,13 @@ export const makeFakeTabs = (world: FakeWorld): Tabs["Service"] =>
         world,
         "tabs.create",
         Effect.fnUntraced(function* (tx) {
-          const windowId = options.windowId ?? (yield* requireFocusedWindow(tx))
-          if (options.openerTabId !== undefined) {
-            const opener = yield* requireTab(tx, options.openerTabId)
-            if (opener.window.id !== windowId) {
-              return yield* tx.reject("Tab opener must be in the same window as the created tab.")
-            }
+          if (options.splitWithTabId !== undefined) {
+            yield* requireSplitViewApi(tx)
+            const tabId = yield* createSplitWith(tx, options.splitWithTabId, options)
+            return yield* requireTabSnapshot(tx, tabId)
           }
+          const windowId = options.windowId ?? (yield* requireFocusedWindow(tx))
+          yield* requireOpenerIn(tx, options.openerTabId, windowId)
           const tabId = yield* createTab(tx, {
             windowId,
             index: options.index ?? "end",
@@ -191,12 +287,16 @@ export const makeFakeTabs = (world: FakeWorld): Tabs["Service"] =>
       Effect.gen(function* () {
         const windowId = Option.fromUndefinedOr(options.windowId)
         yield* Effect.reduce(
-          tabIds,
+          moveUnits(yield* Ref.get(world.browsing), tabIds),
           (): number | "end" => options.index,
-          (target, tabId) =>
-            Effect.map(
-              transact(world, "tabs.move", (tx) => moveTab(tx, tabId, target, windowId)),
-              (placed) => placed + 1,
+          (unitTarget, unit) =>
+            transact(world, "tabs.move", (tx) =>
+              Effect.reduce(
+                unit,
+                () => unitTarget,
+                (target, tabId) =>
+                  Effect.map(moveTab(tx, tabId, target, windowId), (placed) => placed + 1),
+              ),
             ),
         )
         const state = yield* Ref.get(world.browsing)
@@ -296,4 +396,37 @@ export const makeFakeTabs = (world: FakeWorld): Tabs["Service"] =>
           return yield* requireTabSnapshot(tx, tabId)
         }),
       ),
+
+    supportsSplitView,
+
+    createSplit: (tabIds) =>
+      transact(
+        world,
+        "tabs.createSplit",
+        Effect.fnUntraced(function* (tx) {
+          yield* requireSplitViewApi(tx)
+          const first = yield* requireTab(tx, tabIds[0])
+          const second = yield* requireTab(tx, tabIds[1])
+          if (Option.isSome(first.tab.splitViewId) || Option.isSome(second.tab.splitViewId)) {
+            return yield* tx.reject("Tabs already in a split view cannot be split.")
+          }
+          const problems = splitViewProblems(first, second)
+          if (problems.length > 0) return yield* tx.reject(problems.join(" "))
+          return yield* splitTabs(tx, tabIds)
+        }),
+      ),
+
+    unsplit: (splitViewId) =>
+      transact(
+        world,
+        "tabs.unsplit",
+        Effect.fnUntraced(function* (tx) {
+          yield* requireSplitViewApi(tx)
+          if (splitViewMembers(yield* tx.state, splitViewId).length === 0) {
+            return yield* tx.reject(`No split view with id: ${splitViewId}.`)
+          }
+          yield* unsplitTabs(tx, splitViewId)
+        }),
+      ),
   })
+}

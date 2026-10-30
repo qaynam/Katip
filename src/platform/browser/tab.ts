@@ -1,6 +1,6 @@
 import { Option, Schema } from "effect"
-import { nonEmptyString, tabGroupIdFrom, tabIdFrom } from "./chrome-values"
-import { TabGroupId, TabId, WindowId } from "./ids"
+import { nonEmptyString, splitViewIdFrom, tabGroupIdFrom, tabIdFrom } from "./chrome-values"
+import { SplitViewId, TabGroupId, TabId, WindowId } from "./ids"
 
 export const TabStatus = Schema.Literals(["unloaded", "loading", "complete"])
 export type TabStatus = typeof TabStatus.Type
@@ -22,6 +22,7 @@ export const BrowserTab = Schema.Struct({
   incognito: Schema.Boolean,
   openerTabId: Schema.OptionFromNullOr(TabId),
   groupId: Schema.OptionFromNullOr(TabGroupId),
+  splitViewId: Schema.OptionFromNullOr(SplitViewId),
   lastAccessed: Schema.OptionFromNullOr(Schema.Number),
 })
 export type BrowserTab = typeof BrowserTab.Type
@@ -49,6 +50,7 @@ export const fromChromeTab = (raw: chrome.tabs.Tab): Option.Option<BrowserTab> =
     incognito: raw.incognito,
     openerTabId: tabIdFrom(raw.openerTabId),
     groupId: tabGroupIdFrom(raw.groupId),
+    splitViewId: splitViewIdFrom(raw.splitViewId),
     // 型定義上は必須だが Chrome 121 で追加された値で、minimum_chrome_version の 120 では返らない
     lastAccessed: Option.fromNullishOr(raw.lastAccessed),
   }))
@@ -64,6 +66,7 @@ export const TabChanges = Schema.Struct({
   muted: Schema.optionalKey(Schema.Boolean),
   discarded: Schema.optionalKey(Schema.Boolean),
   groupId: Schema.optionalKey(Schema.OptionFromNullOr(TabGroupId)),
+  splitViewId: Schema.optionalKey(Schema.OptionFromNullOr(SplitViewId)),
 })
 export type TabChanges = typeof TabChanges.Type
 
@@ -77,4 +80,5 @@ export const fromChromeTabChangeInfo = (raw: chrome.tabs.OnUpdatedInfo): TabChan
   ...(raw.mutedInfo !== undefined && { muted: raw.mutedInfo.muted }),
   ...(raw.discarded !== undefined && { discarded: raw.discarded }),
   ...(raw.groupId !== undefined && { groupId: tabGroupIdFrom(raw.groupId) }),
+  ...(raw.splitViewId !== undefined && { splitViewId: splitViewIdFrom(raw.splitViewId) }),
 })

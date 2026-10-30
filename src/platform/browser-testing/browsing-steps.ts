@@ -1,6 +1,7 @@
-import { Array, Effect, Option } from "effect"
+import { Array, Effect, Option, Order } from "effect"
 import {
   type BrowserApiError,
+  SplitViewId,
   type TabChanges,
   type TabGroupId,
   TabId,
@@ -18,6 +19,7 @@ import {
   groupEnclosingGap,
   groupSnapshot,
   insertAt,
+  isIntactSplitView,
   issueId,
   locateTab,
   markActive,
@@ -26,6 +28,8 @@ import {
   replaceGroup,
   replaceWindow,
   sameGroup,
+  splitViewIds,
+  splitViewMembers,
   successorOfActiveTab,
   type TabLocation,
   type TabRecord,
@@ -360,9 +364,10 @@ export interface NewTab {
   readonly active: boolean
   readonly pinned: boolean
   readonly openerTabId: Option.Option<TabId>
+  /** 省略時は、両隣が同じグループの位置に開いたタブだけがそのグループに入る。 */
+  readonly groupId?: Option.Option<TabGroupId>
 }
 
-/** タブを開く。両隣が同じグループの位置に開いたタブはそのグループに入る。 */
 export const createTab = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   spec: NewTab,
@@ -383,7 +388,8 @@ export const createTab = Effect.fnUntraced(function* (
     muted: false,
     discarded: false,
     openerTabId: spec.openerTabId,
-    groupId: spec.pinned ? Option.none() : groupEnclosingGap(window.tabs, index),
+    groupId: spec.groupId ?? (spec.pinned ? Option.none() : groupEnclosingGap(window.tabs, index)),
+    splitViewId: Option.none(),
     lastAccessed: tx.now,
   })
   const becomesActive = spec.active || Option.isNone(window.activeTabId)
@@ -411,4 +417,58 @@ export const blurWindow = Effect.fnUntraced(function* (tx: BrowsingTx, windowId:
   if (!Option.contains(focusedWindowId(state), windowId) || others.length === 0) return
   yield* tx.setState({ ...state, focusOrder: [...others, windowId] })
   yield* tx.emit({ _tag: "WindowFocusChanged", windowId: Array.head(others) })
+})
+
+const setSplitViewId = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  tabId: TabId,
+  splitViewId: Option.Option<SplitViewId>,
+) {
+  yield* updateTab(tx, tabId, (record) => ({ ...record, splitViewId }))
+  yield* emitTabUpdated(tx, tabId, { splitViewId })
+})
+
+/** 条件を確かめずに 2 つのタブを分割ビューにする。変化はタブストリップの順に発火する。 */
+export const splitTabs = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  tabIds: readonly [TabId, TabId],
+): Effect.fn.Return<SplitViewId, BrowserApiError> {
+  const [id, issued] = issueId(yield* tx.state)
+  const splitViewId = SplitViewId.make(id)
+  yield* tx.setState(issued)
+  const members = yield* Effect.forEach(tabIds, (tabId) => requireTab(tx, tabId))
+  const inStripOrder = Array.sort(
+    members,
+    Order.mapInput(Order.Number, ({ index }: TabLocation) => index),
+  )
+  yield* Effect.forEach(
+    inStripOrder,
+    ({ tab }) => setSplitViewId(tx, tab.id, Option.some(splitViewId)),
+    { discard: true },
+  )
+  return splitViewId
+})
+
+export const unsplitTabs = Effect.fnUntraced(function* (tx: BrowsingTx, splitViewId: SplitViewId) {
+  yield* Effect.forEach(
+    splitViewMembers(yield* tx.state, splitViewId),
+    ({ tab }) => setSplitViewId(tx, tab.id, Option.none()),
+    { discard: true },
+  )
+})
+
+/**
+ * 同じウィンドウで隣り合い、ピン留めとグループが揃った 2 つのタブ、という分割ビューの条件を
+ * 満たさなくなった分割を解く。
+ *
+ * @remarks
+ * Chrome が分割を解くと確かめられているのは、片方のタブを閉じたときと片方だけを動かしたときだけ。
+ * 操作ごとに挙動を推測して書き分けると推測どうしが食い違うので、どの操作の後でも条件だけで判定する。
+ */
+export const dissolveBrokenSplitViews = Effect.fnUntraced(function* (tx: BrowsingTx) {
+  const state = yield* tx.state
+  const broken = splitViewIds(state).filter(
+    (splitViewId) => !isIntactSplitView(splitViewMembers(state, splitViewId)),
+  )
+  yield* Effect.forEach(broken, (splitViewId) => unsplitTabs(tx, splitViewId), { discard: true })
 })

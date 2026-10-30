@@ -24,7 +24,7 @@ export {
 } from "./browser-events"
 export { type BrowserPort, PortDisconnectedError, Ports, type PortSender } from "./browser-port"
 export { type HeldStream, makeHeldStream } from "./held-stream"
-export { BookmarkId, TabGroupId, TabId, WindowId } from "./ids"
+export { BookmarkId, SplitViewId, TabGroupId, TabId, WindowId } from "./ids"
 export { liveBrowserLayer } from "./live"
 export {
   makeStorageArea,

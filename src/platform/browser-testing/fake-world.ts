@@ -13,15 +13,20 @@ import {
   type Windows,
 } from "#platform/browser"
 import { type BrowsingState, emptyBrowsingState } from "./browsing-state"
+import { dissolveBrokenSplitViews } from "./browsing-steps"
+
+type ApiNameOf<Service> = {
+  readonly [K in keyof Service & string]: Service[K] extends boolean ? never : K
+}[keyof Service & string]
 
 /** 失敗を仕込める API の名前。live の {@link BrowserApiError} の `api` と同じ表記。 */
 export type FakeApiName =
-  | `tabs.${keyof Tabs["Service"] & string}`
-  | `tabGroups.${keyof TabGroups["Service"] & string}`
-  | `windows.${keyof Windows["Service"] & string}`
-  | `bookmarks.${keyof Bookmarks["Service"] & string}`
+  | `tabs.${ApiNameOf<Tabs["Service"]>}`
+  | `tabGroups.${ApiNameOf<TabGroups["Service"]>}`
+  | `windows.${ApiNameOf<Windows["Service"]>}`
+  | `bookmarks.${ApiNameOf<Bookmarks["Service"]>}`
   | `storage.${StorageAreaName}.${"get" | "set" | "remove"}`
-  | `alarms.${keyof Alarms["Service"] & string}`
+  | `alarms.${ApiNameOf<Alarms["Service"]>}`
 
 interface InjectedFailure {
   readonly api: string
@@ -109,6 +114,7 @@ export interface BrowsingTx {
  * @remarks
  * 失敗したら状態もイベントも捨てる。Chrome のリスナーは操作が終わってから呼ばれるので、
  * イベントの購読者が API を呼び返しても、操作の途中の状態は見えない。
+ * 確定する前に、条件を満たさなくなった分割ビューを解く。
  */
 export const transact = <A, E>(
   world: FakeWorld,
@@ -126,13 +132,15 @@ export const transact = <A, E>(
         const now = yield* Clock.currentTimeMillis
         const draft = yield* Ref.make(yield* Ref.get(world.browsing))
         const pending = yield* Ref.make<ReadonlyArray<BrowserEvent>>([])
-        const result = yield* body({
+        const tx: BrowsingTx = {
           now,
           state: Ref.get(draft),
           setState: (state) => Ref.set(draft, state),
           emit: (event) => Ref.update(pending, (events) => [...events, event]),
           reject: (message) => Effect.fail(new BrowserApiError({ api, cause: new Error(message) })),
-        })
+        }
+        const result = yield* body(tx)
+        yield* dissolveBrokenSplitViews(tx)
         yield* Ref.set(world.browsing, yield* Ref.get(draft))
         yield* world.publish(yield* Ref.get(pending))
         return result

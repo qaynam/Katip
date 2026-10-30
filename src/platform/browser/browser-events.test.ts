@@ -145,6 +145,31 @@ describe("Chrome の値の正規化", () => {
     }),
   )
 
+  it.effect("分割ビューが解けたタブは、変化も現在の値も splitViewId が None になる", () =>
+    Effect.gen(function* () {
+      const chrome = makeFakeChromeEvents()
+      const captured = captureBrowserEvents(chrome.sources)
+
+      chrome.fire(
+        "tabs",
+        "onUpdated",
+        1,
+        { splitViewId: -1 },
+        chromeTab({ id: 1, splitViewId: -1 }),
+      )
+
+      const updated = tabUpdated((yield* takeEvents(captured, 1))[0])
+      assert.deepStrictEqual(
+        Option.map(updated, ({ changes }) => changes.splitViewId),
+        Option.some(Option.none()),
+      )
+      assert.deepStrictEqual(
+        Option.map(updated, ({ tab }) => tab.splitViewId),
+        Option.some(Option.none()),
+      )
+    }),
+  )
+
   it.effect("ID を持たないタブのイベントは流さない", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()

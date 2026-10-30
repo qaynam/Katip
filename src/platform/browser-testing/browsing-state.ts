@@ -3,6 +3,7 @@ import {
   type BrowserTab,
   type BrowserTabGroup,
   type BrowserWindow,
+  type SplitViewId,
   TabGroupColor,
   type TabGroupId,
   type TabId,
@@ -22,6 +23,7 @@ export interface TabRecord {
   readonly discarded: boolean
   readonly openerTabId: Option.Option<TabId>
   readonly groupId: Option.Option<TabGroupId>
+  readonly splitViewId: Option.Option<SplitViewId>
   readonly lastAccessed: number
 }
 
@@ -86,6 +88,41 @@ export const locateTab = (state: BrowsingState, tabId: TabId): Option.Option<Tab
       ([tab, index]) => ({ window, index, tab }),
     ),
   )
+
+/** ウィンドウの作成順、ウィンドウの中ではタブストリップの左から。 */
+export const allTabLocations = (state: BrowsingState): ReadonlyArray<TabLocation> =>
+  state.windows.flatMap((window) => window.tabs.map((tab, index) => ({ window, index, tab })))
+
+/** ウィンドウの作成順、ウィンドウの中ではタブストリップの左から。 */
+export const splitViewMembers = (
+  state: BrowsingState,
+  splitViewId: SplitViewId,
+): ReadonlyArray<TabLocation> =>
+  allTabLocations(state).filter(({ tab }) => Option.contains(tab.splitViewId, splitViewId))
+
+export const splitViewIds = (state: BrowsingState): ReadonlyArray<SplitViewId> =>
+  Array.dedupe(allTabLocations(state).flatMap(({ tab }) => Option.toArray(tab.splitViewId)))
+
+/** `createSplit` の条件のうち、2 つのタブの並びと状態についての違反。どちらかが分割済みかは見ない。 */
+export const splitViewProblems = (a: TabLocation, b: TabLocation): ReadonlyArray<string> => [
+  ...(a.window.id === b.window.id ? [] : ["Split tabs must be in the same window."]),
+  ...(a.window.id === b.window.id && Math.abs(a.index - b.index) !== 1
+    ? ["Split tabs must be adjacent."]
+    : []),
+  ...(a.tab.pinned === b.tab.pinned ? [] : ["Split tabs must have matching pinned states."]),
+  ...(sameGroup(a.tab.groupId, b.tab.groupId) ? [] : ["Split tabs must be in the same group."]),
+]
+
+/** 2 つのタブだけが条件を満たして並んでいる分割ビューか。 */
+export const isIntactSplitView = (members: ReadonlyArray<TabLocation>): boolean => {
+  const [first, second, ...rest] = members
+  return (
+    first !== undefined &&
+    second !== undefined &&
+    rest.length === 0 &&
+    splitViewProblems(first, second).length === 0
+  )
+}
 
 export const replaceWindow = (state: BrowsingState, window: WindowRecord): BrowsingState => ({
   ...state,
@@ -330,6 +367,7 @@ export const toBrowserTab = (window: WindowRecord, index: number, tab: TabRecord
   incognito: false,
   openerTabId: tab.openerTabId,
   groupId: tab.groupId,
+  splitViewId: tab.splitViewId,
   lastAccessed: Option.some(tab.lastAccessed),
 })
 
@@ -337,9 +375,7 @@ export const tabSnapshot = (state: BrowsingState, tabId: TabId): Option.Option<B
   Option.map(locateTab(state, tabId), ({ window, index, tab }) => toBrowserTab(window, index, tab))
 
 export const allTabs = (state: BrowsingState): ReadonlyArray<BrowserTab> =>
-  state.windows.flatMap((window) =>
-    window.tabs.map((tab, index) => toBrowserTab(window, index, tab)),
-  )
+  allTabLocations(state).map(({ window, index, tab }) => toBrowserTab(window, index, tab))
 
 export const toBrowserTabGroup = (group: GroupRecord, windowId: WindowId): BrowserTabGroup => ({
   id: group.id,

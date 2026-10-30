@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Option } from "effect"
-import { TabGroupId, TabId } from "./ids"
+import { SplitViewId, TabGroupId, TabId } from "./ids"
 import { fromChromeTab, fromChromeTabChangeInfo } from "./tab"
 
 const chromeTab = (overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab => ({
@@ -80,6 +80,33 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
+  it("splitViewId が SPLIT_VIEW_ID_NONE のタブは分割ビューに入っていない", () => {
+    const converted = fromChromeTab(chromeTab({ splitViewId: -1 }))
+
+    assert.deepStrictEqual(
+      Option.map(converted, (tab) => tab.splitViewId),
+      Option.some(Option.none()),
+    )
+  })
+
+  it("splitViewId を返さない Chrome 140 未満のタブは分割ビューに入っていない", () => {
+    const converted = fromChromeTab(chromeTab({ splitViewId: undefined }))
+
+    assert.deepStrictEqual(
+      Option.map(converted, (tab) => tab.splitViewId),
+      Option.some(Option.none()),
+    )
+  })
+
+  it("分割ビューに入っているタブはその分割ビューの ID を持つ", () => {
+    const converted = fromChromeTab(chromeTab({ splitViewId: 4 }))
+
+    assert.deepStrictEqual(
+      Option.map(converted, (tab) => tab.splitViewId),
+      Option.some(Option.some(SplitViewId.make(4))),
+    )
+  })
+
   it("opener を持つタブは opener のタブ ID を持つ", () => {
     const converted = fromChromeTab(chromeTab({ openerTabId: 3 }))
 
@@ -107,5 +134,17 @@ describe("タブの変化の変換", () => {
     const changes = fromChromeTabChangeInfo({ groupId: -1 })
 
     assert.deepStrictEqual(changes, { groupId: Option.none() })
+  })
+
+  it("分割ビューに入った変化はその分割ビューの ID を持つ", () => {
+    const changes = fromChromeTabChangeInfo({ splitViewId: 4 })
+
+    assert.deepStrictEqual(changes, { splitViewId: Option.some(SplitViewId.make(4)) })
+  })
+
+  it("分割ビューが解けた変化は splitViewId が None になる", () => {
+    const changes = fromChromeTabChangeInfo({ splitViewId: -1 })
+
+    assert.deepStrictEqual(changes, { splitViewId: Option.none() })
   })
 })

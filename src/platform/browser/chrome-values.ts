@@ -1,9 +1,10 @@
 import { Option } from "effect"
-import { TabGroupId, TabId, WindowId } from "./ids"
+import { SplitViewId, TabGroupId, TabId, WindowId } from "./ids"
 
 export const TAB_ID_NONE = -1
 export const TAB_GROUP_ID_NONE = -1
 export const WINDOW_ID_NONE = -1
+export const SPLIT_VIEW_ID_NONE = -1
 
 export const nonEmptyString = (value: string | undefined): Option.Option<string> =>
   Option.filter(Option.fromNullishOr(value), (text) => text.length > 0)
@@ -25,3 +26,9 @@ export const tabGroupIdFrom = (raw: number): Option.Option<TabGroupId> =>
 
 export const tabGroupIdToChrome = (groupId: Option.Option<TabGroupId>): number =>
   Option.getOrElse(groupId, () => TAB_GROUP_ID_NONE)
+
+export const splitViewIdFrom = (raw: number | undefined): Option.Option<SplitViewId> =>
+  Option.fromNullishOr(raw).pipe(
+    Option.filter((id) => id !== SPLIT_VIEW_ID_NONE),
+    Option.map((id) => SplitViewId.make(id)),
+  )

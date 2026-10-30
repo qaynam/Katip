@@ -12,6 +12,7 @@ import {
   type BrowserWindow,
   Ports,
   type PortSender,
+  SplitViewId,
   Storage,
   type StorageAreaName,
   type TabChanges,
@@ -64,6 +65,8 @@ export interface TabSeed {
   readonly discarded?: boolean
   /** {@link WindowSeed.groups} のキー。 */
   readonly group?: string
+  /** 同じキーを持つ隣り合った 2 つのタブが 1 つの分割ビューになる。 */
+  readonly split?: string
   /** このタブを開いたタブの、同じウィンドウの中での位置。 */
   readonly openerIndex?: number
   /** 省略時は仕込んだ時刻。 */
@@ -93,6 +96,8 @@ export interface WindowSeed<
   readonly focused?: boolean
 }
 
+type SplitKeyOf<Seed> = Seed extends { readonly split: infer Key extends string } ? Key : never
+
 export interface SeededWindow<
   Tabs extends ReadonlyArray<TabSeed> = ReadonlyArray<TabSeed>,
   Groups extends TabGroupSeeds = TabGroupSeeds,
@@ -101,6 +106,8 @@ export interface SeededWindow<
   /** {@link WindowSeed.tabs} と同じ順。 */
   readonly tabIds: { readonly [K in keyof Tabs]: TabId }
   readonly groupIds: { readonly [K in keyof Groups]: TabGroupId }
+  /** キーは {@link TabSeed.split}。 */
+  readonly splitViewIds: { readonly [K in SplitKeyOf<Tabs[number]>]: SplitViewId }
 }
 
 /** ページの側で起きる変化。値が変わった項目だけが `TabUpdated` の `changes` に入る。 */
@@ -117,6 +124,26 @@ export interface BrowsingSnapshot {
   /** ウィンドウの作成順、ウィンドウの中では index 順。 */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly groups: ReadonlyArray<BrowserTabGroup>
+}
+
+const splitKeysOf = (seed: WindowSeed): ReadonlyArray<string> =>
+  Array.dedupe(seed.tabs.flatMap((tab) => (tab.split === undefined ? [] : [tab.split])))
+
+const splitProblems = (seed: WindowSeed, key: string): ReadonlyArray<string> => {
+  const members = seed.tabs.flatMap((tab, index) => (tab.split === key ? [{ tab, index }] : []))
+  const [first, second] = members
+  if (first === undefined || second === undefined || members.length > 2) {
+    return [`分割 "${key}" のタブが 2 つでない`]
+  }
+  return [
+    ...(second.index - first.index === 1 ? [] : [`分割 "${key}" のタブが隣り合っていない`]),
+    ...((first.tab.pinned ?? false) === (second.tab.pinned ?? false)
+      ? []
+      : [`分割 "${key}" のタブのピン留めが揃っていない`]),
+    ...(first.tab.group === second.tab.group
+      ? []
+      : [`分割 "${key}" のタブのグループが揃っていない`]),
+  ]
 }
 
 const seedProblems = (seed: WindowSeed): ReadonlyArray<string> => {
@@ -155,6 +182,7 @@ const seedProblems = (seed: WindowSeed): ReadonlyArray<string> => {
         ...(contiguous ? [] : [`グループ "${key}" のタブが連続していない`]),
       ]
     }),
+    ...splitKeysOf(seed).flatMap((key) => splitProblems(seed, key)),
   ]
 }
 
@@ -187,6 +215,18 @@ const seedWindowInto = <
           ] as const,
       )
       const groupIds = Record.fromEntries(groupEntries.map(([key, , id]) => [key, id] as const))
+      const splitKeys = splitKeysOf(seed)
+      const splitViewIds = Record.fromEntries(
+        splitKeys.map(
+          (key, index) =>
+            [
+              key,
+              SplitViewId.make(
+                state.lastIssuedId + 2 + seed.tabs.length + groupEntries.length + index,
+              ),
+            ] as const,
+        ),
+      )
       const groups = groupEntries.reduce<ReadonlyArray<GroupRecord>>(
         (built, [, groupSeed, id]) => [
           ...built,
@@ -218,6 +258,9 @@ const seedWindowInto = <
         groupId: Option.flatMap(Option.fromUndefinedOr(tabSeed.group), (key) =>
           Record.get(groupIds, key),
         ),
+        splitViewId: Option.flatMap(Option.fromUndefinedOr(tabSeed.split), (key) =>
+          Record.get(splitViewIds, key),
+        ),
         lastAccessed: tabSeed.lastAccessed ?? now,
       }))
       const activeIndex = Math.max(
@@ -232,13 +275,15 @@ const seedWindowInto = <
         ],
         groups: [...state.groups, ...groups],
         focusOrder: focused ? [windowId, ...state.focusOrder] : [...state.focusOrder, windowId],
-        lastIssuedId: state.lastIssuedId + 1 + seed.tabs.length + groupEntries.length,
+        lastIssuedId:
+          state.lastIssuedId + 1 + seed.tabs.length + groupEntries.length + splitKeys.length,
       })
       // map や fromEntries は tuple の長さやキーを型に残さないので、仕込みの形に合わせて戻す
       return {
         windowId,
         tabIds: tabIds as SeededWindow<Tabs, Groups>["tabIds"],
         groupIds: groupIds as SeededWindow<Tabs, Groups>["groupIds"],
+        splitViewIds: splitViewIds as SeededWindow<Tabs, Groups>["splitViewIds"],
       }
     }),
   )
@@ -263,6 +308,14 @@ const pageChanges = (tab: TabRecord, update: PageUpdate): TabChanges => ({
     update.audible !== tab.audible && { audible: update.audible }),
 })
 
+export interface FakeBrowserOptions {
+  /** 省略時は `true`。`false` なら分割ビューを作る・解く API の無い Chrome（155 未満）を再現する。 */
+  readonly supportsSplitView?: boolean
+}
+
+type FakeBrowserServices =
+  FakeBrowser | Tabs | TabGroups | Windows | Bookmarks | Storage | Alarms | BrowserEvents | Ports
+
 const extensionPageSender: PortSender = {
   external: false,
   url: Option.none(),
@@ -273,6 +326,7 @@ const extensionPageSender: PortSender = {
 /**
  * テストからブラウザの状態を仕込み、観察し、ユーザーやページの側の操作を起こすハンドル。
  * `FakeBrowser.layer` は、これと Chrome API の全サービスの fake を、状態を共有させて提供する。
+ * `FakeBrowser.layerWith` は Chrome のバージョンの違いを指定して同じものを提供する。
  */
 export class FakeBrowser extends Context.Service<
   FakeBrowser,
@@ -318,95 +372,99 @@ export class FakeBrowser extends Context.Service<
     connect(name: string, sender?: PortSender): Effect.Effect<BrowserPort, never, Scope.Scope>
   }
 >()("katip/platform/browser-testing/FakeBrowser") {
-  static readonly layer: Layer.Layer<
-    FakeBrowser | Tabs | TabGroups | Windows | Bookmarks | Storage | Alarms | BrowserEvents | Ports
-  > = Layer.effectContext(
-    Effect.gen(function* () {
-      const world = yield* makeFakeWorld
-      const bookmarks = yield* makeFakeBookmarks(world)
-      const storage = yield* makeFakeStorage(world)
-      const alarms = yield* makeFakeAlarms(world)
+  static readonly layerWith = (options: FakeBrowserOptions): Layer.Layer<FakeBrowserServices> =>
+    Layer.effectContext(
+      Effect.gen(function* () {
+        const world = yield* makeFakeWorld
+        const bookmarks = yield* makeFakeBookmarks(world)
+        const storage = yield* makeFakeStorage(world)
+        const alarms = yield* makeFakeAlarms(world)
 
-      const connect = (name: string, sender: PortSender = extensionPageSender) =>
-        Effect.acquireRelease(
-          Effect.sync(() => {
-            const { client, server } = makePortPair(name, sender)
-            world.connections.push(server)
-            return client
-          }),
-          (client) => client.disconnect,
+        const connect = (name: string, sender: PortSender = extensionPageSender) =>
+          Effect.acquireRelease(
+            Effect.sync(() => {
+              const { client, server } = makePortPair(name, sender)
+              world.connections.push(server)
+              return client
+            }),
+            (client) => client.disconnect,
+          )
+
+        const fakeBrowser = FakeBrowser.of({
+          seedWindow: (seed) => seedWindowInto(world, seed),
+          seedBookmarks: bookmarks.seed,
+          seedStorage: storage.seed,
+          snapshot: Effect.map(Ref.get(world.browsing), (state) => ({
+            windows: state.windows.map((window) => toBrowserWindow(state, window)),
+            tabs: allTabs(state),
+            groups: allGroups(state),
+          })),
+          emit: (event) => world.publish([event]),
+          takeEmittedEvents: world.takeEmitted,
+          closeWindow: (windowId) =>
+            transact(
+              world,
+              "windows.remove",
+              Effect.fnUntraced(function* (tx) {
+                const window = yield* requireWindow(tx, windowId)
+                yield* Effect.forEach(
+                  window.tabs,
+                  Effect.fnUntraced(function* (tab) {
+                    yield* detachTab(tx, tab.id)
+                    yield* tx.emit({
+                      _tag: "TabRemoved",
+                      tabId: tab.id,
+                      windowId,
+                      isWindowClosing: true,
+                    })
+                    yield* removeGroupIfEmpty(tx, tab.groupId, windowId)
+                  }),
+                  { discard: true },
+                )
+                yield* closeWindowIfEmpty(tx, windowId)
+              }),
+            ),
+          updatePage: (tabId, update) =>
+            transact(
+              world,
+              "tabs.onUpdated",
+              Effect.fnUntraced(function* (tx) {
+                const { tab } = yield* requireTab(tx, tabId)
+                const changes = pageChanges(tab, update)
+                if (Object.keys(changes).length > 0) {
+                  yield* updateTab(tx, tabId, (record) => applyPageChanges(record, changes))
+                  yield* emitTabUpdated(tx, tabId, changes)
+                }
+                return yield* requireTabSnapshot(tx, tabId)
+              }),
+            ),
+          fireAlarm: alarms.fire,
+          failNext: (api, cause = new Error(`${api} failed (injected by FakeBrowser)`)) =>
+            Ref.update(world.failures, (pending) => [...pending, { api, cause }]),
+          connect,
+        })
+
+        return Context.make(FakeBrowser, fakeBrowser).pipe(
+          Context.add(
+            Tabs,
+            makeFakeTabs(world, { supportsSplitView: options.supportsSplitView ?? true }),
+          ),
+          Context.add(TabGroups, makeFakeTabGroups(world)),
+          Context.add(Windows, makeFakeWindows(world)),
+          Context.add(Bookmarks, bookmarks.service),
+          Context.add(Storage, storage.service),
+          Context.add(Alarms, alarms.service),
+          Context.add(
+            BrowserEvents,
+            BrowserEvents.of({
+              events: world.events.stream,
+              connections: world.connections.stream,
+            }),
+          ),
+          Context.add(Ports, Ports.of({ connect: (name) => connect(name) })),
         )
+      }),
+    )
 
-      const fakeBrowser = FakeBrowser.of({
-        seedWindow: (seed) => seedWindowInto(world, seed),
-        seedBookmarks: bookmarks.seed,
-        seedStorage: storage.seed,
-        snapshot: Effect.map(Ref.get(world.browsing), (state) => ({
-          windows: state.windows.map((window) => toBrowserWindow(state, window)),
-          tabs: allTabs(state),
-          groups: allGroups(state),
-        })),
-        emit: (event) => world.publish([event]),
-        takeEmittedEvents: world.takeEmitted,
-        closeWindow: (windowId) =>
-          transact(
-            world,
-            "windows.remove",
-            Effect.fnUntraced(function* (tx) {
-              const window = yield* requireWindow(tx, windowId)
-              yield* Effect.forEach(
-                window.tabs,
-                Effect.fnUntraced(function* (tab) {
-                  yield* detachTab(tx, tab.id)
-                  yield* tx.emit({
-                    _tag: "TabRemoved",
-                    tabId: tab.id,
-                    windowId,
-                    isWindowClosing: true,
-                  })
-                  yield* removeGroupIfEmpty(tx, tab.groupId, windowId)
-                }),
-                { discard: true },
-              )
-              yield* closeWindowIfEmpty(tx, windowId)
-            }),
-          ),
-        updatePage: (tabId, update) =>
-          transact(
-            world,
-            "tabs.onUpdated",
-            Effect.fnUntraced(function* (tx) {
-              const { tab } = yield* requireTab(tx, tabId)
-              const changes = pageChanges(tab, update)
-              if (Object.keys(changes).length > 0) {
-                yield* updateTab(tx, tabId, (record) => applyPageChanges(record, changes))
-                yield* emitTabUpdated(tx, tabId, changes)
-              }
-              return yield* requireTabSnapshot(tx, tabId)
-            }),
-          ),
-        fireAlarm: alarms.fire,
-        failNext: (api, cause = new Error(`${api} failed (injected by FakeBrowser)`)) =>
-          Ref.update(world.failures, (pending) => [...pending, { api, cause }]),
-        connect,
-      })
-
-      return Context.make(FakeBrowser, fakeBrowser).pipe(
-        Context.add(Tabs, makeFakeTabs(world)),
-        Context.add(TabGroups, makeFakeTabGroups(world)),
-        Context.add(Windows, makeFakeWindows(world)),
-        Context.add(Bookmarks, bookmarks.service),
-        Context.add(Storage, storage.service),
-        Context.add(Alarms, alarms.service),
-        Context.add(
-          BrowserEvents,
-          BrowserEvents.of({
-            events: world.events.stream,
-            connections: world.connections.stream,
-          }),
-        ),
-        Context.add(Ports, Ports.of({ connect: (name) => connect(name) })),
-      )
-    }),
-  )
+  static readonly layer: Layer.Layer<FakeBrowserServices> = FakeBrowser.layerWith({})
 }

@@ -2,6 +2,7 @@ export type { BookmarkSeed, SeededBookmarks } from "./fake-bookmarks"
 export {
   type BrowsingSnapshot,
   FakeBrowser,
+  type FakeBrowserOptions,
   type PageUpdate,
   type SeededWindow,
   type TabGroupSeed,

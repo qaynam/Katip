@@ -3,6 +3,7 @@ import { Effect, Option } from "effect"
 import { TestClock } from "effect/testing"
 import {
   type BrowserEvent,
+  SplitViewId,
   TabGroupId,
   TabGroups,
   TabId,
@@ -13,6 +14,16 @@ import { FakeBrowser } from "./fake-browser"
 
 const tagsOf = (events: ReadonlyArray<BrowserEvent>) => events.map(({ _tag }) => _tag)
 
+const splitViewChangesOf = (events: ReadonlyArray<BrowserEvent>) =>
+  events.flatMap((event) =>
+    event._tag === "TabUpdated" && event.changes.splitViewId !== undefined
+      ? [[event.tabId, event.changes.splitViewId] as const]
+      : [],
+  )
+
+const splitViewOf = (tabId: TabId) =>
+  Tabs.use((tabs) => tabs.get(tabId)).pipe(Effect.map(({ splitViewId }) => splitViewId))
+
 const tabOrderIn = (windowId: WindowId) =>
   Tabs.use((tabs) => tabs.query({ windowId })).pipe(
     Effect.map((found) => found.map(({ id }) => id)),
@@ -20,6 +31,7 @@ const tabOrderIn = (windowId: WindowId) =>
 
 const missingTab = TabId.make(9999)
 const missingGroup = TabGroupId.make(9999)
+const missingSplitView = SplitViewId.make(9999)
 
 layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
   describe("タブを閉じたとき", () => {
@@ -945,4 +957,504 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
   })
+
+  describe("2 つのタブを分割ビューにしたとき", () => {
+    it.effect("両方のタブが返された分割ビューに入り、変化がタブストリップの順に発火する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+        } = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        const splitViewId = yield* tabs.createSplit([right, left])
+
+        assert.deepStrictEqual(splitViewChangesOf(yield* fake.takeEmittedEvents), [
+          [left, Option.some(splitViewId)],
+          [right, Option.some(splitViewId)],
+        ])
+      }),
+    )
+
+    it.effect("ピン留めしたタブどうしは分割できる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+        } = yield* fake.seedWindow({ tabs: [{ pinned: true }, { pinned: true }] })
+
+        const splitViewId = yield* tabs.createSplit([left, right])
+
+        assert.deepStrictEqual(yield* splitViewOf(right), Option.some(splitViewId))
+      }),
+    )
+
+    it.effect("同じグループのタブどうしは分割できる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+        } = yield* fake.seedWindow({
+          tabs: [{ group: "work" }, { group: "work" }],
+          groups: { work: {} },
+        })
+
+        const splitViewId = yield* tabs.createSplit([left, right])
+
+        assert.deepStrictEqual(yield* splitViewOf(right), Option.some(splitViewId))
+      }),
+    )
+
+    it.effect("隣り合っていないタブは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, , right],
+        } = yield* fake.seedWindow({ tabs: [{}, {}, {}] })
+
+        const error = yield* Effect.flip(tabs.createSplit([left, right]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("同じタブどうしは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [tab],
+        } = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        const error = yield* Effect.flip(tabs.createSplit([tab, tab]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("別のウィンドウのタブとは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const here = yield* fake.seedWindow({ tabs: [{}] })
+        const elsewhere = yield* fake.seedWindow({ tabs: [{}] })
+
+        const error = yield* Effect.flip(tabs.createSplit([here.tabIds[0], elsewhere.tabIds[0]]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("既に分割ビューに入っているタブは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [, split, unsplit],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
+
+        const error = yield* Effect.flip(tabs.createSplit([split, unsplit]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("ピン留めが揃っていないタブは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [pinned, unpinned],
+        } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}] })
+
+        const error = yield* Effect.flip(tabs.createSplit([pinned, unpinned]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("グループが揃っていないタブは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [grouped, ungrouped],
+        } = yield* fake.seedWindow({ tabs: [{ group: "work" }, {}], groups: { work: {} } })
+
+        const error = yield* Effect.flip(tabs.createSplit([grouped, ungrouped]))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+  })
+
+  describe("分割ビューを解いたとき", () => {
+    it.effect("両方のタブが分割ビューから外れ、変化がタブストリップの順に発火する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+          splitViewIds,
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        yield* tabs.unsplit(splitViewIds.a)
+
+        assert.deepStrictEqual(splitViewChangesOf(yield* fake.takeEmittedEvents), [
+          [left, Option.none()],
+          [right, Option.none()],
+        ])
+      }),
+    )
+
+    it.effect("存在しない分割ビューは解けない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        yield* fake.seedWindow({ tabs: [{}] })
+
+        const error = yield* Effect.flip(tabs.unsplit(missingSplitView))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+  })
+
+  describe("分割ビューのタブを閉じたとき", () => {
+    it.effect("TabRemoved の後に、残ったタブが分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [closing, remaining],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, { active: true }] })
+
+        yield* tabs.remove([closing])
+
+        const emitted = yield* fake.takeEmittedEvents
+        assert.deepStrictEqual(tagsOf(emitted), ["TabRemoved", "TabUpdated"])
+        assert.deepStrictEqual(splitViewChangesOf(emitted), [[remaining, Option.none()]])
+      }),
+    )
+
+    it.effect("ウィンドウごと閉じると、分割ビューの変化は発火しない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        yield* fake.closeWindow(windowId)
+
+        assert.deepStrictEqual(splitViewChangesOf(yield* fake.takeEmittedEvents), [])
+      }),
+    )
+  })
+
+  describe("分割ビューのタブを動かしたとき", () => {
+    it.effect("片方だけを動かすと、両方が分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [moving, left],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
+
+        yield* tabs.move([moving], { index: "end" })
+
+        assert.deepStrictEqual(
+          [yield* splitViewOf(moving), yield* splitViewOf(left)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+
+    it.effect("両方を続けて指定して動かすと、分割ビューのまま並ぶ", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [left, right, other],
+          splitViewIds,
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
+
+        yield* tabs.move([left, right], { index: "end" })
+
+        assert.deepStrictEqual(yield* tabOrderIn(windowId), [other, left, right])
+        assert.deepStrictEqual(
+          [yield* splitViewOf(left), yield* splitViewOf(right)],
+          [Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
+        )
+      }),
+    )
+
+    it.effect("両方を動かしても、間に別のタブを挟んで並べると分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right, other],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
+
+        yield* tabs.move([left, other, right], { index: 0 })
+
+        assert.deepStrictEqual(
+          [yield* splitViewOf(left), yield* splitViewOf(right)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+
+    it.effect("片方だけを別のウィンドウへ動かすと、両方が分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [moving, left],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+        const other = yield* fake.seedWindow({ tabs: [{}] })
+
+        yield* tabs.move([moving], { index: "end", windowId: other.windowId })
+
+        assert.deepStrictEqual(
+          [yield* splitViewOf(moving), yield* splitViewOf(left)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+  })
+
+  describe("分割ビューのタブのピン留めやグループを変えたとき", () => {
+    it.effect("片方をピン留めすると、両方が分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [pinning, other],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        yield* tabs.update(pinning, { pinned: true })
+
+        assert.deepStrictEqual(
+          [yield* splitViewOf(pinning), yield* splitViewOf(other)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+
+    it.effect("片方だけをグループに入れると、両方が分割ビューから外れる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [grouping, other],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        yield* tabs.group({ tabIds: [grouping] })
+
+        assert.deepStrictEqual(
+          [yield* splitViewOf(grouping), yield* splitViewOf(other)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+  })
+
+  describe("既存のタブと分割ビューにしてタブを開いたとき", () => {
+    it.effect("右隣に開き、TabCreated の後に両方が分割ビューに入る", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [partner, other],
+        } = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        const created = yield* tabs.create({ splitWithTabId: partner })
+
+        const emitted = yield* fake.takeEmittedEvents
+        assert.deepStrictEqual(yield* tabOrderIn(windowId), [partner, created.id, other])
+        assert.deepStrictEqual(tagsOf(emitted), [
+          "TabCreated",
+          "TabActivated",
+          "TabUpdated",
+          "TabUpdated",
+        ])
+        assert.deepStrictEqual(splitViewChangesOf(emitted), [
+          [partner, created.splitViewId],
+          [created.id, created.splitViewId],
+        ])
+      }),
+    )
+
+    it.effect("そのタブの位置を index に指定すると左隣に開く", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [other, partner],
+        } = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        const created = yield* tabs.create({ splitWithTabId: partner, index: 1 })
+
+        assert.deepStrictEqual(yield* tabOrderIn(windowId), [other, created.id, partner])
+      }),
+    )
+
+    it.effect("隣にならない index を指定すると失敗する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [partner],
+        } = yield* fake.seedWindow({ tabs: [{}, {}, {}] })
+
+        const error = yield* Effect.flip(tabs.create({ splitWithTabId: partner, index: 2 }))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("別のウィンドウを指定すると失敗する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const here = yield* fake.seedWindow({ tabs: [{}] })
+        const elsewhere = yield* fake.seedWindow({ tabs: [{}] })
+
+        const error = yield* Effect.flip(
+          tabs.create({ splitWithTabId: here.tabIds[0], windowId: elsewhere.windowId }),
+        )
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("既に分割ビューに入っているタブとは分割できない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [split],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        const error = yield* Effect.flip(tabs.create({ splitWithTabId: split }))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("そのタブと食い違うピン留めを指定すると失敗する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [partner],
+        } = yield* fake.seedWindow({ tabs: [{}] })
+
+        const error = yield* Effect.flip(tabs.create({ splitWithTabId: partner, pinned: true }))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("開いたタブは、そのタブと同じグループに入る", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [partner],
+          groupIds,
+        } = yield* fake.seedWindow({ tabs: [{ group: "work" }, {}], groups: { work: {} } })
+
+        const created = yield* tabs.create({ splitWithTabId: partner })
+
+        assert.deepStrictEqual(created.groupId, Option.some(groupIds.work))
+      }),
+    )
+
+    it.effect("ピン留めしたタブと分割すると、開いたタブもピン留めされる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [partner],
+        } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}] })
+
+        const created = yield* tabs.create({ splitWithTabId: partner })
+
+        assert.deepStrictEqual([created.pinned, created.index], [true, 1])
+      }),
+    )
+  })
 })
+
+layer(FakeBrowser.layerWith({ supportsSplitView: false }), { buildPerTest: true })(
+  "分割ビューの API が無い Chrome の Tabs の fake",
+  (it) => {
+    it.effect("分割ビューの API が無いと答える", () =>
+      Effect.gen(function* () {
+        const tabs = yield* Tabs
+
+        assert.isFalse(tabs.supportsSplitView)
+      }),
+    )
+
+    it.effect("ユーザーが作った分割ビューは読める", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          tabIds: [left],
+          splitViewIds,
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+
+        assert.deepStrictEqual(yield* splitViewOf(left), Option.some(splitViewIds.a))
+      }),
+    )
+
+    it.effect("分割ビューを作れない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const { tabIds } = yield* fake.seedWindow({ tabs: [{}, {}] })
+
+        const error = yield* Effect.flip(tabs.createSplit(tabIds))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("分割ビューを解けない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const { splitViewIds } = yield* fake.seedWindow({
+          tabs: [{ split: "a" }, { split: "a" }],
+        })
+
+        const error = yield* Effect.flip(tabs.unsplit(splitViewIds.a))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+
+    it.effect("既存のタブと分割ビューにしてタブを開けない", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [partner],
+        } = yield* fake.seedWindow({ tabs: [{}] })
+
+        const error = yield* Effect.flip(tabs.create({ splitWithTabId: partner }))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+        assert.deepStrictEqual(yield* tabOrderIn(windowId), [partner])
+      }),
+    )
+  },
+)

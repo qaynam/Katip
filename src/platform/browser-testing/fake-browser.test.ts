@@ -97,6 +97,107 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
+  describe("分割ビューを仕込んだとき", () => {
+    it.effect("同じ split キーの 2 つのタブが、返された ID の分割ビューに入る", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+
+        const { windowId, splitViewIds } = yield* fake.seedWindow({
+          tabs: [{}, { split: "a" }, { split: "a" }],
+        })
+
+        assert.deepStrictEqual(
+          (yield* tabs.query({ windowId })).map(({ splitViewId }) => splitViewId),
+          [Option.none(), Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
+        )
+      }),
+    )
+
+    it.effect("split キーごとに別の分割ビューになる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const { splitViewIds } = yield* fake.seedWindow({
+          tabs: [{ split: "a" }, { split: "a" }, { split: "b" }, { split: "b" }],
+        })
+
+        assert.notStrictEqual(splitViewIds.a, splitViewIds.b)
+      }),
+    )
+
+    it.effect("split キーのタブが 1 つだけなら die する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const exit = yield* Effect.exit(fake.seedWindow({ tabs: [{ split: "a" }, {}] }))
+
+        assert.isTrue(Exit.hasDies(exit))
+      }),
+    )
+
+    it.effect("split キーのタブが 3 つあれば die する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const exit = yield* Effect.exit(
+          fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, { split: "a" }] }),
+        )
+
+        assert.isTrue(Exit.hasDies(exit))
+      }),
+    )
+
+    it.effect("split キーのタブが隣り合っていなければ die する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const exit = yield* Effect.exit(
+          fake.seedWindow({ tabs: [{ split: "a" }, {}, { split: "a" }] }),
+        )
+
+        assert.isTrue(Exit.hasDies(exit))
+      }),
+    )
+
+    it.effect("split キーのタブのピン留めが揃っていなければ die する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const exit = yield* Effect.exit(
+          fake.seedWindow({ tabs: [{ split: "a", pinned: true }, { split: "a" }] }),
+        )
+
+        assert.isTrue(Exit.hasDies(exit))
+      }),
+    )
+
+    it.effect("split キーのタブのグループが揃っていなければ die する", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+
+        const exit = yield* Effect.exit(
+          fake.seedWindow({
+            tabs: [{ split: "a", group: "work" }, { split: "a" }],
+            groups: { work: {} },
+          }),
+        )
+
+        assert.isTrue(Exit.hasDies(exit))
+      }),
+    )
+  })
+
+  describe("Chrome のバージョンを指定しなかったとき", () => {
+    it.effect("分割ビューの API がある Chrome として振る舞う", () =>
+      Effect.gen(function* () {
+        const tabs = yield* Tabs
+
+        assert.isTrue(tabs.supportsSplitView)
+      }),
+    )
+  })
+
   describe("BrowserEvents を購読したとき", () => {
     it.effect("購読する前に起きたイベントも、最初の購読者が起きた順に受け取る", () =>
       Effect.gen(function* () {
