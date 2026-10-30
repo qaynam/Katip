@@ -9,11 +9,19 @@ import {
 } from "./search-text"
 import { urlFromInput } from "./url-input"
 
-export type CandidateKind = "OpenTab" | "Pin" | "Space" | "Bookmark"
+export type CandidateKind = "OpenTab" | "Pin" | "Space" | "Bookmark" | "History" | "Action"
+
+/** `All` はすべての種類の候補から探す。`Actions` は操作（`Action`）の候補だけから探す。 */
+export type SpotlightSearchMode = "All" | "Actions"
 
 export interface SearchCandidate {
   readonly kind: CandidateKind
   readonly title: string
+  /**
+   * タイトルと同じように照合する別の名前。表示の言語とは別の言語での操作の名前など。
+   * 一致してもタイトルとして表示されるのは `title`。
+   */
+  readonly keywords?: ReadonlyArray<string>
   /** 空文字は URL を持たない候補（Space）。 */
   readonly url: string
   /** 最後に使った時刻（エポックミリ秒）。 */
@@ -28,6 +36,7 @@ export type SpotlightEntry<C> =
   | { readonly _tag: "SearchWeb"; readonly query: string }
 
 export interface SpotlightSearchOptions {
+  readonly mode: SpotlightSearchMode
   readonly now: number
   /** 候補の最大件数。URL を開く項目とウェブ検索の項目は数えない。 */
   readonly limit: number
@@ -46,7 +55,14 @@ const URL_MATCH_DISCOUNT = 20
 
 // 種類と最近使ったことによる加点は、合わせても一致の強さ 1 段分（20）に届かないようにする。
 // 届くと、打った語との一致よりも開いた時刻で並びが決まり、絞り込むほど結果が読めなくなる
-const kindBonus: Record<CandidateKind, number> = { OpenTab: 3, Pin: 2, Space: 2, Bookmark: 0 }
+const kindBonus: Record<CandidateKind, number> = {
+  OpenTab: 4,
+  Pin: 3,
+  Space: 3,
+  Action: 2,
+  Bookmark: 1,
+  History: 0,
+}
 const RECENCY_BONUS_MAX = 10
 const RECENCY_HALF_LIFE_MS = 24 * 60 * 60 * 1000
 
@@ -58,7 +74,8 @@ const recencyBonus = (lastUsedAt: Option.Option<number>, now: number): number =>
   })
 
 interface SearchableText {
-  readonly title: string
+  /** タイトルと、タイトルと同じように照合する別の名前。 */
+  readonly titles: ReadonlyArray<string>
   readonly url: string
 }
 
@@ -70,7 +87,9 @@ const urlMatchStrength = (url: string, term: string): Option.Option<MatchStrengt
 const textScore = (text: SearchableText, term: string): Option.Option<number> =>
   pipe(
     [
-      Option.map(matchStrength(text.title, term), (strength) => strengthScore[strength]),
+      ...text.titles.map((title) =>
+        Option.map(matchStrength(title, term), (strength) => strengthScore[strength]),
+      ),
       Option.map(
         urlMatchStrength(text.url, term),
         (strength) => strengthScore[strength] - URL_MATCH_DISCOUNT,
@@ -88,7 +107,10 @@ const matchScore = (
   terms: Array.NonEmptyReadonlyArray<string>,
   phrase: string,
 ): Option.Option<number> => {
-  const text = { title: searchableTitle(candidate.title), url: searchableUrl(candidate.url) }
+  const text = {
+    titles: [candidate.title, ...(candidate.keywords ?? [])].map(searchableTitle),
+    url: searchableUrl(candidate.url),
+  }
   const termScores = Option.all(terms.map((term) => textScore(text, term)))
   const phraseBonus = terms.length > 1 ? Option.getOrElse(textScore(text, phrase), () => 0) : 0
   return Option.map(termScores, (scores) => Number.sumAll(scores) + phraseBonus)
@@ -139,28 +161,51 @@ const rankMatches = <C extends SearchCandidate>(
     Array.map(([candidate]) => candidate),
   )
 
+const asEntries = <C>(ranked: ReadonlyArray<C>, limit: number): ReadonlyArray<SpotlightEntry<C>> =>
+  ranked.slice(0, limit).map((candidate) => ({ _tag: "Candidate", candidate }))
+
+const searchActions = <C extends SearchCandidate>(
+  input: string,
+  candidates: ReadonlyArray<C>,
+  options: SpotlightSearchOptions,
+): ReadonlyArray<SpotlightEntry<C>> => {
+  const actions = candidates.filter((candidate) => candidate.kind === "Action")
+  const terms = searchTerms(input)
+  return asEntries(
+    Array.isReadonlyArrayNonEmpty(terms)
+      ? rankMatches(actions, terms, searchPhrase(input), options.now)
+      : actions,
+    options.limit,
+  )
+}
+
 /**
  * Spotlight に並べる項目を、上から表示する順に返す。
  *
  * @remarks
- * 入力が空なら、開いているタブ（今表示しているものを除く）を最近使った順に並べ、Space を続ける。
+ * `All` で入力が空なら、開いているタブ（今表示しているものを除く）を最近使った順に並べ、Space を続ける。
  * 上限に収まらないときは Space を残し、使ったのが古いタブから省く。
  * 入力があれば、すべての語がタイトルか URL に含まれる候補を一致の強さの順に並べ、
  * 最後に入力でウェブを検索する項目を付ける。入力が URL らしければ、それを開く項目も加える。
+ *
+ * `Actions` では操作の候補だけを返す。入力が空なら渡された順のまますべて、入力があれば一致するものを
+ * 一致の強さの順に返し、URL を開く項目やウェブ検索の項目は付けない。
  */
 export const searchSpotlight = <C extends SearchCandidate>(
   input: string,
   candidates: ReadonlyArray<C>,
   options: SpotlightSearchOptions,
 ): ReadonlyArray<SpotlightEntry<C>> => {
-  const asEntries = (ranked: ReadonlyArray<C>): ReadonlyArray<SpotlightEntry<C>> =>
-    ranked.slice(0, options.limit).map((candidate) => ({ _tag: "Candidate", candidate }))
+  if (options.mode === "Actions") return searchActions(input, candidates, options)
   const terms = searchTerms(input)
   if (!Array.isReadonlyArrayNonEmpty(terms)) {
-    return asEntries(suggestionsWithoutQuery(candidates, options.limit))
+    return asEntries(suggestionsWithoutQuery(candidates, options.limit), options.limit)
   }
 
-  const matches = asEntries(rankMatches(candidates, terms, searchPhrase(input), options.now))
+  const matches = asEntries(
+    rankMatches(candidates, terms, searchPhrase(input), options.now),
+    options.limit,
+  )
   const openUrl = Option.map(urlFromInput(input), ({ url, hasScheme }) => ({
     hasScheme,
     entry: { _tag: "OpenUrl", url } as const,

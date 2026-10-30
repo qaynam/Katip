@@ -11,11 +11,14 @@ export class FakePermissions extends Context.Service<
   {
     grant(origins: ReadonlyArray<string>): Effect.Effect<void>
     revoke(origins: ReadonlyArray<string>): Effect.Effect<void>
+    /** `history` などの API の権限を許可する。 */
+    grantPermissions(permissions: ReadonlyArray<string>): Effect.Effect<void>
   }
 >()("katip/platform/permissions/FakePermissions") {
   static readonly layer = Layer.effectContext(
     Effect.gen(function* () {
       const granted = yield* Ref.make<ReadonlySet<string>>(new Set())
+      const grantedPermissions = yield* Ref.make<ReadonlySet<string>>(new Set())
       const changes = yield* PubSub.unbounded<OriginPermissionChange>()
 
       const announce = (change: OriginPermissionChange) =>
@@ -39,9 +42,21 @@ export class FakePermissions extends Context.Service<
         Permissions.of({
           containsOrigin: (originPattern) =>
             Effect.map(Ref.get(granted), (all) => all.has(originPattern)),
+          containsPermission: (permission) =>
+            Effect.map(Ref.get(grantedPermissions), (all) => all.has(permission)),
           originChanges: Stream.fromPubSub(changes),
         }),
-      ).pipe(Context.add(FakePermissions, FakePermissions.of({ grant, revoke })))
+      ).pipe(
+        Context.add(
+          FakePermissions,
+          FakePermissions.of({
+            grant,
+            revoke,
+            grantPermissions: (permissions) =>
+              Ref.update(grantedPermissions, (all) => new Set([...all, ...permissions])),
+          }),
+        ),
+      )
     }),
   )
 }

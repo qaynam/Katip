@@ -1,7 +1,9 @@
 import { Effect, Layer } from "effect"
 import { captureBrowserEvents, liveBrowserLayer } from "#platform/browser"
 import { Clipboard } from "#platform/clipboard"
+import { History } from "#platform/history"
 import { Http } from "#platform/http"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { Permissions } from "#platform/permissions"
 import { Scripting } from "#platform/scripting"
 import { exposeLogsForDevelopment } from "./dev-log"
@@ -25,6 +27,8 @@ const layer = applicationLayer.pipe(
       Clipboard.layer,
       Http.layer,
       Permissions.layer,
+      History.layer,
+      KeyboardShortcuts.layer,
       Scripting.layer,
     ),
   ),

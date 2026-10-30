@@ -1,7 +1,9 @@
 import { Array, Effect, Layer, Option, Ref, Schedule, Schema, Stream } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
+import { FakeHistory } from "#platform/history"
 import { FakeHttp } from "#platform/http"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { FakePermissions } from "#platform/permissions"
 import { FakeScripting } from "#platform/scripting"
 import type { WindowId } from "#platform/browser"
@@ -26,7 +28,9 @@ export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
     ClipboardRecorder.layer,
     FakeHttp.layer,
     FakePermissions.layer,
+    FakeHistory.layer,
     FakeScripting.layer,
+    KeyboardShortcuts.layerTest({}),
     // 知らせや操作の名前を、テストを動かす環境の言語によらず日本語で期待できるようにする
     Layer.succeed(BrowserLanguages, ["ja"]),
   )

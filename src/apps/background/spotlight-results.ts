@@ -1,10 +1,14 @@
 import { Array, Clock, Effect, Match, Option, pipe } from "effect"
+import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
+import { makeTranslator } from "#modules/i18n"
+import { type KeyboardPlatform, pageShortcutLabel } from "#modules/page-shortcuts"
 import {
   PinnedBookmarks,
   type PinnedBookmark,
   type PinnedSplit,
   type PinnedTree,
 } from "#modules/pinned"
+import { type PageShortcutSettings, SettingsRepository } from "#modules/settings"
 import type { Space, SpaceId } from "#modules/space"
 import { type SearchCandidate, searchSpotlight, type SpotlightEntry } from "#modules/spotlight"
 import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
@@ -16,11 +20,17 @@ import {
   type WindowId,
   Windows,
 } from "#platform/browser"
-import type { SpotlightResult } from "#protocol"
+import { History } from "#platform/history"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { Permissions } from "#platform/permissions"
+import type { SpotlightMode, SpotlightResult } from "#protocol"
 import { KatipState } from "./katip-state"
+import { KeyboardCommand } from "./keyboard-commands"
 import { urlOf } from "./tab-admission"
+import { currentTranslator } from "./translation"
 
 const RESULT_LIMIT = 40
+const HISTORY_LIMIT = 50
 
 interface ResultCandidate extends SearchCandidate {
   readonly result: SpotlightResult
@@ -165,6 +175,34 @@ const bookmarkCandidates = Effect.fnUntraced(function* (
   )
 })
 
+const historyCandidates = Effect.fnUntraced(function* (
+  query: string,
+  shownUrls: ReadonlySet<string>,
+) {
+  if (query.trim() === "") return []
+  // 任意の権限なので、許可されるまでは chrome.history そのものが無い
+  if (!(yield* (yield* Permissions).containsPermission("history"))) return []
+  const pages = yield* (yield* History).search({
+    text: query.trim(),
+    maxResults: HISTORY_LIMIT,
+    startTime: 0,
+  })
+  return pages.flatMap((page): ReadonlyArray<ResultCandidate> => {
+    if (shownUrls.has(page.url) || !isOpenableUrl(page.url)) return []
+    const title = page.title.trim() === "" ? page.url : page.title
+    return [
+      {
+        kind: "History",
+        title,
+        url: page.url,
+        lastUsedAt: Option.some(page.lastVisitedAt),
+        isCurrent: false,
+        result: { _tag: "History", title, url: page.url, lastVisitedAt: page.lastVisitedAt },
+      },
+    ]
+  })
+})
+
 const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, query: string) {
   const state = yield* KatipState
   const spaces = yield* state.spaces.get
@@ -199,16 +237,117 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
     spaces: new Map(spaces.map((space) => [space.id, space])),
     pinTitles: pinnedTitles(pins),
   })
+  const bookmarks = yield* bookmarkCandidates(query, pinnedIds).pipe(
+    Effect.catch((error) =>
+      Effect.as(Effect.logWarning("Spotlight でブックマークを検索できなかった", error), []),
+    ),
+  )
+  // 履歴には開いているタブやピンのページも残っているので、同じページが 2 行並ばないよう除く
+  const shownUrls = new Set([
+    ...tabs.map(urlOf),
+    ...pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.url)),
+    ...bookmarks.map((bookmark) => bookmark.url),
+  ])
+  const history = yield* historyCandidates(query, shownUrls).pipe(
+    Effect.catch((error) =>
+      Effect.as(Effect.logWarning("Spotlight で履歴を検索できなかった", error), []),
+    ),
+  )
   return [
     ...tabs.map(toTabCandidate),
     ...closedPins.map(pinCandidate),
     ...spaces.map(spaceCandidate(activeSpaceOf(workspace, callerWindowId))),
-    ...(yield* bookmarkCandidates(query, pinnedIds).pipe(
-      Effect.catch((error) =>
-        Effect.as(Effect.logWarning("Spotlight でブックマークを検索できなかった", error), []),
-      ),
-    )),
+    ...bookmarks,
+    ...history,
   ]
+})
+
+interface ShortcutEnvironment {
+  readonly pageShortcuts: PageShortcutSettings
+  /** 拡張のコマンドの名前ごとに割り当てられたキー。 */
+  readonly assigned: ReadonlyMap<string, string>
+  readonly platform: KeyboardPlatform
+}
+
+// ページ上のショートカットを有効にしていれば、Chrome に割り当てたキーよりそちらを示す。
+// ページを見ている間はページ上のショートカットが先に受け取るため
+const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | null => {
+  const assigned = (command: string) => environment.assigned.get(command) ?? null
+  return Match.valueTags(action, {
+    CopyUrl: () =>
+      environment.pageShortcuts.copyUrl
+        ? pageShortcutLabel("CopyUrl", environment.platform)
+        : assigned(KeyboardCommand.copyCurrentUrl),
+    CopyMarkdownLink: () =>
+      environment.pageShortcuts.copyMarkdownLink
+        ? pageShortcutLabel("CopyMarkdownLink", environment.platform)
+        : assigned(KeyboardCommand.copyCurrentUrlAsMarkdown),
+    TogglePin: () => assigned(KeyboardCommand.quickPinToggle),
+    DuplicateTab: () => null,
+    CloseTab: () => null,
+    ToggleMute: () => null,
+    MoveTabToSpace: () => null,
+    CloseTemporaryTabs: () => null,
+    OpenSettings: () => null,
+  })
+}
+
+const shortcutEnvironment = Effect.gen(function* () {
+  const settings = yield* (yield* SettingsRepository).get
+  const shortcuts = yield* KeyboardShortcuts
+  const assigned = yield* shortcuts.assigned.pipe(
+    Effect.catch((error) =>
+      Effect.as(
+        Effect.logWarning("キーの割り当てを読めなかった", error),
+        new Map<string, string>(),
+      ),
+    ),
+  )
+  const isMac = yield* shortcuts.isMac.pipe(Effect.orElseSucceed(() => false))
+  return {
+    pageShortcuts: settings.pageShortcuts,
+    assigned,
+    platform: isMac ? "mac" : "other",
+  } satisfies ShortcutEnvironment
+})
+
+const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+  const state = yield* KatipState
+  const workspace = yield* state.workspace.get
+  const [activeTab] = yield* (yield* Tabs).query({ windowId: callerWindowId, active: true })
+  return {
+    activeTab: Option.map(Option.fromNullishOr(activeTab), (tab) => ({
+      isMuted: tab.muted,
+      membership: Option.map(trackedTab(workspace, tab.id), ({ spaceId, pinned }) => ({
+        spaceId,
+        isPinned: pinned !== null,
+      })),
+    })),
+    activeSpaceId: activeSpaceOf(workspace, callerWindowId),
+    spaces: yield* state.spaces.get,
+  } satisfies ActionContext
+})
+
+const english = makeTranslator("en")
+
+// 表示の言語が英語以外でも、英語の名前で引けるようにする
+const actionCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+  const context = yield* actionContextOf(callerWindowId)
+  const translator = yield* currentTranslator
+  const environment = yield* shortcutEnvironment
+  return availableActions(context).map((action): ResultCandidate => {
+    const title = actionTitle(action, context, translator)
+    const englishTitle = actionTitle(action, context, english)
+    return {
+      kind: "Action",
+      title,
+      keywords: englishTitle === title ? [] : [englishTitle],
+      url: "",
+      lastUsedAt: Option.none(),
+      isCurrent: false,
+      result: { _tag: "Action", action, title, shortcut: shortcutOf(action, environment) },
+    }
+  })
 })
 
 const toResult = (entry: SpotlightEntry<ResultCandidate>): SpotlightResult =>
@@ -233,21 +372,40 @@ const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) 
  * `callerWindowId` のウィンドウから開いた Spotlight に、`query` で並べる候補を求める。
  *
  * @remarks
+ * `Actions` では操作だけを返す。`All` では入力があるときだけ操作と閲覧履歴（`history` の権限が
+ * あるときだけ）も候補に加える。
+ *
  * 失敗しない。タブやブックマークを読めなかったときは候補を空とみなし、
  * URL を開く項目とウェブ検索の項目だけを返す。
  */
 export const findSpotlightResults = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   query: string,
+  mode: SpotlightMode,
 ) {
-  const candidates = yield* gatherCandidates(callerWindowId, query).pipe(
-    Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight の候補を集められなかった", error), []),
-    ),
-  )
+  const wantsActions = mode === "Actions" || query.trim() !== ""
+  const actions = wantsActions
+    ? yield* actionCandidates(callerWindowId).pipe(
+        Effect.catch((error) =>
+          Effect.as(Effect.logWarning("Spotlight の操作を集められなかった", error), []),
+        ),
+      )
+    : []
+  const others =
+    mode === "All"
+      ? yield* gatherCandidates(callerWindowId, query).pipe(
+          Effect.catch((error) =>
+            Effect.as(Effect.logWarning("Spotlight の候補を集められなかった", error), []),
+          ),
+        )
+      : []
   const now = yield* Clock.currentTimeMillis
   return {
-    results: searchSpotlight(query, candidates, { now, limit: RESULT_LIMIT }).map(toResult),
+    results: searchSpotlight(query, [...others, ...actions], {
+      mode,
+      now,
+      limit: RESULT_LIMIT,
+    }).map(toResult),
     spaceTheme: yield* activeSpaceTheme(callerWindowId),
   }
 })

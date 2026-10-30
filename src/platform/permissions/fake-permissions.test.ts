@@ -64,3 +64,27 @@ describe("許可の変化の通知", () => {
     }).pipe(Effect.provide(FakePermissions.layer)),
   )
 })
+
+describe("API の権限", () => {
+  it.effect("許可した API の権限だけが許可されている", () =>
+    Effect.gen(function* () {
+      const permissions = yield* Permissions
+      yield* (yield* FakePermissions).grantPermissions(["history"])
+
+      const contains = [
+        yield* permissions.containsPermission("history"),
+        yield* permissions.containsPermission("downloads"),
+      ]
+
+      assert.deepStrictEqual(contains, [true, false])
+    }).pipe(Effect.provide(FakePermissions.layer)),
+  )
+
+  it.effect("ホストへのアクセスの許可とは別に扱う", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant(["history"])
+
+      assert.isFalse(yield* (yield* Permissions).containsPermission("history"))
+    }).pipe(Effect.provide(FakePermissions.layer)),
+  )
+})

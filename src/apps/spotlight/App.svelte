@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte"
   import type { ColorScheme, SpaceTheme } from "#modules/theme"
-  import type { SpotlightResult } from "#protocol"
+  import type { SpotlightMode, SpotlightResult } from "#protocol"
   import ResultRow from "./components/ResultRow.svelte"
   import SearchGlyph from "./components/SearchGlyph.svelte"
   import type { SpotlightConnection } from "./connection/spotlight-connection"
@@ -25,8 +25,10 @@
   const optionId = (index: number) => `spotlight-option-${index}`
 
   let query = $state("")
+  let mode = $state<SpotlightMode>("All")
   let results = $state.raw<ReadonlyArray<SpotlightResult>>([])
   let spaceTheme = $state.raw<SpaceTheme | null>(null)
+  let respondedAt = $state(Date.now())
   let selectedIndex = $state(0)
   let hasLoaded = $state(false)
   let isSearching = $state(false)
@@ -42,10 +44,10 @@
 
   // 応答は入力した順に届くとは限らない。先に打った語の応答で、後の語の結果を上書きしない
   let latestSearch = 0
-  const search = async (text: string) => {
+  const search = async (text: string, searchMode: SpotlightMode) => {
     const ticket = ++latestSearch
     isSearching = true
-    const response = await connection.search(text)
+    const response = await connection.search(text, searchMode)
     if (ticket !== latestSearch) return
     isSearching = false
     if (response === null) {
@@ -53,6 +55,7 @@
       return
     }
     notice = null
+    respondedAt = Date.now()
     results = response.results
     spaceTheme = response.spaceTheme
     selectedIndex = 0
@@ -69,10 +72,28 @@
     else notice = outcome.reason
   }
 
+  const switchMode = (next: SpotlightMode) => {
+    mode = next
+    void search(query, next)
+  }
+
+  const hasModifier = (event: KeyboardEvent) =>
+    event.shiftKey || event.altKey || event.ctrlKey || event.metaKey
+
   const onkeydown = (event: KeyboardEvent) => {
     // 日本語入力の変換中は、Enter や矢印キーを変換の確定と候補選びに使う
     if (event.isComposing) return
     switch (event.key) {
+      case "Tab":
+        if (query !== "" || hasModifier(event)) return
+        event.preventDefault()
+        if (mode === "All") switchMode("Actions")
+        return
+      case "Backspace":
+        if (mode !== "Actions" || query !== "") return
+        event.preventDefault()
+        switchMode("All")
+        return
       case "ArrowDown":
       case "ArrowUp":
         event.preventDefault()
@@ -88,7 +109,8 @@
         return
       case "Escape":
         event.preventDefault()
-        close()
+        if (mode === "Actions") switchMode("All")
+        else close()
         return
     }
   }
@@ -100,7 +122,7 @@
 
   onMount(() => {
     input?.focus()
-    void search("")
+    void search(query, mode)
   })
 </script>
 
@@ -118,23 +140,26 @@
   <main class="panel">
     <div class="search">
       <span class="search-glyph"><SearchGlyph size={20} /></span>
+      {#if mode === "Actions"}
+        <span class="mode-chip">{strings.commandMode}</span>
+      {/if}
       <input
         bind:this={input}
         class="query"
         type="text"
         role="combobox"
-        aria-label={strings.searchLabel}
+        aria-label={mode === "Actions" ? strings.commandSearchLabel : strings.searchLabel}
         aria-expanded="true"
         aria-controls={RESULTS_ID}
         aria-autocomplete="list"
         aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
-        placeholder={strings.placeholder}
+        placeholder={mode === "Actions" ? strings.commandPlaceholder : strings.placeholder}
         autocomplete="off"
         spellcheck="false"
         value={query}
         oninput={(event) => {
           query = event.currentTarget.value
-          void search(query)
+          void search(query, mode)
         }}
       />
       <span class="spinner" class:visible={isSearching && hasLoaded} aria-hidden="true"></span>
@@ -145,7 +170,11 @@
         <p class="message" role="status">{strings.loading}</p>
       {:else if !hasMatches}
         <p class="message" role="status">
-          {query.trim() === "" ? strings.noRecentTabs : strings.noMatches}
+          {mode === "Actions"
+            ? strings.noMatchingCommands
+            : query.trim() === ""
+              ? strings.noRecentTabs
+              : strings.noMatches}
         </p>
       {/if}
       {#if results.length > 0}
@@ -161,6 +190,8 @@
               id={optionId(index)}
               {result}
               isSelected={index === selectedIndex}
+              now={respondedAt}
+              showsKind={mode === "All"}
               {faviconUrl}
               onchoose={() => choose(result)}
               onpoint={() => (selectedIndex = index)}
@@ -175,9 +206,12 @@
     {/if}
 
     <footer class="hints" aria-hidden="true">
+      {#if mode === "All" && query === ""}
+        <span><kbd>tab</kbd>{strings.hints.commands}</span>
+      {/if}
       <span><kbd>↑</kbd><kbd>↓</kbd>{strings.hints.select}</span>
       <span><kbd>↵</kbd>{strings.hints.open}</span>
-      <span><kbd>esc</kbd>{strings.hints.close}</span>
+      <span><kbd>esc</kbd>{mode === "Actions" ? strings.hints.back : strings.hints.close}</span>
     </footer>
   </main>
 </div>
@@ -243,6 +277,17 @@
 
   .search-glyph {
     color: var(--text-muted);
+  }
+
+  .mode-chip {
+    flex: none;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--selected-surface);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
   .query {

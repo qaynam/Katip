@@ -4,7 +4,7 @@ import { tick } from "svelte"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SpaceName } from "#modules/space"
 import { TabId } from "#platform/browser"
-import type { SpotlightResult } from "#protocol"
+import type { SpotlightMode, SpotlightResult } from "#protocol"
 import App from "./App.svelte"
 import { createFakeConnection, type FakeConnectionOptions } from "./testing/fake-connection"
 
@@ -25,6 +25,27 @@ const tab = (id: number, title: string): SpotlightResult => ({
 })
 
 const webSearch = (query: string): SpotlightResult => ({ _tag: "SearchWeb", query })
+
+const command = (title: string, shortcut: string | null): SpotlightResult => ({
+  _tag: "Action",
+  action: { _tag: "CopyUrl" },
+  title,
+  shortcut,
+})
+
+const DAY = 24 * 60 * 60 * 1000
+
+const historyPage = (title: string, daysAgo: number): SpotlightResult => ({
+  _tag: "History",
+  title,
+  url: "https://blog.example/posts/1",
+  lastVisitedAt: Date.now() - daysAgo * DAY,
+})
+
+const commands = [command("URL をコピー", "⇧⌘C"), command("タブを複製", null)]
+
+const respondByMode = (query: string, mode: SpotlightMode) =>
+  mode === "Actions" ? commands : query === "" ? threeTabs : [webSearch(query)]
 
 const threeTabs = [tab(1, "メール"), tab(2, "カレンダー"), tab(3, "ドキュメント")]
 
@@ -52,7 +73,7 @@ describe("開いたとき", () => {
   it("空の検索語で問い合わせ、応答が届くまでは読み込み中と出す", () => {
     const { connection } = renderSpotlight()
 
-    expect(connection.searchedQueries).toStrictEqual([""])
+    expect(connection.searches).toStrictEqual([{ query: "", mode: "All" }])
     expect(screen.getByRole("status").textContent).toBe("読み込み中…")
   })
 
@@ -79,7 +100,7 @@ describe("入力したとき", () => {
     await type(input, "k")
     await type(input, "ka")
 
-    expect(connection.searchedQueries).toStrictEqual(["", "k", "ka"])
+    expect(connection.searches.map(({ query }) => query)).toStrictEqual(["", "k", "ka"])
   })
 
   it("古い入力の応答が後から届いても、最新の入力の候補を出し続ける", async () => {
@@ -104,9 +125,7 @@ describe("入力したとき", () => {
     await type(input, "zzz")
 
     await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain(
-        "一致するタブ・ピン・ブックマークはありません",
-      ),
+      expect(screen.getByRole("status").textContent).toContain("一致するものはありません"),
     )
     expect(optionNames()).toHaveLength(1)
   })
@@ -211,5 +230,108 @@ describe("ほかのウィンドウへ移ったとき", () => {
     await fireEvent.blur(window)
 
     expect(close).toHaveBeenCalled()
+  })
+})
+
+describe("コマンドモード", () => {
+  it("入力が空で Tab を押すとコマンドモードになり、コマンドだけを探す要求を送る", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondByMode })
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "Actions" })
+    expect(input.getAttribute("placeholder")).toBe("コマンドを検索")
+    expect(document.activeElement).toBe(input)
+  })
+
+  it("コマンドモードで入力すると、その語でコマンドだけを探す", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondByMode })
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    await type(input, "コピー")
+
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "コピー", mode: "Actions" })
+  })
+
+  it("入力があるときの Tab ではコマンドモードにならない", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondByMode })
+    await type(input, "katip")
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect(connection.searches.every(({ mode }) => mode === "All")).toBe(true)
+  })
+
+  it("Shift+Tab ではコマンドモードにならない", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondByMode })
+
+    await fireEvent.keyDown(input, { key: "Tab", shiftKey: true })
+
+    expect(connection.searches.every(({ mode }) => mode === "All")).toBe(true)
+  })
+
+  it("コマンドモードで入力が空のまま Backspace を押すと通常の検索に戻る", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondByMode })
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    await fireEvent.keyDown(input, { key: "Backspace" })
+
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "All" })
+    expect(input.getAttribute("placeholder")).toBe("検索するか URL を入力")
+  })
+
+  it("コマンドモードで Escape を押すと閉じずに通常の検索に戻る", async () => {
+    const { close, connection, input } = renderSpotlight({ respond: respondByMode })
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    await fireEvent.keyDown(input, { key: "Escape" })
+
+    expect(close).not.toHaveBeenCalled()
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "All" })
+  })
+
+  it("一致するコマンドが無ければそのことを出す", async () => {
+    const { input } = renderSpotlight({
+      respond: (_, mode) => (mode === "Actions" ? [] : threeTabs),
+    })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain("一致するコマンドはありません"),
+    )
+  })
+})
+
+describe("コマンドの行", () => {
+  it("割り当てたキーが表示され、割り当てが無ければ出ない", async () => {
+    renderSpotlight({ respond: () => commands })
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))
+
+    const [copy, duplicate] = screen.getAllByRole("option")
+    expect(copy?.querySelector("kbd")?.textContent).toBe("⇧⌘C")
+    expect(duplicate?.querySelector("kbd")).toBeNull()
+  })
+
+  it("Enter を押すと、そのコマンドを選んだことを送る", async () => {
+    const { connection, input } = renderSpotlight({ respond: () => commands })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))
+    await fireEvent.keyDown(input, { key: "ArrowDown" })
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(connection.chosen).toStrictEqual([commands[1]])
+  })
+})
+
+describe("履歴の行", () => {
+  it("最後に訪れた時刻が出る", async () => {
+    renderSpotlight({ respond: () => [historyPage("ブログの記事", 3)] })
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+
+    expect(screen.getByRole("option").textContent).toContain("3 日前")
   })
 })

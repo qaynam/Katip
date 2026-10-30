@@ -1,4 +1,5 @@
 import { Option, Schema } from "effect"
+import { Action } from "#modules/actions"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
@@ -51,6 +52,15 @@ export const SpotlightResult = Schema.TaggedUnion({
   },
   Space: { spaceId: SpaceId, name: SpaceName, theme: SpaceTheme, isActive: Schema.Boolean },
   Bookmark: { bookmarkId: BookmarkId, title: Schema.String, url: Schema.String },
+  // 閲覧履歴のページ。開いているタブ・ピン・ブックマークと同じ URL のものは除いてある
+  History: { title: Schema.String, url: Schema.String, lastVisitedAt: Schema.Number },
+  Action: {
+    action: Action,
+    // 表示する言語に訳した名前
+    title: Schema.String,
+    // 割り当てられているキーの書き方（「⇧⌘C」など）。割り当てが無ければ null
+    shortcut: Schema.NullOr(Schema.String),
+  },
   OpenUrl: { url: Schema.String },
   SearchWeb: { query: Schema.String },
 })
@@ -62,9 +72,21 @@ export const SpotlightOutcome = Schema.TaggedUnion({
 })
 export type SpotlightOutcome = typeof SpotlightOutcome.Type
 
+/**
+ * `All` はタブ・ピン・履歴・コマンドなどをまとめて探す。`Actions` はコマンドだけを探し、
+ * 入力が空ならすべてのコマンドを並べる。
+ */
+export const SpotlightMode = Schema.Literals(["All", "Actions"])
+export type SpotlightMode = typeof SpotlightMode.Type
+
 // windowId は Spotlight を開いたウィンドウ。Spotlight 自身のウィンドウではない
 export const SpotlightClientMessage = Schema.TaggedUnion({
-  Search: { requestId: RequestId, windowId: WindowId, query: Schema.String },
+  Search: {
+    requestId: RequestId,
+    windowId: WindowId,
+    query: Schema.String,
+    mode: SpotlightMode,
+  },
   Choose: { requestId: RequestId, windowId: WindowId, result: SpotlightResult },
 })
 export type SpotlightClientMessage = typeof SpotlightClientMessage.Type

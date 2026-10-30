@@ -1,6 +1,7 @@
 <script lang="ts">
   import { faviconCandidates, faviconLetter, type FaviconResolver } from "../logic/favicon"
   import type { ResultIcon } from "../logic/result-display"
+  import CommandGlyph from "./CommandGlyph.svelte"
   import SearchGlyph from "./SearchGlyph.svelte"
 
   interface Props {
@@ -26,6 +27,8 @@
     <span class="swatch" style:--swatch={icon.color}></span>
   {:else if icon._tag === "Search"}
     <SearchGlyph />
+  {:else if icon._tag === "Command"}
+    <CommandGlyph />
   {:else if source === undefined}
     <span class="letter">{faviconLetter(icon.pageUrl, icon.title)}</span>
   {:else}

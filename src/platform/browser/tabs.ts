@@ -63,6 +63,8 @@ export class Tabs extends Context.Service<
     get(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     create(options: TabCreateOptions): Effect.Effect<BrowserTab, BrowserApiError>
     update(tabId: TabId, options: TabUpdateOptions): Effect.Effect<BrowserTab, BrowserApiError>
+    /** 元のタブの右隣に、同じページを開いた新しいタブを作ってアクティブにする。 */
+    duplicate(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     /** 先頭から順に閉じる。存在しない ID に当たるとそこで失敗し、それより前のタブは閉じたままになる。 */
     remove(tabIds: ReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
     /**
@@ -151,6 +153,13 @@ export class Tabs extends Context.Service<
         )
         return yield* requirePresent(
           "tabs.update",
+          "Chrome returned no tab",
+        )(Option.flatMap(Option.fromUndefinedOr(raw), fromChromeTab))
+      }),
+      duplicate: Effect.fn("Tabs.duplicate")(function* (tabId) {
+        const raw = yield* callChrome("tabs.duplicate", () => chrome.tabs.duplicate(tabId))
+        return yield* requirePresent(
+          "tabs.duplicate",
           "Chrome returned no tab",
         )(Option.flatMap(Option.fromUndefinedOr(raw), fromChromeTab))
       }),

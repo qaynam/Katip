@@ -869,6 +869,48 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
     )
   })
 
+  describe("タブを複製したとき", () => {
+    it.effect("元のタブの右隣に、同じページの新しいタブが開いてアクティブになる", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [original, other],
+        } = yield* fake.seedWindow({
+          tabs: [{ url: "https://a.example/", title: "A", active: true }, {}],
+        })
+
+        const duplicated = yield* tabs.duplicate(original)
+
+        assert.deepStrictEqual(
+          [
+            yield* tabOrderIn(windowId),
+            duplicated.url,
+            duplicated.title,
+            duplicated.active,
+            duplicated.openerTabId,
+          ],
+          [
+            [original, duplicated.id, other],
+            Option.some("https://a.example/"),
+            Option.some("A"),
+            true,
+            Option.some(original),
+          ],
+        )
+      }),
+    )
+
+    it.effect("無いタブは複製できない", () =>
+      Effect.gen(function* () {
+        const error = yield* Effect.flip((yield* Tabs).duplicate(missingTab))
+
+        assert.strictEqual(error._tag, "BrowserApiError")
+      }),
+    )
+  })
+
   describe("タブを破棄したとき", () => {
     it.effect("アクティブなタブは破棄できない", () =>
       Effect.gen(function* () {

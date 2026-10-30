@@ -1,0 +1,87 @@
+import { Array, Match, Option } from "effect"
+import type { Translator } from "#modules/i18n"
+import type { SpaceId } from "#modules/space"
+import type { Action } from "./action"
+
+export interface ActionTarget {
+  readonly isMuted: boolean
+  /** タブが Space に属していれば、その Space とピン留めかどうか。Favorites など属さないタブは None。 */
+  readonly membership: Option.Option<{ readonly spaceId: SpaceId; readonly isPinned: boolean }>
+}
+
+export interface ActionContext {
+  /** 実行するウィンドウでアクティブなタブ。 */
+  readonly activeTab: Option.Option<ActionTarget>
+  /** 実行するウィンドウで表示している Space。 */
+  readonly activeSpaceId: Option.Option<SpaceId>
+  /** 並べる順の Space。 */
+  readonly spaces: ReadonlyArray<{ readonly id: SpaceId; readonly name: string }>
+}
+
+const tabActions = (target: ActionTarget, context: ActionContext): ReadonlyArray<Action> => {
+  const spaceId = Option.map(target.membership, (membership) => membership.spaceId)
+  return [
+    { _tag: "CopyUrl" },
+    { _tag: "CopyMarkdownLink" },
+    ...(Option.isSome(spaceId) ? [{ _tag: "TogglePin" } as const] : []),
+    { _tag: "DuplicateTab" },
+    { _tag: "CloseTab" },
+    { _tag: "ToggleMute" },
+    ...(Option.isSome(spaceId)
+      ? context.spaces
+          .filter((space) => space.id !== spaceId.value)
+          .map((space): Action => ({ _tag: "MoveTabToSpace", spaceId: space.id }))
+      : []),
+  ]
+}
+
+/**
+ * 今のウィンドウとタブで実行できる操作を、決まった順に返す。
+ *
+ * アクティブなタブが無ければ、タブを対象にする操作は含めない。どの Space にも属さないタブ
+ * （Favorites など）には、ピン留めと Space の移動を含めない。
+ */
+export const availableActions = (context: ActionContext): ReadonlyArray<Action> => [
+  ...Option.match(context.activeTab, {
+    onNone: () => [],
+    onSome: (target) => tabActions(target, context),
+  }),
+  ...(Option.isSome(context.activeSpaceId) ? [{ _tag: "CloseTemporaryTabs" } as const] : []),
+  { _tag: "OpenSettings" },
+]
+
+const isPinned = (context: ActionContext) =>
+  Option.exists(
+    Option.flatMap(context.activeTab, (target) => target.membership),
+    (membership) => membership.isPinned,
+  )
+
+const isMuted = (context: ActionContext) =>
+  Option.exists(context.activeTab, (target) => target.isMuted)
+
+/** 操作の名前。ピン留めとミュートは、タブの今の状態から切り替える向きの名前になる。 */
+export const actionTitle = (
+  action: Action,
+  context: ActionContext,
+  translator: Translator,
+): string =>
+  Match.valueTags(action, {
+    CopyUrl: () => translator.t("actions.copyUrl"),
+    CopyMarkdownLink: () => translator.t("actions.copyMarkdownLink"),
+    TogglePin: () => translator.t(isPinned(context) ? "actions.unpinTab" : "actions.pinTab"),
+    DuplicateTab: () => translator.t("actions.duplicateTab"),
+    CloseTab: () => translator.t("actions.closeTab"),
+    ToggleMute: () => translator.t(isMuted(context) ? "actions.unmuteTab" : "actions.muteTab"),
+    MoveTabToSpace: ({ spaceId }) =>
+      translator.t("actions.moveTabToSpace", {
+        space: Option.getOrElse(
+          Option.map(
+            Array.findFirst(context.spaces, (space) => space.id === spaceId),
+            (space) => space.name,
+          ),
+          () => "",
+        ),
+      }),
+    CloseTemporaryTabs: () => translator.t("actions.closeTemporaryTabs"),
+    OpenSettings: () => translator.t("actions.openSettings"),
+  })

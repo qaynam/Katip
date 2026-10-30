@@ -1,14 +1,18 @@
-import type { SpotlightOutcome, SpotlightResult } from "#protocol"
+import type { SpotlightMode, SpotlightOutcome, SpotlightResult } from "#protocol"
 import type { SearchResponse, SpotlightConnection } from "../connection/spotlight-connection"
 
-interface PendingSearch {
+export interface RecordedSearch {
   readonly query: string
+  readonly mode: SpotlightMode
+}
+
+interface PendingSearch extends RecordedSearch {
   readonly resolve: (response: SearchResponse | null) => void
 }
 
 export interface FakeConnection extends SpotlightConnection {
-  /** 問い合わせられた検索語。問い合わせた順。 */
-  readonly searchedQueries: ReadonlyArray<string>
+  /** 問い合わせた順。 */
+  readonly searches: ReadonlyArray<RecordedSearch>
   readonly chosen: ReadonlyArray<SpotlightResult>
   /** まだ答えていない `query` の問い合わせに、古いものから 1 つ答える。 */
   readonly answer: (
@@ -20,25 +24,26 @@ export interface FakeConnection extends SpotlightConnection {
 
 export interface FakeConnectionOptions {
   /** 指定すると、問い合わせにすぐこの結果で答える。省略時は {@link FakeConnection.answer} を待つ。 */
-  readonly respond?: (query: string) => ReadonlyArray<SpotlightResult>
+  readonly respond?: (query: string, mode: SpotlightMode) => ReadonlyArray<SpotlightResult>
   readonly outcome?: SpotlightOutcome
 }
 
 /** テストから応答の中身と順序を決められる、background の代わり。 */
 export const createFakeConnection = (options: FakeConnectionOptions = {}): FakeConnection => {
-  const searchedQueries: Array<string> = []
+  const searches: Array<RecordedSearch> = []
   const chosen: Array<SpotlightResult> = []
   const pending: Array<PendingSearch> = []
 
   return {
-    searchedQueries,
+    searches,
     chosen,
-    search: (query) => {
-      searchedQueries.push(query)
+    search: (query, mode) => {
+      searches.push({ query, mode })
       const { respond } = options
-      if (respond !== undefined)
-        return Promise.resolve({ results: respond(query), spaceTheme: null })
-      return new Promise((resolve) => pending.push({ query, resolve }))
+      if (respond !== undefined) {
+        return Promise.resolve({ results: respond(query, mode), spaceTheme: null })
+      }
+      return new Promise((resolve) => pending.push({ query, mode, resolve }))
     },
     choose: (result) => {
       chosen.push(result)

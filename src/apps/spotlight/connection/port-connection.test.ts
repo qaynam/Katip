@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { WindowId } from "#platform/browser"
 import { RequestId, type SpotlightClientMessage, type SpotlightServerMessage } from "#protocol"
 import { createSpotlightPortConnection, type SpotlightPort } from "./port-connection"
@@ -55,7 +55,7 @@ describe("検索", () => {
       callerWindowId: CALLER,
     })
 
-    const pending = connection.search("katip")
+    const pending = connection.search("katip", "All")
     const [request] = port.sent
     port.deliver(searchResults(request?.requestId ?? -1, "katip"))
 
@@ -66,6 +66,18 @@ describe("検索", () => {
     })
   })
 
+  it("指定したモードで問い合わせる", () => {
+    const port = fakePort()
+    const connection = createSpotlightPortConnection({
+      openPort: () => port,
+      callerWindowId: CALLER,
+    })
+
+    void connection.search("", "Actions")
+
+    expect(port.sent).toMatchObject([{ _tag: "Search", query: "", mode: "Actions" }])
+  })
+
   it("問い合わせごとに別の requestId を付け、それぞれの応答で解決する", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
@@ -73,8 +85,8 @@ describe("検索", () => {
       callerWindowId: CALLER,
     })
 
-    const first = connection.search("a")
-    const second = connection.search("ab")
+    const first = connection.search("a", "All")
+    const second = connection.search("ab", "All")
     const [firstRequest, secondRequest] = port.sent
     port.deliver(searchResults(secondRequest?.requestId ?? -1, "ab"))
     port.deliver(searchResults(firstRequest?.requestId ?? -1, "a"))
@@ -93,7 +105,7 @@ describe("検索", () => {
       callerWindowId: CALLER,
     })
 
-    const pending = connection.search("katip")
+    const pending = connection.search("katip", "All")
     port.deliver({ _tag: "SearchResults", requestId: "壊れた値" })
     port.deliver(searchResults(port.sent[0]?.requestId ?? -1, "katip"))
 
@@ -107,7 +119,7 @@ describe("検索", () => {
       callerWindowId: CALLER,
     })
 
-    const pending = connection.search("katip")
+    const pending = connection.search("katip", "All")
     port.dropFromBackground()
 
     expect(await pending).toBeNull()
@@ -116,10 +128,10 @@ describe("検索", () => {
   it("接続が切れた後の問い合わせは、つなぎ直して送る", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort(), fakePort()])
     const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
-    void connection.search("a")
+    void connection.search("a", "All")
     opened[0]?.dropFromBackground()
 
-    void connection.search("ab")
+    void connection.search("ab", "All")
 
     expect(opened.map((port) => port.sent.map((message) => message._tag))).toStrictEqual([
       ["Search"],
@@ -131,9 +143,46 @@ describe("検索", () => {
     const { openPort, opened } = portsOpenedBy([fakePort({ rejectsPosts: true }), fakePort()])
     const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
 
-    void connection.search("katip")
+    void connection.search("katip", "All")
 
     expect(opened[1]?.sent.map((message) => message._tag)).toStrictEqual(["Search"])
+  })
+
+  describe("応答が来ないとき", () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("待つ時間が過ぎたら null で解決する", async () => {
+      vi.useFakeTimers()
+      const port = fakePort()
+      const connection = createSpotlightPortConnection({
+        openPort: () => port,
+        callerWindowId: CALLER,
+        searchTimeoutMs: 1_000,
+      })
+
+      const pending = connection.search("katip", "All")
+      vi.advanceTimersByTime(1_000)
+
+      expect(await pending).toBeNull()
+    })
+
+    it("待つ時間が過ぎた後に届いた応答は無視する", async () => {
+      vi.useFakeTimers()
+      const port = fakePort()
+      const connection = createSpotlightPortConnection({
+        openPort: () => port,
+        callerWindowId: CALLER,
+        searchTimeoutMs: 1_000,
+      })
+      const pending = connection.search("katip", "All")
+      vi.advanceTimersByTime(1_000)
+
+      port.deliver(searchResults(port.sent[0]?.requestId ?? -1, "katip"))
+
+      expect(await pending).toBeNull()
+    })
   })
 
   it("background へつなげなければ null で解決する", async () => {
@@ -144,7 +193,7 @@ describe("検索", () => {
       callerWindowId: CALLER,
     })
 
-    expect(await connection.search("katip")).toBeNull()
+    expect(await connection.search("katip", "All")).toBeNull()
   })
 })
 
@@ -190,7 +239,7 @@ describe("閉じたとき", () => {
       openPort: () => port,
       callerWindowId: CALLER,
     })
-    const pending = connection.search("katip")
+    const pending = connection.search("katip", "All")
 
     connection.close()
 

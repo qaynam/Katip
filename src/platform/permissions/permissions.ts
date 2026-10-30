@@ -31,6 +31,12 @@ export class Permissions extends Context.Service<
     /** `originPattern`（`https://example.com/*` の形）のホストへのアクセスが許可されているか。 */
     containsOrigin(originPattern: string): Effect.Effect<boolean, BrowserApiError>
     /**
+     * `history` などの API の権限が許可されているか。
+     *
+     * 任意の権限は、許可されるまで `chrome.history` のような API の名前空間そのものが無い。
+     */
+    containsPermission(permission: string): Effect.Effect<boolean, BrowserApiError>
+    /**
      * 購読を始めた後に、ホストへのアクセスの許可が増減したとき。
      *
      * @remarks
@@ -45,6 +51,14 @@ export class Permissions extends Context.Service<
       containsOrigin: (originPattern) =>
         Effect.tryPromise({
           try: () => chrome.permissions.contains({ origins: [originPattern] }),
+          catch: (cause) => new BrowserApiError({ api: "permissions.contains", cause }),
+        }),
+      containsPermission: (permission) =>
+        Effect.tryPromise({
+          try: () =>
+            chrome.permissions.contains({
+              permissions: [permission as chrome.runtime.ManifestPermission],
+            }),
           catch: (cause) => new BrowserApiError({ api: "permissions.contains", cause }),
         }),
       originChanges: Stream.merge(

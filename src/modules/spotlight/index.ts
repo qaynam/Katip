@@ -3,6 +3,7 @@ export {
   type SearchCandidate,
   searchSpotlight,
   type SpotlightEntry,
+  type SpotlightSearchMode,
   type SpotlightSearchOptions,
 } from "./spotlight-search"
 export { type UrlInput, urlFromInput } from "./url-input"

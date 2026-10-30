@@ -1,9 +1,19 @@
 import { Clock, Effect, Match, Option } from "effect"
-import { activeSpaceOf, assignTab } from "#modules/workspace"
-import { Tabs, type TabId, WebSearch, type WindowId, Windows } from "#platform/browser"
+import type { Action } from "#modules/actions"
+import { activeSpaceOf, assignTab, trackedTab } from "#modules/workspace"
+import {
+  type BrowserTab,
+  Tabs,
+  type TabId,
+  WebSearch,
+  type WindowId,
+  Windows,
+} from "#platform/browser"
 import type { SidebarCommand, SpotlightOutcome, SpotlightResult } from "#protocol"
+import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
+import { currentTranslator } from "./translation"
 
 const succeeded: SpotlightOutcome = { _tag: "Succeeded" }
 
@@ -63,9 +73,83 @@ const searchWeb = Effect.fnUntraced(function* (callerWindowId: WindowId, query: 
   return succeeded
 })
 
+const failed = (reason: string): SpotlightOutcome => ({ _tag: "Failed", reason })
+
+const finishInCaller = (callerWindowId: WindowId) =>
+  Effect.as(focusWindow(callerWindowId), succeeded)
+
+const onActiveTab = Effect.fnUntraced(function* <E, R>(
+  callerWindowId: WindowId,
+  run: (tab: BrowserTab) => Effect.Effect<SpotlightOutcome, E, R>,
+) {
+  const [activeTab] = yield* (yield* Tabs).query({ windowId: callerWindowId, active: true })
+  if (activeTab === undefined) return failed("対象のタブがありません")
+  return yield* run(activeTab)
+})
+
+const copyActiveTab = (callerWindowId: WindowId, format: CopyFormat) =>
+  onActiveTab(callerWindowId, (tab) =>
+    Effect.gen(function* () {
+      if (yield* copyTabWithNotice(tab, format)) return yield* finishInCaller(callerWindowId)
+      return failed((yield* currentTranslator).t("actions.copyFailed"))
+    }),
+  )
+
+const togglePinOf = Effect.fnUntraced(function* (callerWindowId: WindowId, tab: BrowserTab) {
+  const tracked = trackedTab(yield* (yield* KatipState).workspace.get, tab.id)
+  const isPinned = Option.exists(tracked, ({ pinned }) => pinned !== null)
+  return yield* runAsSidebarCommand(
+    callerWindowId,
+    isPinned ? { _tag: "UnpinTab", tabId: tab.id } : { _tag: "PinTab", tabId: tab.id },
+  )
+})
+
+const closeTemporaryTabs = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+  const spaceId = activeSpaceOf(yield* (yield* KatipState).workspace.get, callerWindowId)
+  if (Option.isNone(spaceId)) return failed("表示している Space がありません")
+  return yield* runAsSidebarCommand(callerWindowId, {
+    _tag: "CloseTemporaryTabs",
+    windowId: callerWindowId,
+    spaceId: spaceId.value,
+  })
+})
+
+// ピン留め・タブを閉じる・Space へ移すなどは、サイドパネルから操作したときと同じ規則で動かす
+const runAction = (callerWindowId: WindowId, action: Action) =>
+  Match.valueTags(action, {
+    CopyUrl: () => copyActiveTab(callerWindowId, "Url"),
+    CopyMarkdownLink: () => copyActiveTab(callerWindowId, "MarkdownLink"),
+    TogglePin: () => onActiveTab(callerWindowId, (tab) => togglePinOf(callerWindowId, tab)),
+    DuplicateTab: () =>
+      onActiveTab(callerWindowId, (tab) =>
+        Effect.andThen(
+          Tabs.use((tabs) => tabs.duplicate(tab.id)),
+          finishInCaller(callerWindowId),
+        ),
+      ),
+    CloseTab: () =>
+      onActiveTab(callerWindowId, (tab) =>
+        runAsSidebarCommand(callerWindowId, { _tag: "CloseTab", tabId: tab.id }),
+      ),
+    ToggleMute: () =>
+      onActiveTab(callerWindowId, (tab) =>
+        Effect.andThen(
+          Tabs.use((tabs) => tabs.update(tab.id, { muted: !tab.muted })),
+          finishInCaller(callerWindowId),
+        ),
+      ),
+    MoveTabToSpace: ({ spaceId }) =>
+      onActiveTab(callerWindowId, (tab) =>
+        runAsSidebarCommand(callerWindowId, { _tag: "MoveTabToSpace", tabId: tab.id, spaceId }),
+      ),
+    CloseTemporaryTabs: () => closeTemporaryTabs(callerWindowId),
+    OpenSettings: () => runAsSidebarCommand(callerWindowId, { _tag: "OpenSettings" }),
+  })
+
 /**
  * Spotlight で選ばれた候補を開く。`callerWindowId` は Spotlight を開いたウィンドウで、
  * 開いたページはそこへ出し、そのウィンドウを前面に戻す（開いているタブを選んだときはそのタブのウィンドウ）。
+ * 操作は、そのウィンドウでアクティブなタブを対象に実行する。
  *
  * @remarks
  * 失敗しない。開けなかったときは理由を `Failed` で返す。
@@ -86,6 +170,8 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
         spaceId,
       }),
     Bookmark: ({ url }) => openUrl(callerWindowId, url),
+    History: ({ url }) => openUrl(callerWindowId, url),
+    Action: ({ action }) => runAction(callerWindowId, action),
     OpenUrl: ({ url }) => openUrl(callerWindowId, url),
     SearchWeb: ({ query }) => searchWeb(callerWindowId, query),
   }).pipe(

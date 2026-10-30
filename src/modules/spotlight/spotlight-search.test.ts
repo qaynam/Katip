@@ -29,7 +29,13 @@ const candidate = (
 }
 
 const search = (input: string, candidates: ReadonlyArray<TestCandidate>, limit = 50) =>
-  searchSpotlight(input, candidates, { now: NOW, limit })
+  searchSpotlight(input, candidates, { mode: "All", now: NOW, limit })
+
+const searchActions = (input: string, candidates: ReadonlyArray<TestCandidate>) =>
+  searchSpotlight(input, candidates, { mode: "Actions", now: NOW, limit: 50 })
+
+const action = (name: string, keywords: ReadonlyArray<string> = []) =>
+  candidate(name, { kind: "Action", keywords })
 
 const namesOf = (entries: ReadonlyArray<SpotlightEntry<TestCandidate>>) =>
   entries.flatMap((entry) => (entry._tag === "Candidate" ? [entry.candidate.name] : []))
@@ -220,14 +226,22 @@ describe("検索語があるとき", () => {
       expect(namesOf(entries)).toStrictEqual(["doc さっき", "doc 昨日", "doc 先週"])
     })
 
-    it("使った記録も同じなら、開いているタブ、ピンと Space、ブックマークの順に並ぶ", () => {
+    it("使った記録も同じなら、開いているタブ、ピンと Space、操作、ブックマーク、履歴の順に並ぶ", () => {
       const entries = search("work", [
+        candidate("work 履歴", { kind: "History" }),
         candidate("work ブックマーク", { kind: "Bookmark" }),
+        candidate("work 操作", { kind: "Action" }),
         candidate("work ピン", { kind: "Pin" }),
         candidate("work タブ"),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["work タブ", "work ピン", "work ブックマーク"])
+      expect(namesOf(entries)).toStrictEqual([
+        "work タブ",
+        "work ピン",
+        "work 操作",
+        "work ブックマーク",
+        "work 履歴",
+      ])
     })
 
     it("種類も同じなら、渡された順を保つ", () => {
@@ -284,5 +298,61 @@ describe("検索語があるとき", () => {
     it("URL らしくなければ、開く項目を出さない", () => {
       expect(actionsOf(search("katip", []))).toStrictEqual(["検索 katip"])
     })
+  })
+})
+
+describe("操作の候補", () => {
+  const actions = [
+    action("URL をコピー", ["Copy URL"]),
+    action("タブを複製", ["Duplicate Tab"]),
+    action("設定を開く", ["Open Settings"]),
+  ]
+
+  describe("操作だけを探すとき", () => {
+    it("入力が空なら、渡された操作をすべて渡された順に並べる", () => {
+      expect(namesOf(searchActions("", actions))).toStrictEqual([
+        "URL をコピー",
+        "タブを複製",
+        "設定を開く",
+      ])
+    })
+
+    it("操作でない候補は、一致しても出さない", () => {
+      const entries = searchActions("設定", [candidate("設定のタブ"), ...actions])
+
+      expect(namesOf(entries)).toStrictEqual(["設定を開く"])
+    })
+
+    it("入力があれば、一致する操作だけを一致の強さの順に並べる", () => {
+      const entries = searchActions("タブ", [action("新しいタブ"), action("タブを閉じる")])
+
+      expect(namesOf(entries)).toStrictEqual(["タブを閉じる", "新しいタブ"])
+    })
+
+    it("URL を開く項目もウェブ検索の項目も付けない", () => {
+      expect(actionsOf(searchActions("https://example.com/", actions))).toStrictEqual([])
+    })
+  })
+
+  describe("すべてから探すとき", () => {
+    it("入力が空なら、操作は出さない", () => {
+      expect(
+        namesOf(search("", [candidate("タブ", { usedMinutesAgo: 1 }), ...actions])),
+      ).toStrictEqual(["タブ"])
+    })
+
+    it("一致した操作も、ほかの候補と一緒に一致の強さの順に並ぶ", () => {
+      const entries = search("複製", [
+        candidate("手順を複製する", { kind: "Bookmark" }),
+        ...actions,
+        candidate("複製の手順"),
+      ])
+
+      expect(namesOf(entries)).toStrictEqual(["複製の手順", "タブを複製", "手順を複製する"])
+    })
+  })
+
+  it("表示している名前とは別の言語の名前でも引ける", () => {
+    expect(namesOf(searchActions("copy", actions))).toStrictEqual(["URL をコピー"])
   })
 })

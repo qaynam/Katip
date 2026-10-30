@@ -23,6 +23,8 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "search",
     "scripting",
   ],
+  // Spotlight で閲覧履歴も探すとき。設定で有効にしたときにだけ許可を求める
+  optional_permissions: ["history"],
   // 使う機能を有効にしたときにだけ許可を求め、使わない人には要求しない。ライブフォルダの
   // 取得元と、ページ上のショートカットのためにスクリプトを注入するすべてのサイト
   optional_host_permissions: [

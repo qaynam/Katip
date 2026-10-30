@@ -8,14 +8,27 @@
     id: string
     result: SpotlightResult
     isSelected: boolean
+    /** 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。 */
+    now: number
+    /** 右端に種類を出すか。どの行も同じ種類と分かっているときは出さない。 */
+    showsKind?: boolean
     faviconUrl: FaviconResolver
     onchoose: () => void
     /** マウスで指したとき。選択をこの行へ移す。 */
     onpoint: () => void
   }
 
-  const { id, result, isSelected, faviconUrl, onchoose, onpoint }: Props = $props()
-  const display = $derived(displayOf(result))
+  const {
+    id,
+    result,
+    isSelected,
+    now,
+    showsKind = true,
+    faviconUrl,
+    onchoose,
+    onpoint,
+  }: Props = $props()
+  const display = $derived(displayOf(result, now))
 </script>
 
 <!-- キーボードでは入力欄から aria-activedescendant で操作するので、押しても入力欄からフォーカスを奪わない -->
@@ -38,7 +51,12 @@
       <span class="detail">{display.detail}</span>
     {/if}
   </span>
-  <span class="kind">{display.kindLabel}</span>
+  {#if showsKind}
+    <span class="kind">{display.kindLabel}</span>
+  {/if}
+  {#if display.shortcut !== null}
+    <kbd class="shortcut">{display.shortcut}</kbd>
+  {/if}
 </button>
 
 <style>
@@ -96,6 +114,21 @@
   }
 
   .row.selected .kind {
+    color: var(--text);
+  }
+
+  .shortcut {
+    flex: none;
+    padding: 1px 6px;
+    border: 0.5px solid var(--divider);
+    border-radius: 5px;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+  }
+
+  .row.selected .shortcut {
     color: var(--text);
   }
 </style>

@@ -1,14 +1,24 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option, Queue, Ref, Schema, type Scope, Stream } from "effect"
+import type { Action } from "#modules/actions"
+import { SettingsRepository } from "#modules/settings"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BookmarkId, type PortSender, Tabs, type WindowId, Windows } from "#platform/browser"
 import { fakeSearchUrl, FakeBrowser, makePortPair } from "#platform/browser-testing"
+import { ClipboardRecorder } from "#platform/clipboard"
+import { FakeHistory } from "#platform/history"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { FakePermissions } from "#platform/permissions"
 import {
+  ClientMessage,
   RequestId,
+  ServerMessage,
   type SidebarCommand,
+  SIDEBAR_PORT_NAME,
   SPOTLIGHT_PORT_NAME,
   SpotlightClientMessage,
+  type SpotlightMode,
   type SpotlightResult,
   SpotlightServerMessage,
 } from "#protocol"
@@ -17,19 +27,24 @@ import { initialize } from "./initialize"
 import { KatipState } from "./katip-state"
 import { applicationLayer } from "./program"
 import { runSidebarCommand } from "./sidebar-commands"
+import { SidebarHub } from "./sidebar-hub"
 import { runSpotlightChoice } from "./spotlight-choice"
 import { SpotlightHub } from "./spotlight-hub"
 import { openSpotlight } from "./spotlight-window"
 import { backgroundTestLayer } from "./testing/background-harness"
 
-const testLayer = SpotlightHub.layer.pipe(
-  Layer.provideMerge(applicationLayer),
-  Layer.provideMerge(Layer.mergeAll(backgroundTestLayer, ExtensionInfo.layerTest)),
-)
+const testLayerWith = (shortcuts: Layer.Layer<KeyboardShortcuts>) =>
+  SpotlightHub.layer.pipe(
+    Layer.provideMerge(applicationLayer),
+    Layer.provideMerge(Layer.mergeAll(backgroundTestLayer, ExtensionInfo.layerTest, shortcuts)),
+  )
+
+type TestServices = Layer.Success<ReturnType<typeof testLayerWith>>
 
 const inBackground = <A, E>(
-  effect: Effect.Effect<A, E, Layer.Success<typeof testLayer> | Scope.Scope>,
-) => effect.pipe(Effect.scoped, Effect.provide(testLayer))
+  effect: Effect.Effect<A, E, TestServices | Scope.Scope>,
+  shortcuts: Layer.Layer<KeyboardShortcuts> = KeyboardShortcuts.layerTest({}),
+) => effect.pipe(Effect.scoped, Effect.provide(testLayerWith(shortcuts)))
 
 const spotlightPageSender: PortSender = {
   external: false,
@@ -65,9 +80,15 @@ const connectSpotlight = Effect.fnUntraced(function* (callerWindowId: WindowId) 
     }
   })
 
-  const search = (query: string) =>
+  const search = (query: string, mode: SpotlightMode = "All") =>
     Effect.flatMap(
-      ask((requestId) => ({ _tag: "Search", requestId, windowId: callerWindowId, query })),
+      ask((requestId) => ({
+        _tag: "Search",
+        requestId,
+        windowId: callerWindowId,
+        query,
+        mode,
+      })),
       (reply) =>
         reply._tag === "SearchResults" ? Effect.succeed(reply) : Effect.die("検索の応答ではない"),
     )
@@ -95,6 +116,33 @@ const openTabs = ofTag("OpenTab")
 const pins = ofTag("Pin")
 const spaces = ofTag("Space")
 const bookmarks = ofTag("Bookmark")
+const histories = ofTag("History")
+const actions = ofTag("Action")
+
+const actionsOfKind = (kind: Action["_tag"]) => (results: ReadonlyArray<SpotlightResult>) =>
+  actions(results).filter((result) => result.action._tag === kind)
+
+const encodeSidebarMessage = Schema.encodeEffect(ClientMessage)
+const decodeSidebarMessage = Schema.decodeUnknownEffect(ServerMessage)
+
+/** サイドパネルとして購読し、次に届く知らせを待つ Effect を返す。 */
+const watchSidebarNotices = Effect.fnUntraced(function* (windowId: WindowId) {
+  const hub = yield* SidebarHub
+  const { client, server } = makePortPair(SIDEBAR_PORT_NAME, spotlightPageSender)
+  yield* Effect.forkScoped(
+    hub.serve(server, () => Effect.succeed({ _tag: "Succeeded", createdBookmarkId: null })),
+  )
+  const notices = yield* Queue.unbounded<string>()
+  yield* client.messages.pipe(
+    Stream.mapEffect((raw) => decodeSidebarMessage(raw)),
+    Stream.runForEach((message) =>
+      message._tag === "Notice" ? Queue.offer(notices, message.message) : Effect.void,
+    ),
+    Effect.forkScoped,
+  )
+  yield* client.post(yield* encodeSidebarMessage({ _tag: "Subscribe", windowId }))
+  return Queue.take(notices)
+})
 
 const firstSpaceId = KatipState.use((state) =>
   Effect.flatMap(state.spaces.get, (all) =>
@@ -524,6 +572,369 @@ describe("Spotlight で候補を選んだとき", () => {
         const outcome = yield* spotlight.choose(found ?? (yield* Effect.die("候補が無い")))
 
         expect(outcome._tag).toBe("Failed")
+      }),
+    ),
+  )
+})
+
+const firstOf = <A>(found: ReadonlyArray<A>) =>
+  Option.match(Array.head(found), {
+    onNone: () => Effect.die("候補が無い"),
+    onSome: Effect.succeed,
+  })
+
+describe("Spotlight の操作の候補", () => {
+  it.effect("操作だけを探すと、入力が空でも使える操作が決まった順に並ぶ", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(
+          results.map((result) => (result._tag === "Action" ? result.title : result._tag)),
+        ).toStrictEqual([
+          "URL をコピー",
+          "URL を Markdown のリンクとしてコピー",
+          "タブをピン留め",
+          "タブを複製",
+          "タブを閉じる",
+          "タブをミュート",
+          "一時タブをすべて閉じる",
+          "設定を開く",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("タブを別の Space へ移す操作は、タブが今いる Space 以外の Space の分だけ出る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://a.example/" }],
+        })
+        yield* initialize
+        yield* run({ _tag: "CreateSpace", windowId, name: SpaceName.make("仕事") })
+        yield* run({ _tag: "CreateSpace", windowId, name: SpaceName.make("趣味") })
+        yield* (yield* Tabs).update(tabIds[0], { active: true })
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(actionsOfKind("MoveTabToSpace")(results).map(({ title }) => title)).toStrictEqual([
+          "タブを「仕事」へ移動",
+          "タブを「趣味」へ移動",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("ミュートしているタブでは、ミュートを解除する操作になる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({
+          tabs: [{ url: "https://music.example/", muted: true }],
+        })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(actionsOfKind("ToggleMute")(results).map(({ title }) => title)).toStrictEqual([
+          "タブのミュートを解除",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("ふつうの検索でも、表示の言語とは別の英語の名前で操作が見つかる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("duplicate")
+
+        expect(actions(results).map(({ title }) => title)).toStrictEqual(["タブを複製"])
+      }),
+    ),
+  )
+
+  it.effect("ふつうの検索で入力が空なら、操作は出さない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }, {}] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("")
+
+        expect(actions(results)).toStrictEqual([])
+      }),
+    ),
+  )
+
+  it.effect("Chrome でキーを割り当てた操作には、そのキーを添える", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(
+          actions(results)
+            .slice(0, 4)
+            .map(({ action, shortcut }) => [action._tag, shortcut]),
+        ).toStrictEqual([
+          ["CopyUrl", "⇧⌘C"],
+          ["CopyMarkdownLink", null],
+          ["TogglePin", "⌥D"],
+          ["DuplicateTab", null],
+        ])
+      }),
+      KeyboardShortcuts.layerTest({
+        assigned: { "copy-current-url": "⇧⌘C", "quick-pin-toggle": "⌥D" },
+        isMac: true,
+      }),
+    ),
+  )
+
+  it.effect("ページ上のショートカットを有効にした操作には、そのショートカットのキーを添える", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        yield* (yield* SettingsRepository).update({ pageShortcuts: { copyMarkdownLink: true } })
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(
+          actionsOfKind("CopyMarkdownLink")(results).map(({ shortcut }) => shortcut),
+        ).toStrictEqual(["⌥⇧⌘C"])
+      }),
+      KeyboardShortcuts.layerTest({
+        assigned: { "copy-current-url-as-markdown": "⇧⌘M" },
+        isMac: true,
+      }),
+    ),
+  )
+})
+
+describe("Spotlight で操作を選んだとき", () => {
+  const seedPage = Effect.gen(function* () {
+    const fake = yield* FakeBrowser
+    const seeded = yield* fake.seedWindow({
+      tabs: [{ url: "https://docs.example/guide", title: "使い方 [下書き]", active: true }],
+    })
+    yield* initialize
+    return seeded
+  })
+
+  it.effect("URL のコピーを選ぶと、アクティブなタブの URL が入り、サイドパネルに知らせが出る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const nextNotice = yield* watchSidebarNotices(windowId)
+        const spotlight = yield* connectSpotlight(windowId)
+        const copyUrl = yield* firstOf(
+          actionsOfKind("CopyUrl")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        const outcome = yield* spotlight.choose(copyUrl)
+
+        expect({
+          outcome,
+          written: yield* (yield* ClipboardRecorder).written,
+          notice: yield* nextNotice,
+        }).toStrictEqual({
+          outcome: { _tag: "Succeeded" },
+          written: ["https://docs.example/guide"],
+          notice: "URL をコピーしました",
+        })
+      }),
+    ),
+  )
+
+  it.effect("Markdown のリンクとしてコピーを選ぶと、[タイトル](URL) の形で入る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const spotlight = yield* connectSpotlight(windowId)
+        const copyLink = yield* firstOf(
+          actionsOfKind("CopyMarkdownLink")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        yield* spotlight.choose(copyLink)
+
+        expect(yield* (yield* ClipboardRecorder).written).toStrictEqual([
+          "[使い方 \\[下書き\\]](https://docs.example/guide)",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("ミュートを選ぶと、アクティブなタブがミュートされる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedPage
+        const spotlight = yield* connectSpotlight(windowId)
+        const mute = yield* firstOf(
+          actionsOfKind("ToggleMute")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        yield* spotlight.choose(mute)
+
+        expect((yield* (yield* Tabs).get(tabIds[0])).muted).toBe(true)
+      }),
+    ),
+  )
+
+  it.effect("複製を選ぶと、同じページのタブが増える", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const spotlight = yield* connectSpotlight(windowId)
+        const duplicate = yield* firstOf(
+          actionsOfKind("DuplicateTab")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        yield* spotlight.choose(duplicate)
+
+        const urls = (yield* (yield* Tabs).query({ windowId })).map((tab) => tab.url)
+        expect(urls).toStrictEqual([
+          Option.some("https://docs.example/guide"),
+          Option.some("https://docs.example/guide"),
+        ])
+      }),
+    ),
+  )
+
+  it.effect("別の Space へ移す操作を選ぶと、アクティブなタブがその Space に移る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedPage
+        yield* run({ _tag: "CreateSpace", windowId, name: SpaceName.make("仕事") })
+        yield* (yield* Tabs).update(tabIds[0], { active: true })
+        const spotlight = yield* connectSpotlight(windowId)
+        const move = yield* firstOf(
+          actionsOfKind("MoveTabToSpace")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        yield* spotlight.choose(move)
+
+        const moved = openTabs((yield* spotlight.search("使い方")).results)
+        expect([move.title, moved.map(({ spaceName }) => spaceName)]).toStrictEqual([
+          "タブを「仕事」へ移動",
+          ["仕事"],
+        ])
+      }),
+    ),
+  )
+})
+
+describe("Spotlight の履歴の候補", () => {
+  const seedHistory = Effect.gen(function* () {
+    const fake = yield* FakeBrowser
+    const { windowId } = yield* fake.seedWindow({
+      tabs: [{ url: "https://katip.example/open", title: "Katip 開いているページ" }],
+    })
+    yield* (yield* FakeHistory).seed([
+      { url: "https://katip.example/open", title: "Katip 開いているページ", lastVisitedAt: 300 },
+      { url: "https://katip.example/docs", title: "Katip のドキュメント", lastVisitedAt: 200 },
+    ])
+    yield* initialize
+    return windowId
+  })
+
+  it.effect("履歴の許可があれば、入力に一致する閲覧履歴のページも候補に出る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* FakePermissions).grantPermissions(["history"])
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("katip")
+
+        expect(histories(results)).toStrictEqual([
+          {
+            _tag: "History",
+            title: "Katip のドキュメント",
+            url: "https://katip.example/docs",
+            lastVisitedAt: 200,
+          },
+        ])
+      }),
+    ),
+  )
+
+  it.effect("開いているタブと同じ URL の履歴は出さない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* FakePermissions).grantPermissions(["history"])
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("開いている")
+
+        expect([openTabs(results).length, histories(results)]).toStrictEqual([1, []])
+      }),
+    ),
+  )
+
+  it.effect("履歴の許可が無ければ、閲覧履歴を読まない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("katip")
+
+        expect([histories(results), yield* (yield* FakeHistory).searches]).toStrictEqual([[], []])
+      }),
+    ),
+  )
+
+  it.effect("入力が空なら、閲覧履歴を読まない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* FakePermissions).grantPermissions(["history"])
+        const spotlight = yield* connectSpotlight(windowId)
+
+        yield* spotlight.search("")
+
+        expect(yield* (yield* FakeHistory).searches).toStrictEqual([])
+      }),
+    ),
+  )
+
+  it.effect("履歴のページを選ぶと、呼び出し元のウィンドウの今の Space に開く", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* FakePermissions).grantPermissions(["history"])
+        const spotlight = yield* connectSpotlight(windowId)
+        const page = yield* firstOf(histories((yield* spotlight.search("ドキュメント")).results))
+
+        yield* spotlight.choose(page)
+
+        const opened = openTabs((yield* spotlight.search("katip.example/docs")).results)
+        expect(opened.map(({ url, spaceName }) => [url, spaceName])).toStrictEqual([
+          ["https://katip.example/docs", "ホーム"],
+        ])
       }),
     ),
   )

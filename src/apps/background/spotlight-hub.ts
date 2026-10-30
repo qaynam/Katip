@@ -53,8 +53,8 @@ export class SpotlightHub extends Context.Service<
       ) => {
         const handle = (message: SpotlightClientMessage) =>
           Match.valueTags(message, {
-            Search: ({ requestId, windowId, query }) =>
-              findSpotlightResults(windowId, query).pipe(
+            Search: ({ requestId, windowId, query, mode }) =>
+              findSpotlightResults(windowId, query, mode).pipe(
                 Effect.provideContext(searchContext),
                 Effect.flatMap(({ results, spaceTheme }) =>
                   reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),

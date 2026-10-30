@@ -22,6 +22,8 @@ export interface SpotlightPortConnectionOptions {
   readonly openPort: () => SpotlightPort
   /** Spotlight を開いたウィンドウ。 */
   readonly callerWindowId: WindowId
+  /** 検索の応答を待つ時間。過ぎたら届かなかったものとして null で解決する。省略時は 5 秒。 */
+  readonly searchTimeoutMs?: number
 }
 
 export interface SpotlightPortConnection extends SpotlightConnection {
@@ -92,11 +94,24 @@ export const createSpotlightPortConnection = (
 
   const ask = (
     message: (requestId: RequestId) => SpotlightClientMessage,
+    timeoutMs: number | null,
   ): Promise<SpotlightServerMessage | null> => {
     const requestId = RequestId.make(nextRequestId++)
     return new Promise((resolve) => {
-      pending.set(requestId, resolve)
+      // background が要求を読めずに捨てると、応答も切断も届かず「読み込み中」のまま止まってしまう
+      const timer =
+        timeoutMs === null
+          ? undefined
+          : setTimeout(() => {
+              pending.delete(requestId)
+              resolve(null)
+            }, timeoutMs)
+      pending.set(requestId, (reply) => {
+        clearTimeout(timer)
+        resolve(reply)
+      })
       if (!post(message(requestId))) {
+        clearTimeout(timer)
         pending.delete(requestId)
         resolve(null)
       }
@@ -104,24 +119,32 @@ export const createSpotlightPortConnection = (
   }
 
   return {
-    search: async (query) => {
-      const reply = await ask((requestId) => ({
-        _tag: "Search",
-        requestId,
-        windowId: options.callerWindowId,
-        query,
-      }))
+    search: async (query, mode) => {
+      const reply = await ask(
+        (requestId) => ({
+          _tag: "Search",
+          requestId,
+          windowId: options.callerWindowId,
+          query,
+          mode,
+        }),
+        options.searchTimeoutMs ?? 5_000,
+      )
       return reply?._tag === "SearchResults"
         ? ({ results: reply.results, spaceTheme: reply.spaceTheme } satisfies SearchResponse)
         : null
     },
+    // 開く処理は background で他の操作の後に並ぶことがあり、時間を区切ると開けたのに失敗と出してしまう
     choose: async (result) => {
-      const reply = await ask((requestId) => ({
-        _tag: "Choose",
-        requestId,
-        windowId: options.callerWindowId,
-        result,
-      }))
+      const reply = await ask(
+        (requestId) => ({
+          _tag: "Choose",
+          requestId,
+          windowId: options.callerWindowId,
+          result,
+        }),
+        null,
+      )
       return reply?._tag === "ChoiceSettled"
         ? reply.outcome
         : ({ _tag: "Failed", reason: strings.unreachable } satisfies SpotlightOutcome)

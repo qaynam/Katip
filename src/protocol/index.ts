@@ -19,6 +19,7 @@ export {
   SPOTLIGHT_PAGE_PATH,
   SPOTLIGHT_PORT_NAME,
   SpotlightClientMessage,
+  SpotlightMode,
   SpotlightOutcome,
   spotlightPageUrl,
   SpotlightResult,

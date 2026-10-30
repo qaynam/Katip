@@ -276,6 +276,26 @@ export const makeFakeTabs = (
         }),
       ),
 
+    duplicate: (tabId) =>
+      transact(
+        world,
+        "tabs.duplicate",
+        Effect.fnUntraced(function* (tx) {
+          const { window, index, tab } = yield* requireTab(tx, tabId)
+          const duplicateId = yield* createTab(tx, {
+            windowId: window.id,
+            index: index + 1,
+            url: Option.getOrElse(tab.url, () => NEW_TAB_URL),
+            active: true,
+            pinned: tab.pinned,
+            openerTabId: Option.some(tabId),
+            groupId: tab.groupId,
+          })
+          yield* updateTab(tx, duplicateId, (record) => ({ ...record, title: tab.title }))
+          return yield* requireTabSnapshot(tx, duplicateId)
+        }),
+      ),
+
     remove: (tabIds) =>
       Effect.forEach(
         tabIds,
