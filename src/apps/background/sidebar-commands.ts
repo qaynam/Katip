@@ -1,11 +1,13 @@
-import { Array, Clock, Effect, Match, Option, Order, Schema } from "effect"
+import { Array, Clock, Effect, Equal, Match, Option, Order, Schema } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import {
   FolderExpansionStore,
   PinnedBookmarks,
   PinnedParent,
   SpaceFolders,
+  type PinnedNode,
   type PinnedPosition,
+  type PinnedSplit,
 } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
 import {
@@ -25,6 +27,7 @@ import {
   moveTabToSpace,
   releaseSpace,
   setTitleOverride,
+  spaceOf,
   switchSpace,
   tabsBoundTo,
   tabToFocus,
@@ -32,11 +35,13 @@ import {
   unbindBookmark,
   unbindPinned,
   type TrackedTab,
+  type Workspace,
 } from "#modules/workspace"
 import {
   Tabs,
   type BookmarkId,
   type BrowserTab,
+  type SplitViewId,
   type TabId,
   type WindowId,
 } from "#platform/browser"
@@ -151,34 +156,77 @@ const unpinFromChrome = Effect.fnUntraced(function* (tab: BrowserTab) {
   if (tab.pinned) yield* (yield* Tabs).update(tab.id, { pinned: false })
 })
 
+// 分割ピンの片方だけを外すと、残った 1 つのブックマークが普通のフォルダとして残ってしまう。
+// 分割ピンに属するタブを外すときは、分割ピンごと外して 2 つのタブを両方とも一時タブにする
 const removePin = Effect.fnUntraced(function* (tracked: TrackedTab) {
   if (tracked.pinned === null) return
   const state = yield* KatipState
-  yield* (yield* PinnedBookmarks)
-    .removeBookmark(tracked.pinned.bookmarkId)
+  const pinned = yield* PinnedBookmarks
+  const { bookmarkId } = tracked.pinned
+  const splitFolder = yield* pinned.locate(bookmarkId).pipe(
+    Effect.flatMap((location) =>
+      Option.match(location.parentFolderId, {
+        onNone: () => Effect.succeedNone,
+        onSome: (parentId) =>
+          Effect.map(pinned.locate(parentId), (parent) =>
+            parent.node._tag === "PinnedSplit" ? Option.some(parent.node) : Option.none(),
+          ),
+      }),
+    ),
+    Effect.catchTag("PinnedNodeNotFound", () => Effect.succeedNone),
+  )
+  if (Option.isSome(splitFolder)) {
+    yield* pinned.removeBookmark(splitFolder.value.id)
+    yield* state.workspace.update((workspace) =>
+      splitFolder.value.items.reduce((acc, item) => unbindBookmark(acc, item.id), workspace),
+    )
+    return
+  }
+  yield* pinned
+    .removeBookmark(bookmarkId)
     .pipe(Effect.catchTag("PinnedNodeNotFound", () => Effect.void))
   yield* state.workspace.update((workspace) => unbindPinned(workspace, tracked.tabId))
 })
 
+const splitPartnersIn = (windowTabs: ReadonlyArray<BrowserTab>) => (tabId: TabId) => {
+  const splitViewId = windowTabs.find((tab) => tab.id === tabId)?.splitViewId ?? Option.none()
+  return Option.match(splitViewId, {
+    onNone: () => [tabId],
+    onSome: (id) =>
+      windowTabs.filter((tab) => Option.contains(tab.splitViewId, id)).map((tab) => tab.id),
+  })
+}
+
+/**
+ * タブ（分割ビューなら 2 つ）を Space の一時タブにして、表示順で指定した位置へ動かす。
+ * ピン留めされていれば外し、Chrome で固定されていれば固定を外す。
+ */
 const placeInTemporary = Effect.fnUntraced(function* (
-  tabId: TabId,
+  tabIds: ReadonlyArray<TabId>,
   spaceId: SpaceId,
   placement: TemporaryPlacement,
 ) {
   const state = yield* KatipState
   const tabs = yield* Tabs
   const settings = yield* (yield* SettingsRepository).get
-  const tab = yield* tabs.get(tabId)
-  yield* unpinFromChrome(tab)
-  yield* Option.match(trackedTab(yield* state.workspace.get, tabId), {
-    onNone: () => Effect.void,
-    onSome: removePin,
-  })
+  const moving = Array.sort(yield* Effect.forEach(tabIds, (tabId) => tabs.get(tabId)), byIndex)
+  const [first] = moving
+  if (first === undefined) return
+  yield* Effect.forEach(moving, unpinFromChrome, { discard: true })
+  // 分割ピンは 1 つ目のタブを外した時点で 2 つ分まとめて外れるので、毎回読み直す
+  yield* Effect.forEach(
+    moving,
+    (tab) =>
+      Effect.flatMap(state.workspace.get, (current) =>
+        Option.match(trackedTab(current, tab.id), { onNone: () => Effect.void, onSome: removePin }),
+      ),
+    { discard: true },
+  )
   const now = yield* Clock.currentTimeMillis
   const workspace = yield* state.workspace.update((current) =>
-    assignTab(current, tabId, spaceId, now),
+    moving.reduce((acc, tab) => assignTab(acc, tab.id, spaceId, now), current),
   )
-  const windowTabs = Array.sort(yield* tabs.query({ windowId: tab.windowId }), byIndex)
+  const windowTabs = Array.sort(yield* tabs.query({ windowId: first.windowId }), byIndex)
   const spaceTabs = windowTabs
     .filter((candidate) =>
       Option.exists(
@@ -190,11 +238,28 @@ const placeInTemporary = Effect.fnUntraced(function* (
   const index = moveIndexFor({
     windowTabs: windowTabs.map((candidate) => candidate.id),
     spaceTabs,
-    moving: tabId,
+    moving: moving.map((tab) => tab.id),
     placement,
     newestOnTop: settings.newTabsOnTop,
+    unitOf: splitPartnersIn(windowTabs),
   })
-  if (Option.isSome(index)) yield* tabs.move([tabId], { index: index.value })
+  if (Option.isNone(index)) return
+  yield* tabs.move(
+    moving.map((tab) => tab.id),
+    { index: index.value },
+  )
+  yield* resplitIfBroken(moving)
+})
+
+// 分割ビューの 2 つを一緒に動かしたときに分割が保たれるかは Chrome の版によって違う。
+// 解けていたら、隣り合ったままなので作り直す
+const resplitIfBroken = Effect.fnUntraced(function* (moved: ReadonlyArray<BrowserTab>) {
+  const [left, right] = moved
+  if (left === undefined || right === undefined || Option.isNone(left.splitViewId)) return
+  const tabs = yield* Tabs
+  const current = yield* tabs.get(left.id)
+  if (Option.isSome(current.splitViewId)) return
+  yield* tabs.createSplit([left.id, right.id])
 })
 
 const pinnedPosition = Effect.fnUntraced(function* (
@@ -234,6 +299,187 @@ const placeInPinned = Effect.fnUntraced(function* (
   }
   yield* state.workspace.update((workspace) => assignTab(workspace, tabId, spaceId, now))
 })
+
+/** ピンのノードのうち、開いているタブが結びつきうるブックマークの ID。 */
+const pinnedIdsOf = (node: PinnedNode): ReadonlyArray<BookmarkId> =>
+  node._tag === "PinnedSplit" ? node.items.map((item) => item.id) : [node.id]
+
+const requireSplitSupport = Tabs.use((tabs) =>
+  tabs.supportsSplitView ? Effect.void : reject("この Chrome では分割ビューを使えません"),
+)
+
+const splitPairOf = Effect.fnUntraced(function* (splitViewId: SplitViewId) {
+  const pair = Array.sort(
+    (yield* (yield* Tabs).query({})).filter((tab) => Option.contains(tab.splitViewId, splitViewId)),
+    byIndex,
+  )
+  const [left, right] = pair
+  if (left === undefined || right === undefined) {
+    return yield* reject("分割ビューが見つかりません")
+  }
+  return [left, right] as const
+})
+
+const pinOf = (workspace: Workspace, tab: BrowserTab) =>
+  Option.flatMap(trackedTab(workspace, tab.id), (tracked) => Option.fromNullishOr(tracked.pinned))
+
+// 2 つのタブが同じ分割ピンの左右に結びついていれば、その分割ピンのフォルダの ID を返す
+const sharedSplitPin = Effect.fnUntraced(function* (left: BrowserTab, right: BrowserTab) {
+  const workspace = yield* (yield* KatipState).workspace.get
+  const pinned = yield* PinnedBookmarks
+  const [leftPin, rightPin] = [pinOf(workspace, left), pinOf(workspace, right)]
+  if (Option.isNone(leftPin) || Option.isNone(rightPin)) return Option.none<BookmarkId>()
+  const parent = (yield* pinned.locate(leftPin.value.bookmarkId)).parentFolderId
+  if (Option.isNone(parent)) return Option.none<BookmarkId>()
+  const split = (yield* pinned.locate(parent.value)).node
+  return split._tag === "PinnedSplit" &&
+    split.items.some((item) => item.id === rightPin.value.bookmarkId)
+    ? Option.some(split.id)
+    : Option.none<BookmarkId>()
+})
+
+// 閉じている側だけを、開いている側と並べて分割ビューで開く。両方とも開いていれば前面に出すだけ
+const openSplitPin = Effect.fnUntraced(function* (
+  windowId: WindowId,
+  spaceId: SpaceId,
+  split: PinnedSplit,
+) {
+  const state = yield* KatipState
+  const tabs = yield* Tabs
+  const windowTabIds = new Set<TabId>((yield* tabs.query({ windowId })).map((tab) => tab.id))
+  const workspace = yield* state.workspace.get
+  const openTabOf = (bookmarkId: BookmarkId) =>
+    Option.fromNullishOr(
+      tabsBoundTo(workspace, bookmarkId).find((tab) => windowTabIds.has(tab.tabId)),
+    )
+  const [leftPin, rightPin] = split.items
+  const left = yield* Option.match(openTabOf(leftPin.id), {
+    onSome: (tab) => tabs.update(tab.tabId, { active: true }),
+    onNone: () => tabs.create({ windowId, url: leftPin.url, active: true }),
+  })
+  const canSplitWithLeft = tabs.supportsSplitView && Option.isNone(left.splitViewId)
+  const right = yield* Option.match(openTabOf(rightPin.id), {
+    onSome: (tab) => tabs.get(tab.tabId),
+    onNone: () =>
+      tabs.create({
+        windowId,
+        url: rightPin.url,
+        active: false,
+        ...(canSplitWithLeft && { splitWithTabId: left.id }),
+      }),
+  })
+  const now = yield* Clock.currentTimeMillis
+  const bind = (current: Workspace, tab: BrowserTab, pin: PinnedSplit["items"][number]) =>
+    bindPinned(assignTab(current, tab.id, spaceId, now), tab.id, {
+      bookmarkId: pin.id,
+      pinnedUrl: pin.url,
+    })
+  yield* state.workspace.update((current) => bind(bind(current, left, leftPin), right, rightPin))
+})
+
+const splitCommands = {
+  SplitTabs: Effect.fnUntraced(function* ({
+    tabId,
+    withTabId,
+  }: {
+    tabId: TabId
+    withTabId: TabId
+  }) {
+    yield* requireSplitSupport
+    if (tabId === withTabId) return
+    const state = yield* KatipState
+    const tabs = yield* Tabs
+    const target = yield* tabs.get(withTabId)
+    const dragged = yield* tabs.get(tabId)
+    if (target.pinned) return yield* reject("Favorites のタブとは分割できません")
+    if (Option.isSome(target.splitViewId)) return yield* reject("すでに分割しているタブです")
+    if (dragged.windowId !== target.windowId) {
+      return yield* reject("別のウィンドウのタブとは分割できません")
+    }
+    if (Option.isSome(dragged.splitViewId)) yield* tabs.unsplit(dragged.splitViewId.value)
+    yield* unpinFromChrome(dragged)
+    yield* Option.match(trackedTab(yield* state.workspace.get, tabId), {
+      onNone: () => Effect.void,
+      onSome: removePin,
+    })
+    const targetSpace = spaceOf(yield* state.workspace.get, withTabId)
+    const now = yield* Clock.currentTimeMillis
+    if (Option.isSome(targetSpace)) {
+      yield* state.workspace.update((workspace) =>
+        assignTab(workspace, tabId, targetSpace.value, now),
+      )
+    }
+    // 分割ビューにできるのは同じグループのタブどうしだけなので、先にグループを揃える
+    const current = yield* tabs.get(tabId)
+    if (!Equal.equals(current.groupId, target.groupId)) {
+      yield* Option.match(target.groupId, {
+        onSome: (groupId) => tabs.group({ tabIds: [tabId], groupId }),
+        onNone: () => tabs.ungroup([tabId]),
+      })
+    }
+    const remaining = Array.sort(yield* tabs.query({ windowId: target.windowId }), byIndex).filter(
+      (tab) => tab.id !== tabId,
+    )
+    const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
+    yield* tabs.move([tabId], { index: targetPosition + 1 })
+    yield* tabs.createSplit([withTabId, tabId])
+  }),
+
+  Unsplit: ({ splitViewId }: { splitViewId: SplitViewId }) =>
+    Tabs.use((tabs) => tabs.unsplit(splitViewId)),
+
+  PlaceSplitInTemporary: Effect.fnUntraced(function* (
+    command: Extract<SidebarCommand, { _tag: "PlaceSplitInTemporary" }>,
+  ) {
+    const [left, right] = yield* splitPairOf(command.splitViewId)
+    yield* placeInTemporary([left.id, right.id], command.spaceId, command.placement)
+  }),
+
+  PlaceSplitInPinned: Effect.fnUntraced(function* (
+    command: Extract<SidebarCommand, { _tag: "PlaceSplitInPinned" }>,
+  ) {
+    const state = yield* KatipState
+    const pinned = yield* PinnedBookmarks
+    const [left, right] = yield* splitPairOf(command.splitViewId)
+    const position = yield* pinnedPosition(command.placement)
+    const existing = yield* sharedSplitPin(left, right)
+    if (Option.isSome(existing)) {
+      yield* pinned.moveBookmark(existing.value, position)
+    } else {
+      // それぞれが別々にピン留めされていたら、その 2 つのピンは外して 1 つの分割ピンにまとめる
+      yield* Effect.forEach(
+        [left, right],
+        (tab) =>
+          Effect.flatMap(state.workspace.get, (workspace) =>
+            Option.match(trackedTab(workspace, tab.id), {
+              onNone: () => Effect.void,
+              onSome: removePin,
+            }),
+          ),
+        { discard: true },
+      )
+      const created = yield* pinned.createSplit(position, {
+        title: `${titleOf(left)} | ${titleOf(right)}`,
+        left: { title: titleOf(left), url: urlOf(left) },
+        right: { title: titleOf(right), url: urlOf(right) },
+      })
+      yield* state.workspace.update((current) =>
+        bindPinned(
+          bindPinned(current, left.id, { bookmarkId: created.left, pinnedUrl: urlOf(left) }),
+          right.id,
+          { bookmarkId: created.right, pinnedUrl: urlOf(right) },
+        ),
+      )
+    }
+    const now = yield* Clock.currentTimeMillis
+    yield* state.workspace.update((current) =>
+      [left, right].reduce(
+        (acc, tab) => assignTab(acc, tab.id, command.placement.spaceId, now),
+        current,
+      ),
+    )
+  }),
+}
 
 const tabCommands = {
   OpenNewTab: ({ windowId }: { windowId: WindowId }) =>
@@ -287,7 +533,7 @@ const tabCommands = {
   }),
 
   PlaceTabInTemporary: (command: Extract<SidebarCommand, { _tag: "PlaceTabInTemporary" }>) =>
-    placeInTemporary(command.tabId, command.spaceId, command.placement),
+    placeInTemporary([command.tabId], command.spaceId, command.placement),
 
   PlaceTabInPinned: Effect.fnUntraced(function* (
     command: Extract<SidebarCommand, { _tag: "PlaceTabInPinned" }>,
@@ -365,7 +611,10 @@ const pinnedCommands = {
     const state = yield* KatipState
     const tabs = yield* Tabs
     const location = yield* (yield* PinnedBookmarks).locate(bookmarkId)
-    if (location.node._tag !== "PinnedBookmark") return yield* reject("フォルダは開けません")
+    if (location.node._tag === "PinnedFolder") return yield* reject("フォルダは開けません")
+    if (location.node._tag === "PinnedSplit") {
+      return yield* openSplitPin(windowId, location.spaceId, location.node)
+    }
     const windowTabIds = new Set<TabId>((yield* tabs.query({ windowId })).map((tab) => tab.id))
     const opened = tabsBoundTo(yield* state.workspace.get, bookmarkId).find((tab) =>
       windowTabIds.has(tab.tabId),
@@ -390,19 +639,22 @@ const pinnedCommands = {
     placement: PinnedPlacement
   }) {
     const state = yield* KatipState
-    yield* (yield* PinnedBookmarks).moveBookmark(bookmarkId, yield* pinnedPosition(placement))
+    const pinned = yield* PinnedBookmarks
+    const boundIds = pinnedIdsOf((yield* pinned.locate(bookmarkId)).node)
+    yield* pinned.moveBookmark(bookmarkId, yield* pinnedPosition(placement))
     yield* state.workspace.update((workspace) =>
-      tabsBoundTo(workspace, bookmarkId).reduce(
-        (acc, tab) => moveTabToSpace(acc, tab.tabId, placement.spaceId),
-        workspace,
-      ),
+      boundIds
+        .flatMap((id) => tabsBoundTo(workspace, id))
+        .reduce((acc, tab) => moveTabToSpace(acc, tab.tabId, placement.spaceId), workspace),
     )
   }),
 
   RemovePinnedItem: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
-    yield* (yield* PinnedBookmarks).removeBookmark(bookmarkId)
+    const pinned = yield* PinnedBookmarks
+    const boundIds = pinnedIdsOf((yield* pinned.locate(bookmarkId)).node)
+    yield* pinned.removeBookmark(bookmarkId)
     yield* (yield* KatipState).workspace.update((workspace) =>
-      unbindBookmark(workspace, bookmarkId),
+      boundIds.reduce(unbindBookmark, workspace),
     )
   }),
 
@@ -508,6 +760,7 @@ const executeCommand = (command: SidebarCommand) =>
     Match.tagsExhaustive({
       ...spaceCommands,
       ...tabCommands,
+      ...splitCommands,
       ...pinnedCommands,
       ...archiveCommands,
     }),

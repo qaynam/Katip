@@ -17,12 +17,12 @@ export const KeyboardCommand = {
 } as const
 
 const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId> =>
-  nodes.flatMap((node) =>
-    node._tag === "PinnedFolder"
-      ? openTabIdsIn(node.children)
-      : node.openTab === null
-        ? []
-        : [node.openTab.tab.tabId],
+  nodes.flatMap((node): ReadonlyArray<TabId> =>
+    Match.valueTags(node, {
+      PinnedItem: ({ openTab }) => (openTab === null ? [] : [openTab.tab.tabId]),
+      PinnedSplit: ({ items }) => openTabIdsIn(items),
+      PinnedFolder: ({ children }) => openTabIdsIn(children),
+    }),
   )
 
 // 画面に見えている順で移動する。内部の並びで移動すると、新しいタブを上に出す設定では
@@ -34,7 +34,9 @@ const tabsInDisplayOrder = (view: SidebarView): ReadonlyArray<TabId> =>
       onNone: () => [],
       onSome: (space) => [
         ...(space.pinned._tag === "Available" ? openTabIdsIn(space.pinned.nodes) : []),
-        ...space.temporaryTabs.map((tab) => tab.tabId),
+        ...space.temporaryEntries.flatMap((entry) =>
+          entry._tag === "TemporaryTab" ? [entry.tab.tabId] : entry.tabs.map((tab) => tab.tabId),
+        ),
       ],
     }),
   )

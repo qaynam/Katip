@@ -24,5 +24,6 @@ export const buildSidebarView = Effect.fnUntraced(function* (windowId: WindowId)
     },
     autoArchive: settings.autoArchive,
     archive: yield* (yield* ArchiveRepository).list,
+    canSplit: (yield* Tabs).supportsSplitView,
   })
 })

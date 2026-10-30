@@ -12,7 +12,9 @@ export {
   PinnedFolderView,
   PinnedItemView,
   PinnedNodeView,
+  PinnedSplitView,
   SidebarView,
   SpaceView,
   TabView,
+  TemporaryEntry,
 } from "./sidebar-view"

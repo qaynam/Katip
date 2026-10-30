@@ -1,8 +1,8 @@
 import { Option } from "effect"
-import type { BookmarkId, TabId } from "#platform/browser"
-import type { SidebarCommand, SpaceView } from "#protocol"
+import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
+import type { PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
 import { themeSwatch } from "../logic/space-themes"
-import { otherSpaces } from "../logic/view-queries"
+import { openSplitViewOf, otherSpaces } from "../logic/view-queries"
 import { action, separator, submenu, type MenuEntry } from "../state/menu-controller.svelte"
 import type { SidebarContext } from "../state/sidebar-context"
 import type { SpaceSetupSteps } from "../state/space-setup.svelte"
@@ -36,6 +36,70 @@ export const openTabMenu = (
     ...(destinations.length > 0 ? [submenu("Space へ移動", destinations)] : []),
     action("アーカイブ", run({ _tag: "ArchiveTab", tabId })),
     action("閉じる", run({ _tag: "CloseTab", tabId })),
+  ]
+}
+
+export const temporarySplitMenu = (
+  ctx: SidebarContext,
+  splitViewId: SplitViewId,
+): ReadonlyArray<MenuEntry> => {
+  const { pinned, id: spaceId } = ctx.activeSpace
+  const pinAtEnd: SidebarCommand = {
+    _tag: "PlaceSplitInPinned",
+    splitViewId,
+    placement: {
+      spaceId,
+      parentId: null,
+      index: pinned._tag === "Available" ? pinned.nodes.length : 0,
+    },
+  }
+  return [
+    ...(ctx.view.canSplit
+      ? [action("分割を解除", () => void ctx.run({ _tag: "Unsplit", splitViewId }))]
+      : []),
+    action("ピン留め", () => void ctx.run(pinAtEnd), { disabled: pinned._tag !== "Available" }),
+  ]
+}
+
+const confirmSplitPinRemoval = async (
+  ctx: SidebarContext,
+  split: PinnedSplitView,
+  titles: readonly [string, string],
+) => {
+  const confirmed = await ctx.dialog.confirm({
+    title: "ピンを削除しますか？",
+    message: `「${titles[0]}」と「${titles[1]}」を並べたピンのブックマークを削除します。開いているタブは閉じません。`,
+    confirmLabel: "削除",
+  })
+  if (confirmed) void ctx.run({ _tag: "RemovePinnedItem", bookmarkId: split.bookmarkId })
+}
+
+export const pinnedSplitMenu = (
+  ctx: SidebarContext,
+  split: PinnedSplitView,
+  options: { readonly titles: readonly [string, string]; readonly startRename: () => void },
+): ReadonlyArray<MenuEntry> => {
+  const splitViewId = openSplitViewOf(split)
+  return [
+    action("名前を変更", options.startRename),
+    ...(splitViewId === null
+      ? []
+      : [
+          action(
+            "ピン留めを外す",
+            () =>
+              void ctx.run({
+                _tag: "PlaceSplitInTemporary",
+                splitViewId,
+                spaceId: ctx.activeSpace.id,
+                placement: { _tag: "Top" },
+              }),
+          ),
+        ]),
+    separator,
+    action("ピンを削除", () => void confirmSplitPinRemoval(ctx, split, options.titles), {
+      tone: "danger",
+    }),
   ]
 }
 

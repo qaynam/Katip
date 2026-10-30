@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { SpaceView } from "#protocol"
+  import type { SpaceView, TemporaryEntry } from "#protocol"
   import { getSidebarContext } from "../state/sidebar-context"
   import Icon from "./Icon.svelte"
+  import TemporarySplitRow from "./TemporarySplitRow.svelte"
   import TemporaryTabRow from "./TemporaryTabRow.svelte"
 
   interface Props {
@@ -25,6 +26,9 @@
     })
   }
 
+  const entryKey = (entry: TemporaryEntry) =>
+    entry._tag === "TemporaryTab" ? `tab:${entry.tab.tabId}` : `split:${entry.splitViewId}`
+
   const clear = () =>
     void ctx.run({ _tag: "CloseTemporaryTabs", windowId: ctx.view.windowId, spaceId: space.id })
 </script>
@@ -37,7 +41,7 @@
 >
   <div class="divider">
     <span class="rule"></span>
-    {#if space.temporaryTabs.length > 0}
+    {#if space.temporaryEntries.length > 0}
       <button class="clear" type="button" title="一時タブをすべて閉じる" onclick={clear}>
         <Icon name="arrowDown" size={11} />
         <span>クリア</span>
@@ -53,8 +57,12 @@
     <span>新しいタブ</span>
   </button>
   <ul class="tabs">
-    {#each space.temporaryTabs as tab (tab.tabId)}
-      <TemporaryTabRow {tab} />
+    {#each space.temporaryEntries as entry (entryKey(entry))}
+      {#if entry._tag === "TemporaryTab"}
+        <TemporaryTabRow tab={entry.tab} />
+      {:else}
+        <TemporarySplitRow splitViewId={entry.splitViewId} tabs={entry.tabs} />
+      {/if}
     {/each}
   </ul>
 </section>

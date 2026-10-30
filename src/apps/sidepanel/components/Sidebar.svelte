@@ -39,7 +39,7 @@
 
   const menu = new MenuController()
   const dialog = new DialogController()
-  const drag = new DragSession(() => activeSpace.id)
+  const drag = new DragSession(() => ({ spaceId: activeSpace.id, canSplit: view.canSplit }))
   const themePicker = new ThemePickerController()
   const themeDraft = new ThemeDraft((draft) =>
     run({ _tag: "SetSpaceTheme", spaceId: draft.spaceId, theme: draft.theme }),

@@ -1,8 +1,14 @@
 import { Array, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import type { SpaceId } from "#modules/space"
-import type { BookmarkId } from "#platform/browser"
-import type { PinnedFolderView, PinnedItemView, SidebarView, SpaceView } from "#protocol"
+import type { BookmarkId, SplitViewId } from "#platform/browser"
+import type {
+  PinnedFolderView,
+  PinnedItemView,
+  PinnedSplitView,
+  SidebarView,
+  SpaceView,
+} from "#protocol"
 import type { PinnedPosition } from "./drag-drop"
 
 export const findActiveSpace = (view: SidebarView): Option.Option<SpaceView> =>
@@ -62,3 +68,8 @@ export const childPosition = (
     Option.map((index) => ({ parentId: folder.bookmarkId, index })),
     Option.getOrNull,
   )
+
+export const openSplitViewOf = ({ items: [left, right] }: PinnedSplitView): SplitViewId | null => {
+  const splitViewId = left.openTab?.tab.splitViewId ?? null
+  return splitViewId !== null && splitViewId === right.openTab?.tab.splitViewId ? splitViewId : null
+}

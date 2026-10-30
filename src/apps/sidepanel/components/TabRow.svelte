@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TabId } from "#platform/browser"
-  import { edgeAt, type DragSource, type DropTarget, type Edge } from "../logic/drag-drop"
+  import { rowZoneAt, type DragSource, type DropTarget, type Edge } from "../logic/drag-drop"
   import { pointRect } from "../logic/menu-position"
   import type { MenuEntry } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
@@ -31,6 +31,8 @@
     menuEntries: (startRename: () => void) => ReadonlyArray<MenuEntry>
     dragSource: DragSource
     dropTargetAt: (edge: Edge) => DropTarget | null
+    /** 行の中央に落としたときのドロップ先。受け付けられないドラッグでは中央も前後への並べ替えに使う */
+    splitTarget?: DropTarget | null
   }
 
   const {
@@ -54,6 +56,7 @@
     menuEntries,
     dragSource,
     dropTargetAt,
+    splitTarget = null,
   }: Props = $props()
 
   const ctx = getSidebarContext()
@@ -108,8 +111,9 @@
 
   const onDragOver = (event: DragEvent & { currentTarget: HTMLLIElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
-    const edge = edgeAt(event.clientY - bounds.top, bounds.height)
-    ctx.drag.offer(event, rowKey, edge, dropTargetAt(edge))
+    const canSplitInCenter = splitTarget !== null && ctx.drag.accepts(splitTarget)
+    const zone = rowZoneAt(event.clientY - bounds.top, bounds.height, canSplitInCenter)
+    ctx.drag.offer(event, rowKey, zone, zone === "split" ? splitTarget : dropTargetAt(zone))
   }
 
   const scheduleTooltip = (event: PointerEvent) => {
@@ -130,6 +134,7 @@
   class:dragged={isDragged}
   class:drop-before={dropZone === "before"}
   class:drop-after={dropZone === "after"}
+  class:drop-split={dropZone === "split"}
   data-tab-id={tabId}
   draggable={!isEditing}
   ondragstart={(event) => ctx.drag.begin(event, rowKey, dragSource)}
@@ -378,6 +383,30 @@
 
   .row.drop-after::after {
     bottom: -2px;
+  }
+
+  .row.drop-split {
+    padding-right: calc(50% + 2px);
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1.5px var(--drop-line);
+  }
+
+  .row.drop-split::after {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    width: calc(50% - 6px);
+    border: 1.5px dashed color-mix(in srgb, var(--drop-line) 55%, transparent);
+    border-radius: 7px;
+    background: var(--surface-hover);
+    content: "";
+    pointer-events: none;
+  }
+
+  .row.drop-split .close,
+  .row.drop-split .audio {
+    display: none;
   }
 
   .row :global(.title-editor) {

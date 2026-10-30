@@ -1,12 +1,41 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { TabId } from "#platform/browser"
-import { commandsOf, renderSidebar } from "../testing/render-sidebar"
-import { sidebarView, spaceView, tabView } from "../testing/view-builders"
+import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
+import type { TemporaryEntry } from "#protocol"
+import { commandsOf, dragOverAt, renderSidebar } from "../testing/render-sidebar"
+import {
+  pinnedFolder,
+  pinnedItem,
+  sidebarView,
+  spaceView,
+  tabView,
+  temporarySplit,
+  temporaryTab,
+} from "../testing/view-builders"
 
 const viewWithTabs = (...tabs: ReadonlyArray<ReturnType<typeof tabView>>) =>
   sidebarView({ spaces: [spaceView("work", { temporaryTabs: tabs })] })
+
+const viewWithEntries = (
+  entries: ReadonlyArray<TemporaryEntry>,
+  options: { readonly canSplit?: boolean } = {},
+) =>
+  sidebarView({
+    spaces: [
+      spaceView("work", {
+        temporaryEntries: entries,
+        pinnedNodes: [pinnedItem("existing"), pinnedFolder("folder", { title: "資料" })],
+      }),
+    ],
+    canSplit: options.canSplit ?? true,
+  })
+
+const redditAndGoogle = temporarySplit(
+  9,
+  tabView(1, { title: "Reddit" }),
+  tabView(2, { title: "Google" }),
+)
 
 const rowOf = (title: string) => {
   const row = screen.getByRole("button", { name: title }).closest("li")
@@ -53,6 +82,69 @@ describe("一時タブの行", () => {
     await renderSidebar(viewWithTabs())
 
     expect(screen.queryByRole("button", { name: "クリア" })).toBeNull()
+  })
+})
+
+describe("一時タブの分割ビューの行", () => {
+  it("2 つのタブを左右に並べて 1 つの行に表示する", async () => {
+    await renderSidebar(viewWithEntries([redditAndGoogle, temporaryTab(tabView(3))]))
+
+    expect(rowOf("Reddit")).toBe(rowOf("Google"))
+    expect(rowOf("タブ 3")).not.toBe(rowOf("Reddit"))
+  })
+
+  it("左半分をクリックすると、左のタブをアクティブにする", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Reddit" }))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "ActivateTab", tabId: TabId.make(1) }])
+  })
+
+  it("右半分の × を押すと、右のタブだけを閉じる", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+
+    await fireEvent.click(
+      within(screen.getByRole("group", { name: "Google" })).getByRole("button", {
+        name: "タブを閉じる",
+      }),
+    )
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "CloseTab", tabId: TabId.make(2) }])
+  })
+
+  it("右クリックの「分割を解除」で、2 つのタブを別々の行に戻す", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Google" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "分割を解除" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "Unsplit", splitViewId: SplitViewId.make(9) },
+    ])
+  })
+
+  it("右クリックの「ピン留め」で、分割ビューのままピン留めの末尾に加える", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Reddit" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "ピン留め" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceSplitInPinned",
+        splitViewId: SplitViewId.make(9),
+        placement: { spaceId: "work", parentId: null, index: 2 },
+      },
+    ])
+  })
+
+  it("分割ビューを作れない環境では「分割を解除」を出さない", async () => {
+    await renderSidebar(viewWithEntries([redditAndGoogle], { canSplit: false }))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Reddit" }))
+
+    expect(screen.queryByRole("menuitem", { name: "分割を解除" })).toBeNull()
   })
 })
 
@@ -172,14 +264,82 @@ describe("アクティブなタブへのスクロール", () => {
 })
 
 describe("ドラッグ＆ドロップ", () => {
-  it("一時タブを別の一時タブの上に落とすと、その位置へ並べ替えるコマンドを送る", async () => {
+  it("一時タブを別の一時タブの上端に落とすと、その上へ並べ替える", async () => {
     const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
 
-    await fireEvent.dragStart(rowOf("タブ 1"))
-    await fireEvent.dragOver(rowOf("タブ 2"))
-    await fireEvent.drop(rowOf("タブ 2"))
+    await fireEvent.dragStart(rowOf("タブ 2"))
+    await dragOverAt(rowOf("タブ 1"), 0.1)
+    await fireEvent.drop(rowOf("タブ 1"))
 
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceTabInTemporary",
+        tabId: TabId.make(2),
+        spaceId: "work",
+        placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
+    ])
+  })
+
+  it("一時タブを別の一時タブの中央に落とすと、その右に並べて分割ビューにする", async () => {
+    const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
+
+    await fireEvent.dragStart(rowOf("タブ 2"))
+    await dragOverAt(rowOf("タブ 1"), 0.5)
+    await fireEvent.drop(rowOf("タブ 1"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SplitTabs", tabId: TabId.make(2), withTabId: TabId.make(1) },
+    ])
+  })
+
+  it("分割ビューを作れない環境では、中央に落としても分割ビューにせず並べ替える", async () => {
+    const { connection } = await renderSidebar(
+      viewWithEntries([temporaryTab(tabView(1)), temporaryTab(tabView(2))], { canSplit: false }),
+    )
+
+    await fireEvent.dragStart(rowOf("タブ 2"))
+    await dragOverAt(rowOf("タブ 1"), 0.5)
+    await fireEvent.drop(rowOf("タブ 1"))
+
+    expect(commandsOf(connection.sentCommands, "SplitTabs")).toStrictEqual([])
     expect(commandsOf(connection.sentCommands, "PlaceTabInTemporary")).toHaveLength(1)
+  })
+
+  it("分割ビューの行の中央に落としても、3 つ目のタブは並べず前後へ並べ替える", async () => {
+    const { connection } = await renderSidebar(
+      viewWithEntries([redditAndGoogle, temporaryTab(tabView(3))]),
+    )
+
+    await fireEvent.dragStart(rowOf("タブ 3"))
+    await dragOverAt(rowOf("Reddit"), 0.4)
+    await fireEvent.drop(rowOf("Reddit"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceTabInTemporary",
+        tabId: TabId.make(3),
+        spaceId: "work",
+        placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
+    ])
+  })
+
+  it("分割ビューの行をピン留めのフォルダに落とすと、分割ビューのままフォルダの中にピン留めする", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+    const folderHeader = screen.getByRole("button", { name: "資料" })
+
+    await fireEvent.dragStart(rowOf("Reddit"))
+    await dragOverAt(folderHeader, 0.5)
+    await fireEvent.drop(folderHeader)
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceSplitInPinned",
+        splitViewId: SplitViewId.make(9),
+        placement: { spaceId: "work", parentId: BookmarkId.make("folder"), index: 0 },
+      },
+    ])
   })
 
   it("ドラッグせずに落とされたもの（外部のリンクなど）は無視する", async () => {

@@ -1,5 +1,5 @@
 import "@testing-library/svelte/vitest"
-import { render } from "@testing-library/svelte"
+import { fireEvent, render } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { beforeEach, vi } from "vitest"
 import type { SidebarCommand, SidebarView } from "#protocol"
@@ -50,4 +50,21 @@ export const shownAppearance = (container: HTMLElement) => {
     text: root?.style.getPropertyValue("--text"),
     background: layers[layers.length - 1]?.style.getPropertyValue("--layer-background"),
   }
+}
+
+/**
+ * 要素の上から ratio（0〜1）の高さの位置にドラッグ中のポインタを重ねる。
+ * jsdom はレイアウトを持たず DragEvent も無いので、要素の矩形と座標付きのマウスイベントで代用する
+ */
+export const dragOverAt = async (element: HTMLElement, ratio: number) => {
+  const bounds = new DOMRect(0, 100, 240, 36)
+  vi.spyOn(element, "getBoundingClientRect").mockReturnValue(bounds)
+  await fireEvent(
+    element,
+    new MouseEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      clientY: bounds.top + bounds.height * ratio,
+    }),
+  )
 }

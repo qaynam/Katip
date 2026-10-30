@@ -1,15 +1,15 @@
 import { Option } from "effect"
-import type { SpaceId } from "#modules/space"
 import type { SidebarCommand } from "#protocol"
 import {
   commandForDrop,
   type DragSource,
+  type DropContext,
   type DropTarget,
-  type Edge,
   type FolderZone,
+  type RowZone,
 } from "../logic/drag-drop"
 
-export type DropZone = Edge | FolderZone
+export type DropZone = RowZone | FolderZone
 
 export interface DropIndicator {
   readonly key: string
@@ -24,10 +24,10 @@ export class DragSession {
   indicator = $state.raw<DropIndicator | null>(null)
   #command: SidebarCommand | null = null
   #hover: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null
-  readonly #spaceId: () => SpaceId
+  readonly #context: () => DropContext
 
-  constructor(spaceId: () => SpaceId) {
-    this.#spaceId = spaceId
+  constructor(context: () => DropContext) {
+    this.#context = context
   }
 
   begin(event: DragEvent, key: string, source: DragSource) {
@@ -44,11 +44,7 @@ export class DragSession {
   offer(event: DragEvent, key: string, zone: DropZone, target: DropTarget | null) {
     event.stopPropagation()
     if (this.#hover !== null && this.#hover.key !== key) this.cancelHover()
-    const source = this.source
-    const command =
-      source === null || target === null
-        ? Option.none()
-        : commandForDrop(source, target, this.#spaceId())
+    const command = target === null ? Option.none() : this.#commandFor(target)
     if (Option.isNone(command)) {
       this.reject()
       return
@@ -59,6 +55,16 @@ export class DragSession {
     if (this.indicator?.key !== key || this.indicator.zone !== zone) {
       this.indicator = { key, zone }
     }
+  }
+
+  accepts(target: DropTarget): boolean {
+    return Option.isSome(this.#commandFor(target))
+  }
+
+  #commandFor(target: DropTarget): Option.Option<SidebarCommand> {
+    return this.source === null
+      ? Option.none()
+      : commandForDrop(this.source, target, this.#context())
   }
 
   /** 行と行の隙間では直前の候補を保つ。候補が一瞬消えて挿入線がちらつくのを防ぐ */

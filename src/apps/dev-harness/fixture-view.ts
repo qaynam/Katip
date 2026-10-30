@@ -2,15 +2,19 @@ import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme, themeOf, type SpaceTheme, type ThemeColor } from "#modules/theme"
 import type { SidebarView } from "#protocol"
+import { SplitViewId } from "#platform/browser"
 import {
   archiveEntry,
   favoriteView,
   openPinnedTab,
   pinnedFolder,
   pinnedItem,
+  pinnedSplit,
   sidebarView,
   spaceView,
   tabView,
+  temporarySplit,
+  temporaryTab,
 } from "../sidepanel/testing/view-builders"
 
 const MINUTE_MS = 60_000
@@ -52,6 +56,10 @@ const work = spaceView("work", {
           title: "画面遷移図",
           url: "https://design.example.com/screen-flow",
         }),
+        pinnedSplit("spec-compare", [
+          pinnedItem("spec-ja", { title: "仕様書", url: "https://docs.example.com/spec/ja" }),
+          pinnedItem("spec-en", { title: "Spec", url: "https://docs.example.com/spec/en" }),
+        ]),
         pinnedFolder("minutes", {
           title: "議事録",
           isExpanded: false,
@@ -82,29 +90,59 @@ const work = spaceView("work", {
       title: "チームの予定表",
       url: "https://calendar.example.com/team",
     }),
+    pinnedSplit("review", [
+      pinnedItem("review-diff", {
+        title: "PR #128",
+        url: "https://git.example.com/katip/pull/128",
+        openTab: openPinnedTab(
+          tabView(13, {
+            title: "分割ビューの行を追加 #128",
+            url: "https://git.example.com/katip/pull/128",
+            splitViewId: SplitViewId.make(2),
+          }),
+        ),
+      }),
+      pinnedItem("review-preview", {
+        title: "プレビュー",
+        url: "https://preview.example.com/",
+        openTab: openPinnedTab(
+          tabView(14, {
+            title: "Katip プレビュー",
+            url: "https://preview.example.com/",
+            splitViewId: SplitViewId.make(2),
+          }),
+        ),
+      }),
+    ]),
     pinnedFolder("empty-folder", { title: "あとで読む", isExpanded: true }),
   ],
-  temporaryTabs: [
-    tabView(31, {
-      title: "Runes • Svelte のドキュメント",
-      url: "https://svelte.dev/docs/svelte/what-are-runes",
-      isActive: true,
-    }),
-    tabView(32, {
-      title: "HTML Drag and Drop API - Web API | MDN",
-      url: "https://developer.mozilla.org/ja/docs/Web/API/HTML_Drag_and_Drop_API",
-    }),
-    tabView(33, {
-      title: "Effect 4.0 リリースノート",
-      url: "https://effect.website/blog/releases/effect/40",
-      isLoading: true,
-    }),
-    tabView(34, { title: "作業用 BGM", url: "https://music.example.com/focus", isAudible: true }),
-    tabView(35, {
-      title: "chrome.sidePanel | API | Chrome for Developers",
-      url: "https://developer.chrome.com/docs/extensions/reference/api/sidePanel",
-      isDiscarded: true,
-    }),
+  temporaryEntries: [
+    temporarySplit(
+      1,
+      tabView(36, { title: "r/sveltejs", url: "https://www.reddit.com/r/sveltejs/" }),
+      tabView(37, { title: "Google", url: "https://www.google.com/", isActive: true }),
+    ),
+    ...[
+      tabView(31, {
+        title: "Runes • Svelte のドキュメント",
+        url: "https://svelte.dev/docs/svelte/what-are-runes",
+      }),
+      tabView(32, {
+        title: "HTML Drag and Drop API - Web API | MDN",
+        url: "https://developer.mozilla.org/ja/docs/Web/API/HTML_Drag_and_Drop_API",
+      }),
+      tabView(33, {
+        title: "Effect 4.0 リリースノート",
+        url: "https://effect.website/blog/releases/effect/40",
+        isLoading: true,
+      }),
+      tabView(34, { title: "作業用 BGM", url: "https://music.example.com/focus", isAudible: true }),
+      tabView(35, {
+        title: "chrome.sidePanel | API | Chrome for Developers",
+        url: "https://developer.chrome.com/docs/extensions/reference/api/sidePanel",
+        isDiscarded: true,
+      }),
+    ].map(temporaryTab),
   ],
 })
 
@@ -114,12 +152,21 @@ const hobby = spaceView("hobby", {
   pinnedNodes: [
     pinnedItem("recipes", { title: "料理レシピ", url: "https://recipes.example.com/saved" }),
   ],
-  temporaryTabs: [
-    tabView(41, {
-      title: "週末に行けるキャンプ場",
-      url: "https://camp.example.com/search?area=kanto",
-    }),
-    tabView(42, { title: "フィルムカメラの選び方", url: "https://camera.example.com/film" }),
+  temporaryEntries: [
+    temporarySplit(
+      3,
+      tabView(43, { title: "Reddit", url: "https://www.reddit.com/" }),
+      tabView(44, { title: "Google", url: "https://www.google.com/", isActive: true }),
+    ),
+    temporaryTab(
+      tabView(41, {
+        title: "週末に行けるキャンプ場",
+        url: "https://camp.example.com/search?area=kanto",
+      }),
+    ),
+    temporaryTab(
+      tabView(42, { title: "フィルムカメラの選び方", url: "https://camera.example.com/film" }),
+    ),
   ],
 })
 

@@ -12,7 +12,7 @@ import {
   switchSpace,
   type Workspace,
 } from "#modules/workspace"
-import { BookmarkId, TabId, WindowId, type BrowserTab } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId, WindowId, type BrowserTab } from "#platform/browser"
 import type { PinnedFolderView, PinnedItemView, SidebarView, SpaceView } from "#protocol"
 import { projectSidebarView, type SidebarSources } from "./sidebar-view"
 
@@ -45,6 +45,7 @@ const browserTab = (id: number, overrides: Partial<BrowserTab> = {}): BrowserTab
   openerTabId: Option.none(),
   groupId: Option.none(),
   lastAccessed: Option.none(),
+  splitViewId: Option.none(),
   ...overrides,
 })
 
@@ -79,6 +80,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   },
   autoArchive: defaultSettings.autoArchive,
   archive: [],
+  canSplit: true,
   ...overrides,
 })
 
@@ -87,6 +89,13 @@ const inHome = (workspace: Workspace, ...ids: ReadonlyArray<number>) =>
 
 const project = (overrides: Partial<SidebarSources> = {}): SidebarView =>
   Option.getOrThrow(projectSidebarView(sources(overrides)))
+
+const temporaryTabsOf = (space: SpaceView) =>
+  space.temporaryEntries.flatMap((entry) =>
+    entry._tag === "TemporaryTab" ? [entry.tab] : [...entry.tabs],
+  )
+
+const temporaryTabIds = (space: SpaceView) => temporaryTabsOf(space).map((tab) => tab.tabId)
 
 const homeOf = (view: SidebarView): SpaceView =>
   Option.getOrThrow(Option.fromNullishOr(view.spaces.find((s) => s.id === spaceId("home"))))
@@ -127,7 +136,7 @@ describe("一時タブ", () => {
   it("Chrome のタブの並び順で表示する", () => {
     const view = project({ workspace, windowTabs })
 
-    expect(homeOf(view).temporaryTabs.map((t) => t.tabId)).toStrictEqual([1, 2, 3])
+    expect(temporaryTabIds(homeOf(view))).toStrictEqual([1, 2, 3])
   })
 
   it("新しいタブを上に表示する設定では、並び順を逆にする", () => {
@@ -137,7 +146,7 @@ describe("一時タブ", () => {
       preferences: { ...sources().preferences, newTabsOnTop: true },
     })
 
-    expect(homeOf(view).temporaryTabs.map((t) => t.tabId)).toStrictEqual([3, 2, 1])
+    expect(temporaryTabIds(homeOf(view))).toStrictEqual([3, 2, 1])
   })
 
   it("タブ名が上書きされていれば、その名前で表示する", () => {
@@ -145,7 +154,7 @@ describe("一時タブ", () => {
 
     const view = project({ workspace: renamed, windowTabs })
 
-    expect(homeOf(view).temporaryTabs[0]?.title).toBe("受信箱")
+    expect(temporaryTabsOf(homeOf(view))[0]?.title).toBe("受信箱")
   })
 
   it("タイトルがまだ無いタブは URL を表示名にする", () => {
@@ -154,7 +163,7 @@ describe("一時タブ", () => {
       windowTabs: [browserTab(1, { title: Option.none() })],
     })
 
-    expect(homeOf(view).temporaryTabs[0]?.title).toBe("https://example.com/1")
+    expect(temporaryTabsOf(homeOf(view))[0]?.title).toBe("https://example.com/1")
   })
 
   it("別の Space のタブはその Space の一覧に入る", () => {
@@ -162,7 +171,7 @@ describe("一時タブ", () => {
 
     const view = project({ workspace: mixed, windowTabs: [...windowTabs, browserTab(4)] })
 
-    expect(view.spaces.map((s) => [s.id, s.temporaryTabs.map((t) => t.tabId)])).toStrictEqual([
+    expect(view.spaces.map((s) => [s.id, temporaryTabIds(s)])).toStrictEqual([
       ["home", [1, 2, 3]],
       ["work", [4]],
     ])
@@ -182,7 +191,7 @@ describe("Favorites", () => {
 
     expect({
       favorites: view.favorites.map((f) => [f.tabId, f.isActive]),
-      home: homeOf(view).temporaryTabs.map((t) => t.tabId),
+      home: temporaryTabIds(homeOf(view)),
     }).toStrictEqual({
       favorites: [
         [1, true],
@@ -216,7 +225,7 @@ describe("ピン留め", () => {
     })
 
     expect({
-      temporary: homeOf(view).temporaryTabs.length,
+      temporary: temporaryTabsOf(homeOf(view)).length,
       openTab: (pinnedNodesOf(view)[0] as PinnedItemView).openTab?.tab.tabId,
     }).toStrictEqual({ temporary: 0, openTab: 1 })
   })
@@ -255,7 +264,7 @@ describe("ピン留め", () => {
       pinnedTrees: homeWithPin([]),
     })
 
-    expect(homeOf(view).temporaryTabs.map((t) => t.tabId)).toStrictEqual([1])
+    expect(temporaryTabIds(homeOf(view))).toStrictEqual([1])
   })
 
   it("ピン留めツリーを読めなかった Space は、読めないことを示す", () => {
@@ -323,5 +332,82 @@ describe("フォルダ", () => {
     })
 
     expect(folderOf(view).canCreateSubfolder).toBe(false)
+  })
+})
+
+describe("分割ビュー", () => {
+  const split = SplitViewId.make(7)
+  const workspace = inHome(switchSpace(emptyWorkspace, WINDOW, spaceId("home")), 1, 2, 3)
+  const windowTabs = [
+    browserTab(1),
+    browserTab(2, { splitViewId: Option.some(split) }),
+    browserTab(3, { splitViewId: Option.some(split) }),
+  ]
+  const shape = (view: SidebarView) =>
+    homeOf(view).temporaryEntries.map((entry) =>
+      entry._tag === "TemporaryTab" ? entry.tab.tabId : entry.tabs.map((tab) => tab.tabId),
+    )
+
+  it("同じ分割ビューの 2 つの一時タブは、左右の順で 1 行にまとまる", () => {
+    const view = project({ workspace, windowTabs })
+
+    expect(shape(view)).toStrictEqual([1, [2, 3]])
+  })
+
+  it("新しいタブを上に表示する設定でも、分割の左右は入れ替わらない", () => {
+    const view = project({
+      workspace,
+      windowTabs,
+      preferences: { ...sources().preferences, newTabsOnTop: true },
+    })
+
+    expect(shape(view)).toStrictEqual([[2, 3], 1])
+  })
+
+  it("分割の片方がピンに結びついていれば、もう片方は単独の一時タブとして表示する", () => {
+    const pinnedUrl = "https://example.com/2"
+    const bound = bindPinned(workspace, tabId(2), { bookmarkId: bookmarkId("p"), pinnedUrl })
+
+    const view = project({
+      workspace: bound,
+      windowTabs,
+      pinnedTrees: homeWithPin([bookmark("p", pinnedUrl)]),
+    })
+
+    expect(shape(view)).toStrictEqual([1, 3])
+  })
+
+  it("分割ピンは、それぞれの側に開いているタブを載せた 1 つのノードになる", () => {
+    const left = "https://mail.example/"
+    const right = "https://calendar.example/"
+    const bound = bindPinned(inHome(emptyWorkspace, 5), tabId(5), {
+      bookmarkId: bookmarkId("right"),
+      pinnedUrl: right,
+    })
+
+    const view = project({
+      workspace: bound,
+      windowTabs: [browserTab(5, { url: Option.some(right) })],
+      pinnedTrees: homeWithPin([
+        {
+          _tag: "PinnedSplit",
+          id: bookmarkId("split"),
+          title: "メール | 予定",
+          items: [
+            { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "メール", url: left },
+            { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "予定", url: right },
+          ],
+        },
+      ]),
+    })
+    const node = pinnedNodesOf(view)[0]
+
+    expect(
+      node?._tag === "PinnedSplit" && node.items.map((item) => item.openTab?.tab.tabId ?? null),
+    ).toStrictEqual([null, 5])
+  })
+
+  it("分割ビューを作れるかどうかをそのままビューに載せる", () => {
+    expect(project({ canSplit: false }).canSplit).toBe(false)
   })
 })

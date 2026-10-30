@@ -2,8 +2,15 @@ import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { ArchiveEntryId } from "#modules/archive"
 import { SpaceId } from "#modules/space"
-import { archiveEntry, openPinnedTab, pinnedItem, tabView } from "../testing/view-builders"
-import { archiveEntriesFor, hostOf, pinnedItemDisplay } from "./view-queries"
+import { SplitViewId } from "#platform/browser"
+import {
+  archiveEntry,
+  openPinnedTab,
+  pinnedItem,
+  pinnedSplit,
+  tabView,
+} from "../testing/view-builders"
+import { archiveEntriesFor, hostOf, openSplitViewOf, pinnedItemDisplay } from "./view-queries"
 
 describe("archiveEntriesFor", () => {
   const work = SpaceId.make("work")
@@ -65,5 +72,36 @@ describe("hostOf", () => {
 
   it("ホストを持たない URL にはホスト名が無い", () => {
     expect(Option.isNone(hostOf("about:blank"))).toBe(true)
+  })
+})
+
+describe("openSplitViewOf", () => {
+  const openItem = (id: string, tabId: number, splitViewId: number | null) =>
+    pinnedItem(id, {
+      openTab: openPinnedTab(
+        tabView(tabId, {
+          splitViewId: splitViewId === null ? null : SplitViewId.make(splitViewId),
+        }),
+      ),
+    })
+
+  it("2 つのピンが同じ分割ビューで開いていれば、その分割ビューを返す", () => {
+    const split = pinnedSplit("split", [openItem("a", 1, 9), openItem("b", 2, 9)])
+
+    expect(openSplitViewOf(split)).toBe(SplitViewId.make(9))
+  })
+
+  it("片方でも閉じていれば、分割ビューとして開いていない", () => {
+    const split = pinnedSplit("split", [openItem("a", 1, 9), pinnedItem("b")])
+
+    expect(openSplitViewOf(split)).toBeNull()
+  })
+
+  it("両方開いていても、並べて表示していなければ分割ビューとして開いていない", () => {
+    const apart = pinnedSplit("split", [openItem("a", 1, null), openItem("b", 2, null)])
+    const elsewhere = pinnedSplit("split", [openItem("a", 1, 9), openItem("b", 2, 10)])
+
+    expect(openSplitViewOf(apart)).toBeNull()
+    expect(openSplitViewOf(elsewhere)).toBeNull()
   })
 })

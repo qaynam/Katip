@@ -1,4 +1,4 @@
-import { Array, Option, Order, pipe } from "effect"
+import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import {
   canCreateFolderInside,
@@ -8,6 +8,7 @@ import {
   type FolderExpansion,
   type FolderNestingRule,
   type PinnedNode,
+  type PinnedSplit,
   type PinnedTree,
 } from "#modules/pinned"
 import type { Space, SpaceId, SpaceList } from "#modules/space"
@@ -18,9 +19,11 @@ import type {
   FavoriteView,
   PinnedItemView,
   PinnedNodeView,
+  PinnedSplitView,
   SidebarView,
   SpaceView,
   TabView,
+  TemporaryEntry,
 } from "#protocol"
 
 export interface SidebarSources {
@@ -39,6 +42,7 @@ export interface SidebarSources {
   }
   readonly autoArchive: SidebarView["autoArchive"]
   readonly archive: ReadonlyArray<ArchiveEntry>
+  readonly canSplit: boolean
 }
 
 const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
@@ -67,6 +71,7 @@ const tabView = (tab: BrowserTab, title: string): TabView => ({
   isAudible: tab.audible,
   isMuted: tab.muted,
   isDiscarded: tab.discarded,
+  splitViewId: Option.getOrNull(tab.splitViewId),
 })
 
 const favoriteView = (tab: BrowserTab): FavoriteView => ({
@@ -85,7 +90,11 @@ interface SpaceTab {
 const collectBookmarkIds = (tree: PinnedTree): ReadonlySet<BookmarkId> =>
   new Set(
     tree.flatMap((node): ReadonlyArray<BookmarkId> =>
-      node._tag === "PinnedFolder" ? [...collectBookmarkIds(node.children)] : [node.id],
+      Match.valueTags(node, {
+        PinnedBookmark: ({ id }) => [id],
+        PinnedSplit: ({ items }) => items.map((item) => item.id),
+        PinnedFolder: ({ children }) => [...collectBookmarkIds(children)],
+      }),
     ),
   )
 
@@ -153,9 +162,17 @@ const peekableItems = (
 ): ReadonlyArray<PinnedItemView> =>
   nodes.flatMap((node): ReadonlyArray<PinnedItemView> => {
     if (node._tag === "PinnedFolder") return peekableItems(node.children, showAll)
+    if (node._tag === "PinnedSplit") return peekableItems(node.items, showAll)
     if (node.openTab === null) return []
     return showAll || node.openTab.tab.isActive ? [node] : []
   })
+
+const pinnedSplitView = (split: PinnedSplit, projection: PinnedProjection): PinnedSplitView => ({
+  _tag: "PinnedSplit",
+  bookmarkId: split.id,
+  title: split.title,
+  items: [pinnedItemView(split.items[0], projection), pinnedItemView(split.items[1], projection)],
+})
 
 const pinnedNodeViews = (
   tree: PinnedTree,
@@ -164,6 +181,7 @@ const pinnedNodeViews = (
 ): ReadonlyArray<PinnedNodeView> =>
   tree.map((node): PinnedNodeView => {
     if (node._tag === "PinnedBookmark") return pinnedItemView(node, projection)
+    if (node._tag === "PinnedSplit") return pinnedSplitView(node, projection)
     const children = pinnedNodeViews(node.children, depth + 1, projection)
     const isExpanded = isFolderExpanded(projection.folderExpansion, node.id)
     return {
@@ -205,12 +223,35 @@ const spaceView = (
         canCreateFolder: canCreateFolderInside(SPACE_ROOT_DEPTH, rule),
       }),
     }),
-    temporaryTabs: displayOrder(
-      temporary.map(({ tab, tracked }) => tabView(tab, tracked.titleOverride ?? pageTitleOf(tab))),
+    temporaryEntries: displayOrder(
+      temporaryEntriesOf(
+        temporary.map(({ tab, tracked }) =>
+          tabView(tab, tracked.titleOverride ?? pageTitleOf(tab)),
+        ),
+      ),
       { newestOnTop: sources.preferences.newTabsOnTop },
     ),
   }
 }
+
+// Chrome は分割ビューの 2 つのタブを必ず隣り合わせに置くので、index 順に並べた一覧で
+// 同じ分割の ID を持つ隣どうしを 1 行にまとめれば足りる。片方だけがこの Space の
+// 一時タブ（もう片方はピンや別の Space）なら、まとめずに単独の行として見せる
+const temporaryEntriesOf = (tabs: ReadonlyArray<TabView>): ReadonlyArray<TemporaryEntry> =>
+  tabs.reduce<ReadonlyArray<TemporaryEntry>>((entries, tab) => {
+    const previous = entries.at(-1)
+    if (
+      tab.splitViewId !== null &&
+      previous?._tag === "TemporaryTab" &&
+      previous.tab.splitViewId === tab.splitViewId
+    ) {
+      return [
+        ...entries.slice(0, -1),
+        { _tag: "TemporarySplit", splitViewId: tab.splitViewId, tabs: [previous.tab, tab] },
+      ]
+    }
+    return [...entries, { _tag: "TemporaryTab", tab }]
+  }, [])
 
 /**
  * ウィンドウ 1 つ分のサイドパネルの表示内容を組み立てる。
@@ -244,5 +285,6 @@ export const projectSidebarView = (sources: SidebarSources): Option.Option<Sideb
     favorites: tabs.filter((tab) => tab.pinned).map(favoriteView),
     archive: sources.archive,
     autoArchive: sources.autoArchive,
+    canSplit: sources.canSplit,
   }))
 }

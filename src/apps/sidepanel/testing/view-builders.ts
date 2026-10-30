@@ -2,16 +2,18 @@ import { ArchiveEntryId, type ArchiveEntry } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme } from "#modules/theme"
-import { BookmarkId, TabId, WindowId } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
   OpenPinnedTab,
   PinnedFolderView,
   PinnedItemView,
   PinnedNodeView,
+  PinnedSplitView,
   SidebarView,
   SpaceView,
   TabView,
+  TemporaryEntry,
 } from "#protocol"
 
 export const tabView = (id: number, overrides: Partial<Omit<TabView, "tabId">> = {}): TabView => ({
@@ -24,8 +26,24 @@ export const tabView = (id: number, overrides: Partial<Omit<TabView, "tabId">> =
   isAudible: false,
   isMuted: false,
   isDiscarded: false,
+  splitViewId: null,
   ...overrides,
 })
+
+export const temporaryTab = (tab: TabView): TemporaryEntry => ({ _tag: "TemporaryTab", tab })
+
+/** 2 つのタブに同じ splitViewId を付けて、1 つの分割ビューの行にする */
+export const temporarySplit = (id: number, left: TabView, right: TabView): TemporaryEntry => {
+  const splitViewId = SplitViewId.make(id)
+  return {
+    _tag: "TemporarySplit",
+    splitViewId,
+    tabs: [
+      { ...left, splitViewId },
+      { ...right, splitViewId },
+    ],
+  }
+}
 
 export const openPinnedTab = (
   tab: TabView,
@@ -44,6 +62,18 @@ export const pinnedItem = (
   ...overrides,
 })
 
+export const pinnedSplit = (
+  id: string,
+  items: readonly [PinnedItemView, PinnedItemView],
+  overrides: Partial<Omit<PinnedSplitView, "_tag" | "bookmarkId" | "items">> = {},
+): PinnedSplitView => ({
+  _tag: "PinnedSplit",
+  bookmarkId: BookmarkId.make(id),
+  title: `${items[0].title} | ${items[1].title}`,
+  items,
+  ...overrides,
+})
+
 export const pinnedFolder = (
   id: string,
   overrides: Partial<Omit<PinnedFolderView, "_tag" | "bookmarkId">> = {},
@@ -58,20 +88,22 @@ export const pinnedFolder = (
   ...overrides,
 })
 
+/** 一時タブが分割ビューを含まないなら temporaryTabs でタブだけを並べてよい */
 export const spaceView = (
   id: string,
   overrides: Partial<Omit<SpaceView, "id" | "pinned">> & {
     readonly pinnedNodes?: ReadonlyArray<PinnedNodeView>
     readonly pinned?: SpaceView["pinned"]
+    readonly temporaryTabs?: ReadonlyArray<TabView>
   } = {},
 ): SpaceView => {
-  const { pinnedNodes = [], pinned, ...rest } = overrides
+  const { pinnedNodes = [], pinned, temporaryTabs = [], ...rest } = overrides
   return {
     id: SpaceId.make(id),
     name: SpaceName.make(id),
     theme: neutralTheme,
     pinned: pinned ?? { _tag: "Available", nodes: pinnedNodes, canCreateFolder: true },
-    temporaryTabs: [],
+    temporaryEntries: temporaryTabs.map(temporaryTab),
     ...rest,
   }
 }
@@ -110,6 +142,7 @@ export const sidebarView = (
     favorites: [],
     archive: [],
     autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) },
+    canSplit: true,
     ...overrides,
     spaces,
   }

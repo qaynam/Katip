@@ -3,7 +3,7 @@ import { ArchiveEntry } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
-import { BookmarkId, TabId, WindowId } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 
 export const TabView = Schema.Struct({
   tabId: TabId,
@@ -15,6 +15,8 @@ export const TabView = Schema.Struct({
   isAudible: Schema.Boolean,
   isMuted: Schema.Boolean,
   isDiscarded: Schema.Boolean,
+  // Chrome の分割ビューで、別のタブと並べて表示しているときだけ値を持つ
+  splitViewId: Schema.NullOr(SplitViewId),
 })
 export type TabView = typeof TabView.Type
 
@@ -32,6 +34,17 @@ export const PinnedItemView = Schema.TaggedStruct("PinnedItem", {
   openTab: Schema.NullOr(OpenPinnedTab),
 })
 export type PinnedItemView = typeof PinnedItemView.Type
+
+/**
+ * 分割ビューとしてピン留めした 2 つのタブ。ブックマークでは 2 つのブックマークを入れたフォルダとして
+ * 保存し、開くと分割ビューで並べる。並びは左、右の順。
+ */
+export const PinnedSplitView = Schema.TaggedStruct("PinnedSplit", {
+  bookmarkId: BookmarkId,
+  title: Schema.String,
+  items: Schema.Tuple([PinnedItemView, PinnedItemView]),
+})
+export type PinnedSplitView = typeof PinnedSplitView.Type
 
 export interface PinnedFolderView {
   readonly _tag: "PinnedFolder"
@@ -53,8 +66,9 @@ interface PinnedFolderViewEncoded {
   readonly peekedItems: ReadonlyArray<typeof PinnedItemView.Encoded>
 }
 
-export type PinnedNodeView = PinnedItemView | PinnedFolderView
-type PinnedNodeViewEncoded = typeof PinnedItemView.Encoded | PinnedFolderViewEncoded
+export type PinnedNodeView = PinnedItemView | PinnedSplitView | PinnedFolderView
+type PinnedNodeViewEncoded =
+  typeof PinnedItemView.Encoded | typeof PinnedSplitView.Encoded | PinnedFolderViewEncoded
 
 export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   bookmarkId: BookmarkId,
@@ -68,7 +82,17 @@ export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   peekedItems: Schema.Array(PinnedItemView),
 })
 
-export const PinnedNodeView = Schema.Union([PinnedItemView, PinnedFolderView])
+export const PinnedNodeView = Schema.Union([PinnedItemView, PinnedSplitView, PinnedFolderView])
+
+/** 一時タブの一覧の 1 行。分割ビューの 2 つのタブは 1 行にまとめ、左、右の順に並べる。 */
+export const TemporaryEntry = Schema.Union([
+  Schema.TaggedStruct("TemporaryTab", { tab: TabView }),
+  Schema.TaggedStruct("TemporarySplit", {
+    splitViewId: SplitViewId,
+    tabs: Schema.Tuple([TabView, TabView]),
+  }),
+])
+export type TemporaryEntry = typeof TemporaryEntry.Type
 
 export const SpaceView = Schema.Struct({
   id: SpaceId,
@@ -82,7 +106,7 @@ export const SpaceView = Schema.Struct({
     }),
     Schema.TaggedStruct("Unavailable", {}),
   ]),
-  temporaryTabs: Schema.Array(TabView),
+  temporaryEntries: Schema.Array(TemporaryEntry),
 })
 export type SpaceView = typeof SpaceView.Type
 
@@ -102,5 +126,7 @@ export const SidebarView = Schema.Struct({
   favorites: Schema.Array(FavoriteView),
   archive: Schema.Array(ArchiveEntry),
   autoArchive: Schema.Struct({ enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
+  // Chrome 155 より前には分割ビューを作る API が無いので、分割の操作を出さない
+  canSplit: Schema.Boolean,
 })
 export type SidebarView = typeof SidebarView.Type

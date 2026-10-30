@@ -3,7 +3,7 @@ import { ArchiveEntryId } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
-import { BookmarkId, TabId, WindowId } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 
 // 一時タブの並びは表示順（新しいタブを上に出す設定なら逆順）で指定させる。
 // UI に Chrome のタブ index への換算を持ち込むと、表示設定との組み合わせで取り違えるため
@@ -51,6 +51,18 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("PinTab", { tabId: TabId }),
   Schema.TaggedStruct("UnpinTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTemporaryTabs", { windowId: WindowId, spaceId: SpaceId }),
+  // tabId のタブを withTabId のタブの右に並べて分割ビューにする
+  Schema.TaggedStruct("SplitTabs", { tabId: TabId, withTabId: TabId }),
+  Schema.TaggedStruct("Unsplit", { splitViewId: SplitViewId }),
+  Schema.TaggedStruct("PlaceSplitInTemporary", {
+    splitViewId: SplitViewId,
+    spaceId: SpaceId,
+    placement: TemporaryPlacement,
+  }),
+  Schema.TaggedStruct("PlaceSplitInPinned", {
+    splitViewId: SplitViewId,
+    placement: PinnedPlacement,
+  }),
   Schema.TaggedStruct("ArchiveTab", { tabId: TabId }),
   Schema.TaggedStruct("AddToFavorites", { tabId: TabId, index: Schema.optionalKey(Schema.Int) }),
   Schema.TaggedStruct("MoveFavorite", { tabId: TabId, toIndex: Schema.Int }),

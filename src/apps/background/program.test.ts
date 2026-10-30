@@ -1,10 +1,10 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Array, Effect, type Layer, Option, type Scope } from "effect"
+import { Array, Effect, Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { Bookmarks, Tabs, TabId } from "#platform/browser"
-import type { PinnedItemView, SidebarView } from "#protocol"
+import type { PinnedItemView, SidebarView, SpaceView } from "#protocol"
 import {
   backgroundTestLayer,
   eventually,
@@ -17,8 +17,13 @@ const inBackground = <A, E>(
   effect: Effect.Effect<A, E, Layer.Success<typeof backgroundTestLayer> | Scope.Scope>,
 ) => effect.pipe(Effect.scoped, Effect.provide(backgroundTestLayer))
 
+const temporaryTabsIn = (space: SpaceView) =>
+  space.temporaryEntries.flatMap((entry) =>
+    entry._tag === "TemporaryTab" ? [entry.tab] : [...entry.tabs],
+  )
+
 const temporaryTitles = (view: SidebarView, spaceName: string) =>
-  Option.map(spaceNamed(view, spaceName), (space) => space.temporaryTabs.map((tab) => tab.title))
+  Option.map(spaceNamed(view, spaceName), (space) => temporaryTabsIn(space).map((tab) => tab.title))
 
 const pinnedItems = (view: SidebarView, spaceName: string): ReadonlyArray<PinnedItemView> =>
   Option.match(spaceNamed(view, spaceName), {
@@ -104,7 +109,10 @@ describe("Space の操作", () => {
 
         const outcome = yield* sidebar.run({ _tag: "CreateSpace", windowId })
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(spaceNamed(v, "スペース 2"), (space) => space.temporaryTabs.length === 1),
+          Option.exists(
+            spaceNamed(v, "スペース 2"),
+            (space) => temporaryTabsIn(space).length === 1,
+          ),
         )
 
         expect([outcome._tag, activeSpaceName(view)]).toStrictEqual([
@@ -129,9 +137,9 @@ describe("Space の操作", () => {
         yield* sidebar.run({ _tag: "DeleteSpace", spaceId: doomed.id })
         const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        expect(Option.map(spaceNamed(view, "ホーム"), (s) => s.temporaryTabs.length)).toStrictEqual(
-          Option.some(2),
-        )
+        expect(
+          Option.map(spaceNamed(view, "ホーム"), (s) => temporaryTabsIn(s).length),
+        ).toStrictEqual(Option.some(2))
       }),
     ),
   )
@@ -193,11 +201,14 @@ describe("タブ", () => {
 
         yield* (yield* Tabs).create({ windowId, url: "https://new.example/", active: false })
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(spaceNamed(v, "スペース 2"), (space) => space.temporaryTabs.length === 2),
+          Option.exists(
+            spaceNamed(v, "スペース 2"),
+            (space) => temporaryTabsIn(space).length === 2,
+          ),
         )
 
         expect(
-          Option.map(spaceNamed(view, "スペース 2"), (s) => s.temporaryTabs.map((t) => t.url)),
+          Option.map(spaceNamed(view, "スペース 2"), (s) => temporaryTabsIn(s).map((t) => t.url)),
         ).toStrictEqual(Option.some(["https://new.example/", "chrome://newtab/"]))
       }),
     ),
@@ -296,6 +307,181 @@ describe("タブ", () => {
 
         expect([pinned, unpinned]).toStrictEqual([1, 0])
       }),
+    ),
+  )
+})
+
+describe("分割ビュー", () => {
+  const entriesShape = (view: SidebarView) =>
+    Option.match(spaceNamed(view, "ホーム"), {
+      onNone: () => [],
+      onSome: (space) =>
+        space.temporaryEntries.map((entry) =>
+          entry._tag === "TemporaryTab" ? entry.tab.title : entry.tabs.map((tab) => tab.title),
+        ),
+    })
+
+  const pinnedSplits = (view: SidebarView) =>
+    Option.match(spaceNamed(view, "ホーム"), {
+      onNone: () => [],
+      onSome: (space) =>
+        space.pinned._tag === "Available"
+          ? space.pinned.nodes.filter((node) => node._tag === "PinnedSplit")
+          : [],
+    })
+
+  const splitIdIn = (view: SidebarView) =>
+    Option.getOrThrow(
+      Array.findFirst(Option.getOrThrow(spaceNamed(view, "ホーム")).temporaryEntries, (entry) =>
+        entry._tag === "TemporarySplit" ? Option.some(entry.splitViewId) : Option.none(),
+      ),
+    )
+
+  const seedThreeTabs = Effect.gen(function* () {
+    const fake = yield* FakeBrowser
+    return yield* fake.seedWindow({
+      tabs: [
+        { url: "https://a.example/", title: "A" },
+        { url: "https://b.example/", title: "B" },
+        { url: "https://c.example/", title: "C" },
+      ],
+    })
+  })
+
+  it.live("タブを別のタブに重ねると分割ビューになり、左右の順を保ったまま 1 行にまとまる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedThreeTabs
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const outcome = yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[2],
+          withTabId: tabIds[0],
+        })
+        const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+        // 既定では新しいタブを上に表示するので、行の並びは Chrome の並びの逆になる
+        expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["A", "C"]]])
+      }),
+    ),
+  )
+
+  it.live("分割を解除すると、2 つの単独の行に戻る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedThreeTabs
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+        yield* sidebar.run({
+          _tag: "Unsplit",
+          splitViewId: splitIdIn(split),
+        })
+        const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 3)
+
+        expect(entriesShape(view)).toStrictEqual(["C", "B", "A"])
+      }),
+    ),
+  )
+
+  it.live("分割をピン留めすると分割ピンになり、タブを閉じても分割ピンとして残る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedThreeTabs
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const initial = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+        yield* sidebar.run({
+          _tag: "PlaceSplitInPinned",
+          splitViewId: splitIdIn(split),
+          placement: { spaceId: initial.activeSpaceId, parentId: null, index: 0 },
+        })
+        yield* sidebar.viewWhere((v) => pinnedSplits(v).length === 1)
+        yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[0] })
+        yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[1] })
+        const view = yield* sidebar.viewWhere((v) =>
+          pinnedSplits(v).some((pin) => pin.items.every((item) => item.openTab === null)),
+        )
+
+        expect(
+          pinnedSplits(view).map((pin) => [pin.title, pin.items.map((item) => item.title)]),
+        ).toStrictEqual([["A | B", ["A", "B"]]])
+      }),
+    ),
+  )
+
+  it.live("閉じた分割ピンを開くと、2 つのタブが分割ビューで並んで開く", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedThreeTabs
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const initial = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+        yield* sidebar.run({
+          _tag: "PlaceSplitInPinned",
+          splitViewId: splitIdIn(split),
+          placement: { spaceId: initial.activeSpaceId, parentId: null, index: 0 },
+        })
+        yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[0] })
+        yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[1] })
+        const closed = yield* sidebar.viewWhere((v) =>
+          pinnedSplits(v).some((pin) => pin.items.every((item) => item.openTab === null)),
+        )
+        const pin = Option.getOrThrow(Array.head(pinnedSplits(closed)))
+
+        yield* sidebar.run({ _tag: "OpenPinnedItem", windowId, bookmarkId: pin.bookmarkId })
+        const view = yield* sidebar.viewWhere((v) =>
+          pinnedSplits(v).some((p) => p.items.every((item) => item.openTab !== null)),
+        )
+        const reopened = Option.getOrThrow(Array.head(pinnedSplits(view)))
+        const [left, right] = reopened.items.map((item) => item.openTab?.tab.splitViewId ?? null)
+
+        expect([left !== null, left === right]).toStrictEqual([true, true])
+      }),
+    ),
+  )
+})
+
+describe("分割ビューの API が無い Chrome", () => {
+  it.live("分割はできないと示され、分割しようとしても理由つきで断られる", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeBrowser
+      const { windowId, tabIds } = yield* fake.seedWindow({
+        tabs: [{ url: "https://a.example/" }, { url: "https://b.example/" }],
+      })
+      yield* startBackground
+      const sidebar = yield* openSidebar(windowId)
+      const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+      const outcome = yield* sidebar.run({
+        _tag: "SplitTabs",
+        tabId: tabIds[1],
+        withTabId: tabIds[0],
+      })
+
+      expect([view.canSplit, outcome]).toStrictEqual([
+        false,
+        { _tag: "Failed", reason: "この Chrome では分割ビューを使えません" },
+      ])
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        Layer.mergeAll(
+          FakeBrowser.layerWith({ supportsSplitView: false }),
+          ClipboardRecorder.layer,
+        ),
+      ),
     ),
   )
 })

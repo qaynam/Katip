@@ -4,6 +4,7 @@
   import { slotAt } from "../logic/drag-drop"
   import PinnedFolder from "./PinnedFolder.svelte"
   import PinnedItemRow from "./PinnedItemRow.svelte"
+  import PinnedSplitRow from "./PinnedSplitRow.svelte"
 
   interface Props {
     nodes: ReadonlyArray<PinnedNodeView>
@@ -17,6 +18,12 @@
   {#each nodes as node, index (node.bookmarkId)}
     {#if node._tag === "PinnedFolder"}
       <PinnedFolder folder={node} position={{ parentId, index }} />
+    {:else if node._tag === "PinnedSplit"}
+      <PinnedSplitRow
+        split={node}
+        position={{ parentId, index }}
+        dropTargetAt={(edge) => ({ _tag: "Pinned", parentId, slot: slotAt(index, edge) })}
+      />
     {:else}
       <PinnedItemRow
         item={node}

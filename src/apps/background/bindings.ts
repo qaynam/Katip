@@ -1,10 +1,16 @@
-import { Effect } from "effect"
+import { Effect, Match } from "effect"
 import { PinnedBookmarks, type PinnedTree } from "#modules/pinned"
 import type { BookmarkId } from "#platform/browser"
 import { KatipState } from "./katip-state"
 
 const bookmarkIdsIn = (tree: PinnedTree): ReadonlyArray<BookmarkId> =>
-  tree.flatMap((node) => (node._tag === "PinnedFolder" ? bookmarkIdsIn(node.children) : [node.id]))
+  tree.flatMap((node) =>
+    Match.valueTags(node, {
+      PinnedBookmark: ({ id }) => [id],
+      PinnedSplit: ({ items }) => items.map((item) => item.id),
+      PinnedFolder: ({ children }) => bookmarkIdsIn(children),
+    }),
+  )
 
 /**
  * 存在しなくなったブックマークへのバインディングを外す。

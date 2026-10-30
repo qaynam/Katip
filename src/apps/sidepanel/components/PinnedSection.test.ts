@@ -1,13 +1,14 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { BookmarkId, TabId } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarCommand } from "#protocol"
-import { commandsOf, renderSidebar } from "../testing/render-sidebar"
+import { commandsOf, dragOverAt, renderSidebar } from "../testing/render-sidebar"
 import {
   openPinnedTab,
   pinnedFolder,
   pinnedItem,
+  pinnedSplit,
   sidebarView,
   spaceView,
   tabView,
@@ -209,6 +210,117 @@ describe("開いているピン", () => {
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "ReplacePinnedUrl", tabId: TabId.make(5) },
     ])
+  })
+})
+
+describe("分割ビューのピン", () => {
+  const openSplit = (splitViewId: number) =>
+    pinnedSplit("split", [
+      pinnedItem("left", {
+        title: "設計書",
+        openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(splitViewId) })),
+      }),
+      pinnedItem("right", {
+        title: "プレビュー",
+        openTab: openPinnedTab(tabView(6, { splitViewId: SplitViewId.make(splitViewId) })),
+      }),
+    ])
+  const closedSplit = pinnedSplit("split", [
+    pinnedItem("left", { title: "設計書" }),
+    pinnedItem("right", { title: "プレビュー" }),
+  ])
+  const rowOf = (title: string) =>
+    screen.getByRole("button", { name: title }).closest("li") as HTMLElement
+
+  it("フォルダの中でも、2 つのピンを左右に並べて 1 つの行に表示する", async () => {
+    await renderSidebar(viewWithPins(pinnedFolder("folder", { children: [closedSplit] })))
+
+    expect(rowOf("設計書")).toBe(rowOf("プレビュー"))
+  })
+
+  it("開いている側をクリックすると、そのタブをアクティブにする", async () => {
+    const { connection } = await renderSidebar(viewWithPins(openSplit(9)))
+
+    await fireEvent.click(screen.getByRole("button", { name: "プレビュー" }))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "ActivateTab", tabId: TabId.make(6) }])
+  })
+
+  it("閉じていれば、どちらの側をクリックしても 2 つを分割ビューで開く", async () => {
+    const { connection } = await renderSidebar(viewWithPins(closedSplit))
+
+    await fireEvent.click(screen.getByRole("button", { name: "プレビュー" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "OpenPinnedItem", windowId: 1, bookmarkId: BookmarkId.make("split") },
+    ])
+  })
+
+  it("閉じている側には閉じるボタンを出さない", async () => {
+    await renderSidebar(viewWithPins(closedSplit))
+
+    expect(screen.queryByRole("button", { name: "タブを閉じる" })).toBeNull()
+  })
+
+  it("「名前を変更」は、右クリックした側のピンの名前を変える", async () => {
+    const { connection } = await renderSidebar(viewWithPins(closedSplit))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "プレビュー" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }))
+    const input = screen.getByRole("textbox", { name: "名前" })
+    await fireEvent.input(input, { target: { value: "ステージング" } })
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("right"), title: "ステージング" },
+    ])
+  })
+
+  it("「ピンを削除」は確認で承認したときだけ、分割ビューのピンごと削除する", async () => {
+    const { connection } = await renderSidebar(viewWithPins(openSplit(9)))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "設計書" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "ピンを削除" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "削除" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "RemovePinnedItem", bookmarkId: BookmarkId.make("split") },
+    ])
+  })
+
+  it("開いていれば、一時タブの行へ落とすとピンを外して分割ビューのままその位置に置く", async () => {
+    const { connection } = await renderSidebar(
+      sidebarView({
+        spaces: [spaceView("work", { pinnedNodes: [openSplit(9)], temporaryTabs: [tabView(1)] })],
+      }),
+    )
+
+    await fireEvent.dragStart(rowOf("設計書"))
+    await dragOverAt(rowOf("タブ 1"), 0.9)
+    await fireEvent.drop(rowOf("タブ 1"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceSplitInTemporary",
+        splitViewId: SplitViewId.make(9),
+        spaceId: "work",
+        placement: { _tag: "Below", tabId: TabId.make(1) },
+      },
+    ])
+  })
+
+  it("閉じていれば、一時タブの行へ落としても何も起きない", async () => {
+    const { connection } = await renderSidebar(
+      sidebarView({
+        spaces: [spaceView("work", { pinnedNodes: [closedSplit], temporaryTabs: [tabView(1)] })],
+      }),
+    )
+
+    await fireEvent.dragStart(rowOf("設計書"))
+    await dragOverAt(rowOf("タブ 1"), 0.9)
+    await fireEvent.drop(rowOf("タブ 1"))
+
+    expect(connection.sentCommands).toStrictEqual([])
   })
 })
 

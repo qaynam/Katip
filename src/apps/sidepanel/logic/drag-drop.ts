@@ -1,7 +1,7 @@
 import { Match, Option } from "effect"
 import type { SpaceId } from "#modules/space"
-import type { BookmarkId, TabId } from "#platform/browser"
-import type { SidebarCommand, TemporaryPlacement } from "#protocol"
+import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
+import type { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
 
 export interface PinnedPosition {
   readonly parentId: BookmarkId | null
@@ -11,11 +11,23 @@ export interface PinnedPosition {
 export type DragSource =
   | { readonly _tag: "TemporaryTab"; readonly tabId: TabId }
   | {
+      readonly _tag: "TemporarySplit"
+      readonly splitViewId: SplitViewId
+      readonly tabIds: readonly [TabId, TabId]
+    }
+  | {
       readonly _tag: "PinnedItem"
       readonly bookmarkId: BookmarkId
       readonly openTabId: TabId | null
       // 閉じたフォルダに覗かせているアイテムは、実際の親と位置がビューから分からないことがある
       readonly position: PinnedPosition | null
+    }
+  | {
+      readonly _tag: "PinnedSplit"
+      readonly bookmarkId: BookmarkId
+      // 2 つのタブが分割ビューとして開いているときだけ値を持つ
+      readonly openSplitViewId: SplitViewId | null
+      readonly position: PinnedPosition
     }
   | { readonly _tag: "Favorite"; readonly tabId: TabId; readonly index: number }
   | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
@@ -24,9 +36,16 @@ export type DragSource =
 // 移動先の最終位置への換算は commandForDrop だけが行う
 export type DropTarget =
   | { readonly _tag: "Temporary"; readonly placement: TemporaryPlacement }
+  | { readonly _tag: "SplitWith"; readonly tabId: TabId }
   | { readonly _tag: "Pinned"; readonly parentId: BookmarkId | null; readonly slot: number }
   | { readonly _tag: "Favorites"; readonly slot: number }
   | { readonly _tag: "SpaceBar"; readonly slot: number }
+
+export interface DropContext {
+  /** 表示中の Space。ピン留めや一時タブへの配置先になる */
+  readonly spaceId: SpaceId
+  readonly canSplit: boolean
+}
 
 export type Edge = "before" | "after"
 
@@ -37,6 +56,18 @@ export const slotAt = (index: number, edge: Edge): number => (edge === "before" 
 
 export const temporaryPlacementAt = (tabId: TabId, edge: Edge): TemporaryPlacement =>
   edge === "before" ? { _tag: "Above", tabId } : { _tag: "Below", tabId }
+
+export type RowZone = Edge | "split"
+
+// 分割ビューにできる行は、上下の 1/4 だけを前後への並べ替えに使い、中央を分割ビューに使う。
+// 分割できない行まで中央を空けると、並べ替えの当たり判定が無駄に狭くなる
+export const rowZoneAt = (offset: number, size: number, canSplitInCenter: boolean): RowZone => {
+  if (!canSplitInCenter) return edgeAt(offset, size)
+  const ratio = offset / size
+  if (ratio < 0.25) return "before"
+  if (ratio > 0.75) return "after"
+  return "split"
+}
 
 export type FolderZone = "before" | "into" | "after" | "firstChild"
 
@@ -86,22 +117,67 @@ const reorder = (
 const isPlacementRelativeTo = (placement: TemporaryPlacement, tabId: TabId): boolean =>
   (placement._tag === "Above" || placement._tag === "Below") && placement.tabId === tabId
 
-const openTabOf = (source: DragSource): Option.Option<TabId> =>
+/** 1 つのタブとして動かせるドラッグ元なら、そのタブ。分割ビューの行は 1 つのタブではない */
+const singleTabOf = (source: DragSource): Option.Option<TabId> =>
   Match.valueTags(source, {
     TemporaryTab: ({ tabId }) => Option.some(tabId),
+    TemporarySplit: () => Option.none(),
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId),
+    PinnedSplit: () => Option.none(),
     Favorite: ({ tabId }) => Option.some(tabId),
     SpaceMark: () => Option.none(),
+  })
+
+const temporaryTabsOf = (source: DragSource): ReadonlyArray<TabId> =>
+  Match.valueTags(source, {
+    TemporaryTab: ({ tabId }) => [tabId],
+    TemporarySplit: ({ tabIds }) => tabIds,
+    PinnedItem: () => [],
+    PinnedSplit: () => [],
+    Favorite: () => [],
+    SpaceMark: () => [],
   })
 
 const dropOnTemporary = (
   source: DragSource,
   placement: TemporaryPlacement,
   spaceId: SpaceId,
+): Option.Option<SidebarCommand> => {
+  const isNextToItself = temporaryTabsOf(source).some((tabId) =>
+    isPlacementRelativeTo(placement, tabId),
+  )
+  if (isNextToItself) return Option.none()
+  const placeTab = (tabId: TabId): SidebarCommand => ({
+    _tag: "PlaceTabInTemporary",
+    tabId,
+    spaceId,
+    placement,
+  })
+  const placeSplit = (splitViewId: SplitViewId): SidebarCommand => ({
+    _tag: "PlaceSplitInTemporary",
+    splitViewId,
+    spaceId,
+    placement,
+  })
+  return Match.valueTags(source, {
+    TemporarySplit: ({ splitViewId }) => Option.some(placeSplit(splitViewId)),
+    PinnedSplit: ({ openSplitViewId }) =>
+      Option.fromNullishOr(openSplitViewId).pipe(Option.map(placeSplit)),
+    TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
+    PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
+    Favorite: ({ tabId }) => Option.some(placeTab(tabId)),
+    SpaceMark: () => Option.none(),
+  })
+}
+
+const dropOnSplit = (
+  source: DragSource,
+  withTabId: TabId,
+  canSplit: boolean,
 ): Option.Option<SidebarCommand> =>
-  openTabOf(source).pipe(
-    Option.filter((tabId) => !isPlacementRelativeTo(placement, tabId)),
-    Option.map((tabId) => ({ _tag: "PlaceTabInTemporary", tabId, spaceId, placement })),
+  singleTabOf(source).pipe(
+    Option.filter((tabId) => canSplit && tabId !== withTabId),
+    Option.map((tabId) => ({ _tag: "SplitTabs", tabId, withTabId })),
   )
 
 const dropOnPinned = (
@@ -109,24 +185,41 @@ const dropOnPinned = (
   target: { readonly parentId: BookmarkId | null; readonly slot: number },
   spaceId: SpaceId,
 ): Option.Option<SidebarCommand> => {
-  const placementAt = (index: number) => ({ spaceId, parentId: target.parentId, index })
-  if (source._tag === "PinnedItem") {
-    const { bookmarkId, position } = source
-    return position !== null && position.parentId === target.parentId
+  const placementAt = (index: number): PinnedPlacement => ({
+    spaceId,
+    parentId: target.parentId,
+    index,
+  })
+  const movePinned = (bookmarkId: BookmarkId, position: PinnedPosition | null) =>
+    position !== null && position.parentId === target.parentId
       ? reorder(position.index, target.slot, (index) => ({
           _tag: "MovePinnedItem",
           bookmarkId,
           placement: placementAt(index),
         }))
-      : Option.some({ _tag: "MovePinnedItem", bookmarkId, placement: placementAt(target.slot) })
-  }
-  return openTabOf(source).pipe(
-    Option.map((tabId) => ({
-      _tag: "PlaceTabInPinned",
-      tabId,
-      placement: placementAt(target.slot),
-    })),
-  )
+      : Option.some<SidebarCommand>({
+          _tag: "MovePinnedItem",
+          bookmarkId,
+          placement: placementAt(target.slot),
+        })
+  const placeTab = (tabId: TabId): SidebarCommand => ({
+    _tag: "PlaceTabInPinned",
+    tabId,
+    placement: placementAt(target.slot),
+  })
+  return Match.valueTags(source, {
+    PinnedItem: ({ bookmarkId, position }) => movePinned(bookmarkId, position),
+    PinnedSplit: ({ bookmarkId, position }) => movePinned(bookmarkId, position),
+    TemporarySplit: ({ splitViewId }) =>
+      Option.some<SidebarCommand>({
+        _tag: "PlaceSplitInPinned",
+        splitViewId,
+        placement: placementAt(target.slot),
+      }),
+    TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
+    Favorite: ({ tabId }) => Option.some(placeTab(tabId)),
+    SpaceMark: () => Option.none(),
+  })
 }
 
 const dropOnFavorites = (source: DragSource, slot: number): Option.Option<SidebarCommand> =>
@@ -136,7 +229,7 @@ const dropOnFavorites = (source: DragSource, slot: number): Option.Option<Sideba
         tabId: source.tabId,
         toIndex,
       }))
-    : openTabOf(source).pipe(
+    : singleTabOf(source).pipe(
         Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, index: slot })),
       )
 
@@ -151,16 +244,17 @@ const dropOnSpaceBar = (source: DragSource, slot: number): Option.Option<Sidebar
 
 /**
  * 結果が None のドロップは受け付けない（元の位置に落とした場合や、閉じたピンを一時タブへ
- * 落とした場合など）。spaceId は表示中の Space で、ピン留めや一時タブへの配置先になる。
+ * 落とした場合、分割ビューを作れない環境で分割しようとした場合など）。
  */
 export const commandForDrop = (
   source: DragSource,
   target: DropTarget,
-  spaceId: SpaceId,
+  context: DropContext,
 ): Option.Option<SidebarCommand> =>
   Match.valueTags(target, {
-    Temporary: ({ placement }) => dropOnTemporary(source, placement, spaceId),
-    Pinned: (pinned) => dropOnPinned(source, pinned, spaceId),
+    Temporary: ({ placement }) => dropOnTemporary(source, placement, context.spaceId),
+    SplitWith: ({ tabId }) => dropOnSplit(source, tabId, context.canSplit),
+    Pinned: (pinned) => dropOnPinned(source, pinned, context.spaceId),
     Favorites: ({ slot }) => dropOnFavorites(source, slot),
     SpaceBar: ({ slot }) => dropOnSpaceBar(source, slot),
   })
