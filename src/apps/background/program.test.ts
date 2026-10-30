@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, type Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
+import { ClipboardRecorder } from "#platform/clipboard"
 import { Bookmarks, Tabs, TabId } from "#platform/browser"
 import type { PinnedItemView, SidebarView } from "#protocol"
 import {
@@ -266,6 +267,34 @@ describe("タブ", () => {
         )
 
         expect([pinned, unpinned]).toStrictEqual([1, 0])
+      }),
+    ),
+  )
+})
+
+describe("URL のコピー", () => {
+  it.live("ショートカットでアクティブなタブの URL がコピーされ、サイドパネルに知らされる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://copy.example/page?q=1", active: true }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        yield* fake.emit({
+          _tag: "CommandTriggered",
+          command: "copy-current-url",
+          tab: Option.some(yield* (yield* Tabs).get(tabIds[0])),
+        })
+        const notice = yield* sidebar.noticeWhere(() => true)
+
+        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+          ["https://copy.example/page?q=1"],
+          "URL をコピーしました",
+        ])
       }),
     ),
   )

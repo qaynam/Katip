@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect"
 import { captureBrowserEvents, liveBrowserLayer } from "#platform/browser"
+import { Clipboard } from "#platform/clipboard"
 import { reloadOnRebuild } from "./dev-reload"
 import { ExtensionInfo } from "./extension-info"
 import { applicationLayer, program } from "./program"
@@ -10,7 +11,9 @@ const captured = captureBrowserEvents(chrome)
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
 
 const layer = applicationLayer.pipe(
-  Layer.provideMerge(Layer.mergeAll(liveBrowserLayer(captured), ExtensionInfo.layer)),
+  Layer.provideMerge(
+    Layer.mergeAll(liveBrowserLayer(captured), ExtensionInfo.layer, Clipboard.layer),
+  ),
 )
 
 Effect.runFork(program.pipe(Effect.scoped, Effect.provide(layer)))

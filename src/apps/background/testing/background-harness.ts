@@ -1,5 +1,6 @@
 import { Array, Effect, Layer, Option, Ref, Schedule, Schema, Stream } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
+import { ClipboardRecorder } from "#platform/clipboard"
 import type { WindowId } from "#platform/browser"
 import {
   ClientMessage,
@@ -14,7 +15,7 @@ import {
 import { ExtensionInfo } from "../extension-info"
 import { applicationLayer, program } from "../program"
 
-export const backgroundTestLayer = FakeBrowser.layer
+export const backgroundTestLayer = Layer.mergeAll(FakeBrowser.layer, ClipboardRecorder.layer)
 
 /**
  * background を起動する。
@@ -53,6 +54,7 @@ export const openSidebar = (windowId: WindowId) =>
       ReadonlyMap<number, { readonly outcome: CommandOutcome; readonly viewsBefore: number }>
     >(new Map())
     const nextRequestId = yield* Ref.make(1)
+    const notices = yield* Ref.make<ReadonlyArray<string>>([])
     const firstFreshView = yield* Ref.make(0)
 
     yield* port.messages.pipe(
@@ -71,7 +73,7 @@ export const openSidebar = (windowId: WindowId) =>
               ),
             )
           case "Notice":
-            return Effect.void
+            return Ref.update(notices, (all) => [...all, message.message])
         }
       }),
       Effect.forkScoped,
@@ -100,7 +102,10 @@ export const openSidebar = (windowId: WindowId) =>
         return settled.outcome
       })
 
-    return { viewWhere, run }
+    const noticeWhere = (predicate: (notice: string) => boolean) =>
+      eventually(Effect.map(Ref.get(notices), (all) => Array.findLast(all, predicate)))
+
+    return { viewWhere, run, noticeWhere }
   })
 
 export const spaceNamed = (view: SidebarView, name: string): Option.Option<SpaceView> =>

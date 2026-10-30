@@ -2,14 +2,18 @@ import { Array, Effect, Match, Option, pipe } from "effect"
 import { trackedTab } from "#modules/workspace"
 import { Tabs, type BrowserTab, type TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarView } from "#protocol"
+import { Clipboard } from "#platform/clipboard"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
+import { SidebarHub } from "./sidebar-hub"
 import { buildSidebarView } from "./sidebar-view-source"
+import { urlOf } from "./tab-admission"
 
 export const KeyboardCommand = {
   quickPinToggle: "quick-pin-toggle",
   nextTabInSpace: "next-tab-in-space",
   previousTabInSpace: "previous-tab-in-space",
+  copyCurrentUrl: "copy-current-url",
 } as const
 
 const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId> =>
@@ -55,6 +59,13 @@ const togglePin = Effect.fnUntraced(function* (activeTab: BrowserTab) {
   )
 })
 
+const copyUrl = Effect.fnUntraced(function* (activeTab: BrowserTab) {
+  const url = urlOf(activeTab)
+  if (url === "") return
+  yield* (yield* Clipboard).writeText(url)
+  yield* (yield* SidebarHub).notify("URL をコピーしました")
+})
+
 /**
  * キーボードショートカットを実行する。サイドパネルが開いていなくても動く。
  *
@@ -68,6 +79,7 @@ export const runKeyboardCommand = (command: string, activeTab: Option.Option<Bro
         Match.when(KeyboardCommand.quickPinToggle, () => togglePin(tab)),
         Match.when(KeyboardCommand.nextTabInSpace, () => stepWithinSpace(tab, 1)),
         Match.when(KeyboardCommand.previousTabInSpace, () => stepWithinSpace(tab, -1)),
+        Match.when(KeyboardCommand.copyCurrentUrl, () => copyUrl(tab)),
         Match.orElse(() => Effect.void),
       ),
   })
