@@ -6,4 +6,4 @@ export {
   nativeLanguageNames,
   resolveLocale,
 } from "./locale"
-export { makeTranslator, type MessageArgs, type Translator } from "./translator"
+export { type Duration, makeTranslator, type MessageArgs, type Translator } from "./translator"

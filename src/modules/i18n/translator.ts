@@ -13,6 +13,18 @@ type ParamValues = Readonly<Record<string, string | number>>
 
 const PLACEHOLDER = /\{(\w+)\}/g
 
+export interface Duration {
+  readonly value: number
+  readonly unit: "minute" | "hour" | "day" | "week"
+}
+
+const durationMessages = {
+  minute: "common.duration.minute",
+  hour: "common.duration.hour",
+  day: "common.duration.day",
+  week: "common.duration.week",
+} as const satisfies Record<Duration["unit"], MessageKey>
+
 export interface Translator {
   readonly locale: Locale
   /** `<html lang>` や `lang` 属性に入れる言語タグ。 */
@@ -23,6 +35,8 @@ export interface Translator {
    * そちらになる。
    */
   relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit): string
+  /** 「6 時間」「6 hours」のように、数と単位で書いた時間の長さ。 */
+  duration(duration: Duration): string
   /** `locale` の言語の名前を、この Translator の言語で書いたもの。 */
   languageName(locale: Locale): string
 }
@@ -57,6 +71,7 @@ export const makeTranslator = (locale: Locale): Translator => {
     languageTag,
     t,
     relativeTime: (value, unit) => relativeTimeFormat.format(value, unit),
+    duration: ({ value, unit }) => t(durationMessages[unit], { count: value }),
     languageName: (named) => languageNames.of(languageTagOf(named)) ?? languageTagOf(named),
   }
 }

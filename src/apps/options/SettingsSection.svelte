@@ -19,7 +19,7 @@
   {#if heading !== undefined}
     <h2 id={headingId}>{heading}</h2>
   {/if}
-  <div class="group">
+  <div class="rows">
     {@render children()}
   </div>
   {#if footnote !== undefined}
@@ -29,34 +29,28 @@
 
 <style>
   h2 {
-    margin: 0 0 7px 12px;
+    display: flex;
+    align-items: center;
+    height: 28px;
+    margin: 0;
+    padding: 0 12px;
+    color: var(--text-muted);
     font-size: 13px;
     font-weight: 600;
-    line-height: 1.35;
+    letter-spacing: 0.005em;
   }
 
-  .group {
-    border: 1px solid var(--group-edge);
-    border-radius: 10px;
-    background: var(--group);
-  }
-
-  .group > :global(*) {
-    position: relative;
-  }
-
-  .group > :global(*:not(:first-child))::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    inset-inline: 12px;
-    border-top: 1px solid var(--separator);
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .footnote {
-    margin: 7px 12px 0;
-    color: var(--secondary-label);
+    margin: 6px 12px 0;
+    color: var(--text-muted);
     font-size: 11.5px;
+    font-weight: 400;
     line-height: 1.5;
     text-wrap: pretty;
   }

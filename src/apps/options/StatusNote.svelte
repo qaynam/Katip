@@ -31,7 +31,7 @@
     align-items: center;
     gap: 4px;
     margin: 0;
-    color: var(--secondary-label);
+    color: var(--text-muted);
     font-size: 12px;
     line-height: 1.4;
     animation: appear 200ms ease-out;

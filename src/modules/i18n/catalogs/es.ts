@@ -10,6 +10,10 @@ export const es: Catalog = {
   "common.close": "Cerrar",
   "common.delete": "Eliminar",
   "common.rename": "Cambiar nombre",
+  "common.duration.minute": { one: "{count} minuto", other: "{count} minutos" },
+  "common.duration.hour": { one: "{count} hora", other: "{count} horas" },
+  "common.duration.day": { one: "{count} día", other: "{count} días" },
+  "common.duration.week": { one: "{count} semana", other: "{count} semanas" },
 
   "options.documentTitle": "Ajustes de Katip",
   "options.title": "Ajustes",
@@ -17,8 +21,6 @@ export const es: Catalog = {
   "options.saved": "Guardado",
   "options.saveFailed":
     "No se ha podido guardar el cambio. Espera un momento y vuelve a intentarlo.",
-  "options.stepper.increment": "Aumentar",
-  "options.stepper.decrement": "Disminuir",
 
   "options.language.label": "Idioma",
   "options.language.automatic": "Automático ({language})",
@@ -35,13 +37,14 @@ export const es: Catalog = {
   "options.syncTabGroups.label": "Sincronizar los espacios con los grupos de pestañas de Chrome",
   "options.syncTabGroups.description":
     "Muestra cada espacio como un grupo de pestañas en cada ventana. Si cambias el nombre o el color de un grupo, el espacio no cambia y el grupo se restablece en la siguiente sincronización. Mientras se sincroniza, no se pueden crear carpetas dentro de otras carpetas.",
+  "options.splitView.label": "Vista dividida",
+  "options.splitView.available": "Disponible",
+  "options.splitView.unavailable":
+    "No disponible en este navegador (requiere Chrome 155 o posterior)",
 
   "options.autoArchive.heading": "Archivo",
   "options.autoArchive.label": "Archivar automáticamente las pestañas inactivas",
   "options.autoArchive.idleTime.label": "Archivar tras",
-  "options.autoArchive.idleTime.unit": { one: "minuto", other: "minutos" },
-  "options.autoArchive.idleTime.empty": "Introduce el número de minutos.",
-  "options.autoArchive.idleTime.invalid": "Introduce un número entero igual o mayor que 1.",
   "options.autoArchive.footnote":
     "Las pestañas temporales que no hayas visto durante este tiempo se cierran y se guardan en el archivo, desde donde puedes volver a abrirlas. Las pestañas fijadas, los Favoritos, las pestañas que reproducen audio y la pestaña que estás viendo nunca se cierran.",
 

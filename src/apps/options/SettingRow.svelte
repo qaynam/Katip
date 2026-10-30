@@ -12,18 +12,16 @@
   let {
     label,
     description,
-    problem = null,
     disabled = false,
     labelsControl = true,
     children,
   }: {
     label: string
     description?: string
-    problem?: string | null
     disabled?: boolean
     /**
-     * `false` ならラベルをコントロールの名前にしない。ボタンのように、中の文字が名前になる
-     * コントロールに使う。
+     * `false` ならラベルをコントロールの名前にしない。ボタンのように中の文字が名前になる
+     * コントロールや、コントロールの無い表示だけの行に使う。
      */
     labelsControl?: boolean
     children: Snippet<[RowControlAttributes]>
@@ -32,13 +30,6 @@
   const id = $props.id()
   const controlId = `${id}-control`
   const descriptionId = `${id}-description`
-  const problemId = `${id}-problem`
-
-  const describedBy = $derived(
-    [description === undefined ? null : descriptionId, problem === null ? null : problemId]
-      .filter((describing) => describing !== null)
-      .join(" ") || undefined,
-  )
 </script>
 
 <div class="row" class:disabled>
@@ -51,12 +42,12 @@
     {#if description !== undefined}
       <p id={descriptionId} class="description">{description}</p>
     {/if}
-    {#if problem !== null}
-      <p id={problemId} class="problem">{problem}</p>
-    {/if}
   </div>
   <div class="control">
-    {@render children({ id: controlId, "aria-describedby": describedBy })}
+    {@render children({
+      id: controlId,
+      "aria-describedby": description === undefined ? undefined : descriptionId,
+    })}
   </div>
 </div>
 
@@ -65,9 +56,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    min-height: 22px;
-    padding: 9px 12px;
+    gap: 16px;
+    box-sizing: border-box;
+    min-height: var(--row-height);
+    padding: 7px 8px 7px 12px;
+    border-radius: var(--radius-row);
+    background: var(--surface-raised);
   }
 
   .text {
@@ -77,33 +71,28 @@
 
   .label {
     display: block;
-    line-height: 1.35;
+    font-size: 13.5px;
+    letter-spacing: -0.003em;
+    transition: color 120ms ease;
   }
 
   .disabled .label {
-    color: var(--tertiary-label);
-  }
-
-  .description,
-  .problem {
-    margin: 2px 0 0;
-    font-size: 11.5px;
-    line-height: 1.45;
-    text-wrap: pretty;
+    color: var(--text-muted);
   }
 
   .description {
-    color: var(--secondary-label);
-  }
-
-  .problem {
-    color: var(--danger);
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+    text-wrap: pretty;
   }
 
   .control {
     display: flex;
     flex: none;
     align-items: center;
-    gap: 6px;
+    max-width: 60%;
   }
 </style>

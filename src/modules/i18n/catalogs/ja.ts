@@ -10,14 +10,16 @@ export const ja: Catalog = {
   "common.close": "閉じる",
   "common.delete": "削除",
   "common.rename": "名前を変更",
+  "common.duration.minute": { other: "{count} 分" },
+  "common.duration.hour": { other: "{count} 時間" },
+  "common.duration.day": { other: "{count} 日" },
+  "common.duration.week": { other: "{count} 週間" },
 
   "options.documentTitle": "Katip の設定",
   "options.title": "設定",
   "options.loadFailed": "設定を読み込めませんでした。ページを再読み込みしてください。",
   "options.saved": "保存しました",
   "options.saveFailed": "保存できませんでした。少し待ってから、もう一度変更してください。",
-  "options.stepper.increment": "増やす",
-  "options.stepper.decrement": "減らす",
 
   "options.language.label": "言語",
   "options.language.automatic": "自動（{language}）",
@@ -33,13 +35,13 @@ export const ja: Catalog = {
   "options.syncTabGroups.label": "Space を Chrome のタブグループと同期",
   "options.syncTabGroups.description":
     "ウィンドウごとに Space をタブグループとして表示します。グループ側で名前や色を変えても Space には反映されず、次の同期で元に戻ります。同期中はフォルダの中にフォルダを作れません。",
+  "options.splitView.label": "分割ビュー",
+  "options.splitView.available": "使えます",
+  "options.splitView.unavailable": "このブラウザでは使えません（Chrome 155 以降が必要）",
 
   "options.autoArchive.heading": "アーカイブ",
   "options.autoArchive.label": "使っていないタブを自動でアーカイブ",
   "options.autoArchive.idleTime.label": "アーカイブするまでの時間",
-  "options.autoArchive.idleTime.unit": { other: "分" },
-  "options.autoArchive.idleTime.empty": "時間を分単位で入力してください",
-  "options.autoArchive.idleTime.invalid": "1 以上の整数で入力してください",
   "options.autoArchive.footnote":
     "最後に表示してからこの時間が過ぎた一時タブを閉じて、アーカイブに記録します。アーカイブからはあとで開き直せます。ピン留め・Favorites・音声を再生中・表示中のタブは閉じません。",
 

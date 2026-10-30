@@ -10,14 +10,16 @@ export const en = {
   "common.close": "Close",
   "common.delete": "Delete",
   "common.rename": "Rename",
+  "common.duration.minute": { one: "{count} minute", other: "{count} minutes" },
+  "common.duration.hour": { one: "{count} hour", other: "{count} hours" },
+  "common.duration.day": { one: "{count} day", other: "{count} days" },
+  "common.duration.week": { one: "{count} week", other: "{count} weeks" },
 
   "options.documentTitle": "Katip Settings",
   "options.title": "Settings",
   "options.loadFailed": "Couldn’t load your settings. Reload this page to try again.",
   "options.saved": "Saved",
   "options.saveFailed": "Couldn’t save the change. Wait a moment, then try again.",
-  "options.stepper.increment": "Increase",
-  "options.stepper.decrement": "Decrease",
 
   "options.language.label": "Language",
   "options.language.automatic": "Automatic ({language})",
@@ -33,13 +35,13 @@ export const en = {
   "options.syncTabGroups.label": "Sync Spaces with Chrome tab groups",
   "options.syncTabGroups.description":
     "Shows each Space as a tab group in every window. Renaming or recoloring a group doesn’t change the Space and is undone at the next sync. While syncing, folders can’t contain other folders.",
+  "options.splitView.label": "Split view",
+  "options.splitView.available": "Available",
+  "options.splitView.unavailable": "Not available in this browser (requires Chrome 155 or later)",
 
   "options.autoArchive.heading": "Archive",
   "options.autoArchive.label": "Archive inactive tabs automatically",
   "options.autoArchive.idleTime.label": "Archive after",
-  "options.autoArchive.idleTime.unit": { one: "minute", other: "minutes" },
-  "options.autoArchive.idleTime.empty": "Enter the number of minutes.",
-  "options.autoArchive.idleTime.invalid": "Enter a whole number of 1 or more.",
   "options.autoArchive.footnote":
     "Temporary tabs you haven’t viewed for this long are closed and saved to the archive, where you can reopen them later. Pinned tabs, Favorites, tabs playing audio, and the tab you’re viewing are never closed.",
 

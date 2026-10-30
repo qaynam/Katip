@@ -24,41 +24,36 @@
     appearance: none;
     position: relative;
     flex: none;
-    width: 34px;
-    height: 20px;
-    margin: 0;
-    border-radius: 10px;
-    background: var(--switch-off);
-    box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.04);
-    transition: background-color 160ms ease-out;
+    width: 30px;
+    height: 18px;
+    margin: 0 2px;
+    border-radius: 9px;
+    background: var(--divider);
+    transition: background-color 160ms ease;
   }
 
   input::after {
     content: "";
     position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 18px;
-    height: 18px;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: var(--knob);
-    box-shadow:
-      0 0 0 0.5px rgb(0 0 0 / 0.06),
-      0 1px 2px rgb(0 0 0 / 0.22);
-    transition: transform 160ms cubic-bezier(0.3, 0.7, 0.4, 1);
+    background: var(--switch-knob);
+    box-shadow: var(--shadow-active);
+    transition:
+      transform 160ms cubic-bezier(0.3, 0.7, 0.4, 1),
+      background-color 160ms ease;
   }
 
   input:checked {
-    background: var(--accent);
+    background: var(--text);
   }
 
   input:checked::after {
-    transform: translateX(14px);
-  }
-
-  input:focus-visible {
-    outline: 3px solid var(--focus-ring);
-    outline-offset: 1px;
+    background: var(--switch-knob-on);
+    transform: translateX(12px);
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -73,6 +73,22 @@ describe("件数による語形", () => {
   })
 })
 
+describe("時間の長さ", () => {
+  it.each([
+    ["en", { value: 6, unit: "hour" }, "6 hours"],
+    ["en", { value: 1, unit: "day" }, "1 day"],
+    ["en", { value: 30, unit: "minute" }, "30 minutes"],
+    ["ja", { value: 6, unit: "hour" }, "6 時間"],
+    ["ja", { value: 1, unit: "week" }, "1 週間"],
+    ["zh", { value: 6, unit: "hour" }, "6 小时"],
+    ["zh", { value: 3, unit: "day" }, "3 天"],
+    ["es", { value: 6, unit: "hour" }, "6 horas"],
+    ["es", { value: 1, unit: "week" }, "1 semana"],
+  ] as const)("%s では %o が「%s」になる", (locale, duration, text) => {
+    expect(makeTranslator(locale).duration(duration)).toBe(text)
+  })
+})
+
 describe("相対時刻", () => {
   it.each([
     ["en", "2 hours ago"],
