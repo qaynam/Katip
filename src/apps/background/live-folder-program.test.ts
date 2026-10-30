@@ -25,10 +25,10 @@ const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const reviewRequests: LiveSource = { _tag: "GitHub", query: "review-requested" }
 
 const gmailEntry = (id: string, subject: string) =>
-  `<entry><title>${subject}</title><summary>本文の冒頭</summary><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@gmail.com&amp;message_id=${id}&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:${id}</id><author><name>佐藤 花子</name><email>hanako.sato@example.co.jp</email></author></entry>`
+  `<entry><title>${subject}</title><summary>本文の冒頭</summary><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=${id}&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:${id}</id><author><name>佐藤 花子</name><email>hanako.sato@example.co.jp</email></author></entry>`
 
 const gmailFeed = (...entries: ReadonlyArray<string>) =>
-  `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@gmail.com</title><tagline>New messages in your Gmail Inbox</tagline><fullcount>${entries.length}</fullcount><link rel="alternate" href="https://mail.google.com/mail" type="text/html" /><modified>2026-10-30T09:12:44Z</modified>${entries.join("")}</feed>`
+  `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><tagline>New messages in your Gmail Inbox</tagline><fullcount>${entries.length}</fullcount><link rel="alternate" href="https://mail.google.com/mail" type="text/html" /><modified>2026-10-30T09:12:44Z</modified>${entries.join("")}</feed>`
 
 const githubSearchBody = (...titles: ReadonlyArray<string>) =>
   JSON.stringify({

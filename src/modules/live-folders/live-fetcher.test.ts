@@ -18,7 +18,7 @@ const GITHUB_API_ORIGIN = "https://api.github.com/*"
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const mentioned: LiveSource = { _tag: "GitHub", query: "mentioned" }
 
-const gmailFeed = `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@gmail.com</title><fullcount>1</fullcount><entry><title>請求書の送付</title><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@gmail.com&amp;message_id=19a&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:1</id><author><name>経理部</name><email>keiri@example.co.jp</email></author></entry></feed>`
+const gmailFeed = `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><fullcount>1</fullcount><entry><title>請求書の送付</title><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=19a&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:1</id><author><name>経理部</name><email>keiri@example.co.jp</email></author></entry></feed>`
 
 const githubItem = (id: number, updatedAt: string) => ({
   id,

@@ -7,7 +7,7 @@ import type { GmailSource } from "./live-source"
 const inbox: GmailSource = { _tag: "Gmail", accountIndex: 0, label: null }
 
 const feedOf = (entries: string, fullcount = 1) =>
-  `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@gmail.com</title><tagline>New messages in your Gmail Inbox</tagline><fullcount>${fullcount}</fullcount><link rel="alternate" href="https://mail.google.com/mail" type="text/html" /><modified>2026-10-30T09:12:44Z</modified>${entries}</feed>`
+  `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><tagline>New messages in your Gmail Inbox</tagline><fullcount>${fullcount}</fullcount><link rel="alternate" href="https://mail.google.com/mail" type="text/html" /><modified>2026-10-30T09:12:44Z</modified>${entries}</feed>`
 
 const entryOf = (fields: {
   readonly id?: string
@@ -21,7 +21,7 @@ const entryOf = (fields: {
   const link =
     fields.link === null
       ? ""
-      : `<link rel="alternate" href="${fields.link ?? "https://mail.google.com/mail?account_id=taro.yamada@gmail.com&amp;message_id=19a3c1f2e4b5d6a7&amp;view=conv&amp;extsrc=atom"}" type="text/html" />`
+      : `<link rel="alternate" href="${fields.link ?? "https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=19a3c1f2e4b5d6a7&amp;view=conv&amp;extsrc=atom"}" type="text/html" />`
   const modified =
     fields.modified === null
       ? ""
@@ -42,7 +42,7 @@ describe("未読フィードの解析", () => {
         id: "tag:gmail.google.com,2004:1847261839201746352",
         title: "週次ミーティングの議事録",
         subtitle: "佐藤 花子",
-        url: "https://mail.google.com/mail?account_id=taro.yamada@gmail.com&message_id=19a3c1f2e4b5d6a7&view=conv&extsrc=atom",
+        url: "https://mail.google.com/mail?account_id=taro.yamada@example.com&message_id=19a3c1f2e4b5d6a7&view=conv&extsrc=atom",
         updatedAt: Date.UTC(2026, 9, 30, 9, 10, 1),
       },
     ])
