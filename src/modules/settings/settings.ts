@@ -1,4 +1,5 @@
 import { Effect, Option, Schema } from "effect"
+import { LocalePreference } from "#modules/i18n"
 import { SpaceId } from "#modules/space"
 
 // Struct 全体の検証だけに頼ると、1 項目が壊れただけで全項目が既定値に戻ってしまう。
@@ -44,6 +45,7 @@ export const Settings = withDefaultsOfAllFields(
     autoArchive: AutoArchiveSettings,
     // null は「指定なし」。新しいタブの行き先が決まらないときの扱いは呼び出し側が決める
     defaultSpaceId: withDefault(Schema.NullOr(SpaceId), null),
+    locale: withDefault(LocalePreference, "auto"),
   }),
 )
 export type Settings = typeof Settings.Type

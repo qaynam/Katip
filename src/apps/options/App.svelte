@@ -1,23 +1,83 @@
 <script lang="ts">
+  import "./theme.css"
   import { Effect, Exit, Stream } from "effect"
+  import {
+    languageTagOf,
+    Locale,
+    type LocalePreference,
+    makeTranslator,
+    type MessageKey,
+    nativeLanguageNames,
+    resolveLocale,
+  } from "#modules/i18n"
   import {
     applySettingsPatch,
     SettingsRepository,
     type Settings,
     type SettingsPatch,
   } from "#modules/settings"
-  import { TabGroupColor } from "#platform/browser"
-  import IdleMinutesField from "./IdleMinutesField.svelte"
+  import IdleMinutesRow from "./IdleMinutesRow.svelte"
   import type { OptionsRuntime } from "./options-runtime"
-  import SaveStatus, { type SaveOutcome } from "./SaveStatus.svelte"
-  import SettingSwitch from "./SettingSwitch.svelte"
+  import PopUpButton, { type PopUpOption } from "./PopUpButton.svelte"
+  import PushButton from "./PushButton.svelte"
+  import SettingRow from "./SettingRow.svelte"
+  import SettingsSection from "./SettingsSection.svelte"
+  import { openChromeShortcutSettings } from "./shortcut-settings"
+  import StatusNote, { type Note } from "./StatusNote.svelte"
+  import Switch from "./Switch.svelte"
 
-  let { runtime }: { runtime: OptionsRuntime } = $props()
+  let {
+    runtime,
+    version,
+    browserLanguages,
+  }: {
+    runtime: OptionsRuntime
+    version: string
+    /** `navigator.languages` と同じく、優先する順に並んだ BCP 47 の言語タグ。 */
+    browserLanguages: ReadonlyArray<string>
+  } = $props()
+
+  type Outcome = "Saved" | "SaveFailed" | "ShortcutsUnavailable"
+
+  const outcomeMessages = {
+    Saved: "options.saved",
+    SaveFailed: "options.saveFailed",
+    ShortcutsUnavailable: "options.shortcuts.openFailed",
+  } as const satisfies Record<Outcome, MessageKey>
 
   let settings = $state<Settings | null>(null)
   let loadFailed = $state(false)
-  let outcome = $state<SaveOutcome | null>(null)
+  let outcome = $state<Outcome | null>(null)
   let hideSavedTimer: ReturnType<typeof setTimeout> | undefined
+
+  const translator = $derived(
+    makeTranslator(resolveLocale(settings?.locale ?? "auto", browserLanguages)),
+  )
+  const t = $derived(translator.t)
+
+  const note = $derived<Note | null>(
+    outcome === null
+      ? null
+      : { text: t(outcomeMessages[outcome]), tone: outcome === "Saved" ? "Quiet" : "Alert" },
+  )
+
+  const languageOptions = $derived<ReadonlyArray<PopUpOption<LocalePreference>>>([
+    {
+      value: "auto",
+      label: t("options.language.automatic", {
+        language: translator.languageName(resolveLocale("auto", browserLanguages)),
+      }),
+    },
+    ...Locale.literals.map((locale) => ({
+      value: locale,
+      label: nativeLanguageNames[locale],
+      lang: languageTagOf(locale),
+    })),
+  ])
+
+  $effect(() => {
+    document.documentElement.lang = translator.languageTag
+  })
 
   $effect(() => {
     const cancel = runtime.runCallback(
@@ -41,7 +101,7 @@
     }
   })
 
-  const announce = (next: SaveOutcome) => {
+  const announce = (next: Outcome) => {
     clearTimeout(hideSavedTimer)
     outcome = next
     if (next === "Saved") {
@@ -63,236 +123,189 @@
       announce("Saved")
     } else {
       settings = beforeSave
-      announce("Failed")
+      announce("SaveFailed")
     }
+  }
+
+  const openShortcutSettings = async () => {
+    const opened = await runtime.runPromiseExit(openChromeShortcutSettings)
+    if (Exit.isFailure(opened)) announce("ShortcutsUnavailable")
   }
 </script>
 
-<main>
-  <article class="sheet">
-    <div class="index-tabs" aria-hidden="true">
-      {#each TabGroupColor.literals as color (color)}
-        <span style:background-color="var(--group-{color})"></span>
-      {/each}
-    </div>
+<svelte:head>
+  <title>{t("options.documentTitle")}</title>
+</svelte:head>
 
-    <header>
-      <p class="wordmark">Katip</p>
-      <h1>設定</h1>
-      <p class="lede">変更はすぐに保存されます。</p>
-    </header>
+<header class="toolbar">
+  <div class="column">
+    <h1>{t("options.title")}</h1>
+    <StatusNote {note} />
+  </div>
+</header>
 
-    {#if settings !== null}
-      <section aria-labelledby="tabs-heading">
-        <h2 id="tabs-heading">タブと Space</h2>
-        <SettingSwitch
-          label="新しいタブを一時タブの一番上に表示する"
-          description="オフにすると Chrome のタブバーと同じ並びになり、新しいタブは一番下に追加されます。"
-          checked={settings.newTabsOnTop}
-          onchange={(checked) => save({ newTabsOnTop: checked })}
-        />
-        <SettingSwitch
-          label="閉じたフォルダでも、開いているタブをすべて表示する"
-          description="オフにすると、閉じたフォルダの下にはアクティブなタブと、フォルダを閉じている間に表示したタブだけが並びます。"
-          checked={settings.showAllOpenTabsInCollapsedFolders}
-          onchange={(checked) => save({ showAllOpenTabsInCollapsedFolders: checked })}
-        />
-        <SettingSwitch
-          label="Space を Chrome のタブグループと同期する"
-          description="ウィンドウごとに Space をタブグループとして表示します。グループ側で名前や色を変えても Space には反映されず、次の同期で元に戻ります。同期中はフォルダの中にフォルダを作れません。"
-          checked={settings.syncTabGroups}
-          onchange={(checked) => save({ syncTabGroups: checked })}
-        />
-      </section>
+<main class="column">
+  {#if settings !== null}
+    {@const current = settings}
 
-      <section aria-labelledby="archive-heading">
-        <h2 id="archive-heading">自動アーカイブ</h2>
-        <SettingSwitch
-          label="使っていない一時タブを自動でアーカイブする"
-          description="閉じたタブはアーカイブに記録され、あとから開き直せます。ピン留め・Chrome で固定・音声を再生中・表示中のタブは閉じません。"
-          checked={settings.autoArchive.enabled}
-          onchange={(enabled) => save({ autoArchive: { enabled } })}
-        />
-        <IdleMinutesField
-          value={settings.autoArchive.idleMinutes}
-          disabled={!settings.autoArchive.enabled}
-          oncommit={(idleMinutes) => save({ autoArchive: { idleMinutes } })}
-        />
-      </section>
-    {:else if loadFailed}
-      <p class="load-problem">設定を読み込めませんでした。ページを再読み込みしてください。</p>
-    {/if}
-  </article>
+    <SettingsSection footnote={t("options.language.footnote")}>
+      <SettingRow label={t("options.language.label")}>
+        {#snippet children(control)}
+          <PopUpButton
+            {...control}
+            value={current.locale}
+            options={languageOptions}
+            onchange={(locale) => save({ locale })}
+          />
+        {/snippet}
+      </SettingRow>
+    </SettingsSection>
 
-  <SaveStatus {outcome} />
+    <SettingsSection heading={t("options.tabs.heading")}>
+      <SettingRow
+        label={t("options.newTabsOnTop.label")}
+        description={t("options.newTabsOnTop.description")}
+      >
+        {#snippet children(control)}
+          <Switch
+            {...control}
+            checked={current.newTabsOnTop}
+            onchange={(checked) => save({ newTabsOnTop: checked })}
+          />
+        {/snippet}
+      </SettingRow>
+      <SettingRow
+        label={t("options.collapsedFolders.label")}
+        description={t("options.collapsedFolders.description")}
+      >
+        {#snippet children(control)}
+          <Switch
+            {...control}
+            checked={current.showAllOpenTabsInCollapsedFolders}
+            onchange={(checked) => save({ showAllOpenTabsInCollapsedFolders: checked })}
+          />
+        {/snippet}
+      </SettingRow>
+      <SettingRow
+        label={t("options.syncTabGroups.label")}
+        description={t("options.syncTabGroups.description")}
+      >
+        {#snippet children(control)}
+          <Switch
+            {...control}
+            checked={current.syncTabGroups}
+            onchange={(checked) => save({ syncTabGroups: checked })}
+          />
+        {/snippet}
+      </SettingRow>
+    </SettingsSection>
+
+    <SettingsSection
+      heading={t("options.autoArchive.heading")}
+      footnote={t("options.autoArchive.footnote")}
+    >
+      <SettingRow label={t("options.autoArchive.label")}>
+        {#snippet children(control)}
+          <Switch
+            {...control}
+            checked={current.autoArchive.enabled}
+            onchange={(enabled) => save({ autoArchive: { enabled } })}
+          />
+        {/snippet}
+      </SettingRow>
+      <IdleMinutesRow
+        value={current.autoArchive.idleMinutes}
+        disabled={!current.autoArchive.enabled}
+        {translator}
+        oncommit={(idleMinutes) => save({ autoArchive: { idleMinutes } })}
+      />
+    </SettingsSection>
+
+    <SettingsSection footnote={t("options.shortcuts.footnote")}>
+      <SettingRow label={t("options.shortcuts.label")} labelsControl={false}>
+        {#snippet children(control)}
+          <PushButton {...control} onclick={openShortcutSettings}>
+            {t("options.shortcuts.open")}
+          </PushButton>
+        {/snippet}
+      </SettingRow>
+    </SettingsSection>
+
+    <SettingsSection>
+      <SettingRow label={t("options.version.label")} labelsControl={false}>
+        {#snippet children(control)}
+          <span {...control} class="value">{version}</span>
+        {/snippet}
+      </SettingRow>
+    </SettingsSection>
+  {:else if loadFailed}
+    <p class="load-problem" role="alert">{t("options.loadFailed")}</p>
+  {/if}
 </main>
 
 <style>
-  :global(:root) {
-    --page: #e9edf1;
-    --surface: #ffffff;
-    --surface-sunken: #f2f4f7;
-    --ink: #1c2430;
-    --ink-muted: #586474;
-    --ink-faint: #9aa3af;
-    --line: #dce1e7;
-    --line-strong: #b9c1cb;
-    --accent: #007b83;
-    --switch-off: #c3cad3;
-    --danger: #c5221f;
-
-    --group-grey: #5f6368;
-    --group-blue: #1a73e8;
-    --group-red: #d93025;
-    --group-yellow: #f9ab00;
-    --group-green: #1e8e3e;
-    --group-pink: #d01884;
-    --group-purple: #9334e6;
-    --group-cyan: #007b83;
-    --group-orange: #fa903e;
-
-    --font-body:
-      "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", system-ui,
-      sans-serif;
-    --font-display: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
-    --font-numeric: ui-monospace, "SF Mono", Menlo, monospace;
-
-    color-scheme: light dark;
+  .column {
+    box-sizing: border-box;
+    max-width: 640px;
+    margin-inline: auto;
+    padding-inline: 20px;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :global(:root) {
-      --page: #11151a;
-      --surface: #1a2027;
-      --surface-sunken: #141a20;
-      --ink: #e4e8ed;
-      --ink-muted: #9aa5b3;
-      --ink-faint: #5e6875;
-      --line: #2a323c;
-      --line-strong: #3c4652;
-      --accent: #3fb8c0;
-      --switch-off: #3c4652;
-      --danger: #f28b82;
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 1px solid transparent;
+    background: var(--toolbar);
+    backdrop-filter: saturate(1.8) blur(20px);
+    animation: reveal-edge linear both;
+    animation-timeline: scroll();
+    animation-range: 0 16px;
+  }
 
-      --group-grey: #dadce0;
-      --group-blue: #8ab4f8;
-      --group-red: #f28b82;
-      --group-yellow: #fdd663;
-      --group-green: #81c995;
-      --group-pink: #ff8bcb;
-      --group-purple: #c58af9;
-      --group-cyan: #78d9ec;
-      --group-orange: #fcad70;
+  @keyframes reveal-edge {
+    to {
+      border-bottom-color: var(--separator);
     }
   }
 
-  :global(body) {
-    margin: 0;
-    background: var(--page);
-    color: var(--ink);
-    font-family: var(--font-body);
-    font-size: 0.9375rem;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  main {
-    padding: 56px 16px 96px;
-  }
-
-  .sheet {
-    position: relative;
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 36px 40px 20px;
-    border: 1px solid var(--line);
-    border-radius: 4px 4px 12px 12px;
-    background: var(--surface);
-  }
-
-  .index-tabs {
-    position: absolute;
-    bottom: 100%;
-    right: 32px;
+  .toolbar .column {
     display: flex;
-    gap: 3px;
-  }
-
-  .index-tabs span {
-    width: 22px;
-    height: 7px;
-    border-radius: 3px 3px 0 0;
-  }
-
-  header {
-    padding-bottom: 20px;
-  }
-
-  .wordmark {
-    margin: 0;
-    color: var(--ink-muted);
-    font-family: var(--font-display);
-    font-size: 0.8125rem;
-    letter-spacing: 0.24em;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 16px;
+    padding-top: 28px;
+    padding-bottom: 14px;
   }
 
   h1 {
-    margin: 4px 0 0;
-    font-family: var(--font-display);
-    font-size: 2rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-  }
-
-  .lede {
-    margin: 8px 0 0;
-    color: var(--ink-muted);
-    font-size: 0.8125rem;
-  }
-
-  section {
-    padding-top: 20px;
-    border-top: 1px solid var(--line-strong);
-  }
-
-  section + section {
-    margin-top: 12px;
-  }
-
-  h2 {
     margin: 0;
-    color: var(--accent);
-    font-size: 0.75rem;
+    font-size: 26px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    line-height: 1.2;
   }
 
-  section :global(.setting + .setting) {
-    border-top: 1px solid var(--line);
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 8px;
+    padding-bottom: 64px;
+  }
+
+  .value {
+    color: var(--secondary-label);
+    font-variant-numeric: tabular-nums;
+    user-select: text;
   }
 
   .load-problem {
     margin: 0;
-    padding: 20px 0;
-    border-top: 1px solid var(--line-strong);
+    padding: 12px;
+    border: 1px solid var(--group-edge);
+    border-radius: 10px;
+    background: var(--group);
     color: var(--danger);
-    font-weight: 600;
-  }
-
-  @media (max-width: 480px) {
-    main {
-      padding-top: 40px;
-    }
-
-    .sheet {
-      padding: 28px 20px 12px;
-    }
-
-    .index-tabs {
-      right: 16px;
-    }
-
-    .index-tabs span {
-      width: 16px;
-    }
   }
 </style>

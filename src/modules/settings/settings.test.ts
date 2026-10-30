@@ -7,13 +7,14 @@ const decodeStored = Schema.decodeUnknownSync(Settings)
 const encodeForStorage = Schema.encodeSync(Settings)
 
 describe("既定値", () => {
-  it("新しいタブを上に表示し、それ以外の機能は OFF で始まる", () => {
+  it("新しいタブを上に表示し、それ以外の機能は OFF、言語はブラウザに合わせる設定で始まる", () => {
     expect(defaultSettings).toStrictEqual({
       newTabsOnTop: true,
       showAllOpenTabsInCollapsedFolders: false,
       syncTabGroups: false,
       autoArchive: { enabled: false, idleMinutes: 360 },
       defaultSpaceId: null,
+      locale: "auto",
     })
   })
 })
@@ -26,6 +27,7 @@ describe("保存値の読み込み", () => {
       syncTabGroups: true,
       autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(30) },
       defaultSpaceId: SpaceId.make("work"),
+      locale: "zh",
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)
@@ -62,6 +64,15 @@ describe("保存値の読み込み", () => {
 
     expect(settings).toStrictEqual({ ...defaultSettings, newTabsOnTop: false })
   })
+
+  it.each(["fr", "zh-CN", 1, null])(
+    "対応していない言語 %j が保存されていると、言語だけがブラウザに合わせる設定になる",
+    (locale) => {
+      const settings = decodeStored({ locale, syncTabGroups: true })
+
+      expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true, locale: "auto" })
+    },
+  )
 
   it("知らない項目が含まれていても読める", () => {
     const settings = decodeStored({ syncTabGroups: true, addedInFutureVersion: 1 })
@@ -106,6 +117,12 @@ describe("applySettingsPatch", () => {
     const patched = applySettingsPatch(current, { defaultSpaceId: null })
 
     expect(patched.defaultSpaceId).toBeNull()
+  })
+
+  it("言語だけを変えられる", () => {
+    const patched = applySettingsPatch(defaultSettings, { locale: "es" })
+
+    expect(patched).toStrictEqual({ ...defaultSettings, locale: "es" })
   })
 
   it("空の変更では何も変わらない", () => {
