@@ -1,12 +1,14 @@
 import { Clock, Context, type Duration, Effect, Layer, Match, Ref, Semaphore, Stream } from "effect"
 import { ArchiveRepository } from "#modules/archive"
+import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
 import { desiredGroupsFor, TabGroupSync } from "#modules/tab-group-sync"
 import { takeSnapshot } from "#modules/workspace"
 import { Array, Order } from "effect"
 import { BrowserEvents, Tabs, type BrowserEvent, type BrowserTab } from "#platform/browser"
-import { SIDEBAR_PORT_NAME } from "#protocol"
+import { Permissions } from "#platform/permissions"
+import { SIDEBAR_PORT_NAME, SPOTLIGHT_PORT_NAME } from "#protocol"
 import { AUTO_ARCHIVE_ALARM, runAutoArchive, scheduleAutoArchive } from "./auto-archive"
 import { pruneStaleBindings } from "./bindings"
 import { handleBrowserEvent, isBookmarkEvent } from "./browser-event-handler"
@@ -14,9 +16,17 @@ import { makeDebounced } from "./debounced"
 import { ExtensionInfo } from "./extension-info"
 import { initialize } from "./initialize"
 import { KatipState, saveRestoreSnapshot } from "./katip-state"
+import {
+  LIVE_FOLDER_REFRESH_ALARM,
+  refreshDueLiveFolders,
+  refreshLiveFoldersWhere,
+  scheduleLiveFolderRefresh,
+} from "./live-folder-refresh"
 import { runKeyboardCommand } from "./keyboard-commands"
 import { runSidebarCommand } from "./sidebar-commands"
 import { SidebarHub } from "./sidebar-hub"
+import { runSpotlightChoice } from "./spotlight-choice"
+import { SpotlightHub } from "./spotlight-hub"
 import { urlOf } from "./tab-admission"
 
 const byWindowThenIndex = Order.combine(
@@ -91,6 +101,7 @@ export const program = Effect.gen(function* () {
   const serialize = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Semaphore.withPermits(lock, 1)(Effect.timeout(effect, timeLimit))
   const hub = yield* SidebarHub
+  const spotlight = yield* SpotlightHub
   const events = yield* BrowserEvents
 
   const publishViews = yield* makeDebounced(hub.publish, "30 millis")
@@ -111,6 +122,13 @@ export const program = Effect.gen(function* () {
     "100 millis",
   )
 
+  // 取得は状態を変える処理のロックの外で進むので、始まりと終わりを表示へ知らせる。
+  // 取得はサイドパネルの接続を受けた直後から始まりうるので、接続を受け付けるより前に購読する
+  yield* (yield* LiveFolders).refreshEvents.pipe(
+    Stream.runForEach(() => publishViews),
+    Effect.forkScoped,
+  )
+
   const handleEvent = (event: BrowserEvent) =>
     Match.value(event).pipe(
       Match.tag("TabRemoved", (removed) =>
@@ -122,7 +140,11 @@ export const program = Effect.gen(function* () {
         ),
       ),
       Match.tag("AlarmFired", ({ alarm }) =>
-        alarm.name === AUTO_ARCHIVE_ALARM ? serialize(runAutoArchive) : Effect.void,
+        Match.value(alarm.name).pipe(
+          Match.when(AUTO_ARCHIVE_ALARM, () => serialize(runAutoArchive)),
+          Match.when(LIVE_FOLDER_REFRESH_ALARM, () => serialize(refreshDueLiveFolders)),
+          Match.orElse(() => Effect.void),
+        ),
       ),
       Match.tag("CommandTriggered", ({ command, tab }) =>
         serialize(runKeyboardCommand(command, tab)),
@@ -132,23 +154,44 @@ export const program = Effect.gen(function* () {
       ),
     )
 
+  const refreshLiveFoldersOnOpen = logFailure("ライブフォルダの取得を始められなかった")(
+    serialize(refreshDueLiveFolders),
+  )
+
   yield* events.connections.pipe(
     Stream.runForEach((port) =>
       port.name === SIDEBAR_PORT_NAME
-        ? Effect.forkScoped(
-            hub.serve(port, (command) =>
-              serialize(runSidebarCommand(command)).pipe(
-                Effect.catchTag("TimeoutError", () =>
-                  Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
-                    _tag: "Failed" as const,
-                    reason: "時間内に完了しませんでした",
-                  }),
+        ? Effect.andThen(
+            Effect.forkScoped(refreshLiveFoldersOnOpen),
+            Effect.forkScoped(
+              hub.serve(port, (command) =>
+                serialize(runSidebarCommand(command)).pipe(
+                  Effect.catchTag("TimeoutError", () =>
+                    Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
+                      _tag: "Failed" as const,
+                      reason: "時間内に完了しませんでした",
+                    }),
+                  ),
+                  Effect.tap(() => afterChange),
                 ),
-                Effect.tap(() => afterChange),
               ),
             ),
           )
-        : port.disconnect,
+        : port.name === SPOTLIGHT_PORT_NAME
+          ? Effect.forkScoped(
+              spotlight.serve(port, (windowId, result) =>
+                serialize(runSpotlightChoice(windowId, result)).pipe(
+                  Effect.catchTag("TimeoutError", () =>
+                    Effect.as(Effect.logError("Spotlight の決定が時間内に終わらなかった"), {
+                      _tag: "Failed" as const,
+                      reason: "時間内に完了しませんでした",
+                    }),
+                  ),
+                  Effect.tap(() => afterChange),
+                ),
+              ),
+            )
+          : port.disconnect,
     ),
     Effect.forkScoped(),
   )
@@ -157,7 +200,19 @@ export const program = Effect.gen(function* () {
   // 一切応答しなくなり、ユーザーには何が起きたのか分からない
   yield* logFailure("起動時の整合に失敗した")(serialize(initialize))
   yield* logFailure("自動アーカイブの予約に失敗した")(scheduleAutoArchive)
+  yield* logFailure("ライブフォルダの取得の予約に失敗した")(scheduleLiveFolderRefresh)
   yield* afterChange
+
+  // 許可されたら、許可を待って失敗していたライブフォルダをすぐに取得し直す。取り消されたら、
+  // 次の定期取得を待たずに許可が無いことを示す
+  yield* (yield* Permissions).originChanges.pipe(
+    Stream.runForEach(({ origins }) =>
+      logFailure("ライブフォルダの取得を始められなかった")(
+        serialize(refreshLiveFoldersWhere((source) => origins.includes(originPatternOf(source)))),
+      ),
+    ),
+    Effect.forkScoped,
+  )
 
   // 所属の判定は復元レコードの読み込みを前提にするので、イベントは整合を取った後に処理する
   yield* events.events.pipe(
@@ -182,7 +237,7 @@ export const program = Effect.gen(function* () {
 })
 
 /** {@link program} が使うサービスのうち、Chrome API 以外のもの。 */
-export const applicationLayer = Layer.mergeAll(SidebarHub.layer).pipe(
+export const applicationLayer = Layer.mergeAll(SidebarHub.layer, SpotlightHub.layer).pipe(
   Layer.provideMerge(
     Layer.mergeAll(
       KatipState.layer,
@@ -190,6 +245,7 @@ export const applicationLayer = Layer.mergeAll(SidebarHub.layer).pipe(
       SettingsRepository.layer,
       ArchiveRepository.layer,
       TabGroupSync.layer,
+      LiveFolders.layer,
     ),
   ),
 )

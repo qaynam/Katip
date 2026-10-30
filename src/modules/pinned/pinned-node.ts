@@ -1,4 +1,5 @@
 import { Array, Match, Option } from "effect"
+import type { LiveSource } from "#modules/live-folders"
 import type { BookmarkFolder, BookmarkId, BookmarkNode } from "#platform/browser"
 import { SPACE_ROOT_DEPTH } from "./folder-depth"
 
@@ -25,7 +26,15 @@ export interface PinnedSplit {
   readonly items: readonly [PinnedBookmark, PinnedBookmark]
 }
 
-export type PinnedNode = PinnedBookmark | PinnedSplit | PinnedFolder
+/** 取得元から中身を取り込むフォルダ。中身はブックマークに持たないので、ノードとしては子を持たない。 */
+export interface PinnedLiveFolder {
+  readonly _tag: "PinnedLiveFolder"
+  readonly id: BookmarkId
+  readonly title: string
+  readonly source: LiveSource
+}
+
+export type PinnedNode = PinnedBookmark | PinnedSplit | PinnedLiveFolder | PinnedFolder
 
 /** Space フォルダの直下に並ぶノード。順序はブックマークの並び順そのもの。 */
 export type PinnedTree = ReadonlyArray<PinnedNode>
@@ -60,21 +69,47 @@ const pinnedSplitFrom = (folder: BookmarkFolder): Option.Option<PinnedSplit> =>
       : Option.none()
   })
 
+// 印の付いたフォルダでも、外部でブックマークを入れられたものはライブフォルダとして扱わない。
+// 普通のフォルダとして見せ、入れられたブックマークを隠さない
+const pinnedLiveFolderFrom = (
+  folder: BookmarkFolder,
+  source: LiveSource,
+): Option.Option<PinnedLiveFolder> =>
+  Option.flatMap(folder.children, (children) =>
+    children.length === 0
+      ? Option.some({ _tag: "PinnedLiveFolder", id: folder.id, title: folder.title, source })
+      : Option.none(),
+  )
+
+/** フォルダに付けた印。どちらも無いフォルダは普通のフォルダとして読む。 */
+export interface FolderMarks {
+  /** 分割ビューとしてピン留めしたフォルダの ID。 */
+  readonly splitFolders?: ReadonlySet<BookmarkId>
+  /** ライブフォルダとして作ったフォルダの ID と、その取得元。 */
+  readonly liveFolders?: ReadonlyMap<BookmarkId, LiveSource>
+}
+
+const markedNodeFrom = (folder: BookmarkFolder, marks: FolderMarks): Option.Option<PinnedNode> => {
+  if (marks.splitFolders?.has(folder.id)) return pinnedSplitFrom(folder)
+  return Option.match(Option.fromNullishOr(marks.liveFolders?.get(folder.id)), {
+    onNone: () => Option.none(),
+    onSome: (source) => pinnedLiveFolderFrom(folder, source),
+  })
+}
+
 const pinnedNodeFrom =
-  (splitFolders: ReadonlySet<BookmarkId>) =>
+  (marks: FolderMarks) =>
   (node: BookmarkNode): Option.Option<PinnedNode> =>
     Match.valueTags(node, {
       Bookmark: () => pinnedBookmarkFrom(node),
       BookmarkFolder: (folder) =>
-        Option.orElse(
-          splitFolders.has(folder.id) ? pinnedSplitFrom(folder) : Option.none<PinnedNode>(),
-          () =>
-            Option.map(pinnedTreeFrom(folder, splitFolders), (children): PinnedNode => ({
-              _tag: "PinnedFolder",
-              id: folder.id,
-              title: folder.title,
-              children,
-            })),
+        Option.orElse(markedNodeFrom(folder, marks), () =>
+          Option.map(pinnedTreeFrom(folder, marks), (children): PinnedNode => ({
+            _tag: "PinnedFolder",
+            id: folder.id,
+            title: folder.title,
+            children,
+          })),
         ),
     })
 
@@ -82,15 +117,13 @@ const pinnedNodeFrom =
  * Space フォルダのサブツリーを、Space 直下のピン留めツリーに変換する。
  *
  * 子を読み込んでいないフォルダが 1 つでも含まれていれば None を返す（空のフォルダと区別できないため）。
- *
- * @param splitFolders - 分割ビューとしてピン留めしたフォルダの ID。
  */
 export const pinnedTreeFrom = (
   spaceFolder: BookmarkFolder,
-  splitFolders: ReadonlySet<BookmarkId> = new Set(),
+  marks: FolderMarks = {},
 ): Option.Option<PinnedTree> =>
   Option.flatMap(spaceFolder.children, (children) =>
-    Option.all(children.map(pinnedNodeFrom(splitFolders))),
+    Option.all(children.map(pinnedNodeFrom(marks))),
   )
 
 const findWithin = (
@@ -105,6 +138,7 @@ const findWithin = (
     }
     return Match.valueTags(node, {
       PinnedBookmark: () => Option.none(),
+      PinnedLiveFolder: () => Option.none(),
       PinnedSplit: (split) => findWithin(split.items, id, Option.some(split.id), depth + 1),
       PinnedFolder: (folder) => findWithin(folder.children, id, Option.some(folder.id), depth + 1),
     })
@@ -129,6 +163,18 @@ export const splitIdsWithin = (folder: PinnedFolder): ReadonlyArray<BookmarkId> 
     Match.valueTags(child, {
       PinnedBookmark: (): ReadonlyArray<BookmarkId> => [],
       PinnedSplit: (split) => [split.id],
+      PinnedLiveFolder: () => [],
       PinnedFolder: splitIdsWithin,
+    }),
+  )
+
+/** ツリーのすべての階層にあるライブフォルダを、ツリーの上から順に返す。 */
+export const liveFoldersIn = (tree: PinnedTree): ReadonlyArray<PinnedLiveFolder> =>
+  tree.flatMap((node) =>
+    Match.valueTags(node, {
+      PinnedBookmark: (): ReadonlyArray<PinnedLiveFolder> => [],
+      PinnedSplit: () => [],
+      PinnedLiveFolder: (live) => [live],
+      PinnedFolder: (folder) => liveFoldersIn(folder.children),
     }),
   )

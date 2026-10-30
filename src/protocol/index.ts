@@ -7,10 +7,23 @@ export {
   SIDEBAR_PORT_NAME,
 } from "./sidebar-port"
 export {
+  callerWindowOfSpotlight,
+  SPOTLIGHT_PAGE_PATH,
+  SPOTLIGHT_PORT_NAME,
+  SpotlightClientMessage,
+  SpotlightOutcome,
+  spotlightPageUrl,
+  SpotlightResult,
+  SpotlightServerMessage,
+} from "./spotlight-port"
+export {
   FavoriteView,
+  LiveFolderStatus,
+  LiveItemView,
   OpenPinnedTab,
   PinnedFolderView,
   PinnedItemView,
+  PinnedLiveFolderView,
   PinnedNodeView,
   PinnedSplitView,
   SidebarView,

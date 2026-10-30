@@ -1,9 +1,11 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
+import type { LiveSource } from "#modules/live-folders"
 import { BookmarkId, type BookmarkFolder, type BookmarkNode } from "#platform/browser"
 import {
   findPinnedNode,
   folderIdsWithin,
+  liveFoldersIn,
   pinnedTreeFrom,
   type PinnedFolder,
   type PinnedNode,
@@ -188,7 +190,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
       loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")], "左 | 右"),
     ])
 
-    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+    const tree = pinnedTreeFrom(spaceFolder, { splitFolders: splitIds })
 
     expect(tree).toStrictEqual(
       Option.some([
@@ -205,7 +207,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
   it("印の付いたフォルダでも、中身が 2 つのブックマークでなくなっていたら普通のフォルダになる", () => {
     const spaceFolder = loadedFolder("space", [loadedFolder("split", [chromeBookmark("only")])])
 
-    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+    const tree = pinnedTreeFrom(spaceFolder, { splitFolders: splitIds })
 
     expect(tree).toStrictEqual(Option.some([pinFolder("split", [pin("only")])]))
   })
@@ -215,7 +217,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
       loadedFolder("folder", [chromeBookmark("a"), chromeBookmark("b")]),
     ])
 
-    const tree = pinnedTreeFrom(spaceFolder, splitIds)
+    const tree = pinnedTreeFrom(spaceFolder, { splitFolders: splitIds })
 
     expect(tree).toStrictEqual(Option.some([pinFolder("folder", [pin("a"), pin("b")])]))
   })
@@ -226,7 +228,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
         loadedFolder("space", [
           loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")]),
         ]),
-        splitIds,
+        { splitFolders: splitIds },
       ),
     )
 
@@ -235,5 +237,64 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
     expect(Option.map(found, (l) => [l.parentFolderId, l.index])).toStrictEqual(
       Option.some([Option.some(bookmarkId("split")), 1]),
     )
+  })
+})
+
+describe("ライブフォルダとして作ったフォルダ", () => {
+  const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
+  const liveFolders = new Map([[bookmarkId("live"), reviews]])
+
+  it("印の付いた空のフォルダは、取得元を持つライブフォルダになる", () => {
+    const spaceFolder = loadedFolder("space", [loadedFolder("live", [], "レビュー")])
+
+    const tree = pinnedTreeFrom(spaceFolder, { liveFolders })
+
+    expect(tree).toStrictEqual(
+      Option.some([
+        { _tag: "PinnedLiveFolder", id: bookmarkId("live"), title: "レビュー", source: reviews },
+      ]),
+    )
+  })
+
+  it("印の付いたフォルダでも、外でブックマークを入れられていたら普通のフォルダとして中身を見せる", () => {
+    const spaceFolder = loadedFolder("space", [loadedFolder("live", [chromeBookmark("stray")])])
+
+    const tree = pinnedTreeFrom(spaceFolder, { liveFolders })
+
+    expect(tree).toStrictEqual(Option.some([pinFolder("live", [pin("stray")])]))
+  })
+
+  it("フォルダの中にあるライブフォルダも、フォルダを親として見つかる", () => {
+    const tree = Option.getOrThrow(
+      pinnedTreeFrom(loadedFolder("space", [loadedFolder("f1", [loadedFolder("live", [])])]), {
+        liveFolders,
+      }),
+    )
+
+    const found = findPinnedNode(tree, bookmarkId("live"))
+
+    expect(
+      Option.map(found, (l) => [l.node._tag, l.parentFolderId, l.depth] as const),
+    ).toStrictEqual(Option.some(["PinnedLiveFolder", Option.some(bookmarkId("f1")), 2]))
+  })
+
+  it("ツリーのすべての階層のライブフォルダを、上から順に集める", () => {
+    const tree = Option.getOrThrow(
+      pinnedTreeFrom(
+        loadedFolder("space", [
+          loadedFolder("f1", [loadedFolder("inner", [])]),
+          loadedFolder("outer", []),
+          chromeBookmark("b1"),
+        ]),
+        {
+          liveFolders: new Map([
+            [bookmarkId("outer"), reviews],
+            [bookmarkId("inner"), reviews],
+          ]),
+        },
+      ),
+    )
+
+    expect(liveFoldersIn(tree).map((live) => live.id)).toStrictEqual(["inner", "outer"])
   })
 })

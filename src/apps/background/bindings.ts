@@ -8,6 +8,7 @@ const bookmarkIdsIn = (tree: PinnedTree): ReadonlyArray<BookmarkId> =>
     Match.valueTags(node, {
       PinnedBookmark: ({ id }) => [id],
       PinnedSplit: ({ items }) => items.map((item) => item.id),
+      PinnedLiveFolder: () => [],
       PinnedFolder: ({ children }) => bookmarkIdsIn(children),
     }),
   )

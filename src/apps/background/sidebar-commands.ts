@@ -1,7 +1,15 @@
 import { Array, Clock, Effect, Equal, Match, Option, Order, Schema } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import {
+  defaultLiveFolderTitle,
+  GitHubTokenStore,
+  LiveFolders,
+  type LiveSource,
+} from "#modules/live-folders"
+import {
   FolderExpansionStore,
+  LiveFolderStore,
+  liveFoldersIn,
   PinnedBookmarks,
   PinnedParent,
   SpaceFolders,
@@ -22,6 +30,7 @@ import {
 import { moveIndexFor } from "#modules/tab-order"
 import { settleTheme } from "#modules/theme"
 import {
+  activeSpaceOf,
   assignTab,
   bindPinned,
   moveTabToSpace,
@@ -50,6 +59,8 @@ import { pruneStaleBindings } from "./bindings"
 import { ExtensionInfo } from "./extension-info"
 import { newSpaceId } from "./initialize"
 import { KatipState } from "./katip-state"
+import { openSpotlight } from "./spotlight-window"
+import { refreshLiveFoldersWhere, scheduleLiveFolderRefresh } from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
 
 export class CommandRejected extends Schema.TaggedError<CommandRejected>()("CommandRejected", {
@@ -139,11 +150,17 @@ const spaceCommands = {
     const state = yield* KatipState
     const successor = Array.findFirst(yield* state.spaces.get, (space) => space.id !== spaceId)
     if (Option.isNone(successor)) return yield* reject("最後の Space は削除できません")
+    const liveFolderIds = yield* (yield* PinnedBookmarks).loadSpaceTree(spaceId).pipe(
+      Effect.map((tree) => liveFoldersIn(tree).map((live) => live.id)),
+      Effect.orElseSucceed((): ReadonlyArray<BookmarkId> => []),
+    )
     yield* state.spaces.updateEffect((spaces) => Effect.fromResult(removeSpace(spaces, spaceId)))
     yield* state.workspace.update((workspace) =>
       releaseSpace(workspace, spaceId, successor.value.id),
     )
     yield* (yield* SpaceFolders).removeSpaceFolder(spaceId)
+    yield* (yield* LiveFolderStore).forget(liveFolderIds)
+    yield* releaseLiveFolders(liveFolderIds)
   }),
 
   MoveSpace: ({ spaceId, toIndex }: { spaceId: SpaceId; toIndex: number }) =>
@@ -151,6 +168,13 @@ const spaceCommands = {
       state.spaces.updateEffect((spaces) => Effect.fromResult(moveSpace(spaces, spaceId, toIndex))),
     ),
 }
+
+/** ブックマークから消したライブフォルダの、取得中の処理とキャッシュを捨てる。 */
+const releaseLiveFolders = Effect.fnUntraced(function* (folderIds: ReadonlyArray<BookmarkId>) {
+  if (folderIds.length === 0) return
+  yield* (yield* LiveFolders).forget(folderIds)
+  yield* scheduleLiveFolderRefresh
+})
 
 const unpinFromChrome = Effect.fnUntraced(function* (tab: BrowserTab) {
   if (tab.pinned) yield* (yield* Tabs).update(tab.id, { pinned: false })
@@ -302,7 +326,12 @@ const placeInPinned = Effect.fnUntraced(function* (
 
 /** ピンのノードのうち、開いているタブが結びつきうるブックマークの ID。 */
 const pinnedIdsOf = (node: PinnedNode): ReadonlyArray<BookmarkId> =>
-  node._tag === "PinnedSplit" ? node.items.map((item) => item.id) : [node.id]
+  Match.valueTags(node, {
+    PinnedBookmark: ({ id }): ReadonlyArray<BookmarkId> => [id],
+    PinnedSplit: ({ items }) => items.map((item) => item.id),
+    PinnedLiveFolder: () => [],
+    PinnedFolder: ({ id }) => [id],
+  })
 
 const requireSplitSupport = Tabs.use((tabs) =>
   tabs.supportsSplitView ? Effect.void : reject("この Chrome では分割ビューを使えません"),
@@ -611,7 +640,9 @@ const pinnedCommands = {
     const state = yield* KatipState
     const tabs = yield* Tabs
     const location = yield* (yield* PinnedBookmarks).locate(bookmarkId)
-    if (location.node._tag === "PinnedFolder") return yield* reject("フォルダは開けません")
+    if (location.node._tag === "PinnedFolder" || location.node._tag === "PinnedLiveFolder") {
+      return yield* reject("フォルダは開けません")
+    }
     if (location.node._tag === "PinnedSplit") {
       return yield* openSplitPin(windowId, location.spaceId, location.node)
     }
@@ -651,11 +682,12 @@ const pinnedCommands = {
 
   RemovePinnedItem: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
     const pinned = yield* PinnedBookmarks
-    const boundIds = pinnedIdsOf((yield* pinned.locate(bookmarkId)).node)
+    const { node } = yield* pinned.locate(bookmarkId)
     yield* pinned.removeBookmark(bookmarkId)
     yield* (yield* KatipState).workspace.update((workspace) =>
-      boundIds.reduce(unbindBookmark, workspace),
+      pinnedIdsOf(node).reduce(unbindBookmark, workspace),
     )
+    if (node._tag === "PinnedLiveFolder") yield* releaseLiveFolders([bookmarkId])
   }),
 
   RenamePinnedItem: Effect.fnUntraced(function* ({
@@ -713,8 +745,82 @@ const pinnedCommands = {
   }) => FolderExpansionStore.use((store) => store.setExpanded(bookmarkId, isExpanded)),
 
   DeleteFolder: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
-    yield* (yield* PinnedBookmarks).removeFolder(bookmarkId)
+    const pinned = yield* PinnedBookmarks
+    const { node } = yield* pinned.locate(bookmarkId)
+    const liveFolderIds =
+      node._tag === "PinnedFolder" ? liveFoldersIn(node.children).map((live) => live.id) : []
+    yield* pinned.removeFolder(bookmarkId)
     yield* pruneStaleBindings
+    yield* releaseLiveFolders(liveFolderIds)
+  }),
+}
+
+const liveFolderOrReject = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
+  const { node } = yield* (yield* PinnedBookmarks).locate(bookmarkId)
+  if (node._tag !== "PinnedLiveFolder") return yield* reject("ライブフォルダが見つかりません")
+  return node
+})
+
+const liveFolderCommands = {
+  CreateLiveFolder: Effect.fnUntraced(function* ({
+    spaceId,
+    parentId,
+    source,
+  }: {
+    spaceId: SpaceId
+    parentId: BookmarkId | null
+    source: LiveSource
+  }) {
+    const position = yield* pinnedPosition({ spaceId, parentId, index: Number.MAX_SAFE_INTEGER })
+    const folderId = yield* (yield* PinnedBookmarks).createLiveFolder(
+      { parent: position.parent },
+      { title: defaultLiveFolderTitle(source), source },
+    )
+    yield* (yield* LiveFolders).refresh(folderId, source)
+    yield* scheduleLiveFolderRefresh
+    return folderId
+  }),
+
+  RefreshLiveFolder: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
+    const live = yield* liveFolderOrReject(bookmarkId)
+    yield* (yield* LiveFolders).refresh(live.id, live.source)
+  }),
+
+  // 開いた項目は呼び出し元のウィンドウで見ている Space の一時タブにする。ライブフォルダの
+  // ある Space に入れると、別の Space を見ているときにタブが見えない所へ開いてしまう
+  OpenLiveItem: Effect.fnUntraced(function* ({
+    windowId,
+    bookmarkId,
+    itemId,
+  }: {
+    windowId: WindowId
+    bookmarkId: BookmarkId
+    itemId: string
+  }) {
+    const state = yield* KatipState
+    const liveFolders = yield* LiveFolders
+    yield* liveFolderOrReject(bookmarkId)
+    const item = yield* Effect.flatMap(
+      liveFolders.findItem(bookmarkId, itemId),
+      Option.match({ onNone: () => reject("項目が見つかりません"), onSome: Effect.succeed }),
+    )
+    const tab = yield* (yield* Tabs).create({ windowId, url: item.url, active: true })
+    const activeSpace = activeSpaceOf(yield* state.workspace.get, windowId)
+    if (Option.isSome(activeSpace)) {
+      const now = yield* Clock.currentTimeMillis
+      yield* state.workspace.update((workspace) =>
+        assignTab(workspace, tab.id, activeSpace.value, now),
+      )
+    }
+    yield* liveFolders.markItemSeen(bookmarkId, itemId)
+  }),
+
+  MarkLiveFolderSeen: ({ bookmarkId }: { bookmarkId: BookmarkId }) =>
+    LiveFolders.use((liveFolders) => liveFolders.markAllSeen(bookmarkId)),
+
+  SetGitHubToken: Effect.fnUntraced(function* ({ token }: { token: string }) {
+    yield* (yield* GitHubTokenStore).save(token)
+    yield* refreshLiveFoldersWhere((source) => source._tag === "GitHub")
   }),
 }
 
@@ -753,6 +859,8 @@ const archiveCommands = {
     ),
 
   OpenSettings: () => ExtensionInfo.use((info) => info.openOptionsPage),
+
+  OpenSpotlight: ({ windowId }: { windowId: WindowId }) => openSpotlight(windowId),
 }
 
 const executeCommand = (command: SidebarCommand) =>
@@ -762,6 +870,7 @@ const executeCommand = (command: SidebarCommand) =>
       ...tabCommands,
       ...splitCommands,
       ...pinnedCommands,
+      ...liveFolderCommands,
       ...archiveCommands,
     }),
   )
@@ -783,7 +892,10 @@ export const runSidebarCommand = (command: SidebarCommand) =>
   executeCommand(command).pipe(
     Effect.map((result): CommandOutcome => ({
       _tag: "Succeeded",
-      createdBookmarkId: command._tag === "CreateFolder" ? (result as BookmarkId) : null,
+      createdBookmarkId:
+        command._tag === "CreateFolder" || command._tag === "CreateLiveFolder"
+          ? (result as BookmarkId)
+          : null,
     })),
     Effect.catch((error: { readonly _tag: string }) =>
       Effect.as(Effect.logWarning("コマンドが失敗した", command._tag, error), {

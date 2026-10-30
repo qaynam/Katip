@@ -1,5 +1,6 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
+import type { LiveFolderRecord, LiveItem, LiveSource } from "#modules/live-folders"
 import type { PinnedTree } from "#modules/pinned"
 import { defaultSettings } from "#modules/settings"
 import { neutralTheme } from "#modules/theme"
@@ -13,7 +14,13 @@ import {
   type Workspace,
 } from "#modules/workspace"
 import { BookmarkId, SplitViewId, TabId, WindowId, type BrowserTab } from "#platform/browser"
-import type { PinnedFolderView, PinnedItemView, SidebarView, SpaceView } from "#protocol"
+import type {
+  PinnedFolderView,
+  PinnedItemView,
+  PinnedLiveFolderView,
+  SidebarView,
+  SpaceView,
+} from "#protocol"
 import { projectSidebarView, type SidebarSources } from "./sidebar-view"
 
 const WINDOW = WindowId.make(1)
@@ -73,6 +80,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
     [spaceId("work"), []],
   ]),
   folderExpansion: {},
+  liveFolders: { records: new Map(), refreshing: new Set() },
   preferences: {
     newTabsOnTop: false,
     showAllOpenTabsInCollapsedFolders: false,
@@ -409,5 +417,117 @@ describe("分割ビュー", () => {
 
   it("分割ビューを作れるかどうかをそのままビューに載せる", () => {
     expect(project({ canSplit: false }).canSplit).toBe(false)
+  })
+})
+
+describe("ライブフォルダ", () => {
+  const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
+  const LIVE = bookmarkId("live")
+  const liveTree: PinnedTree = [
+    { _tag: "PinnedLiveFolder", id: LIVE, title: "レビュー依頼", source: reviews },
+  ]
+  const liveItem = (id: string, updatedAt: number): LiveItem => ({
+    id,
+    title: `PR ${id}`,
+    subtitle: "katip-dev/katip#1",
+    url: `https://github.com/katip-dev/katip/pull/${id}`,
+    updatedAt,
+  })
+  const fetched = (
+    items: ReadonlyArray<LiveItem>,
+    seenVersions: Record<string, number> = {},
+  ): LiveFolderRecord => ({ items, lastAttempt: { _tag: "Fetched", at: 1000 }, seenVersions })
+  const liveFolderOf = (overrides: Partial<SidebarSources>) =>
+    pinnedNodesOf(project({ pinnedTrees: homeWithPin(liveTree), ...overrides }))[0] as
+      PinnedLiveFolderView | undefined
+
+  it("取得した項目を、未読かどうかと一緒に取得元の順で並べる", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("1", 50), liveItem("2", 80)], { "2": 80 })]]),
+        refreshing: new Set(),
+      },
+    })
+
+    expect(node?.items.map((item) => [item.id, item.isUnseen])).toStrictEqual([
+      ["1", true],
+      ["2", false],
+    ])
+  })
+
+  it("取得を終えていれば、取得した時刻とともに準備できたと示す", () => {
+    const node = liveFolderOf({
+      liveFolders: { records: new Map([[LIVE, fetched([])]]), refreshing: new Set() },
+    })
+
+    expect([node?.title, node?.source, node?.status]).toStrictEqual([
+      "レビュー依頼",
+      reviews,
+      { _tag: "Ready", refreshedAt: 1000 },
+    ])
+  })
+
+  it("取得している間は、前回の項目を並べたまま取得中と示す", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
+        refreshing: new Set([LIVE]),
+      },
+    })
+
+    expect([node?.status, node?.items.length]).toStrictEqual([{ _tag: "Refreshing" }, 1])
+  })
+
+  it("まだ一度も取得を終えていなければ、空のまま取得中と示す", () => {
+    const node = liveFolderOf({})
+
+    expect([node?.status, node?.items]).toStrictEqual([{ _tag: "Refreshing" }, []])
+  })
+
+  it("失敗していれば、理由と直し方を示す", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([
+          [
+            LIVE,
+            {
+              ...fetched([]),
+              lastAttempt: { _tag: "Failed", at: 1000, failure: { _tag: "TokenRejected" } },
+            },
+          ],
+        ]),
+        refreshing: new Set(),
+      },
+    })
+
+    expect(node?.status).toStrictEqual({
+      _tag: "Failed",
+      reason: "GitHub のアクセストークンが無効です",
+      needsPermission: false,
+      needsToken: true,
+    })
+  })
+
+  it("開閉状態はフォルダと同じく保存値に従う", () => {
+    expect([
+      liveFolderOf({})?.isExpanded,
+      liveFolderOf({ folderExpansion: { [LIVE]: true } })?.isExpanded,
+    ]).toStrictEqual([false, true])
+  })
+
+  it("閉じたフォルダの中のライブフォルダは、見出しの下に覗かせない", () => {
+    const view = project({
+      pinnedTrees: homeWithPin([folder("f", liveTree)]),
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
+        refreshing: new Set(),
+      },
+    })
+    const node = pinnedNodesOf(view)[0] as PinnedFolderView
+
+    expect([node.children.map((child) => child._tag), node.peekedItems]).toStrictEqual([
+      ["PinnedLiveFolder"],
+      [],
+    ])
   })
 })

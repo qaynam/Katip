@@ -1,11 +1,13 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option } from "effect"
+import type { LiveSource } from "#modules/live-folders"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
 import { neutralTheme } from "#modules/theme"
 import { BookmarkId, Bookmarks, type BookmarkFolderType } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import { isFolderExpanded } from "./folder-expansion"
 import { FolderExpansionStore } from "./folder-expansion-store"
+import { LiveFolderStore } from "./live-folder-store"
 import { PinnedBookmarks, PinnedParent } from "./pinned-bookmarks"
 import type { PinnedNode, PinnedTree } from "./pinned-node"
 import { SpaceFolders } from "./space-folders"
@@ -579,6 +581,124 @@ describe("分割ビューのピン留め", () => {
           yield* exists(created.right),
         ],
         [false, false, false],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})
+
+describe("ライブフォルダ", () => {
+  const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
+  const draft = { title: "レビュー依頼", source: reviews }
+
+  it.effect("取得元を持つライブフォルダとして作られ、開いた状態で保存される", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+
+      const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
+      const tree = yield* pinned.loadSpaceTree(work.id)
+
+      assert.deepStrictEqual(
+        [tree, isFolderExpanded(yield* (yield* FolderExpansionStore).load, folderId)],
+        [
+          [{ _tag: "PinnedLiveFolder", id: folderId, title: "レビュー依頼", source: reviews }],
+          true,
+        ],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("深さの上限に達したフォルダの中にも作れる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "外" }, syncOn)
+
+      const folderId = yield* pinned.createLiveFolder({ parent: inFolder(outer) }, draft)
+      const location = yield* pinned.locate(folderId)
+
+      assert.deepStrictEqual([location.node._tag, location.depth], ["PinnedLiveFolder", 2])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("別の Space のフォルダへ移せる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
+      const folder = yield* pinned.createFolder(
+        { parent: spaceRoot(hobby) },
+        { title: "旅" },
+        syncOff,
+      )
+
+      yield* pinned.moveBookmark(folderId, { parent: inFolder(folder) })
+      const location = yield* pinned.locate(folderId)
+
+      assert.deepStrictEqual(
+        [location.spaceId, location.parentFolderId, location.node._tag],
+        [hobby.id, Option.some(folder), "PinnedLiveFolder"],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("改名できる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
+
+      yield* pinned.rename(folderId, "見てほしい PR")
+
+      assert.strictEqual((yield* pinned.locate(folderId)).node.title, "見てほしい PR")
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("中にブックマークは作れない", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
+
+      const error = yield* Effect.flip(
+        pinned.createBookmark(
+          { parent: inFolder(folderId) },
+          { title: "a", url: "https://example.com/" },
+        ),
+      )
+
+      assert.strictEqual(error._tag, "PinnedNodeNotFound")
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("削除するとフォルダが消え、印と開閉状態も捨てる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
+
+      yield* pinned.removeBookmark(folderId)
+
+      assert.deepStrictEqual(
+        [
+          yield* exists(folderId),
+          (yield* (yield* LiveFolderStore).load).size,
+          yield* (yield* FolderExpansionStore).load,
+        ],
+        [false, 0, {}],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("中にあるフォルダを削除すると、ライブフォルダの印と開閉状態も捨てる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const outer = yield* pinned.createFolder(
+        { parent: spaceRoot(work) },
+        { title: "外" },
+        syncOff,
+      )
+      yield* pinned.createLiveFolder({ parent: inFolder(outer) }, draft)
+
+      yield* pinned.removeFolder(outer)
+
+      assert.deepStrictEqual(
+        [(yield* (yield* LiveFolderStore).load).size, yield* (yield* FolderExpansionStore).load],
+        [0, {}],
       )
     }).pipe(Effect.provide(TestLayer)),
   )

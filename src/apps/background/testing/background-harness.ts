@@ -1,6 +1,8 @@
 import { Array, Effect, Layer, Option, Ref, Schedule, Schema, Stream } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
+import { FakeHttp } from "#platform/http"
+import { FakePermissions } from "#platform/permissions"
 import type { WindowId } from "#platform/browser"
 import {
   ClientMessage,
@@ -15,7 +17,12 @@ import {
 import { ExtensionInfo } from "../extension-info"
 import { applicationLayer, program } from "../program"
 
-export const backgroundTestLayer = Layer.mergeAll(FakeBrowser.layer, ClipboardRecorder.layer)
+export const backgroundTestLayer = Layer.mergeAll(
+  FakeBrowser.layer,
+  ClipboardRecorder.layer,
+  FakeHttp.layer,
+  FakePermissions.layer,
+)
 
 /**
  * background を起動する。

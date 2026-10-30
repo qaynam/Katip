@@ -20,7 +20,10 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "favicon",
     "offscreen",
     "clipboardWrite",
+    "search",
   ],
+  // ライブフォルダの取得元。作るときにだけ許可を求め、使わない人には要求しない
+  optional_host_permissions: ["https://mail.google.com/*", "https://api.github.com/*"],
   side_panel: { default_path: "sidepanel/index.html" },
   action: { default_title: "Katip" },
   background: { service_worker: "background.js", type: "module" },
@@ -34,15 +37,13 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
       suggested_key: { default: "Alt+D" },
       description: "アクティブなタブをピン留め／ピン解除する",
     },
-    // Chrome が既定のキーを割り当てるのは 4 つまで。URL のコピーは使う人が自分で割り当てる
-    "next-tab-in-space": {
-      suggested_key: { default: "Alt+J" },
-      description: "Space の中で次のタブへ移る",
+    "open-spotlight": {
+      suggested_key: { default: "Alt+T" },
+      description: "Spotlight を開いてタブ・ピン・Space を検索する",
     },
-    "previous-tab-in-space": {
-      suggested_key: { default: "Alt+K" },
-      description: "Space の中で前のタブへ移る",
-    },
+    // Chrome が既定のキーを割り当てるのは 4 つまでなので、使う頻度の低いものは各自で割り当てる
+    "next-tab-in-space": { description: "Space の中で次のタブへ移る" },
+    "previous-tab-in-space": { description: "Space の中で前のタブへ移る" },
     "copy-current-url": { description: "アクティブなタブの URL をコピーする" },
   },
   // 拡張ページはブラウザ自動操作ツールから開けないため、開発ビルドに限り localhost の

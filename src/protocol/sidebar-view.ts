@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
+import { LiveItem, LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -46,6 +47,40 @@ export const PinnedSplitView = Schema.TaggedStruct("PinnedSplit", {
 })
 export type PinnedSplitView = typeof PinnedSplitView.Type
 
+export const LiveItemView = Schema.Struct({
+  ...LiveItem.fields,
+  /** まだ開いていない（Gmail なら未読、GitHub なら前回見た後に更新された）もの。 */
+  isUnseen: Schema.Boolean,
+})
+export type LiveItemView = typeof LiveItemView.Type
+
+export const LiveFolderStatus = Schema.TaggedUnion({
+  Ready: { refreshedAt: Schema.Number },
+  Refreshing: {},
+  Failed: {
+    reason: Schema.String,
+    // 取得元へのアクセスがまだ許可されていない。UI から許可を求めれば直る
+    needsPermission: Schema.Boolean,
+    // GitHub のトークンが無いか無効。UI からトークンを入れ直せば直る
+    needsToken: Schema.Boolean,
+  },
+})
+export type LiveFolderStatus = typeof LiveFolderStatus.Type
+
+/**
+ * 取得元から中身を自動で取り込むフォルダ。ブックマークのフォルダを置き場所と名前に使い、
+ * 中身はブックマークではなく取得した項目を並べる。
+ */
+export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
+  bookmarkId: BookmarkId,
+  title: Schema.String,
+  source: LiveSource,
+  isExpanded: Schema.Boolean,
+  status: LiveFolderStatus,
+  items: Schema.Array(LiveItemView),
+})
+export type PinnedLiveFolderView = typeof PinnedLiveFolderView.Type
+
 export interface PinnedFolderView {
   readonly _tag: "PinnedFolder"
   readonly bookmarkId: BookmarkId
@@ -66,9 +101,13 @@ interface PinnedFolderViewEncoded {
   readonly peekedItems: ReadonlyArray<typeof PinnedItemView.Encoded>
 }
 
-export type PinnedNodeView = PinnedItemView | PinnedSplitView | PinnedFolderView
+export type PinnedNodeView =
+  PinnedItemView | PinnedSplitView | PinnedLiveFolderView | PinnedFolderView
 type PinnedNodeViewEncoded =
-  typeof PinnedItemView.Encoded | typeof PinnedSplitView.Encoded | PinnedFolderViewEncoded
+  | typeof PinnedItemView.Encoded
+  | typeof PinnedSplitView.Encoded
+  | typeof PinnedLiveFolderView.Encoded
+  | PinnedFolderViewEncoded
 
 export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   bookmarkId: BookmarkId,
@@ -82,7 +121,12 @@ export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   peekedItems: Schema.Array(PinnedItemView),
 })
 
-export const PinnedNodeView = Schema.Union([PinnedItemView, PinnedSplitView, PinnedFolderView])
+export const PinnedNodeView = Schema.Union([
+  PinnedItemView,
+  PinnedSplitView,
+  PinnedLiveFolderView,
+  PinnedFolderView,
+])
 
 /** 一時タブの一覧の 1 行。分割ビューの 2 つのタブは 1 行にまとめ、左、右の順に並べる。 */
 export const TemporaryEntry = Schema.Union([

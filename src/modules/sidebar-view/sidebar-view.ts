@@ -1,12 +1,19 @@
 import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import {
+  explainFailure,
+  isUnseen,
+  type LiveFolderRecord,
+  type LiveFolderSnapshot,
+} from "#modules/live-folders"
+import {
   canCreateFolderInside,
   hasNavigatedAway,
   isFolderExpanded,
   SPACE_ROOT_DEPTH,
   type FolderExpansion,
   type FolderNestingRule,
+  type PinnedLiveFolder,
   type PinnedNode,
   type PinnedSplit,
   type PinnedTree,
@@ -17,7 +24,9 @@ import { activeSpaceOf, trackedTab, type TrackedTab, type Workspace } from "#mod
 import type { BookmarkId, BrowserTab, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
+  LiveFolderStatus,
   PinnedItemView,
+  PinnedLiveFolderView,
   PinnedNodeView,
   PinnedSplitView,
   SidebarView,
@@ -35,6 +44,7 @@ export interface SidebarSources {
   /** 読めた Space のピン留めツリー。含まれない Space は読めなかったものとして表示する。 */
   readonly pinnedTrees: ReadonlyMap<SpaceId, PinnedTree>
   readonly folderExpansion: FolderExpansion
+  readonly liveFolders: LiveFolderSnapshot
   readonly preferences: {
     readonly newTabsOnTop: boolean
     readonly showAllOpenTabsInCollapsedFolders: boolean
@@ -93,6 +103,7 @@ const collectBookmarkIds = (tree: PinnedTree): ReadonlySet<BookmarkId> =>
       Match.valueTags(node, {
         PinnedBookmark: ({ id }) => [id],
         PinnedSplit: ({ items }) => items.map((item) => item.id),
+        PinnedLiveFolder: () => [],
         PinnedFolder: ({ children }) => [...collectBookmarkIds(children)],
       }),
     ),
@@ -124,6 +135,7 @@ const splitPinnedTabs = (spaceTabs: ReadonlyArray<SpaceTab>, tree: Option.Option
 interface PinnedProjection {
   readonly openTabs: ReadonlyMap<BookmarkId, SpaceTab>
   readonly folderExpansion: FolderExpansion
+  readonly liveFolders: LiveFolderSnapshot
   readonly rule: FolderNestingRule
   readonly showAllOpenTabsInCollapsedFolders: boolean
 }
@@ -163,6 +175,7 @@ const peekableItems = (
   nodes.flatMap((node): ReadonlyArray<PinnedItemView> => {
     if (node._tag === "PinnedFolder") return peekableItems(node.children, showAll)
     if (node._tag === "PinnedSplit") return peekableItems(node.items, showAll)
+    if (node._tag === "PinnedLiveFolder") return []
     if (node.openTab === null) return []
     return showAll || node.openTab.tab.isActive ? [node] : []
   })
@@ -174,6 +187,41 @@ const pinnedSplitView = (split: PinnedSplit, projection: PinnedProjection): Pinn
   items: [pinnedItemView(split.items[0], projection), pinnedItemView(split.items[1], projection)],
 })
 
+const liveFolderStatus = (
+  record: Option.Option<LiveFolderRecord>,
+  isRefreshing: boolean,
+): LiveFolderStatus => {
+  if (isRefreshing) return { _tag: "Refreshing" }
+  return Option.match(record, {
+    // 一度も取得を終えていないのは作った直後か記録を失った直後だけで、どちらもすぐに取得を始める
+    onNone: () => ({ _tag: "Refreshing" }),
+    onSome: ({ lastAttempt }) =>
+      lastAttempt._tag === "Fetched"
+        ? { _tag: "Ready", refreshedAt: lastAttempt.at }
+        : { _tag: "Failed", ...explainFailure(lastAttempt.failure) },
+  })
+}
+
+const pinnedLiveFolderView = (
+  live: PinnedLiveFolder,
+  projection: PinnedProjection,
+): PinnedLiveFolderView => {
+  const record = Option.fromNullishOr(projection.liveFolders.records.get(live.id))
+  return {
+    _tag: "PinnedLiveFolder",
+    bookmarkId: live.id,
+    title: live.title,
+    source: live.source,
+    isExpanded: isFolderExpanded(projection.folderExpansion, live.id),
+    status: liveFolderStatus(record, projection.liveFolders.refreshing.has(live.id)),
+    items: Option.match(record, {
+      onNone: () => [],
+      onSome: (loaded) =>
+        loaded.items.map((item) => ({ ...item, isUnseen: isUnseen(loaded, item) })),
+    }),
+  }
+}
+
 const pinnedNodeViews = (
   tree: PinnedTree,
   depth: number,
@@ -182,6 +230,7 @@ const pinnedNodeViews = (
   tree.map((node): PinnedNodeView => {
     if (node._tag === "PinnedBookmark") return pinnedItemView(node, projection)
     if (node._tag === "PinnedSplit") return pinnedSplitView(node, projection)
+    if (node._tag === "PinnedLiveFolder") return pinnedLiveFolderView(node, projection)
     const children = pinnedNodeViews(node.children, depth + 1, projection)
     const isExpanded = isFolderExpanded(projection.folderExpansion, node.id)
     return {
@@ -208,6 +257,7 @@ const spaceView = (
   const projection: PinnedProjection = {
     openTabs: byBookmark,
     folderExpansion: sources.folderExpansion,
+    liveFolders: sources.liveFolders,
     rule,
     showAllOpenTabsInCollapsedFolders: sources.preferences.showAllOpenTabsInCollapsedFolders,
   }

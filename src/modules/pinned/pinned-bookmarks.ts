@@ -1,4 +1,5 @@
 import { Array, Context, Data, Effect, Layer, Option } from "effect"
+import type { LiveSource } from "#modules/live-folders"
 import type { SpaceId } from "#modules/space"
 import { Bookmarks, type BookmarkId, type BrowserApiError } from "#platform/browser"
 import {
@@ -8,10 +9,12 @@ import {
   type FolderNestingRule,
 } from "./folder-depth"
 import { FolderExpansionStore } from "./folder-expansion-store"
+import { LiveFolderStore } from "./live-folder-store"
 import { FolderDepthExceeded, PinnedNodeNotFound, PinnedTreeUnavailable } from "./pinned-errors"
 import {
   findPinnedNode,
   folderIdsWithin,
+  liveFoldersIn,
   pinnedTreeFrom,
   splitIdsWithin,
   type PinnedNodeLocation,
@@ -46,6 +49,11 @@ export interface PinnedSplitDraft {
   readonly title: string
   readonly left: PinnedBookmarkDraft
   readonly right: PinnedBookmarkDraft
+}
+
+export interface PinnedLiveFolderDraft {
+  readonly title: string
+  readonly source: LiveSource
 }
 
 export interface CreatedSplit {
@@ -98,13 +106,22 @@ export class PinnedBookmarks extends Context.Service<
       position: PinnedPosition,
       draft: PinnedSplitDraft,
     ): Effect.Effect<CreatedSplit, PinnedNodeNotFound | BrowserApiError>
+    /**
+     * ライブフォルダを作る。空のフォルダを作り、ライブフォルダの印と取得元を付け、開いた状態で保存する。
+     *
+     * フォルダの深さ制限は受けない（中身をユーザーが整理するフォルダではなく、1 つのピンとして扱う）。
+     */
+    createLiveFolder(
+      position: PinnedPosition,
+      draft: PinnedLiveFolderDraft,
+    ): Effect.Effect<BookmarkId, PinnedNodeNotFound | BrowserApiError>
     /** 作ったフォルダは開いた状態で保存する。 */
     createFolder(
       position: PinnedPosition,
       draft: { readonly title: string },
       rule: FolderNestingRule,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | FolderDepthExceeded | BrowserApiError>
-    /** ブックマークと分割ピンを移す。別の Space へも移せる。フォルダは移せない。 */
+    /** ブックマーク・分割ピン・ライブフォルダを移す。別の Space へも移せる。フォルダは移せない。 */
     moveBookmark(
       bookmarkId: BookmarkId,
       position: PinnedPosition,
@@ -118,11 +135,14 @@ export class PinnedBookmarks extends Context.Service<
       bookmarkId: BookmarkId,
       draft: PinnedBookmarkDraft,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
-    /** ブックマークか分割ピンを削除する。分割ピンは中の 2 つのブックマークごと消える。 */
+    /**
+     * ブックマーク・分割ピン・ライブフォルダを削除する。分割ピンは中の 2 つのブックマークごと消える。
+     * ライブフォルダは印と開閉状態も捨てる（取得した中身のキャッシュは呼び出し側で捨てる）。
+     */
     removeBookmark(
       bookmarkId: BookmarkId,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
-    /** 中身ごと消し、配下のフォルダの開閉状態も捨てる。 */
+    /** 中身ごと消し、配下のフォルダの開閉状態と、配下の分割ピン・ライブフォルダの印も捨てる。 */
     removeFolder(folderId: BookmarkId): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
   }
 >()("katip/pinned/PinnedBookmarks") {
@@ -133,13 +153,19 @@ export class PinnedBookmarks extends Context.Service<
       const spaceFolders = yield* SpaceFolders
       const folderExpansion = yield* FolderExpansionStore
       const splitFolders = yield* SplitFolderStore
+      const liveFolders = yield* LiveFolderStore
+
+      const loadMarks = Effect.all({
+        splitFolders: splitFolders.load,
+        liveFolders: liveFolders.load,
+      })
 
       const readableSpaceTrees = Effect.gen(function* () {
         const subtrees = yield* spaceFolders.readSpaceSubtrees
-        const splitIds = yield* splitFolders.load
+        const marks = yield* loadMarks
         return Array.getSomes(
           Array.fromIterable(subtrees).map(([spaceId, folder]) =>
-            Option.map(pinnedTreeFrom(folder, splitIds), (tree) => ({ spaceId, tree })),
+            Option.map(pinnedTreeFrom(folder, marks), (tree) => ({ spaceId, tree })),
           ),
         )
       })
@@ -199,10 +225,10 @@ export class PinnedBookmarks extends Context.Service<
         loadSpaceTree: Effect.fn("PinnedBookmarks.loadSpaceTree")(function* (spaceId) {
           const unavailable = new PinnedTreeUnavailable({ spaceId })
           const subtrees = yield* Effect.mapError(spaceFolders.readSpaceSubtrees, () => unavailable)
-          const splitIds = yield* Effect.mapError(splitFolders.load, () => unavailable)
+          const marks = yield* Effect.mapError(loadMarks, () => unavailable)
           return yield* Effect.fromOption(
             Option.flatMap(Option.fromNullishOr(subtrees.get(spaceId)), (folder) =>
-              pinnedTreeFrom(folder, splitIds),
+              pinnedTreeFrom(folder, marks),
             ),
             () => unavailable,
           )
@@ -241,6 +267,19 @@ export class PinnedBookmarks extends Context.Service<
           yield* splitFolders.mark(folder.id)
           return { folderId: folder.id, left: left.id, right: right.id }
         }),
+        createLiveFolder: Effect.fn("PinnedBookmarks.createLiveFolder")(
+          function* (position, draft) {
+            const parent = yield* resolveParent(position.parent)
+            const created = yield* bookmarks.create({
+              parentId: parent.folderId,
+              title: draft.title,
+              ...atIndex(position.index),
+            })
+            yield* liveFolders.mark(created.id, draft.source)
+            yield* folderExpansion.setExpanded(created.id, true)
+            return created.id
+          },
+        ),
         createFolder: Effect.fn("PinnedBookmarks.createFolder")(function* (position, draft, rule) {
           const parent = yield* resolveParent(position.parent)
           if (!canCreateFolderInside(parent.depth, rule)) {
@@ -280,22 +319,36 @@ export class PinnedBookmarks extends Context.Service<
             yield* splitFolders.forget([bookmarkId])
             return
           }
+          if (location.node._tag === "PinnedLiveFolder") {
+            yield* bookmarks.removeTree(bookmarkId)
+            yield* liveFolders.forget([bookmarkId])
+            yield* folderExpansion.forget([bookmarkId])
+            return
+          }
           yield* bookmarks.remove(bookmarkId)
         }),
         removeFolder: Effect.fn("PinnedBookmarks.removeFolder")(function* (folderId) {
           const location = yield* locateFolder(folderId)
+          const folderIds = folderIdsWithin(location.node)
+          const liveFolderIds = liveFoldersIn(location.node.children).map((live) => live.id)
           yield* bookmarks.removeTree(folderId)
-          yield* folderExpansion.forget(folderIdsWithin(location.node))
+          yield* folderExpansion.forget([...folderIds, ...liveFolderIds])
           yield* splitFolders.forget(splitIdsWithin(location.node))
+          // 外でブックマークを入れられて普通のフォルダとして見えているライブフォルダの印も残さない
+          yield* liveFolders.forget([...folderIds, ...liveFolderIds])
         }),
       })
     }),
   )
 
-  /** {@link SpaceFolders}、{@link FolderExpansionStore}、{@link SplitFolderStore} も合わせて提供する。 */
+  /**
+   * {@link SpaceFolders}、{@link FolderExpansionStore}、{@link SplitFolderStore}、
+   * {@link LiveFolderStore} も合わせて提供する。
+   */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(SpaceFolders.layer),
     Layer.provideMerge(FolderExpansionStore.layer),
     Layer.provideMerge(SplitFolderStore.layer),
+    Layer.provideMerge(LiveFolderStore.layer),
   )
 }

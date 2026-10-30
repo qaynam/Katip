@@ -6,11 +6,13 @@ export {
 } from "./folder-depth"
 export { FolderExpansion, isFolderExpanded } from "./folder-expansion"
 export { FolderExpansionStore } from "./folder-expansion-store"
+export { LiveFolderStore } from "./live-folder-store"
 export {
   PinnedBookmarks,
   PinnedParent,
   type CreatedSplit,
   type PinnedBookmarkDraft,
+  type PinnedLiveFolderDraft,
   type PinnedSplitDraft,
   type PinnedLocation,
   type PinnedPosition,
@@ -18,8 +20,10 @@ export {
 export { FolderDepthExceeded, PinnedNodeNotFound, PinnedTreeUnavailable } from "./pinned-errors"
 export {
   findPinnedNode,
+  liveFoldersIn,
   type PinnedBookmark,
   type PinnedFolder,
+  type PinnedLiveFolder,
   type PinnedNode,
   type PinnedNodeLocation,
   type PinnedSplit,

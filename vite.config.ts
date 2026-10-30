@@ -59,6 +59,7 @@ export default defineConfig(({ mode }) => {
           sidepanel: fromRoot("./src/apps/sidepanel/index.html"),
           options: fromRoot("./src/apps/options/index.html"),
           offscreen: fromRoot("./src/apps/offscreen/index.html"),
+          spotlight: fromRoot("./src/apps/spotlight/index.html"),
           background: fromRoot("./src/apps/background/main.ts"),
         },
         output: {

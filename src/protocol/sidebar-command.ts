@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
+import { LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -84,5 +85,23 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("RemoveArchiveEntry", { entryId: ArchiveEntryId }),
   Schema.TaggedStruct("UpdateAutoArchive", { enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
   Schema.TaggedStruct("OpenSettings", {}),
+
+  // 結果の createdBookmarkId に、置き場所にしたブックマークのフォルダの ID が入る
+  Schema.TaggedStruct("CreateLiveFolder", {
+    spaceId: SpaceId,
+    parentId: Schema.NullOr(BookmarkId),
+    source: LiveSource,
+  }),
+  Schema.TaggedStruct("RefreshLiveFolder", { bookmarkId: BookmarkId }),
+  Schema.TaggedStruct("OpenLiveItem", {
+    windowId: WindowId,
+    bookmarkId: BookmarkId,
+    itemId: Schema.String,
+  }),
+  Schema.TaggedStruct("MarkLiveFolderSeen", { bookmarkId: BookmarkId }),
+  // 空文字はトークンを消す。トークンは background だけが持ち、ビューには載せない
+  Schema.TaggedStruct("SetGitHubToken", { token: Schema.String }),
+
+  Schema.TaggedStruct("OpenSpotlight", { windowId: WindowId }),
 ])
 export type SidebarCommand = typeof SidebarCommand.Type

@@ -3,8 +3,10 @@ import { Array, Effect, Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
 import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
+import { FakeHttp } from "#platform/http"
+import { FakePermissions } from "#platform/permissions"
 import { OperationTimeLimit } from "./program"
-import { Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
+import { Alarms, Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
 import type { PinnedItemView, SidebarView, SpaceView } from "#protocol"
 import {
   backgroundTestLayer,
@@ -590,8 +592,34 @@ describe("分割ビューの API が無い Chrome", () => {
         Layer.mergeAll(
           FakeBrowser.layerWith({ supportsSplitView: false }),
           ClipboardRecorder.layer,
+          FakeHttp.layer,
+          FakePermissions.layer,
         ),
       ),
+    ),
+  )
+})
+
+describe("Spotlight", () => {
+  it.live("サイドパネルから開くと、呼び出し元のウィンドウとは別の popup ウィンドウで開く", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const outcome = yield* sidebar.run({ _tag: "OpenSpotlight", windowId })
+        const windows = (yield* fake.snapshot).windows
+
+        expect([
+          outcome._tag,
+          windows
+            .filter((window) => window.id !== windowId)
+            .map((window) => Option.getOrNull(window.type)),
+        ]).toStrictEqual(["Succeeded", ["popup"]])
+      }),
     ),
   )
 })
@@ -656,6 +684,13 @@ describe("自動アーカイブ", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        // 最初のビューは起動時の整合を待たずに届くので、予約が済むのを別に待つ
+        yield* eventually(
+          Effect.map(
+            Alarms.use((alarms) => alarms.getAll),
+            (all) => Array.findFirst(all, (alarm) => alarm.name === "katip/auto-archive"),
+          ),
+        )
 
         yield* fake.fireAlarm("katip/auto-archive")
         const view = yield* sidebar.viewWhere((v) => v.archive.length === 1)
