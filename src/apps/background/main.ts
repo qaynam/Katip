@@ -6,6 +6,7 @@ import { Permissions } from "#platform/permissions"
 import { exposeLogsForDevelopment } from "./dev-log"
 import { reloadOnRebuild } from "./dev-reload"
 import { ExtensionInfo } from "./extension-info"
+import { AcceptsExternalConnection, isLocalDevelopmentPage } from "./external-connection"
 import { applicationLayer, program } from "./program"
 
 if (import.meta.env.MODE === "development") exposeLogsForDevelopment()
@@ -27,7 +28,13 @@ const layer = applicationLayer.pipe(
   ),
 )
 
-Effect.runFork(program.pipe(Effect.scoped, Effect.provide(layer)))
+const runnable = program.pipe(Effect.scoped, Effect.provide(layer))
+
+Effect.runFork(
+  import.meta.env.MODE === "development"
+    ? Effect.provideService(runnable, AcceptsExternalConnection, isLocalDevelopmentPage)
+    : runnable,
+)
 
 // service worker では import() が使えないので静的に読み込み、本番ビルドでは分岐ごと消させる
 if (import.meta.env.MODE === "development") void reloadOnRebuild()

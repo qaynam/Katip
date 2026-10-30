@@ -1,4 +1,15 @@
-import { Clock, Context, type Duration, Effect, Layer, Match, Ref, Semaphore, Stream } from "effect"
+import {
+  Clock,
+  Context,
+  type Duration,
+  Effect,
+  Layer,
+  Match,
+  Option,
+  Ref,
+  Semaphore,
+  Stream,
+} from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
@@ -13,6 +24,7 @@ import { AUTO_ARCHIVE_ALARM, runAutoArchive, scheduleAutoArchive } from "./auto-
 import { pruneStaleBindings } from "./bindings"
 import { handleBrowserEvent, isBookmarkEvent } from "./browser-event-handler"
 import { makeDebounced } from "./debounced"
+import { AcceptsExternalConnection } from "./external-connection"
 import { ExtensionInfo } from "./extension-info"
 import { initialize } from "./initialize"
 import { KatipState, saveRestoreSnapshot } from "./katip-state"
@@ -158,40 +170,43 @@ export const program = Effect.gen(function* () {
     serialize(refreshDueLiveFolders),
   )
 
+  const acceptsExternal = yield* AcceptsExternalConnection
   yield* events.connections.pipe(
     Stream.runForEach((port) =>
-      port.name === SIDEBAR_PORT_NAME
-        ? Effect.andThen(
-            Effect.forkScoped(refreshLiveFoldersOnOpen),
-            Effect.forkScoped(
-              hub.serve(port, (command) =>
-                serialize(runSidebarCommand(command)).pipe(
-                  Effect.catchTag("TimeoutError", () =>
-                    Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
-                      _tag: "Failed" as const,
-                      reason: "時間内に完了しませんでした",
-                    }),
+      Option.exists(port.sender, (sender) => sender.external && !acceptsExternal(sender))
+        ? port.disconnect
+        : port.name === SIDEBAR_PORT_NAME
+          ? Effect.andThen(
+              Effect.forkScoped(refreshLiveFoldersOnOpen),
+              Effect.forkScoped(
+                hub.serve(port, (command) =>
+                  serialize(runSidebarCommand(command)).pipe(
+                    Effect.catchTag("TimeoutError", () =>
+                      Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
+                        _tag: "Failed" as const,
+                        reason: "時間内に完了しませんでした",
+                      }),
+                    ),
+                    Effect.tap(() => afterChange),
                   ),
-                  Effect.tap(() => afterChange),
-                ),
-              ),
-            ),
-          )
-        : port.name === SPOTLIGHT_PORT_NAME
-          ? Effect.forkScoped(
-              spotlight.serve(port, (windowId, result) =>
-                serialize(runSpotlightChoice(windowId, result)).pipe(
-                  Effect.catchTag("TimeoutError", () =>
-                    Effect.as(Effect.logError("Spotlight の決定が時間内に終わらなかった"), {
-                      _tag: "Failed" as const,
-                      reason: "時間内に完了しませんでした",
-                    }),
-                  ),
-                  Effect.tap(() => afterChange),
                 ),
               ),
             )
-          : port.disconnect,
+          : port.name === SPOTLIGHT_PORT_NAME
+            ? Effect.forkScoped(
+                spotlight.serve(port, (windowId, result) =>
+                  serialize(runSpotlightChoice(windowId, result)).pipe(
+                    Effect.catchTag("TimeoutError", () =>
+                      Effect.as(Effect.logError("Spotlight の決定が時間内に終わらなかった"), {
+                        _tag: "Failed" as const,
+                        reason: "時間内に完了しませんでした",
+                      }),
+                    ),
+                    Effect.tap(() => afterChange),
+                  ),
+                ),
+              )
+            : port.disconnect,
     ),
     Effect.forkScoped(),
   )
