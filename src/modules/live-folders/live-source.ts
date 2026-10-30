@@ -20,6 +20,12 @@ export const LiveSource = Schema.TaggedUnion({
 })
 export type LiveSource = typeof LiveSource.Type
 
+/**
+ * ライブフォルダの中の並べ方。`source` は GitHub ならリポジトリ、Gmail なら差出人でまとめる。
+ */
+export const LiveSort = Schema.Literals(["newest", "oldest", "title", "source"])
+export type LiveSort = typeof LiveSort.Type
+
 /** ライブフォルダに並ぶ 1 件。取得元での識別子を id に持つ。 */
 export const LiveItem = Schema.Struct({
   id: Schema.String,
@@ -40,11 +46,30 @@ export type GmailSource = Extract<LiveSource, { readonly _tag: "Gmail" }>
  */
 export const isOpenableUrl = (url: string): boolean => url.startsWith("https://")
 
-/** 取得元へのアクセスに要るホストの許可。マニフェストの optional_host_permissions と同じ表記。 */
-export const originPatternOf = (source: LiveSource): string =>
+/**
+ * 取得元へのアクセスに要るホストの許可。マニフェストの optional_host_permissions と同じ表記。
+ *
+ * GitHub はログイン中のセッションで読む github.com を返す。トークンが設定されているときに使う
+ * 公式 API（api.github.com）の許可は含まない。
+ */
+/** 取得元へのアクセスの許可に使うパターン。作成前の、取得元の種類しか決まっていない時点でも引ける。 */
+export const originPatternOfKind = (kind: LiveSource["_tag"]): string =>
+  Match.value(kind).pipe(
+    Match.when("Gmail", () => "https://mail.google.com/*"),
+    Match.when("GitHub", () => "https://github.com/*"),
+    Match.exhaustive,
+  )
+
+export const originPatternOf = (source: LiveSource): string => originPatternOfKind(source._tag)
+
+export const gmailMailboxUrl = (accountIndex: number): string =>
+  `https://mail.google.com/mail/u/${accountIndex}/`
+
+/** ログインしていなくて取得できないときに、ログインのために開くページ。 */
+export const signInUrlOf = (source: LiveSource): string =>
   Match.valueTags(source, {
-    Gmail: () => "https://mail.google.com/*",
-    GitHub: () => "https://api.github.com/*",
+    Gmail: ({ accountIndex }) => gmailMailboxUrl(accountIndex),
+    GitHub: () => "https://github.com/login",
   })
 
 const githubQueryTitles: Readonly<Record<GitHubQuery, string>> = {

@@ -3,7 +3,7 @@ import { Array, Effect, Option, type Scope, type Layer } from "effect"
 import type { LiveSource } from "#modules/live-folders"
 import { Alarms, BookmarkId, Storage, type BookmarkNode, type WindowId } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
-import { FakeHttp, httpResponse } from "#platform/http"
+import { FakeHttp, httpResponse, redirectResponse } from "#platform/http"
 import { FakePermissions } from "#platform/permissions"
 import type { PinnedLiveFolderView, PinnedNodeView, SidebarView } from "#protocol"
 import {
@@ -19,7 +19,8 @@ const inBackground = <A, E>(
 ) => effect.pipe(Effect.scoped, Effect.provide(backgroundTestLayer))
 
 const GMAIL_ORIGIN = "https://mail.google.com/*"
-const GITHUB_ORIGIN = "https://api.github.com/*"
+const GITHUB_ORIGIN = "https://github.com/*"
+const GITHUB_API_ORIGIN = "https://api.github.com/*"
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const reviewRequests: LiveSource = { _tag: "GitHub", query: "review-requested" }
 
@@ -43,6 +44,38 @@ const githubSearchBody = (...titles: ReadonlyArray<string>) =>
       pull_request: { url: "https://api.github.com/repos/katip-dev/katip/pulls/1" },
     })),
   })
+
+const githubWebPage = (titles: ReadonlyArray<string>, { loggedIn = true } = {}) =>
+  JSON.stringify({
+    meta: { title: "Pull request search results" },
+    payload: {
+      blackbirdSearchRoute: {
+        logged_in: loggedIn,
+        result_count: titles.length,
+        page: 1,
+        page_count: 1,
+        results: titles.map((title, index) => ({
+          id: String(5000 + index),
+          hl_title: title,
+          hl_text: "",
+          number: 200 + index,
+          state: "open",
+          merged: false,
+          created: "2026-10-29T03:00:00.000Z",
+          num_comments: 0,
+          author_name: "hanako",
+          repo: { repository: { id: 1, name: "katip", owner_login: "katip-dev" } },
+          issue: { issue: { pull_request_id: 1 } },
+          labels: [],
+        })),
+      },
+    },
+  })
+
+const serveGitHubWeb = (body: string) =>
+  FakeHttp.use((http) =>
+    http.route("https://github.com/search", () => Effect.succeed(httpResponse(200, body))),
+  )
 
 const serveGmail = (xml: string) =>
   FakeHttp.use((http) =>
@@ -149,6 +182,7 @@ describe("ライブフォルダの作成", () => {
             reason: "取得元へのアクセスが許可されていません",
             needsPermission: true,
             needsToken: false,
+            signInUrl: null,
           }),
           [],
         ])
@@ -174,43 +208,106 @@ describe("ライブフォルダの作成", () => {
   )
 })
 
-describe("GitHub のトークン", () => {
-  it.live("トークンが無ければ入れ直せば直ると示し、トークンを入れるとそれで取得し直す", () =>
+describe("GitHub", () => {
+  it.live("ブラウザで GitHub にログインしていれば、トークン無しでレビュー依頼が並ぶ", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_ORIGIN)
-        yield* (yield* FakeHttp).route("https://api.github.com/", () =>
-          Effect.succeed(httpResponse(200, githubSearchBody("ライブフォルダを追加する"))),
-        )
-        const { sidebar } = yield* createLiveFolder(reviewRequests)
-        const failed = yield* sidebar.viewWhere(hasFailed)
+        yield* serveGitHubWeb(githubWebPage(["<em>ライブ</em>フォルダを追加する"]))
 
-        yield* sidebar.run({ _tag: "SetGitHubToken", token: "ghp_example" })
+        const { sidebar } = yield* createLiveFolder(reviewRequests)
         const view = yield* sidebar.viewWhere(isReady)
 
-        const [request] = yield* (yield* FakeHttp).requests
-        expect({
-          before: Option.map(liveFolderOf(failed), (live) => live.status),
-          after: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.subtitle)),
-          authorization: request?.headers?.["Authorization"],
-        }).toStrictEqual({
-          before: Option.some({
+        expect(
+          Option.map(liveFolderOf(view), (live) =>
+            live.items.map((item) => [item.title, item.subtitle, item.url]),
+          ),
+        ).toStrictEqual(
+          Option.some([
+            [
+              "ライブフォルダを追加する",
+              "katip-dev/katip#200",
+              "https://github.com/katip-dev/katip/pull/200",
+            ],
+          ]),
+        )
+      }),
+    ),
+  )
+
+  it.live("GitHub にログインしていなければ、ログインページを開けば直ると示す", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GITHUB_ORIGIN)
+        yield* serveGitHubWeb(githubWebPage([], { loggedIn: false }))
+
+        const { sidebar } = yield* createLiveFolder(reviewRequests)
+        const view = yield* sidebar.viewWhere(hasFailed)
+
+        expect(Option.map(liveFolderOf(view), (live) => live.status)).toStrictEqual(
+          Option.some({
             _tag: "Failed",
-            reason: "GitHub のアクセストークンが設定されていません",
+            reason: "GitHub にログインしていません",
             needsPermission: false,
-            needsToken: true,
+            needsToken: false,
+            signInUrl: "https://github.com/login",
           }),
-          after: Option.some(["katip-dev/katip#100"]),
+        )
+      }),
+    ),
+  )
+
+  it.live("検索画面の応答の形が変わって読めなければ、読み取れないと示す", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GITHUB_ORIGIN)
+        yield* serveGitHubWeb(JSON.stringify({ payload: { searchResults: [] } }))
+
+        const { sidebar } = yield* createLiveFolder(reviewRequests)
+        const view = yield* sidebar.viewWhere(hasFailed)
+
+        expect(
+          Option.map(liveFolderOf(view), (live) =>
+            live.status._tag === "Failed" ? live.status.reason : live.status._tag,
+          ),
+        ).toStrictEqual(Option.some("GitHub の応答を読み取れませんでした"))
+      }),
+    ),
+  )
+
+  it.live("トークンを設定すると、公式 API で取得し直す", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GITHUB_ORIGIN)
+        yield* grant(GITHUB_API_ORIGIN)
+        yield* serveGitHubWeb(githubWebPage(["画面の検索の結果"]))
+        yield* (yield* FakeHttp).route("https://api.github.com/", () =>
+          Effect.succeed(httpResponse(200, githubSearchBody("公式 API の結果"))),
+        )
+        const { sidebar } = yield* createLiveFolder(reviewRequests)
+        yield* sidebar.viewWhere(isReady)
+
+        yield* sidebar.run({ _tag: "SetGitHubToken", token: "ghp_example" })
+        const view = yield* sidebar.viewWhere(
+          hasLiveFolderWith((live) => live.items.some((item) => item.title === "公式 API の結果")),
+        )
+
+        const requests = yield* (yield* FakeHttp).requests
+        expect({
+          titles: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.title)),
+          authorization: requests.at(-1)?.headers?.["Authorization"],
+        }).toStrictEqual({
+          titles: Option.some(["公式 API の結果"]),
           authorization: "Bearer ghp_example",
         })
       }),
     ),
   )
 
-  it.live("トークンを受け付けられなければ、トークンが無効なので入れ直せば直ると示す", () =>
+  it.live("設定したトークンを受け付けられなければ、トークンが無効なので入れ直せば直ると示す", () =>
     inBackground(
       Effect.gen(function* () {
-        yield* grant(GITHUB_ORIGIN)
+        yield* grant(GITHUB_API_ORIGIN)
         yield* (yield* FakeHttp).route("https://api.github.com/", () =>
           Effect.succeed(httpResponse(401, '{"message":"Bad credentials"}')),
         )
@@ -231,8 +328,123 @@ describe("GitHub のトークン", () => {
             reason: "GitHub のアクセストークンが無効です",
             needsPermission: false,
             needsToken: true,
+            signInUrl: null,
           }),
         )
+      }),
+    ),
+  )
+})
+
+describe("Gmail にログインしていないとき", () => {
+  it.live("ログイン画面へリダイレクトされたら、そのアカウントの受信トレイを開けば直ると示す", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GMAIL_ORIGIN)
+        yield* (yield* FakeHttp).route("https://mail.google.com/", () =>
+          Effect.succeed(redirectResponse),
+        )
+
+        const { sidebar } = yield* createLiveFolder({ ...inbox, accountIndex: 1 })
+        const view = yield* sidebar.viewWhere(hasFailed)
+
+        expect(
+          Option.map(liveFolderOf(view), (live) =>
+            live.status._tag === "Failed" ? live.status.signInUrl : null,
+          ),
+        ).toStrictEqual(Option.some("https://mail.google.com/mail/u/1/"))
+      }),
+    ),
+  )
+})
+
+describe("URL を開く", () => {
+  it.live("ログインページなどの URL を、見ている Space の一時タブとして開く", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { sidebar, windowId } = yield* startWithSidebar
+
+        const outcome = yield* sidebar.run({
+          _tag: "OpenUrl",
+          windowId,
+          url: "https://github.com/login",
+        })
+        const view = yield* sidebar.viewWhere((v) =>
+          temporaryUrls(v).includes("https://github.com/login"),
+        )
+
+        expect([
+          outcome._tag,
+          temporaryUrls(view).includes("https://github.com/login"),
+        ]).toStrictEqual(["Succeeded", true])
+      }),
+    ),
+  )
+
+  it.live("http と https 以外の URL は開かない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { sidebar, windowId } = yield* startWithSidebar
+        const tabsBefore = (yield* (yield* FakeBrowser).snapshot).tabs.length
+
+        const outcomes = yield* Effect.forEach(
+          ["javascript:alert(1)", "chrome://settings/", "file:///etc/passwd", "not a url"],
+          (url) => sidebar.run({ _tag: "OpenUrl", windowId, url }),
+        )
+
+        expect({
+          outcomes,
+          tabsAdded: (yield* (yield* FakeBrowser).snapshot).tabs.length - tabsBefore,
+        }).toStrictEqual({
+          outcomes: Array.replicate({ _tag: "Failed", reason: "この URL は開けません" }, 4),
+          tabsAdded: 0,
+        })
+      }),
+    ),
+  )
+})
+
+describe("並べ方", () => {
+  it.live("並べ方を変えるとその順で並び、取得し直しても保たれる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GMAIL_ORIGIN)
+        yield* serveGmail(gmailFeed(gmailEntry("1", "新しいメール"), gmailEntry("2", "古いメール")))
+        const { sidebar } = yield* createLiveFolder(inbox)
+        const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+
+        yield* sidebar.run({
+          _tag: "SetLiveFolderSort",
+          bookmarkId: ready.bookmarkId,
+          sort: "oldest",
+        })
+        yield* sidebar.viewWhere(hasLiveFolderWith((live) => live.sort === "oldest"))
+        yield* sidebar.run({ _tag: "RefreshLiveFolder", bookmarkId: ready.bookmarkId })
+        const view = yield* sidebar.viewWhere(
+          hasLiveFolderWith((live) => live.sort === "oldest" && live.status._tag === "Ready"),
+        )
+
+        expect(
+          Option.map(liveFolderOf(view), (live) => [live.sort, live.items.map((i) => i.title)]),
+        ).toStrictEqual(Option.some(["oldest", ["古いメール", "新しいメール"]]))
+      }),
+    ),
+  )
+
+  it.live("ライブフォルダでないピンには並べ方を設定できない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { sidebar, spaceId } = yield* startWithSidebar
+        const folder = yield* sidebar.run({ _tag: "CreateFolder", spaceId, parentId: null })
+        const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
+
+        const outcome = yield* sidebar.run({
+          _tag: "SetLiveFolderSort",
+          bookmarkId: folderId ?? BookmarkId.make("missing"),
+          sort: "title",
+        })
+
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "ライブフォルダが見つかりません" })
       }),
     ),
   )

@@ -14,6 +14,7 @@ import {
 import type { BookmarkId, BrowserApiError } from "#platform/browser"
 import { LiveFetcher } from "./live-fetcher"
 import { LiveFolderCache } from "./live-folder-cache"
+import { LiveSortStore } from "./live-sort-store"
 import {
   markAllSeen,
   markItemSeen,
@@ -21,7 +22,7 @@ import {
   recordFetched,
   type LiveFolderSnapshot,
 } from "./live-folder-record"
-import type { LiveItem, LiveSource } from "./live-source"
+import type { LiveItem, LiveSort, LiveSource } from "./live-source"
 
 export class LiveFolders extends Context.Service<
   LiveFolders,
@@ -36,9 +37,10 @@ export class LiveFolders extends Context.Service<
     findItem(folderId: BookmarkId, itemId: string): Effect.Effect<Option.Option<LiveItem>>
     markItemSeen(folderId: BookmarkId, itemId: string): Effect.Effect<void, BrowserApiError>
     markAllSeen(folderId: BookmarkId): Effect.Effect<void, BrowserApiError>
-    /** 進んでいる取得を止めてから、キャッシュを捨てる。 */
+    setSort(folderId: BookmarkId, sort: LiveSort): Effect.Effect<void, BrowserApiError>
+    /** 進んでいる取得を止めてから、キャッシュと並べ方を捨てる。 */
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
-    /** `folderIds` に含まれないフォルダのキャッシュを捨てる。 */
+    /** `folderIds` に含まれないフォルダのキャッシュと並べ方を捨てる。 */
     retainOnly(folderIds: ReadonlySet<BookmarkId>): Effect.Effect<void, BrowserApiError>
     /** 取得を始めたときと終えたときに、そのフォルダの ID が流れる。 */
     readonly refreshEvents: Stream.Stream<BookmarkId>
@@ -49,6 +51,7 @@ export class LiveFolders extends Context.Service<
     Effect.gen(function* () {
       const fetcher = yield* LiveFetcher
       const cache = yield* LiveFolderCache
+      const sorts = yield* LiveSortStore
       const fibers = yield* FiberMap.make<BookmarkId>()
       const refreshing = yield* Ref.make<ReadonlySet<BookmarkId>>(new Set())
       const events = yield* PubSub.unbounded<BookmarkId>()
@@ -94,13 +97,11 @@ export class LiveFolders extends Context.Service<
 
       return LiveFolders.of({
         refresh,
-        snapshot: Effect.map(
-          Effect.all([cache.all, Ref.get(refreshing)]),
-          ([records, refreshingIds]): LiveFolderSnapshot => ({
-            records,
-            refreshing: refreshingIds,
-          }),
-        ),
+        snapshot: Effect.all({
+          records: cache.all,
+          refreshing: Ref.get(refreshing),
+          sorts: sorts.all,
+        }),
         findItem: (folderId, itemId) =>
           Effect.map(cache.get(folderId), (record) =>
             Option.flatMap(record, ({ items }) =>
@@ -110,21 +111,25 @@ export class LiveFolders extends Context.Service<
         markItemSeen: (folderId, itemId) =>
           cache.modify(folderId, (record) => markItemSeen(record, itemId)),
         markAllSeen: (folderId) => cache.modify(folderId, markAllSeen),
+        setSort: (folderId, sort) => sorts.set(folderId, sort),
         forget: Effect.fnUntraced(function* (folderIds) {
           yield* Effect.forEach(folderIds, (folderId) => FiberMap.remove(fibers, folderId), {
             discard: true,
           })
           yield* cache.forget(folderIds)
+          yield* sorts.forget(folderIds)
         }),
-        retainOnly: (folderIds) => cache.retainOnly(folderIds),
+        retainOnly: (folderIds) =>
+          Effect.andThen(cache.retainOnly(folderIds), sorts.retainOnly(folderIds)),
         refreshEvents: Stream.fromPubSub(events),
       })
     }),
   )
 
-  /** {@link LiveFetcher} と {@link LiveFolderCache} も合わせて提供する。 */
+  /** {@link LiveFetcher}、{@link LiveFolderCache}、{@link LiveSortStore} も合わせて提供する。 */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(LiveFetcher.layer),
     Layer.provideMerge(LiveFolderCache.layer),
+    Layer.provideMerge(LiveSortStore.layer),
   )
 }

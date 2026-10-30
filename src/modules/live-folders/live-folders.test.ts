@@ -166,3 +166,42 @@ describe("忘れる", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 })
+
+describe("並べ方", () => {
+  it.effect("設定した並べ方を覚え、既定の新しい順に戻すと設定を持たない", () =>
+    Effect.gen(function* () {
+      const folders = yield* LiveFolders
+
+      yield* folders.setSort(FOLDER, "title")
+      const titled = (yield* snapshot).sorts.get(FOLDER)
+      yield* folders.setSort(FOLDER, "newest")
+      const reset = (yield* snapshot).sorts.has(FOLDER)
+
+      assert.deepStrictEqual([titled, reset], ["title", false])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("忘れたフォルダの並べ方も捨てる", () =>
+    Effect.gen(function* () {
+      const folders = yield* LiveFolders
+      yield* folders.setSort(FOLDER, "oldest")
+
+      yield* folders.forget([FOLDER])
+
+      assert.isFalse((yield* snapshot).sorts.has(FOLDER))
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("残すフォルダに含まれないフォルダの並べ方を捨てる", () =>
+    Effect.gen(function* () {
+      const folders = yield* LiveFolders
+      const kept = BookmarkId.make("live-2")
+      yield* folders.setSort(FOLDER, "oldest")
+      yield* folders.setSort(kept, "source")
+
+      yield* folders.retainOnly(new Set([kept]))
+
+      assert.deepStrictEqual([...(yield* snapshot).sorts.entries()], [[kept, "source"]])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})

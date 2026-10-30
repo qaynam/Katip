@@ -1,8 +1,10 @@
 import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import {
+  DEFAULT_LIVE_SORT,
   explainFailure,
   isUnseen,
+  sortLiveItems,
   type LiveFolderRecord,
   type LiveFolderSnapshot,
 } from "#modules/live-folders"
@@ -188,6 +190,7 @@ const pinnedSplitView = (split: PinnedSplit, projection: PinnedProjection): Pinn
 })
 
 const liveFolderStatus = (
+  live: PinnedLiveFolder,
   record: Option.Option<LiveFolderRecord>,
   isRefreshing: boolean,
 ): LiveFolderStatus => {
@@ -198,7 +201,7 @@ const liveFolderStatus = (
     onSome: ({ lastAttempt }) =>
       lastAttempt._tag === "Fetched"
         ? { _tag: "Ready", refreshedAt: lastAttempt.at }
-        : { _tag: "Failed", ...explainFailure(lastAttempt.failure) },
+        : { _tag: "Failed", ...explainFailure(lastAttempt.failure, live.source) },
   })
 }
 
@@ -207,17 +210,22 @@ const pinnedLiveFolderView = (
   projection: PinnedProjection,
 ): PinnedLiveFolderView => {
   const record = Option.fromNullishOr(projection.liveFolders.records.get(live.id))
+  const sort = projection.liveFolders.sorts.get(live.id) ?? DEFAULT_LIVE_SORT
   return {
     _tag: "PinnedLiveFolder",
     bookmarkId: live.id,
     title: live.title,
     source: live.source,
     isExpanded: isFolderExpanded(projection.folderExpansion, live.id),
-    status: liveFolderStatus(record, projection.liveFolders.refreshing.has(live.id)),
+    status: liveFolderStatus(live, record, projection.liveFolders.refreshing.has(live.id)),
+    sort,
     items: Option.match(record, {
       onNone: () => [],
       onSome: (loaded) =>
-        loaded.items.map((item) => ({ ...item, isUnseen: isUnseen(loaded, item) })),
+        sortLiveItems(loaded.items, sort, live.source).map((item) => ({
+          ...item,
+          isUnseen: isUnseen(loaded, item),
+        })),
     }),
   }
 }

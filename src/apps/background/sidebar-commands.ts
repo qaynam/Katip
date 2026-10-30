@@ -4,6 +4,7 @@ import {
   defaultLiveFolderTitle,
   GitHubTokenStore,
   LiveFolders,
+  type LiveSort,
   type LiveSource,
 } from "#modules/live-folders"
 import {
@@ -761,6 +762,21 @@ const liveFolderOrReject = Effect.fnUntraced(function* (bookmarkId: BookmarkId) 
   return node
 })
 
+const parseUrl = Option.liftThrowable((url: string) => new URL(url))
+
+const isWebUrl = (url: string): boolean =>
+  Option.exists(parseUrl(url), ({ protocol }) => protocol === "http:" || protocol === "https:")
+
+/** ウィンドウで見ている Space の一時タブとして開く。 */
+const openInActiveSpace = Effect.fnUntraced(function* (windowId: WindowId, url: string) {
+  const state = yield* KatipState
+  const tab = yield* (yield* Tabs).create({ windowId, url, active: true })
+  const activeSpace = activeSpaceOf(yield* state.workspace.get, windowId)
+  if (Option.isNone(activeSpace)) return
+  const now = yield* Clock.currentTimeMillis
+  yield* state.workspace.update((workspace) => assignTab(workspace, tab.id, activeSpace.value, now))
+})
+
 const liveFolderCommands = {
   CreateLiveFolder: Effect.fnUntraced(function* ({
     spaceId,
@@ -797,26 +813,35 @@ const liveFolderCommands = {
     bookmarkId: BookmarkId
     itemId: string
   }) {
-    const state = yield* KatipState
     const liveFolders = yield* LiveFolders
     yield* liveFolderOrReject(bookmarkId)
     const item = yield* Effect.flatMap(
       liveFolders.findItem(bookmarkId, itemId),
       Option.match({ onNone: () => reject("項目が見つかりません"), onSome: Effect.succeed }),
     )
-    const tab = yield* (yield* Tabs).create({ windowId, url: item.url, active: true })
-    const activeSpace = activeSpaceOf(yield* state.workspace.get, windowId)
-    if (Option.isSome(activeSpace)) {
-      const now = yield* Clock.currentTimeMillis
-      yield* state.workspace.update((workspace) =>
-        assignTab(workspace, tab.id, activeSpace.value, now),
-      )
-    }
+    yield* openInActiveSpace(windowId, item.url)
     yield* liveFolders.markItemSeen(bookmarkId, itemId)
   }),
 
   MarkLiveFolderSeen: ({ bookmarkId }: { bookmarkId: BookmarkId }) =>
     LiveFolders.use((liveFolders) => liveFolders.markAllSeen(bookmarkId)),
+
+  SetLiveFolderSort: Effect.fnUntraced(function* ({
+    bookmarkId,
+    sort,
+  }: {
+    bookmarkId: BookmarkId
+    sort: LiveSort
+  }) {
+    yield* liveFolderOrReject(bookmarkId)
+    yield* (yield* LiveFolders).setSort(bookmarkId, sort)
+  }),
+
+  // サイドパネルから任意の文字列を受け取るので、javascript: や拡張・ブラウザの内部のページは開かない
+  OpenUrl: Effect.fnUntraced(function* ({ windowId, url }: { windowId: WindowId; url: string }) {
+    if (!isWebUrl(url)) return yield* reject("この URL は開けません")
+    yield* openInActiveSpace(windowId, url)
+  }),
 
   SetGitHubToken: Effect.fnUntraced(function* ({ token }: { token: string }) {
     yield* (yield* GitHubTokenStore).save(token)

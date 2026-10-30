@@ -13,7 +13,8 @@ const TestLayer = LiveFetcher.layer.pipe(
 )
 
 const GMAIL_ORIGIN = "https://mail.google.com/*"
-const GITHUB_ORIGIN = "https://api.github.com/*"
+const GITHUB_ORIGIN = "https://github.com/*"
+const GITHUB_API_ORIGIN = "https://api.github.com/*"
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const mentioned: LiveSource = { _tag: "GitHub", query: "mentioned" }
 
@@ -30,6 +31,17 @@ const githubItem = (id: number, updatedAt: string) => ({
 
 const githubBody = (items: ReadonlyArray<unknown>) =>
   JSON.stringify({ total_count: items.length, incomplete_results: false, items })
+
+const webResult = (number: number, created: string) => ({
+  id: String(number),
+  hl_title: `#${number}`,
+  number,
+  created,
+  repo: { repository: { name: "katip", owner_login: "katip-dev" } },
+})
+
+const webPage = (results: ReadonlyArray<unknown>, loggedIn = true) =>
+  JSON.stringify({ payload: { blackbirdSearchRoute: { results, logged_in: loggedIn } } })
 
 const fetchFailure = (source: LiveSource) =>
   Effect.map(
@@ -90,56 +102,117 @@ describe("Gmail", () => {
   )
 })
 
-describe("GitHub", () => {
-  it.effect("トークンが無ければ、要求を送らずに失敗する", () =>
+describe("GitHub（ログイン中のセッション）", () => {
+  it.effect(
+    "トークンが無ければ、検索画面をログイン中の cookie 付きで読み、プルリクエストと Issue の結果を合わせる",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+        yield* (yield* FakeHttp).route("https://github.com/search", (request) =>
+          Effect.succeed(
+            httpResponse(
+              200,
+              new URL(request.url).searchParams.get("type") === "issues"
+                ? webPage([webResult(1, "2026-10-29T00:00:00Z")])
+                : webPage([webResult(2, "2026-10-30T00:00:00Z")]),
+            ),
+          ),
+        )
+
+        const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(mentioned))
+
+        const requests = yield* (yield* FakeHttp).requests
+        assert.deepStrictEqual(
+          [items.map((item) => item.url), requests.map((request) => request.credentials)],
+          [
+            [
+              "https://github.com/katip-dev/katip/pull/2",
+              "https://github.com/katip-dev/katip/issues/1",
+            ],
+            ["include", "include"],
+          ],
+        )
+      }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("github.com へのアクセスが許可されていなければ、要求を送らずに失敗する", () =>
     Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
 
       const failure = yield* fetchFailure(mentioned)
 
       assert.deepStrictEqual(
         [failure, yield* (yield* FakeHttp).requests],
-        [{ _tag: "TokenMissing" }, []],
+        [{ _tag: "PermissionMissing" }, []],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("保存したトークンで検索し、複数の検索の結果を更新の新しい順にまとめる", () =>
+  it.effect("ログインしていなければ、ログインしていないとして失敗する", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
-      yield* (yield* GitHubTokenStore).save("  ghp_secret  ")
-      yield* (yield* FakeHttp).route("https://api.github.com/search/issues", (request) =>
-        Effect.succeed(
-          httpResponse(
-            200,
-            githubBody(
-              new URL(request.url).searchParams.get("q")?.startsWith("is:issue")
-                ? [githubItem(1, "2026-10-29T00:00:00Z")]
-                : [githubItem(2, "2026-10-30T00:00:00Z")],
-            ),
-          ),
-        ),
+      yield* (yield* FakeHttp).route("https://github.com/search", () =>
+        Effect.succeed(httpResponse(200, webPage([], false))),
       )
 
-      const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(mentioned))
+      assert.deepStrictEqual(yield* fetchFailure(mentioned), { _tag: "NotSignedIn" })
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})
 
-      const requests = yield* (yield* FakeHttp).requests
+describe("GitHub（トークン）", () => {
+  it.effect(
+    "トークンが設定されていれば公式 API をトークンで検索し、結果を更新の新しい順にまとめる",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
+        yield* (yield* GitHubTokenStore).save("  ghp_secret  ")
+        yield* (yield* FakeHttp).route("https://api.github.com/search/issues", (request) =>
+          Effect.succeed(
+            httpResponse(
+              200,
+              githubBody(
+                new URL(request.url).searchParams.get("q")?.startsWith("is:issue")
+                  ? [githubItem(1, "2026-10-29T00:00:00Z")]
+                  : [githubItem(2, "2026-10-30T00:00:00Z")],
+              ),
+            ),
+          ),
+        )
+
+        const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(mentioned))
+
+        const requests = yield* (yield* FakeHttp).requests
+        assert.deepStrictEqual(
+          [
+            items.map((item) => item.title),
+            requests.map((request) => request.headers?.["Authorization"]),
+          ],
+          [
+            ["#2", "#1"],
+            ["Bearer ghp_secret", "Bearer ghp_secret"],
+          ],
+        )
+      }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("公式 API へのアクセスが許可されていなければ、要求を送らずに失敗する", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* GitHubTokenStore).save("ghp_secret")
+
+      const failure = yield* fetchFailure(mentioned)
+
       assert.deepStrictEqual(
-        [
-          items.map((item) => item.title),
-          requests.map((request) => request.headers?.["Authorization"]),
-        ],
-        [
-          ["#2", "#1"],
-          ["Bearer ghp_secret", "Bearer ghp_secret"],
-        ],
+        [failure, yield* (yield* FakeHttp).requests],
+        [{ _tag: "PermissionMissing" }, []],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
   it.effect("トークンを受け付けられなければ、トークンが無効として失敗する", () =>
     Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
       yield* (yield* GitHubTokenStore).save("ghp_revoked")
       yield* (yield* FakeHttp).route("https://api.github.com/", () =>
         Effect.succeed(httpResponse(401, '{"message":"Bad credentials"}')),
@@ -149,15 +222,20 @@ describe("GitHub", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("空のトークンを保存すると、トークンが消える", () =>
+  it.effect("空のトークンを保存するとトークンが消え、ログイン中のセッションで読む", () =>
     Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN, GITHUB_API_ORIGIN])
+      yield* (yield* FakeHttp).route("https://github.com/search", () =>
+        Effect.succeed(httpResponse(200, webPage([]))),
+      )
       const tokens = yield* GitHubTokenStore
       yield* tokens.save("ghp_secret")
 
       yield* tokens.save(" ")
+      yield* LiveFetcher.use((fetcher) => fetcher.fetch(mentioned))
 
-      assert.deepStrictEqual(yield* fetchFailure(mentioned), { _tag: "TokenMissing" })
+      const requests = yield* (yield* FakeHttp).requests
+      assert.isTrue(requests.every((request) => request.url.startsWith("https://github.com/")))
     }).pipe(Effect.provide(TestLayer)),
   )
 })

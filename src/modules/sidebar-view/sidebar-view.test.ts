@@ -80,7 +80,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
     [spaceId("work"), []],
   ]),
   folderExpansion: {},
-  liveFolders: { records: new Map(), refreshing: new Set() },
+  liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map() },
   preferences: {
     newTabsOnTop: false,
     showAllOpenTabsInCollapsedFolders: false,
@@ -441,11 +441,62 @@ describe("ライブフォルダ", () => {
     pinnedNodesOf(project({ pinnedTrees: homeWithPin(liveTree), ...overrides }))[0] as
       PinnedLiveFolderView | undefined
 
+  it("並べ方を設定していなければ、新しい順として取得元の順で並べる", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
+        refreshing: new Set(),
+        sorts: new Map(),
+      },
+    })
+
+    expect([node?.sort, node?.items.map((item) => item.id)]).toStrictEqual(["newest", ["2", "1"]])
+  })
+
+  it("設定した並べ方で並べて送る", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
+        refreshing: new Set(),
+        sorts: new Map([[LIVE, "oldest"]]),
+      },
+    })
+
+    expect([node?.sort, node?.items.map((item) => item.id)]).toStrictEqual(["oldest", ["1", "2"]])
+  })
+
+  it("ログインしていなくて失敗していれば、ログインのために開くページを示す", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([
+          [
+            LIVE,
+            {
+              ...fetched([]),
+              lastAttempt: { _tag: "Failed", at: 1000, failure: { _tag: "NotSignedIn" } },
+            },
+          ],
+        ]),
+        refreshing: new Set(),
+        sorts: new Map(),
+      },
+    })
+
+    expect(node?.status).toStrictEqual({
+      _tag: "Failed",
+      reason: "GitHub にログインしていません",
+      needsPermission: false,
+      needsToken: false,
+      signInUrl: "https://github.com/login",
+    })
+  })
+
   it("取得した項目を、未読かどうかと一緒に取得元の順で並べる", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("1", 50), liveItem("2", 80)], { "2": 80 })]]),
         refreshing: new Set(),
+        sorts: new Map(),
       },
     })
 
@@ -457,7 +508,11 @@ describe("ライブフォルダ", () => {
 
   it("取得を終えていれば、取得した時刻とともに準備できたと示す", () => {
     const node = liveFolderOf({
-      liveFolders: { records: new Map([[LIVE, fetched([])]]), refreshing: new Set() },
+      liveFolders: {
+        records: new Map([[LIVE, fetched([])]]),
+        refreshing: new Set(),
+        sorts: new Map(),
+      },
     })
 
     expect([node?.title, node?.source, node?.status]).toStrictEqual([
@@ -472,6 +527,7 @@ describe("ライブフォルダ", () => {
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
         refreshing: new Set([LIVE]),
+        sorts: new Map(),
       },
     })
 
@@ -497,6 +553,7 @@ describe("ライブフォルダ", () => {
           ],
         ]),
         refreshing: new Set(),
+        sorts: new Map(),
       },
     })
 
@@ -505,6 +562,7 @@ describe("ライブフォルダ", () => {
       reason: "GitHub のアクセストークンが無効です",
       needsPermission: false,
       needsToken: true,
+      signInUrl: null,
     })
   })
 
@@ -521,6 +579,7 @@ describe("ライブフォルダ", () => {
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
         refreshing: new Set(),
+        sorts: new Map(),
       },
     })
     const node = pinnedNodesOf(view)[0] as PinnedFolderView

@@ -2,13 +2,12 @@ import { Option, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { httpResponse } from "#platform/http"
 import {
-  githubItemsFrom,
-  githubSearchesFor,
-  githubSearchRequest,
-  mergeSearchResults,
-  parseGitHubSearch,
-} from "./github-search"
-import type { GitHubQuery, LiveItem } from "./live-source"
+  githubApiItemsFrom,
+  githubApiSearchesFor,
+  githubApiSearchRequest,
+  parseGitHubApiSearch,
+} from "./github-api-search"
+import type { GitHubQuery } from "./live-source"
 
 const NOW = Date.UTC(2026, 9, 30, 9, 0, 0)
 
@@ -45,15 +44,7 @@ const searchItem = (overrides: Record<string, unknown> = {}) => ({
 const searchBody = (items: ReadonlyArray<unknown>) =>
   JSON.stringify({ total_count: items.length, incomplete_results: false, items })
 
-const liveItem = (id: string, updatedAt: number): LiveItem => ({
-  id,
-  title: id,
-  subtitle: "",
-  url: `https://github.com/o/r/issues/${id}`,
-  updatedAt,
-})
-
-describe("検索式", () => {
+describe("公式 API の検索式", () => {
   it.each<[GitHubQuery, ReadonlyArray<string>]>([
     ["review-requested", ["is:pr is:open review-requested:@me archived:false"]],
     ["authored-pull-requests", ["is:pr is:open author:@me archived:false"]],
@@ -63,12 +54,12 @@ describe("検索式", () => {
       ["is:issue is:open mentions:@me archived:false", "is:pr is:open mentions:@me archived:false"],
     ],
   ])("%s は、開いているものだけを対象に検索する", (query, expected) => {
-    expect(githubSearchesFor(query)).toStrictEqual(expected)
+    expect(githubApiSearchesFor(query)).toStrictEqual(expected)
   })
 })
 
-describe("検索の要求", () => {
-  const request = githubSearchRequest("is:pr is:open author:@me", "ghp_secret")
+describe("公式 API への検索の要求", () => {
+  const request = githubApiSearchRequest("is:pr is:open author:@me", "ghp_secret")
 
   it("検索式を更新の新しい順で問い合わせる", () => {
     const url = new URL(request.url)
@@ -94,9 +85,9 @@ describe("検索の要求", () => {
   })
 })
 
-describe("検索結果の解析", () => {
+describe("公式 API の検索結果の解析", () => {
   it("Issue やプルリクエストが、リポジトリと番号を補足に持つ項目になる", () => {
-    const items = parseGitHubSearch(searchBody([searchItem()]))
+    const items = parseGitHubApiSearch(searchBody([searchItem()]))
 
     expect(items).toStrictEqual(
       Option.some([
@@ -112,7 +103,7 @@ describe("検索結果の解析", () => {
   })
 
   it("該当が無ければ空になる", () => {
-    expect(parseGitHubSearch(searchBody([]))).toStrictEqual(Option.some([]))
+    expect(parseGitHubApiSearch(searchBody([]))).toStrictEqual(Option.some([]))
   })
 
   it("形の合わない項目だけを除き、ほかの項目は残す", () => {
@@ -122,7 +113,7 @@ describe("検索結果の解析", () => {
       searchItem({ id: 3 }),
     ])
 
-    expect(Option.map(parseGitHubSearch(body), (items) => items.map((i) => i.id))).toStrictEqual(
+    expect(Option.map(parseGitHubApiSearch(body), (items) => items.map((i) => i.id))).toStrictEqual(
       Option.some(["3"]),
     )
   })
@@ -133,47 +124,36 @@ describe("検索結果の解析", () => {
       searchItem({ id: 2 }),
     ])
 
-    expect(Option.map(parseGitHubSearch(body), (items) => items.map((i) => i.id))).toStrictEqual(
+    expect(Option.map(parseGitHubApiSearch(body), (items) => items.map((i) => i.id))).toStrictEqual(
       Option.some(["2"]),
     )
   })
 
   it("JSON でない本文や項目の一覧の無い本文は読めない", () => {
     expect([
-      parseGitHubSearch("<html>Bad gateway</html>"),
-      parseGitHubSearch(JSON.stringify({ message: "Validation Failed" })),
+      parseGitHubApiSearch("<html>Bad gateway</html>"),
+      parseGitHubApiSearch(JSON.stringify({ message: "Validation Failed" })),
     ]).toStrictEqual([Option.none(), Option.none()])
   })
 })
 
-describe("複数の検索結果の統合", () => {
-  it("両方に現れた項目は 1 つにまとめ、更新の新しい順に並べる", () => {
-    const merged = mergeSearchResults([
-      [liveItem("a", 1), liveItem("b", 3)],
-      [liveItem("b", 3), liveItem("c", 2)],
-    ])
-
-    expect(merged.map((item) => item.id)).toStrictEqual(["b", "c", "a"])
-  })
-})
-
-describe("検索の応答の判定", () => {
+describe("公式 API の応答の判定", () => {
   it("成功すれば項目が取り込まれる", () => {
-    const result = githubItemsFrom(httpResponse(200, searchBody([searchItem()])), NOW)
+    const result = githubApiItemsFrom(httpResponse(200, searchBody([searchItem()])), NOW)
 
     expect(Result.map(result, (items) => items.length)).toStrictEqual(Result.succeed(1))
   })
 
   it("成功の応答でも読めない本文なら、読み取れないと判定する", () => {
-    expect(githubItemsFrom(httpResponse(200, "{"), NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(httpResponse(200, "{"), NOW)).toStrictEqual(
       Result.fail({ _tag: "UnreadableResponse" }),
     )
   })
 
   it("トークンを受け付けられなかったら、トークンが無効と判定する", () => {
-    expect(githubItemsFrom(httpResponse(401, '{"message":"Bad credentials"}'), NOW)).toStrictEqual(
-      Result.fail({ _tag: "TokenRejected" }),
-    )
+    expect(
+      githubApiItemsFrom(httpResponse(401, '{"message":"Bad credentials"}'), NOW),
+    ).toStrictEqual(Result.fail({ _tag: "TokenRejected" }))
   })
 
   it("回数の上限を使い切ったら、知らされた回復時刻まで待つ", () => {
@@ -182,7 +162,7 @@ describe("検索の応答の判定", () => {
       "x-ratelimit-reset": "1793350000",
     })
 
-    expect(githubItemsFrom(response, NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(response, NOW)).toStrictEqual(
       Result.fail({ _tag: "RateLimited", retryAt: 1793350000 * 1000 }),
     )
   })
@@ -193,13 +173,13 @@ describe("検索の応答の判定", () => {
       "x-ratelimit-remaining": "25",
     })
 
-    expect(githubItemsFrom(response, NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(response, NOW)).toStrictEqual(
       Result.fail({ _tag: "RateLimited", retryAt: NOW + 90_000 }),
     )
   })
 
   it("待つ時間を知らされずに上限に達したら、1 分待つ", () => {
-    expect(githubItemsFrom(httpResponse(429), NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(httpResponse(429), NOW)).toStrictEqual(
       Result.fail({ _tag: "RateLimited", retryAt: NOW + 60_000 }),
     )
   })
@@ -209,13 +189,13 @@ describe("検索の応答の判定", () => {
       "x-ratelimit-remaining": "4999",
     })
 
-    expect(githubItemsFrom(response, NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(response, NOW)).toStrictEqual(
       Result.fail({ _tag: "AccessDenied", status: 403 }),
     )
   })
 
   it("それ以外のエラー応答は、その状態コードで失敗する", () => {
-    expect(githubItemsFrom(httpResponse(422), NOW)).toStrictEqual(
+    expect(githubApiItemsFrom(httpResponse(422), NOW)).toStrictEqual(
       Result.fail({ _tag: "UnexpectedStatus", status: 422 }),
     )
   })

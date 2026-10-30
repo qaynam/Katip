@@ -23,7 +23,11 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "search",
   ],
   // ライブフォルダの取得元。作るときにだけ許可を求め、使わない人には要求しない
-  optional_host_permissions: ["https://mail.google.com/*", "https://api.github.com/*"],
+  optional_host_permissions: [
+    "https://mail.google.com/*",
+    "https://github.com/*",
+    "https://api.github.com/*",
+  ],
   side_panel: { default_path: "sidepanel/index.html" },
   action: { default_title: "Katip" },
   background: { service_worker: "background.js", type: "module" },

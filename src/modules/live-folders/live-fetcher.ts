@@ -2,14 +2,20 @@ import { Clock, Context, type Duration, Effect, Layer, Match, Option, type Resul
 import { Http, type HttpRequest, type HttpResponse } from "#platform/http"
 import { Permissions } from "#platform/permissions"
 import {
-  githubItemsFrom,
-  githubSearchesFor,
-  githubSearchRequest,
-  mergeSearchResults,
-} from "./github-search"
+  GITHUB_API_ORIGIN,
+  githubApiItemsFrom,
+  githubApiSearchesFor,
+  githubApiSearchRequest,
+} from "./github-api-search"
 import { GitHubTokenStore } from "./github-token-store"
+import {
+  githubWebItemsFrom,
+  githubWebSearchesFor,
+  githubWebSearchRequest,
+} from "./github-web-search"
 import { gmailFeedRequest, gmailItemsFrom } from "./gmail-feed"
 import { LiveFetchError, type LiveFetchFailure } from "./live-fetch-failure"
+import { mergeNewestFirst } from "./live-item-order"
 import { originPatternOf, type LiveItem, type LiveSource } from "./live-source"
 
 /** 取得元が応答しないまま待つ上限。超えたら接続できなかったものとして扱う。 */
@@ -24,7 +30,10 @@ export class LiveFetcher extends Context.Service<
   LiveFetcher,
   {
     /**
-     * 取得元から項目を取り込む。
+     * 取得元から、取得元が新しい順に並べた順で項目を取り込む。
+     *
+     * GitHub は、トークンが設定されていれば公式 API で、無ければブラウザのログイン中の
+     * セッションで読む。
      *
      * 取得元へのアクセスが許可されていなければ、要求を送らずに失敗する。許可は求めない
      * （許可を求めるダイアログはユーザーの操作中のページからしか出せない）。
@@ -45,9 +54,9 @@ export class LiveFetcher extends Context.Service<
           Effect.catch(() => failWith({ _tag: "Unreachable" })),
         )
 
-      const requirePermission = Effect.fnUntraced(function* (source: LiveSource) {
+      const requirePermission = Effect.fnUntraced(function* (originPattern: string) {
         const isGranted = yield* permissions
-          .containsOrigin(originPatternOf(source))
+          .containsOrigin(originPattern)
           .pipe(
             Effect.catch((error) =>
               Effect.as(Effect.logWarning("許可を確かめられなかった", error), false),
@@ -56,40 +65,60 @@ export class LiveFetcher extends Context.Service<
         if (!isGranted) return yield* failWith({ _tag: "PermissionMissing" })
       })
 
-      const requireToken = tokens.load.pipe(
+      const loadToken = tokens.load.pipe(
         Effect.catch((error) =>
           Effect.as(Effect.logWarning("トークンを読めなかった", error), Option.none<string>()),
         ),
-        Effect.flatMap(
-          Option.match({
-            onNone: () => failWith({ _tag: "TokenMissing" }),
-            onSome: Effect.succeed,
-          }),
-        ),
       )
 
-      const fetchGitHub = Effect.fnUntraced(function* (
+      const fetchGitHubWithToken = Effect.fnUntraced(function* (
         source: Extract<LiveSource, { _tag: "GitHub" }>,
+        token: string,
       ) {
-        const token = yield* requireToken
-        const results = yield* Effect.forEach(githubSearchesFor(source.query), (search) =>
-          Effect.flatMap(send(githubSearchRequest(search, token)), (response) =>
+        yield* requirePermission(GITHUB_API_ORIGIN)
+        const results = yield* Effect.forEach(githubApiSearchesFor(source.query), (search) =>
+          Effect.flatMap(send(githubApiSearchRequest(search, token)), (response) =>
             Effect.flatMap(Clock.currentTimeMillis, (now) =>
-              fromInterpretation(githubItemsFrom(response, now)),
+              fromInterpretation(githubApiItemsFrom(response, now)),
             ),
           ),
         )
-        return mergeSearchResults(results)
+        return mergeNewestFirst(results)
       })
 
-      const fetchGmail = (source: Extract<LiveSource, { _tag: "Gmail" }>) =>
-        Effect.flatMap(send(gmailFeedRequest(source)), (response) =>
-          fromInterpretation(gmailItemsFrom(response, source)),
+      const fetchGitHubWithSession = Effect.fnUntraced(function* (
+        source: Extract<LiveSource, { _tag: "GitHub" }>,
+      ) {
+        yield* requirePermission(originPatternOf(source))
+        const results = yield* Effect.forEach(githubWebSearchesFor(source.query), (search) =>
+          Effect.flatMap(send(githubWebSearchRequest(search)), (response) =>
+            Effect.flatMap(Clock.currentTimeMillis, (now) =>
+              fromInterpretation(githubWebItemsFrom(response, search, now)),
+            ),
+          ),
         )
+        return mergeNewestFirst(results)
+      })
+
+      const fetchGitHub = (source: Extract<LiveSource, { _tag: "GitHub" }>) =>
+        Effect.flatMap(
+          loadToken,
+          Option.match({
+            onNone: () => fetchGitHubWithSession(source),
+            onSome: (token) => fetchGitHubWithToken(source, token),
+          }),
+        )
+
+      const fetchGmail = Effect.fnUntraced(function* (
+        source: Extract<LiveSource, { _tag: "Gmail" }>,
+      ) {
+        yield* requirePermission(originPatternOf(source))
+        const response = yield* send(gmailFeedRequest(source))
+        return yield* fromInterpretation(gmailItemsFrom(response, source))
+      })
 
       return LiveFetcher.of({
         fetch: Effect.fn("LiveFetcher.fetch")(function* (source) {
-          yield* requirePermission(source)
           return yield* Match.valueTags(source, { Gmail: fetchGmail, GitHub: fetchGitHub })
         }),
       })

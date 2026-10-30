@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { defaultLiveFolderTitle, originPatternOf, type LiveSource } from "./live-source"
+import {
+  defaultLiveFolderTitle,
+  originPatternOf,
+  signInUrlOf,
+  type LiveSource,
+} from "./live-source"
 
 const gmail = (accountIndex: number, label: string | null): LiveSource => ({
   _tag: "Gmail",
@@ -8,11 +13,20 @@ const gmail = (accountIndex: number, label: string | null): LiveSource => ({
 })
 
 describe("取得元に要るホストの許可", () => {
-  it("Gmail は mail.google.com、GitHub は api.github.com への許可が要る", () => {
+  it("Gmail は mail.google.com、GitHub はログイン中のセッションで読む github.com への許可が要る", () => {
     expect([
       originPatternOf(gmail(1, "仕事")),
       originPatternOf({ _tag: "GitHub", query: "mentioned" }),
-    ]).toStrictEqual(["https://mail.google.com/*", "https://api.github.com/*"])
+    ]).toStrictEqual(["https://mail.google.com/*", "https://github.com/*"])
+  })
+})
+
+describe("ログインのために開くページ", () => {
+  it("Gmail はそのアカウントの受信トレイ、GitHub はログインページ", () => {
+    expect([
+      signInUrlOf(gmail(1, "仕事")),
+      signInUrlOf({ _tag: "GitHub", query: "mentioned" }),
+    ]).toStrictEqual(["https://mail.google.com/mail/u/1/", "https://github.com/login"])
   })
 })
 

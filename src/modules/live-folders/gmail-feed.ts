@@ -2,9 +2,7 @@ import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import { XMLParser } from "fast-xml-parser"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import { isOpenableUrl, type GmailSource, type LiveItem } from "./live-source"
-
-const mailboxUrl = (accountIndex: number) => `https://mail.google.com/mail/u/${accountIndex}/`
+import { gmailMailboxUrl, isOpenableUrl, type GmailSource, type LiveItem } from "./live-source"
 
 /**
  * ログイン中のセッションの cookie で読む未読フィード。
@@ -13,7 +11,7 @@ const mailboxUrl = (accountIndex: number) => `https://mail.google.com/mail/u/${a
  * ブラウザでログインしている状態をそのまま使えるこのフィードを読む。
  */
 export const gmailFeedRequest = ({ accountIndex, label }: GmailSource): HttpRequest => ({
-  url: `${mailboxUrl(accountIndex)}feed/atom${label === null ? "" : `/${encodeURIComponent(label)}`}`,
+  url: `${gmailMailboxUrl(accountIndex)}feed/atom${label === null ? "" : `/${encodeURIComponent(label)}`}`,
   credentials: "include",
   // ログインしていないとログイン画面へリダイレクトされる。たどると許可の無い
   // accounts.google.com への要求になって接続エラーと区別できなくなるので、たどらずに判定する
@@ -88,7 +86,7 @@ const itemFrom =
         id: entry.id,
         title: Option.getOrElse(nonBlank(entry.title), () => "（件名なし）"),
         subtitle: senderOf(entry),
-        url: Option.getOrElse(conversationUrlOf(entry), () => mailboxUrl(accountIndex)),
+        url: Option.getOrElse(conversationUrlOf(entry), () => gmailMailboxUrl(accountIndex)),
         updatedAt: DateTime.toEpochMillis(updated),
       }),
     )

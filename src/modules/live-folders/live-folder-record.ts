@@ -1,7 +1,7 @@
 import { Array, Option, Record, Schema } from "effect"
 import type { BookmarkId } from "#platform/browser"
 import { LiveFetchFailure } from "./live-fetch-failure"
-import { LiveItem } from "./live-source"
+import { LiveItem, type LiveSort } from "./live-source"
 
 export const LiveFolderAttempt = Schema.TaggedUnion({
   Fetched: { at: Schema.Number },
@@ -11,7 +11,7 @@ export type LiveFolderAttempt = typeof LiveFolderAttempt.Type
 
 /** ライブフォルダ 1 つ分の、最後に取得できた項目と最後の取得の結果。 */
 export const LiveFolderRecord = Schema.Struct({
-  /** 取得に失敗しても、前回取得できた項目を残す。 */
+  /** 取得元が新しい順に並べた順。取得に失敗しても、前回取得できた項目を残す。 */
   items: Schema.Array(LiveItem),
   lastAttempt: LiveFolderAttempt,
   /** 項目の ID ごとに、最後に見たときのその項目の更新時刻。 */
@@ -23,6 +23,8 @@ export interface LiveFolderSnapshot {
   /** まだ一度も取得を終えていないフォルダは含まない。 */
   readonly records: ReadonlyMap<BookmarkId, LiveFolderRecord>
   readonly refreshing: ReadonlySet<BookmarkId>
+  /** 含まれないフォルダは既定の並べ方（新しい順）。 */
+  readonly sorts: ReadonlyMap<BookmarkId, LiveSort>
 }
 
 /**

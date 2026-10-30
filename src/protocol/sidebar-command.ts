@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
-import { LiveSource } from "#modules/live-folders"
+import { LiveSort, LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -99,6 +99,10 @@ export const SidebarCommand = Schema.Union([
     itemId: Schema.String,
   }),
   Schema.TaggedStruct("MarkLiveFolderSeen", { bookmarkId: BookmarkId }),
+  Schema.TaggedStruct("SetLiveFolderSort", { bookmarkId: BookmarkId, sort: LiveSort }),
+  // 取得元のログインページなど、ピンでもライブの項目でもないページを、そのウィンドウの
+  // アクティブな Space の一時タブとして開く
+  Schema.TaggedStruct("OpenUrl", { windowId: WindowId, url: Schema.String }),
   // 空文字はトークンを消す。トークンは background だけが持ち、ビューには載せない
   Schema.TaggedStruct("SetGitHubToken", { token: Schema.String }),
 

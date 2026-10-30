@@ -1,7 +1,11 @@
-import { Array, DateTime, Option, Order, pipe, Record, Result, Schema } from "effect"
+import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
+import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
 import { isOpenableUrl, type GitHubQuery, type LiveItem } from "./live-source"
+
+/** トークンを使う公式 API に要るホストの許可。 */
+export const GITHUB_API_ORIGIN = "https://api.github.com/*"
 
 const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<string>>> = {
   "review-requested": ["is:pr is:open review-requested:@me archived:false"],
@@ -15,10 +19,10 @@ const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<
 }
 
 /** ライブフォルダ 1 つ分の検索式。複数あれば、すべての結果を合わせたものが中身になる。 */
-export const githubSearchesFor = (query: GitHubQuery): Array.NonEmptyReadonlyArray<string> =>
+export const githubApiSearchesFor = (query: GitHubQuery): Array.NonEmptyReadonlyArray<string> =>
   searchesByQuery[query]
 
-export const githubSearchRequest = (search: string, token: string): HttpRequest => ({
+export const githubApiSearchRequest = (search: string, token: string): HttpRequest => ({
   url: `https://api.github.com/search/issues?${new URLSearchParams({
     q: search,
     sort: "updated",
@@ -47,7 +51,6 @@ type SearchItem = typeof SearchItem.Type
 
 const decodeResponse = Schema.decodeUnknownOption(SearchResponse)
 const decodeItem = Schema.decodeUnknownOption(SearchItem)
-const decodeNumber = Schema.decodeUnknownOption(Schema.FiniteFromString)
 
 // repository_url は https://api.github.com/repos/<owner>/<repo> の形
 const repositoryNameOf = (repositoryUrl: string): string =>
@@ -62,10 +65,10 @@ const itemFrom = (item: SearchItem): LiveItem => ({
 })
 
 /**
- * 検索 API の応答本文から項目を取り出す。形の合わない項目と開けない URL の項目は除く。
- * 応答そのものが読めなければ None。
+ * 検索 API の応答本文から、更新の新しい順に項目を取り出す。形の合わない項目と開けない URL の
+ * 項目は除く。応答そのものが読めなければ None。
  */
-export const parseGitHubSearch = (body: string): Option.Option<ReadonlyArray<LiveItem>> =>
+export const parseGitHubApiSearch = (body: string): Option.Option<ReadonlyArray<LiveItem>> =>
   Option.map(decodeResponse(body), ({ items }) =>
     Array.getSomes(
       items.map((raw) =>
@@ -78,51 +81,13 @@ export const parseGitHubSearch = (body: string): Option.Option<ReadonlyArray<Liv
     ),
   )
 
-const byNewestUpdate = Order.flip(Order.mapInput(Order.Number, (item: LiveItem) => item.updatedAt))
-
-/** 複数の検索結果を、重複を除いて更新の新しい順に並べる。 */
-export const mergeSearchResults = (
-  results: ReadonlyArray<ReadonlyArray<LiveItem>>,
-): ReadonlyArray<LiveItem> =>
-  Array.sort(
-    Array.dedupeWith(results.flat(), (a, b) => a.id === b.id),
-    byNewestUpdate,
-  )
-
-const headerNumber = (response: HttpResponse, name: string) =>
-  Option.flatMap(Record.get(response.headers, name), decodeNumber)
-
-const FALLBACK_RATE_LIMIT_WAIT_MS = 60_000
-
-// 一次の上限は残り回数と回復時刻（エポック秒）、二次の上限は retry-after（秒）で知らされる
-const rateLimitRetryAt = (response: HttpResponse, now: number): Option.Option<number> => {
-  if (response.status !== 403 && response.status !== 429) return Option.none()
-  const afterRetryAfter = Option.map(
-    headerNumber(response, "retry-after"),
-    (seconds) => now + seconds * 1000,
-  )
-  const isExhausted = Option.contains(headerNumber(response, "x-ratelimit-remaining"), 0)
-  const atReset = isExhausted
-    ? Option.map(headerNumber(response, "x-ratelimit-reset"), (seconds) => seconds * 1000)
-    : Option.none()
-  return pipe(
-    afterRetryAfter,
-    Option.orElse(() => atReset),
-    Option.orElse(() =>
-      response.status === 429 || isExhausted
-        ? Option.some(now + FALLBACK_RATE_LIMIT_WAIT_MS)
-        : Option.none(),
-    ),
-  )
-}
-
 /** @param now - 上限に達したときの再開時刻を、待ち時間で知らされた場合の起点。 */
-export const githubItemsFrom = (
+export const githubApiItemsFrom = (
   response: HttpResponse,
   now: number,
 ): Result.Result<ReadonlyArray<LiveItem>, LiveFetchFailure> => {
   if (response.status === 200) {
-    return Result.fromOption(parseGitHubSearch(response.body), () => ({
+    return Result.fromOption(parseGitHubApiSearch(response.body), () => ({
       _tag: "UnreadableResponse" as const,
     }))
   }

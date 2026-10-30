@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
-import { LiveItem, LiveSource } from "#modules/live-folders"
+import { LiveItem, LiveSort, LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -63,6 +63,8 @@ export const LiveFolderStatus = Schema.TaggedUnion({
     needsPermission: Schema.Boolean,
     // GitHub のトークンが無いか無効。UI からトークンを入れ直せば直る
     needsToken: Schema.Boolean,
+    // 取得元にログインしていない。このページを開いてログインすれば直る
+    signInUrl: Schema.NullOr(Schema.String),
   },
 })
 export type LiveFolderStatus = typeof LiveFolderStatus.Type
@@ -77,6 +79,8 @@ export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
   source: LiveSource,
   isExpanded: Schema.Boolean,
   status: LiveFolderStatus,
+  sort: LiveSort,
+  // sort の順に並べ済み
   items: Schema.Array(LiveItemView),
 })
 export type PinnedLiveFolderView = typeof PinnedLiveFolderView.Type
