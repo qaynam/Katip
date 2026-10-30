@@ -19,4 +19,14 @@ export type Catalog = {
   readonly [K in MessageKey]: EnglishMessage<K> extends string ? string : PluralForms
 }
 
+/**
+ * カタログのうち、キーが `namespace.` で始まる部分。画面ごとにファイルを分けても、
+ * 英語のカタログと比べたキーの過不足は、その画面のファイルで型検査に落ちる。
+ */
+export type CatalogSection<Namespace extends string> = {
+  readonly [
+    K in MessageKey as K extends `${Namespace}.${string}` ? K : never
+  ]: EnglishMessage<K> extends string ? string : PluralForms
+}
+
 export const catalogs: { readonly [L in Locale]: Catalog } = { en, ja, zh, es }
