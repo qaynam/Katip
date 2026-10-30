@@ -11,6 +11,18 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
   action: { default_title: "Katip" },
   background: { service_worker: "background.js", type: "module" },
   options_page: "options/index.html",
+  commands: {
+    _execute_action: {
+      suggested_key: { default: "Alt+S" },
+      description: "サイドパネルを開く",
+    },
+    "quick-pin-toggle": {
+      suggested_key: { default: "Alt+D" },
+      description: "アクティブなタブをピン留め／ピン解除する",
+    },
+    "next-tab-in-space": { description: "Space の中で次のタブへ移る" },
+    "previous-tab-in-space": { description: "Space の中で前のタブへ移る" },
+  },
   // 拡張ページはブラウザ自動操作ツールから開けないため、開発ビルドに限り localhost の
   // 検証用ページから background へ接続できるようにする
   ...(mode === "development" && {
