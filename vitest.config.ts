@@ -8,7 +8,6 @@ export default defineConfig({
       {
         test: {
           name: "core",
-          passWithNoTests: true,
           environment: "node",
           include: ["src/**/*.test.ts"],
           exclude: ["src/apps/sidepanel/**", "src/apps/options/**"],
@@ -20,7 +19,6 @@ export default defineConfig({
         resolve: { conditions: ["browser"] },
         test: {
           name: "ui",
-          passWithNoTests: true,
           environment: "jsdom",
           include: ["src/apps/sidepanel/**/*.test.ts", "src/apps/options/**/*.test.ts"],
         },
