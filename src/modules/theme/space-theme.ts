@@ -40,3 +40,22 @@ export const themeOf = (colors: ReadonlyArray<ThemeColor>): SpaceTheme => ({
 })
 
 export const neutralTheme: SpaceTheme = themeOf([])
+
+const roundToThousandths = (value: number) => Math.round(value * 1000) / 1000
+
+/**
+ * 保存する前に値を丸める。スライダーやドラッグで得た値は桁数が長く、同じ見た目でも
+ * 保存値が毎回変わってしまう。
+ */
+export const settleTheme = (theme: SpaceTheme): SpaceTheme => ({
+  ...theme,
+  colors: theme.colors.map((color) => ({
+    hue: roundToThousandths(color.hue) % 360,
+    chroma: roundToThousandths(color.chroma),
+  })),
+  intensity: roundToThousandths(theme.intensity),
+  grain: roundToThousandths(theme.grain),
+})
+
+/** 見た目が同じテーマかどうか。 */
+export const themeEquivalence = Schema.toEquivalence(SpaceTheme)

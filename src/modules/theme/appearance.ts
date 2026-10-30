@@ -36,14 +36,25 @@ const backgroundTone = (color: ThemeColor, scheme: ColorScheme, intensity: numbe
       hue: color.hue,
     })),
     Match.when("dark", () => ({
-      lightness: 0.2 + 0.07 * intensity,
-      chroma: color.chroma * (0.015 + 0.09 * intensity),
+      lightness: 0.22 + 0.09 * intensity,
+      chroma: color.chroma * (0.02 + 0.12 * intensity),
       hue: color.hue,
     })),
     Match.exhaustive,
   )
 
 const neutral: ThemeColor = { hue: 280, chroma: 0.1 }
+
+// sRGB のまま補間すると、補色どうしの中間が灰色や泥色に沈む。知覚的に均一な OKLab で
+// 補間し、主色が広く見えるよう先頭の色の範囲を長めに取る
+const gradientStops = (colors: ReadonlyArray<string>) =>
+  colors
+    .map((color, index) =>
+      index === 0
+        ? `${color} 15%`
+        : `${color} ${Math.round(40 + (60 * index) / (colors.length - 1))}%`,
+    )
+    .join(", ")
 
 const white: Rgb = { red: 1, green: 1, blue: 1 }
 const ink: Rgb = { red: 0.11, green: 0.11, blue: 0.12 }
@@ -73,7 +84,7 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
   const background =
     stops.length === 1
       ? rgbCss(first)
-      : `linear-gradient(165deg, ${stops.map((stop) => rgbCss(stop)).join(", ")})`
+      : `linear-gradient(in oklab 170deg, ${gradientStops(stops.map((stop) => rgbCss(stop)))})`
   const accentColor = Array.headNonEmpty(colors)
   return {
     scheme,

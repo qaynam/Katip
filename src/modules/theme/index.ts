@@ -18,8 +18,10 @@ export {
   DEFAULT_INTENSITY,
   MAX_THEME_COLORS,
   neutralTheme,
+  settleTheme,
   SpaceTheme,
   ThemeColor,
   ThemeMode,
+  themeEquivalence,
   themeOf,
 } from "./space-theme"
