@@ -80,9 +80,6 @@ export const program = Effect.gen(function* () {
   const hub = yield* SidebarHub
   const events = yield* BrowserEvents
 
-  yield* serialize(initialize)
-  yield* logFailure("自動アーカイブの予約に失敗した")(scheduleAutoArchive)
-
   const publishViews = yield* makeDebounced(hub.publish, "30 millis")
   const syncGroups = yield* makeDebounced(serialize(syncTabGroupsIfEnabled), "200 millis")
   const persistSnapshot = yield* makeDebounced(serialize(saveSnapshot), "1 second")
@@ -105,13 +102,6 @@ export const program = Effect.gen(function* () {
       ),
     )
 
-  yield* events.events.pipe(
-    Stream.runForEach((event) =>
-      Effect.andThen(logFailure(`${event._tag} の処理に失敗した`)(handleEvent(event)), afterChange),
-    ),
-    Effect.forkScoped(),
-  )
-
   yield* events.connections.pipe(
     Stream.runForEach((port) =>
       port.name === SIDEBAR_PORT_NAME
@@ -121,6 +111,20 @@ export const program = Effect.gen(function* () {
             ),
           )
         : port.disconnect,
+    ),
+    Effect.forkScoped(),
+  )
+
+  // 起動時の整合が失敗しても、処理を止めずに続ける。止めるとサイドパネルもショートカットも
+  // 一切応答しなくなり、ユーザーには何が起きたのか分からない
+  yield* logFailure("起動時の整合に失敗した")(serialize(initialize))
+  yield* logFailure("自動アーカイブの予約に失敗した")(scheduleAutoArchive)
+  yield* afterChange
+
+  // 所属の判定は復元レコードの読み込みを前提にするので、イベントは整合を取った後に処理する
+  yield* events.events.pipe(
+    Stream.runForEach((event) =>
+      Effect.andThen(logFailure(`${event._tag} の処理に失敗した`)(handleEvent(event)), afterChange),
     ),
     Effect.forkScoped(),
   )
