@@ -43,8 +43,7 @@
       ondragover={(event) =>
         ctx.drag.offer(event, emptyKey, "into", { _tag: "Favorites", slot: 0 })}
     >
-      <strong>Favorites</strong>
-      <span>よく使うタブをここにドラッグすると、このウィンドウのどの Space からでも開けます</span>
+      タブをここにドラッグして Favorites に追加
     </p>
   {:else}
     <ul class="grid" ondragover={onGridDragOver}>
@@ -66,16 +65,23 @@
             class="tile"
             class:active={favorite.isActive}
             type="button"
-            title={favorite.title}
             aria-label={favorite.title}
             aria-current={favorite.isActive ? "true" : undefined}
             onclick={() => void ctx.run({ _tag: "ActivateTab", tabId: favorite.tabId })}
+            onpointerenter={(event) =>
+              ctx.tooltip.schedule(
+                { title: favorite.title },
+                { x: event.clientX, y: event.clientY },
+              )}
+            onpointermove={(event) => ctx.tooltip.follow({ x: event.clientX, y: event.clientY })}
+            onpointerleave={() => ctx.tooltip.hide()}
+            onpointerdown={() => ctx.tooltip.hide()}
           >
             <Favicon
               pageUrl={favorite.url}
               favIconUrl={favorite.favIconUrl}
               title={favorite.title}
-              size={20}
+              size={18}
             />
           </button>
         </li>
@@ -86,13 +92,14 @@
 
 <style>
   .favorites {
-    padding: 10px 10px 4px;
+    flex: none;
+    padding: 8px 8px 0;
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
     margin: 0;
     padding: 0;
   }
@@ -113,27 +120,27 @@
     height: 44px;
     padding: 0;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--surface-raised);
-    color: inherit;
-    transition: background-color 120ms ease;
+    transition:
+      background-color 140ms ease,
+      box-shadow 140ms ease;
   }
 
   .tile:hover {
-    background: var(--surface-raised-hover);
+    background: linear-gradient(var(--surface-hover), var(--surface-hover)) var(--surface-raised);
   }
 
   .tile.active {
     background: var(--surface-active);
     box-shadow: var(--shadow-active);
-    color: var(--text-on-surface);
   }
 
   .cell.drop-before::before,
   .cell.drop-after::after {
     position: absolute;
-    top: 6px;
-    bottom: 6px;
+    top: 8px;
+    bottom: 8px;
     width: 2px;
     border-radius: 1px;
     background: var(--drop-line);
@@ -142,33 +149,29 @@
   }
 
   .cell.drop-before::before {
-    left: -4px;
+    left: -5px;
   }
 
   .cell.drop-after::after {
-    right: -4px;
+    right: -5px;
   }
 
   .empty {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    display: grid;
+    place-items: center;
+    height: 44px;
     margin: 0;
-    padding: 10px 12px;
-    border: 1px dashed var(--rule);
-    border-radius: 12px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
     color: var(--text-muted);
     font-size: 11.5px;
-    line-height: 1.45;
-  }
-
-  .empty strong {
-    color: var(--text);
-    font-size: 12px;
+    text-align: center;
+    transition: background-color 140ms ease;
   }
 
   .empty.drop-into {
-    border-color: var(--drop-line);
     background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1.5px var(--drop-line);
   }
 </style>

@@ -1,5 +1,6 @@
 import { Array, Option, Order } from "effect"
 import type { SpaceList } from "#modules/space"
+import { groupColorOf } from "#modules/theme"
 import { activeSpaceOf, spaceOf, type Workspace } from "#modules/workspace"
 import type { BrowserTab } from "#platform/browser"
 import type { DesiredGroup } from "./tab-group-sync-plan"
@@ -35,7 +36,7 @@ export const desiredGroupsFor = (
               windowId,
               spaceId: space.id,
               title: space.name,
-              color: space.color,
+              color: groupColorOf(space.theme),
               collapsed: Option.exists(activeSpaceId, (active) => active !== space.id),
               tabIds,
             },

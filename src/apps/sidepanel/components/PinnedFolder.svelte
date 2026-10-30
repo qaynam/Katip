@@ -12,7 +12,7 @@
   import { childPosition } from "../logic/view-queries"
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
-  import Icon from "./Icon.svelte"
+  import FolderGlyph from "./FolderGlyph.svelte"
   import { createFolder } from "./menus"
   import PinnedItemRow from "./PinnedItemRow.svelte"
   import PinnedNodes from "./PinnedNodes.svelte"
@@ -102,7 +102,7 @@
 <li class="folder">
   {#if isEditing}
     <div class="header editing">
-      <span class="folder-icon"><Icon name="folderOpen" /></span>
+      <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
       <TitleEditor
         initial={folder.title}
         label="フォルダの名前"
@@ -125,13 +125,8 @@
       ondragover={onHeaderDragOver}
       ondragleave={() => ctx.drag.cancelHover()}
     >
-      <span class="folder-icon" class:peeking={!folder.isExpanded && folder.peekedItems.length > 0}>
-        <Icon name={folder.isExpanded ? "folderOpen" : "folder"} />
-      </span>
+      <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
       <span class="title">{folder.title || "名前のないフォルダ"}</span>
-      <span class="chevron" class:expanded={folder.isExpanded}>
-        <Icon name="chevronRight" size={12} />
-      </span>
     </button>
   {/if}
 
@@ -171,46 +166,31 @@
     align-items: center;
     gap: 9px;
     width: 100%;
-    min-height: 34px;
-    padding: 0 10px;
+    min-height: var(--row-height);
+    padding: 0 10px 0 9px;
     border: none;
     border-radius: var(--radius-row);
     background: none;
-    color: inherit;
-    font: inherit;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     text-align: start;
-    cursor: default;
     transition: background-color 120ms ease;
   }
 
   button.header:hover {
-    background: var(--space-bg-hover);
+    background: var(--surface-hover);
   }
 
   .header.drop-into {
-    background: var(--surface-raised-hover);
+    background: var(--surface-raised);
     box-shadow: inset 0 0 0 1.5px var(--drop-line);
   }
 
   .folder-icon {
-    position: relative;
     display: grid;
     flex: none;
     place-items: center;
-    width: 16px;
-    color: var(--text-muted);
-  }
-
-  .folder-icon.peeking::after {
-    position: absolute;
-    right: -3px;
-    bottom: -1px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
-    content: "";
+    width: 18px;
   }
 
   .title {
@@ -219,25 +199,6 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-  }
-
-  .chevron {
-    display: grid;
-    place-items: center;
-    color: var(--text-muted);
-    opacity: 0;
-    transition:
-      transform 150ms ease,
-      opacity 120ms ease;
-  }
-
-  .chevron.expanded {
-    transform: rotate(90deg);
-  }
-
-  .header:hover .chevron,
-  .header:focus-visible .chevron {
-    opacity: 1;
   }
 
   .header.drop-before::before,
@@ -263,29 +224,35 @@
 
   .header.drop-first-child::after {
     bottom: -2px;
-    left: 32px;
+    left: 26px;
+  }
+
+  .header :global(.title-editor) {
+    font-weight: 700;
   }
 
   .empty {
-    margin: 2px 0 4px 23px;
-    padding: 8px 10px;
-    border: 1px dashed var(--rule);
+    display: flex;
+    align-items: center;
+    height: 30px;
+    margin: 2px 0 2px 16px;
+    padding: 0 10px;
     border-radius: 8px;
     color: var(--text-muted);
     font-size: 12px;
+    transition: background-color 120ms ease;
   }
 
   .empty.drop-into {
-    border-color: var(--drop-line);
     background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1.5px var(--drop-line);
   }
 
   .peek {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    margin: 2px 0 2px 17px;
-    padding: 0 0 0 6px;
-    border-left: 1px dashed var(--rule);
+    margin: 2px 0 2px 16px;
+    padding: 0;
   }
 </style>

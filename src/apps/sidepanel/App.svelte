@@ -1,8 +1,10 @@
 <script lang="ts">
   import "./theme.css"
   import { Option } from "effect"
+  import { neutralTheme } from "#modules/theme"
   import type { SidebarCommand, SidebarView } from "#protocol"
   import Sidebar from "./components/Sidebar.svelte"
+  import ThemedSurface from "./components/ThemedSurface.svelte"
   import Toasts from "./components/Toasts.svelte"
   import type { SidebarConnection } from "./connection/sidebar-connection"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
@@ -42,19 +44,23 @@
 {#if view !== null && activeSpace !== null}
   <Sidebar {view} {activeSpace} {run} {toasts} {faviconUrl} {onReload} />
 {:else}
-  <div class="katip-root waiting" data-space-color="grey">
-    <p class="waiting-message" role="status">
-      {view === null ? "サイドバーを読み込んでいます…" : "表示できる Space がありません"}
-    </p>
-    <div class="waiting-toasts"><Toasts {toasts} /></div>
-  </div>
+  <ThemedSurface theme={neutralTheme} transitionKey="waiting">
+    <div class="waiting">
+      <p class="waiting-message" role="status">
+        {view === null ? "サイドバーを読み込んでいます…" : "表示できる Space がありません"}
+      </p>
+      <div class="waiting-toasts"><Toasts {toasts} /></div>
+    </div>
+  </ThemedSurface>
 {/if}
 
 <style>
   .waiting {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    height: 100%;
   }
 
   .waiting-message {

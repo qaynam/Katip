@@ -1,17 +1,18 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { themeOf } from "#modules/theme"
 import { assignTab, bindPinned, emptyWorkspace, switchSpace } from "#modules/workspace"
 import { BookmarkId, TabId, WindowId, type BrowserTab } from "#platform/browser"
 import { desiredGroupsFor } from "./desired-groups"
 
 const spaceId = (value: string) => SpaceId.make(value)
-const space = (id: string, color: Space["color"]): Space => ({
+const space = (id: string, hue: number): Space => ({
   id: spaceId(id),
   name: SpaceName.make(id),
-  color,
+  theme: themeOf([{ hue, chroma: 0.7 }]),
 })
-const spaces = [space("home", "blue"), space("work", "red")]
+const spaces = [space("home", 255), space("work", 25)]
 
 const tab = (id: number, windowId: number, index: number, pinned = false) =>
   ({
@@ -22,7 +23,7 @@ const tab = (id: number, windowId: number, index: number, pinned = false) =>
   }) as BrowserTab
 
 describe("desiredGroupsFor", () => {
-  it("ウィンドウごと・Space ごとに、名前と色を付けたグループを index 順のタブで作る", () => {
+  it("ウィンドウごと・Space ごとに、名前とテーマに近い色を付けたグループを index 順のタブで作る", () => {
     const workspace = [
       [1, "home"],
       [2, "work"],

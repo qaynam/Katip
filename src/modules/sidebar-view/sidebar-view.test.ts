@@ -2,6 +2,7 @@ import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import type { PinnedTree } from "#modules/pinned"
 import { defaultSettings } from "#modules/settings"
+import { neutralTheme } from "#modules/theme"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
 import {
   assignTab,
@@ -20,7 +21,11 @@ const tabId = (value: number) => TabId.make(value)
 const spaceId = (value: string) => SpaceId.make(value)
 const bookmarkId = (value: string) => BookmarkId.make(value)
 
-const space = (id: string): Space => ({ id: spaceId(id), name: SpaceName.make(id), color: "blue" })
+const space = (id: string): Space => ({
+  id: spaceId(id),
+  name: SpaceName.make(id),
+  theme: neutralTheme,
+})
 
 const browserTab = (id: number, overrides: Partial<BrowserTab> = {}): BrowserTab => ({
   id: tabId(id),

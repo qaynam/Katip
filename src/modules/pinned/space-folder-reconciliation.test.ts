@@ -1,6 +1,7 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { neutralTheme } from "#modules/theme"
 import { BookmarkId } from "#platform/browser"
 import {
   planSpaceFolderReconciliation,
@@ -16,7 +17,7 @@ const bookmarkId = (value: string) => BookmarkId.make(value)
 const space = (id: string, name: string = id): Space => ({
   id: spaceId(id),
   name: spaceName(name),
-  color: "grey",
+  theme: neutralTheme,
 })
 
 const rootFolder = (id: string, title: string): KatipRootFolder => ({ id: bookmarkId(id), title })

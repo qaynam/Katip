@@ -5,6 +5,10 @@ import type { DialogController } from "./dialog-controller.svelte"
 import type { DragSession } from "./drag-session.svelte"
 import type { MenuController } from "./menu-controller.svelte"
 import type { PendingRename } from "./pending-rename.svelte"
+import type { PendingSpaceSetup } from "./space-setup.svelte"
+import type { ThemeDraft } from "./theme-draft.svelte"
+import type { ThemePickerController } from "./theme-picker.svelte"
+import type { TooltipController } from "./tooltip.svelte"
 
 export interface SidebarContext {
   /** 失敗はトーストで知らせ済み。呼び出し側は結果を使うときだけ待てばよい */
@@ -15,6 +19,10 @@ export interface SidebarContext {
   readonly dialog: DialogController
   readonly drag: DragSession
   readonly pendingRename: PendingRename
+  readonly spaceSetup: PendingSpaceSetup
+  readonly themePicker: ThemePickerController
+  readonly themeDraft: ThemeDraft
+  readonly tooltip: TooltipController
   readonly faviconUrl: FaviconResolver
 }
 

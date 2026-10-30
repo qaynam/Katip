@@ -1,5 +1,6 @@
 import { Array, Option, pipe, Result, Schema } from "effect"
-import { Space, SpaceColor, SpaceId, SpaceName } from "./space"
+import { groupColorOf, presetPages, themeOf, type SpaceTheme } from "#modules/theme"
+import { Space, SpaceId, SpaceName } from "./space"
 
 export const SpaceList = Schema.Array(Space)
 export type SpaceList = typeof SpaceList.Type
@@ -27,24 +28,27 @@ const defaultName = (spaces: SpaceList): SpaceName => {
   )
 }
 
-const defaultColor = (spaces: SpaceList): SpaceColor => {
-  const palette = SpaceColor.literals
-  const used = new Set(spaces.map((space) => space.color))
+// 1 ページ目の先頭は無彩色なので、自動で割り当てる候補からは外す
+const colorfulPresets = (presetPages[0] ?? []).slice(1).map(themeOf)
+
+const defaultTheme = (spaces: SpaceList): SpaceTheme => {
+  const used = new Set(spaces.map((space) => groupColorOf(space.theme)))
   return pipe(
-    Array.findFirst(palette, (color) => !used.has(color)),
-    Option.getOrElse(() => palette[spaces.length % palette.length] ?? "grey"),
+    Array.findFirst(colorfulPresets, (theme) => !used.has(groupColorOf(theme))),
+    Option.orElse(() => Array.get(colorfulPresets, spaces.length % colorfulPresets.length)),
+    Option.getOrElse(() => themeOf([])),
   )
 }
 
 export const addSpace = (
   spaces: SpaceList,
-  draft: { readonly id: SpaceId; readonly name?: SpaceName; readonly color?: SpaceColor },
+  draft: { readonly id: SpaceId; readonly name?: SpaceName; readonly theme?: SpaceTheme },
 ): SpaceList => [
   ...spaces,
   {
     id: draft.id,
     name: draft.name ?? defaultName(spaces),
-    color: draft.color ?? defaultColor(spaces),
+    theme: draft.theme ?? defaultTheme(spaces),
   },
 ]
 
@@ -60,8 +64,8 @@ const updateSpace = (
 export const renameSpace = (spaces: SpaceList, id: SpaceId, name: SpaceName) =>
   updateSpace(spaces, id, (space) => ({ ...space, name }))
 
-export const recolorSpace = (spaces: SpaceList, id: SpaceId, color: SpaceColor) =>
-  updateSpace(spaces, id, (space) => ({ ...space, color }))
+export const setSpaceTheme = (spaces: SpaceList, id: SpaceId, theme: SpaceTheme) =>
+  updateSpace(spaces, id, (space) => ({ ...space, theme }))
 
 export const removeSpace = (
   spaces: SpaceList,

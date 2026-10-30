@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
-import { SpaceColor, SpaceId, SpaceName } from "#modules/space"
+import { SpaceId, SpaceName } from "#modules/space"
+import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
 export const TabView = Schema.Struct({
@@ -72,7 +73,7 @@ export const PinnedNodeView = Schema.Union([PinnedItemView, PinnedFolderView])
 export const SpaceView = Schema.Struct({
   id: SpaceId,
   name: SpaceName,
-  color: SpaceColor,
+  theme: SpaceTheme,
   // ブックマークが読めない間は、ピン留めが空なのか未取得なのかを区別して表示する
   pinned: Schema.Union([
     Schema.TaggedStruct("Available", {

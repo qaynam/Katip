@@ -27,9 +27,9 @@ describe("Favorites", () => {
     expect(tile.getAttribute("aria-current")).toBe("true")
   })
 
-  it("空のときは、ドラッグで追加できることを説明する", async () => {
+  it("空のときは、ドラッグで追加できることを控えめに示す", async () => {
     await renderSidebar(sidebarView({ favorites: [] }))
 
-    expect(within(favoritesRegion()).getByText(/ここにドラッグすると/)).toBeTruthy()
+    expect(within(favoritesRegion()).getByText(/ドラッグして Favorites に追加/)).toBeTruthy()
   })
 })

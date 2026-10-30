@@ -53,13 +53,13 @@
 <style>
   .pinned {
     position: relative;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
   }
 
   .pinned.drop-after::after {
     position: absolute;
     right: 8px;
-    bottom: 2px;
+    bottom: 1px;
     left: 8px;
     height: 2px;
     border-radius: 1px;
@@ -68,18 +68,20 @@
   }
 
   .empty {
+    display: grid;
+    place-items: center;
+    height: var(--row-height);
     margin: 0;
-    padding: 12px;
-    border: 1px dashed var(--rule);
+    padding: 0 12px;
     border-radius: var(--radius-row);
     color: var(--text-muted);
     font-size: 12px;
-    text-align: center;
+    transition: background-color 120ms ease;
   }
 
   .empty.drop-into {
-    border-color: var(--drop-line);
     background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1.5px var(--drop-line);
   }
 
   .unavailable {
@@ -98,12 +100,12 @@
   }
 
   .unavailable button {
-    padding: 4px 10px;
+    height: 26px;
+    padding: 0 12px;
     border: none;
-    border-radius: 6px;
+    border-radius: 7px;
     background: var(--surface-active);
-    color: var(--text-on-surface);
-    font: inherit;
+    box-shadow: var(--shadow-active);
     font-weight: 600;
   }
 </style>

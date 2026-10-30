@@ -37,8 +37,6 @@
   }
 
   .nested {
-    margin: 2px 0 2px 17px;
-    padding-left: 6px;
-    border-left: 1px solid var(--rule);
+    margin: 2px 0 2px 16px;
   }
 </style>

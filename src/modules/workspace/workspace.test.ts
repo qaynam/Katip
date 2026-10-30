@@ -1,6 +1,7 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { neutralTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 import {
   activeSpaceOf,
@@ -23,7 +24,11 @@ const tabId = (value: number) => TabId.make(value)
 const windowId = (value: number) => WindowId.make(value)
 const spaceId = (value: string) => SpaceId.make(value)
 
-const space = (id: string): Space => ({ id: spaceId(id), name: SpaceName.make(id), color: "grey" })
+const space = (id: string): Space => ({
+  id: spaceId(id),
+  name: SpaceName.make(id),
+  theme: neutralTheme,
+})
 const spaces = [space("home"), space("work"), space("fun")]
 
 const WINDOW = windowId(1)

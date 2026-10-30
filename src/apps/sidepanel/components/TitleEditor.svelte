@@ -60,14 +60,14 @@
   .title-editor {
     flex: 1;
     min-width: 0;
-    height: 24px;
-    padding: 0 6px;
+    height: 26px;
     margin: 0 -2px;
+    padding: 0 7px;
     border: none;
-    border-radius: 6px;
-    outline: 2px solid var(--focus-ring);
+    border-radius: 7px;
+    outline: 1.5px solid var(--focus-ring);
     background: var(--surface-active);
-    color: var(--text-on-surface);
+    color: var(--text);
     font: inherit;
   }
 </style>

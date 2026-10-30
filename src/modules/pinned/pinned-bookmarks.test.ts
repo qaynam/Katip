@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option } from "effect"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { neutralTheme } from "#modules/theme"
 import { BookmarkId, Bookmarks, type BookmarkFolderType } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import { isFolderExpanded } from "./folder-expansion"
@@ -17,7 +18,7 @@ const syncOn = { isTabGroupSyncEnabled: true }
 const space = (id: string, name: string = id): Space => ({
   id: SpaceId.make(id),
   name: SpaceName.make(name),
-  color: "grey",
+  theme: neutralTheme,
 })
 
 const work = space("work", "仕事")

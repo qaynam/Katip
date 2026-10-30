@@ -8,17 +8,23 @@
   import { MenuController } from "../state/menu-controller.svelte"
   import { PendingRename } from "../state/pending-rename.svelte"
   import { setSidebarContext } from "../state/sidebar-context"
+  import { PendingSpaceSetup } from "../state/space-setup.svelte"
+  import { ThemeDraft } from "../state/theme-draft.svelte"
+  import { ThemePickerController } from "../state/theme-picker.svelte"
   import type { ToastQueue } from "../state/toast-queue.svelte"
+  import { TooltipController } from "../state/tooltip.svelte"
   import ArchivePanel from "./ArchivePanel.svelte"
+  import BottomBar from "./BottomBar.svelte"
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
-  import Icon from "./Icon.svelte"
   import PinnedSection from "./PinnedSection.svelte"
-  import SpaceHeader from "./SpaceHeader.svelte"
-  import SpaceSwitcher from "./SpaceSwitcher.svelte"
+  import SpaceTitle from "./SpaceTitle.svelte"
   import TemporarySection from "./TemporarySection.svelte"
+  import ThemedSurface from "./ThemedSurface.svelte"
+  import ThemePicker from "./ThemePicker.svelte"
   import Toasts from "./Toasts.svelte"
+  import Tooltip from "./Tooltip.svelte"
 
   interface Props {
     view: SidebarView
@@ -34,6 +40,11 @@
   const menu = new MenuController()
   const dialog = new DialogController()
   const drag = new DragSession(() => activeSpace.id)
+  const themePicker = new ThemePickerController()
+  const themeDraft = new ThemeDraft((draft) =>
+    run({ _tag: "SetSpaceTheme", spaceId: draft.spaceId, theme: draft.theme }),
+  )
+  const tooltip = new TooltipController()
   setSidebarContext({
     run: (command) => run(command),
     get view() {
@@ -46,6 +57,10 @@
     dialog,
     drag,
     pendingRename: new PendingRename(),
+    spaceSetup: new PendingSpaceSetup(),
+    themePicker,
+    themeDraft,
+    tooltip,
     get faviconUrl() {
       return faviconUrl
     },
@@ -54,8 +69,24 @@
   let isArchiveOpen = $state(false)
   let lastSwipeAt = Number.NEGATIVE_INFINITY
 
+  const displayedTheme = $derived(themeDraft.themeFor(activeSpace.id) ?? activeSpace.theme)
+
+  $effect(() => {
+    const draft = themeDraft.current
+    if (draft === null) return
+    themeDraft.settleWith(view.spaces.find((space) => space.id === draft.spaceId)?.theme ?? null)
+  })
+
+  $effect(() => {
+    const picker = themePicker.current
+    if (picker !== null && picker.spaceId !== activeSpace.id) {
+      themeDraft.release()
+      themePicker.close()
+    }
+  })
+
   const switchByWheel = (event: WheelEvent) => {
-    if (drag.source !== null) return
+    if (drag.source !== null || themePicker.current !== null) return
     const direction = detectSwipe(event, event.timeStamp - lastSwipeAt)
     if (Option.isNone(direction)) return
     const destination = neighborSpaceId(view.spaces, activeSpace.id, direction.value)
@@ -75,7 +106,7 @@
   }
 </script>
 
-<div class="katip-root" data-space-color={activeSpace.color}>
+<ThemedSurface theme={displayedTheme} transitionKey={activeSpace.id}>
   <main
     class="sidebar"
     inert={dialog.current !== null}
@@ -83,19 +114,14 @@
     ondragover={() => drag.reject()}
     ondrop={dropAcceptedCommand}
     ondragleave={forgetDropTargetWhenLeaving}
+    ondragstart={() => tooltip.hide()}
   >
     <FavoritesGrid favorites={view.favorites} />
 
-    <SpaceHeader
-      space={activeSpace}
-      canDelete={view.spaces.length > 1}
-      {isArchiveOpen}
-      onToggleArchive={() => (isArchiveOpen = !isArchiveOpen)}
-    />
-
-    <div class="space-body">
-      {#key activeSpace.id}
-        <div class="space-content">
+    {#key activeSpace.id}
+      <div class="space">
+        <SpaceTitle space={activeSpace} />
+        <div class="space-body">
           {#if isArchiveOpen}
             <ArchivePanel spaceId={activeSpace.id} />
           {:else}
@@ -103,88 +129,67 @@
             <TemporarySection space={activeSpace} />
           {/if}
         </div>
-      {/key}
-    </div>
+      </div>
+    {/key}
 
     <div class="bottom">
       <Toasts {toasts} />
-      <button
-        class="new-tab"
-        type="button"
-        onclick={() => void run({ _tag: "OpenNewTab", windowId: view.windowId })}
-      >
-        <Icon name="plus" />
-        <span>新しいタブ</span>
-      </button>
-      <SpaceSwitcher spaces={view.spaces} activeSpaceId={activeSpace.id} />
+      <BottomBar
+        spaces={view.spaces}
+        activeSpaceId={activeSpace.id}
+        {isArchiveOpen}
+        onToggleArchive={() => (isArchiveOpen = !isArchiveOpen)}
+      />
     </div>
   </main>
 
+  <ThemePicker />
   <ContextMenu />
   <ConfirmDialog />
-</div>
+  <Tooltip />
+</ThemedSurface>
 
 <style>
   .sidebar {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
   }
 
-  .space-body {
+  .space {
+    display: flex;
     flex: 1;
+    flex-direction: column;
     min-height: 0;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--rule) transparent;
+    animation: space-in 200ms ease-out;
   }
 
-  .space-content {
+  .space-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    min-height: 100%;
-    padding: 0 6px;
-    box-sizing: border-box;
-    animation: space-in 180ms ease-out;
+    min-height: 0;
+    padding: 0 8px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--divider) transparent;
   }
 
   .bottom {
     position: relative;
     flex: none;
-    padding-top: 4px;
-  }
-
-  .new-tab {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: calc(100% - 20px);
-    height: 34px;
-    margin: 0 10px;
-    padding: 0 10px;
-    border: none;
-    border-radius: var(--radius-row);
-    background: var(--surface-raised);
-    color: inherit;
-    font: inherit;
-    text-align: start;
-    transition: background-color 120ms ease;
-  }
-
-  .new-tab:hover {
-    background: var(--surface-raised-hover);
   }
 
   @keyframes space-in {
     from {
-      opacity: 0.35;
-      transform: translateY(3px);
+      opacity: 0.3;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .space-content {
+    .space {
       animation: none;
     }
   }

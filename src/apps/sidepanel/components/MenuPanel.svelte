@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from "svelte"
-  import { fitMenuPosition, type Point } from "../logic/menu-position"
+  import type { Point } from "../logic/menu-position"
   import type { MenuEntry, OpenMenu } from "../state/menu-controller.svelte"
-  import ColorSwatches from "./ColorSwatches.svelte"
   import Icon from "./Icon.svelte"
+  import { popoverPosition } from "./popover-position"
 
   type Submenu = Extract<MenuEntry, { readonly _tag: "Submenu" }>
 
@@ -28,23 +28,7 @@
     )
 
   const placeAndFocus = (node: HTMLDivElement) => {
-    const container = node.offsetParent?.getBoundingClientRect() ?? {
-      left: 0,
-      top: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
-    }
-    const anchor = {
-      left: menu.anchor.left - container.left,
-      right: menu.anchor.right - container.left,
-      top: menu.anchor.top - container.top,
-      bottom: menu.anchor.bottom - container.top,
-    }
-    position = fitMenuPosition(
-      anchor,
-      { width: node.offsetWidth, height: node.offsetHeight },
-      { width: container.width, height: container.height },
-    )
+    position = popoverPosition(node, menu.anchor)
     focusableItems(node)[0]?.focus()
   }
 
@@ -115,7 +99,7 @@
 {#key trail.length}
   <div
     bind:this={panel}
-    class="menu"
+    class="menu glass"
     role="menu"
     tabindex="-1"
     aria-label={page?.label ?? menu.label}
@@ -144,12 +128,12 @@
           disabled={entry.disabled === true}
           onclick={() => select(entry)}
         >
-          {#if entry.color !== undefined}
-            <span class="dot" data-space-color={entry.color}></span>
+          {#if entry.swatch !== undefined}
+            <span class="dot" style:background={entry.swatch}></span>
           {/if}
           <span class="label">{entry.label}</span>
         </button>
-      {:else if entry._tag === "Submenu"}
+      {:else}
         <button
           class="item"
           type="button"
@@ -163,18 +147,6 @@
           <span class="label">{entry.label}</span>
           <Icon name="chevronRight" size={14} />
         </button>
-      {:else}
-        <div class="colors">
-          <ColorSwatches
-            label={entry.label}
-            selected={entry.selected}
-            itemRole="menuitemradio"
-            onPick={(color) => {
-              onClose()
-              entry.onPick(color)
-            }}
-          />
-        </div>
       {/if}
     {/each}
   </div>
@@ -191,12 +163,9 @@
     max-height: calc(100% - 16px);
     padding: 5px;
     overflow-y: auto;
-    border: 1px solid var(--menu-border);
-    border-radius: 10px;
-    background: var(--menu-bg);
-    box-shadow: var(--menu-shadow);
-    color: var(--menu-text);
-    animation: menu-in 90ms ease-out;
+    border-radius: 11px;
+    font-size: 13px;
+    animation: menu-in 110ms ease-out;
   }
 
   .menu:focus {
@@ -207,24 +176,22 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 30px;
-    padding: 0 10px;
+    min-height: 28px;
+    padding: 0 9px;
     border: none;
     border-radius: 6px;
     background: none;
-    color: inherit;
-    font: inherit;
     text-align: start;
   }
 
   .item:hover:not(:disabled),
   .item:focus-visible {
     outline: none;
-    background: var(--menu-hover);
+    background: var(--glass-hover);
   }
 
   .item:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
   }
 
   .item.danger {
@@ -232,7 +199,7 @@
   }
 
   .item.back {
-    color: var(--text-muted-on-menu);
+    color: var(--glass-muted);
     font-weight: 600;
   }
 
@@ -248,23 +215,18 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: var(--space-swatch);
   }
 
   .separator {
-    height: 1px;
-    margin: 4px 6px;
-    background: var(--menu-border);
-  }
-
-  .colors {
-    padding: 6px 6px 4px;
+    height: 0.5px;
+    margin: 4px 8px;
+    background: var(--glass-border);
   }
 
   @keyframes menu-in {
     from {
       opacity: 0;
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
   }
 

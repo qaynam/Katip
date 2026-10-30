@@ -70,6 +70,7 @@
   })
 
   const startRename = () => {
+    ctx.tooltip.hide()
     isEditing = true
   }
 
@@ -96,6 +97,7 @@
   const openMenu = (event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
+    ctx.tooltip.hide()
     const isFromKeyboard = event.clientX === 0 && event.clientY === 0
     const anchor =
       isFromKeyboard && row !== undefined
@@ -108,6 +110,14 @@
     const bounds = event.currentTarget.getBoundingClientRect()
     const edge = edgeAt(event.clientY - bounds.top, bounds.height)
     ctx.drag.offer(event, rowKey, edge, dropTargetAt(edge))
+  }
+
+  const scheduleTooltip = (event: PointerEvent) => {
+    if (isEditing || ctx.drag.source !== null) return
+    ctx.tooltip.schedule(
+      { title, hint: "ダブルクリックで名前を変更" },
+      { x: event.clientX, y: event.clientY },
+    )
   }
 </script>
 
@@ -127,13 +137,16 @@
   ondragover={onDragOver}
   oncontextmenu={openMenu}
   onauxclick={closeOnMiddleClick}
+  onpointerenter={scheduleTooltip}
+  onpointermove={(event) => ctx.tooltip.follow({ x: event.clientX, y: event.clientY })}
+  onpointerleave={() => ctx.tooltip.hide()}
+  onpointerdown={() => ctx.tooltip.hide()}
 >
   {#if onReturnToPinnedUrl !== undefined}
     <button
       class="return-button"
       type="button"
       aria-label="ピンした URL に戻る"
-      title="ピンした URL に戻る"
       onclick={onReturnToPinnedUrl}
     >
       <span class="favicon"><Favicon {pageUrl} {favIconUrl} {title} /></span>
@@ -156,7 +169,6 @@
       class="main"
       type="button"
       aria-current={isActive ? "true" : undefined}
-      {title}
       onclick={activate}
       ondblclick={startRename}
       onmousedown={suppressAutoscroll}
@@ -179,8 +191,8 @@
   {/if}
 
   {#if onClose !== undefined && !isEditing}
-    <button class="close" type="button" aria-label="タブを閉じる" title="閉じる" onclick={onClose}>
-      <Icon name="close" size={14} />
+    <button class="close" type="button" aria-label="タブを閉じる" onclick={onClose}>
+      <Icon name="close" size={13} />
     </button>
   {/if}
 </li>
@@ -191,21 +203,22 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    min-height: 34px;
-    padding: 0 4px 0 10px;
+    min-height: var(--row-height);
+    padding: 0 6px 0 10px;
     border-radius: var(--radius-row);
     list-style: none;
-    transition: background-color 120ms ease;
+    transition:
+      background-color 120ms ease,
+      box-shadow 120ms ease;
   }
 
   .row:hover {
-    background: var(--space-bg-hover);
+    background: var(--surface-hover);
   }
 
   .row.active {
     background: var(--surface-active);
     box-shadow: var(--shadow-active);
-    color: var(--text-on-surface);
   }
 
   .row.dragged {
@@ -222,7 +235,7 @@
   }
 
   .row.closed:not(.active) .favicon {
-    opacity: 0.55;
+    opacity: 0.6;
     filter: saturate(0.4);
   }
 
@@ -230,16 +243,13 @@
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     min-width: 0;
-    height: 34px;
+    height: var(--row-height);
     padding: 0;
     border: none;
     background: none;
-    color: inherit;
-    font: inherit;
     text-align: start;
-    cursor: default;
   }
 
   .main:focus-visible {
@@ -253,6 +263,9 @@
 
   .title {
     overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.003em;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -283,12 +296,11 @@
     place-items: center;
     width: 24px;
     height: 24px;
-    margin: 0 4px 0 -4px;
+    margin: 0 0 0 -4px;
     padding: 0;
     border: none;
     border-radius: 6px;
     background: none;
-    color: inherit;
   }
 
   .return-glyph {
@@ -298,7 +310,6 @@
     place-items: center;
     border-radius: 6px;
     background: var(--surface-active);
-    color: var(--text-on-surface);
     opacity: 0;
     transition: opacity 120ms ease;
   }
@@ -310,9 +321,10 @@
 
   .slash {
     flex: none;
-    margin-right: -4px;
+    margin: 0 -6px 0 -2px;
     color: var(--text-muted);
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 400;
   }
 
   .audio {
@@ -333,19 +345,19 @@
     border: none;
     border-radius: 6px;
     background: none;
-    color: inherit;
+    color: var(--text-muted);
     opacity: 0;
+    transition: opacity 100ms ease;
   }
 
   .row:hover .close,
-  .row.active .close,
   .close:focus-visible {
-    opacity: 0.7;
+    opacity: 1;
   }
 
   .close:hover {
-    background: color-mix(in srgb, currentColor 12%, transparent);
-    opacity: 1;
+    background: var(--surface-hover);
+    color: var(--text);
   }
 
   .row.drop-before::before,
@@ -366,6 +378,11 @@
 
   .row.drop-after::after {
     bottom: -2px;
+  }
+
+  .row :global(.title-editor) {
+    margin-left: 8px;
+    font-size: 14px;
   }
 
   @keyframes spin {

@@ -1,9 +1,9 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { ArchiveEntryId } from "#modules/archive"
-import { SpaceColor, SpaceId } from "#modules/space"
+import { SpaceId } from "#modules/space"
 import { archiveEntry, openPinnedTab, pinnedItem, tabView } from "../testing/view-builders"
-import { archiveEntriesFor, hostOf, pinnedItemDisplay, suggestedSpaceColor } from "./view-queries"
+import { archiveEntriesFor, hostOf, pinnedItemDisplay } from "./view-queries"
 
 describe("archiveEntriesFor", () => {
   const work = SpaceId.make("work")
@@ -24,18 +24,6 @@ describe("archiveEntriesFor", () => {
     const ids = archiveEntriesFor(entries, "allSpaces", work).map((entry) => entry.id)
 
     expect(ids).toStrictEqual(["hobby", "new", "old"].map((id) => ArchiveEntryId.make(id)))
-  })
-})
-
-describe("suggestedSpaceColor", () => {
-  it("まだ使われていない色のうち、パレット順で最初の色を勧める", () => {
-    expect(suggestedSpaceColor([{ color: "grey" }, { color: "red" }])).toBe("blue")
-  })
-
-  it("すべての色が使われていれば、パレットを一巡した色を勧める", () => {
-    const spaces = SpaceColor.literals.map((color) => ({ color }))
-
-    expect(suggestedSpaceColor(spaces)).toBe("grey")
   })
 })
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, type Layer, Option, type Scope } from "effect"
 import { FakeBrowser } from "#platform/browser-testing"
+import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { Bookmarks, Tabs, TabId } from "#platform/browser"
 import type { PinnedItemView, SidebarView } from "#protocol"
@@ -131,6 +132,33 @@ describe("Space の操作", () => {
         expect(Option.map(spaceNamed(view, "ホーム"), (s) => s.temporaryTabs.length)).toStrictEqual(
           Option.some(2),
         )
+      }),
+    ),
+  )
+
+  it.live("テーマを変えるとビューに反映され、同期中のタブグループもテーマに近い色になる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        yield* fake.seedStorage("sync", { "katip/settings": { syncTabGroups: true } })
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const before = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        const pink = themeOf([{ hue: 350, chroma: 0.7 }])
+
+        yield* sidebar.run({ _tag: "SetSpaceTheme", spaceId: before.activeSpaceId, theme: pink })
+        const view = yield* sidebar.viewWhere((v) => v.spaces[0]?.theme.colors[0]?.hue === 350)
+        const groupColor = yield* eventually(
+          Effect.map(fake.snapshot, (snapshot) =>
+            Option.filter(
+              Option.fromNullishOr(snapshot.groups[0]?.color),
+              (color) => color === "pink",
+            ),
+          ),
+        )
+
+        expect([view.spaces[0]?.theme, groupColor]).toStrictEqual([pink, "pink"])
       }),
     ),
   )

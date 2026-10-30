@@ -40,3 +40,14 @@ export const commandsOf = (
   commands: ReadonlyArray<SidebarCommand>,
   tag: SidebarCommand["_tag"],
 ): ReadonlyArray<SidebarCommand> => commands.filter((command) => command._tag === tag)
+
+/** サイドバー全体に今塗られている色。背景は Space 切り替えのフェードで重なった層の一番上 */
+export const shownAppearance = (container: HTMLElement) => {
+  const root = container.querySelector<HTMLElement>("[data-scheme]")
+  const layers = container.querySelectorAll<HTMLElement>("[data-backdrop-layer]")
+  return {
+    scheme: root?.dataset["scheme"],
+    text: root?.style.getPropertyValue("--text"),
+    background: layers[layers.length - 1]?.style.getPropertyValue("--layer-background"),
+  }
+}

@@ -1,8 +1,11 @@
+import { Option } from "effect"
 import type { BookmarkId, TabId } from "#platform/browser"
-import type { SidebarCommand } from "#protocol"
+import type { SidebarCommand, SpaceView } from "#protocol"
+import { themeSwatch } from "../logic/space-themes"
 import { otherSpaces } from "../logic/view-queries"
 import { action, separator, submenu, type MenuEntry } from "../state/menu-controller.svelte"
 import type { SidebarContext } from "../state/sidebar-context"
+import type { SpaceSetupSteps } from "../state/space-setup.svelte"
 
 export const openTabMenu = (
   ctx: SidebarContext,
@@ -12,7 +15,7 @@ export const openTabMenu = (
   const run = (command: SidebarCommand) => () => void ctx.run(command)
   const destinations = otherSpaces(ctx.view).map((space) =>
     action(space.name, run({ _tag: "MoveTabToSpace", tabId, spaceId: space.id }), {
-      color: space.color,
+      swatch: Option.getOrElse(themeSwatch(space.theme.colors), () => "currentColor"),
     }),
   )
   return [
@@ -42,4 +45,44 @@ export const createFolder = async (ctx: SidebarContext, parentId: BookmarkId | n
   if (outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null) {
     ctx.pendingRename.request(outcome.createdBookmarkId)
   }
+}
+
+const confirmSpaceDeletion = async (ctx: SidebarContext, space: SpaceView) => {
+  const confirmed = await ctx.dialog.confirm({
+    title: `「${space.name}」を削除しますか？`,
+    message:
+      "この Space のピン留めとフォルダも削除されます。開いている一時タブは閉じずに、別の Space に移動します。",
+    confirmLabel: "Space を削除",
+  })
+  if (confirmed) void ctx.run({ _tag: "DeleteSpace", spaceId: space.id })
+}
+
+/** 名前やテーマの編集は、表示されていない Space ならまずその Space へ切り替えてから始める */
+const setUpSpace = (ctx: SidebarContext, space: SpaceView, steps: SpaceSetupSteps) => () => {
+  ctx.spaceSetup.requestFor(space.id, steps)
+  if (space.id !== ctx.activeSpace.id) {
+    void ctx.run({ _tag: "SwitchSpace", windowId: ctx.view.windowId, spaceId: space.id })
+  }
+}
+
+export const spaceMenuEntries = (
+  ctx: SidebarContext,
+  space: SpaceView,
+): ReadonlyArray<MenuEntry> => {
+  const canCreateFolder =
+    space.id === ctx.activeSpace.id &&
+    space.pinned._tag === "Available" &&
+    space.pinned.canCreateFolder
+  return [
+    action("テーマを編集", setUpSpace(ctx, space, { rename: false, editTheme: true })),
+    action("名前を変更", setUpSpace(ctx, space, { rename: true, editTheme: false })),
+    ...(canCreateFolder ? [action("新しいフォルダ", () => void createFolder(ctx, null))] : []),
+    separator,
+    action("Space を削除", () => void confirmSpaceDeletion(ctx, space), {
+      tone: "danger",
+      disabled: ctx.view.spaces.length <= 1,
+    }),
+    separator,
+    action("設定を開く", () => void ctx.run({ _tag: "OpenSettings" })),
+  ]
 }

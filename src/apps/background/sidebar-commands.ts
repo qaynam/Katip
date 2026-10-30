@@ -11,13 +11,14 @@ import { SettingsRepository } from "#modules/settings"
 import {
   addSpace,
   moveSpace,
-  recolorSpace,
   removeSpace,
   renameSpace,
+  setSpaceTheme,
   type Space,
   type SpaceId,
 } from "#modules/space"
 import { moveIndexFor } from "#modules/tab-order"
+import { settleTheme } from "#modules/theme"
 import {
   assignTab,
   bindPinned,
@@ -103,7 +104,7 @@ const spaceCommands = {
       addSpace(current, {
         id,
         ...(command.name !== undefined && { name: command.name }),
-        ...(command.color !== undefined && { color: command.color }),
+        ...(command.theme !== undefined && { theme: settleTheme(command.theme) }),
       }),
     )
     const created = spaces.find((space) => space.id === id) as Space
@@ -120,10 +121,10 @@ const spaceCommands = {
     yield* (yield* SpaceFolders).renameSpaceFolder({ id: command.spaceId, name: command.name })
   }),
 
-  RecolorSpace: (command: Extract<SidebarCommand, { _tag: "RecolorSpace" }>) =>
+  SetSpaceTheme: (command: Extract<SidebarCommand, { _tag: "SetSpaceTheme" }>) =>
     KatipState.use((state) =>
       state.spaces.updateEffect((spaces) =>
-        Effect.fromResult(recolorSpace(spaces, command.spaceId, command.color)),
+        Effect.fromResult(setSpaceTheme(spaces, command.spaceId, settleTheme(command.theme))),
       ),
     ),
 

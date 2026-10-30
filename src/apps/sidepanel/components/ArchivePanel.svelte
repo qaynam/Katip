@@ -4,6 +4,7 @@
   import type { SpaceId } from "#modules/space"
   import { idleMinutesFrom } from "../logic/drafts"
   import { describeElapsed } from "../logic/elapsed-time"
+  import { themeSwatch } from "../logic/space-themes"
   import { archiveEntriesFor, hostOf, type ArchiveScope } from "../logic/view-queries"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
@@ -130,7 +131,13 @@
               <span class="meta">
                 {#if scope === "allSpaces" && space !== undefined}
                   <span class="space"
-                    ><span class="dot" data-space-color={space.color}></span>{space.name}</span
+                    ><span
+                      class="dot"
+                      style:background={Option.getOrElse(
+                        themeSwatch(space.theme.colors),
+                        () => "currentColor",
+                      )}
+                    ></span>{space.name}</span
                   >
                 {/if}
                 <span>{Option.getOrElse(hostOf(entry.url), () => entry.url)}</span>
@@ -158,16 +165,20 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 2px 6px 12px;
+    padding: 2px 0 12px;
+    animation: archive-in 160ms ease-out;
   }
 
   .heading {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    margin: 4px 10px 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  @keyframes archive-in {
+    from {
+      opacity: 0;
+    }
   }
 
   .settings {
@@ -198,8 +209,6 @@
     border: none;
     border-radius: 6px;
     background: var(--surface-active);
-    color: var(--text-on-surface);
-    font: inherit;
   }
 
   .minutes input:disabled {
@@ -232,7 +241,6 @@
     border-radius: 7px;
     background: none;
     color: var(--text-muted);
-    font: inherit;
     font-size: 12px;
     font-weight: 600;
   }
@@ -240,7 +248,7 @@
   .scope button[aria-checked="true"] {
     background: var(--surface-active);
     box-shadow: var(--shadow-active);
-    color: var(--text-on-surface);
+    color: var(--text);
   }
 
   .empty {
@@ -266,20 +274,18 @@
   }
 
   .entry:hover {
-    background: var(--space-bg-hover);
+    background: var(--surface-hover);
   }
 
   .restore {
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     min-width: 0;
     padding: 6px 4px 6px 10px;
     border: none;
     background: none;
-    color: inherit;
-    font: inherit;
     text-align: start;
   }
 
@@ -322,22 +328,22 @@
     place-items: center;
     width: 24px;
     height: 24px;
-    margin-right: 4px;
+    margin-right: 6px;
     padding: 0;
     border: none;
     border-radius: 6px;
     background: none;
-    color: inherit;
+    color: var(--text-muted);
     opacity: 0;
   }
 
   .entry:hover .remove,
   .remove:focus-visible {
-    opacity: 0.7;
+    opacity: 1;
   }
 
   .remove:hover {
-    background: color-mix(in srgb, currentColor 12%, transparent);
-    opacity: 1;
+    background: var(--surface-hover);
+    color: var(--text);
   }
 </style>

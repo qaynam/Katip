@@ -1,5 +1,6 @@
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
+import { neutralTheme, themeOf, type SpaceTheme, type ThemeColor } from "#modules/theme"
 import type { SidebarView } from "#protocol"
 import {
   archiveEntry,
@@ -14,6 +15,13 @@ import {
 
 const MINUTE_MS = 60_000
 
+const color = (hue: number, chroma: number): ThemeColor => ({ hue, chroma })
+
+const themed = (
+  colors: ReadonlyArray<ThemeColor>,
+  overrides: Partial<Omit<SpaceTheme, "colors">> = {},
+): SpaceTheme => ({ ...themeOf(colors), ...overrides })
+
 const minutesOct21 = pinnedItem("minutes-1021", {
   title: "10/21 定例",
   url: "https://docs.example.com/minutes/1021",
@@ -27,7 +35,7 @@ const minutesOct21 = pinnedItem("minutes-1021", {
 
 const work = spaceView("work", {
   name: SpaceName.make("仕事"),
-  color: "blue",
+  theme: themed([color(295, 0.55), color(255, 0.5)], { mode: "dark", intensity: 0.6 }),
   pinnedNodes: [
     pinnedFolder("design-docs", {
       title: "設計資料",
@@ -102,7 +110,7 @@ const work = spaceView("work", {
 
 const hobby = spaceView("hobby", {
   name: SpaceName.make("趣味"),
-  color: "orange",
+  theme: themed([color(90, 0.8)], { mode: "light" }),
   pinnedNodes: [
     pinnedItem("recipes", { title: "料理レシピ", url: "https://recipes.example.com/saved" }),
   ],
@@ -115,18 +123,40 @@ const hobby = spaceView("hobby", {
   ],
 })
 
-const reading = spaceView("reading", { name: SpaceName.make("読書"), color: "green" })
+const reading = spaceView("reading", {
+  name: SpaceName.make("読書"),
+  theme: themed([color(350, 0.55)], { mode: "light", grain: 0.35 }),
+  pinnedNodes: [
+    pinnedItem("novel", { title: "連載小説の目次", url: "https://novel.example.com/toc" }),
+  ],
+  temporaryTabs: [
+    tabView(61, { title: "今月の新刊", url: "https://books.example.com/new", isActive: true }),
+  ],
+})
+
+const travel = spaceView("travel", {
+  name: SpaceName.make("旅行"),
+  theme: themed([color(90, 0.8), color(25, 0.8), color(140, 0.7)]),
+  temporaryTabs: [
+    tabView(71, {
+      title: "金沢 2 泊 3 日のモデルコース",
+      url: "https://trip.example.com/kanazawa",
+    }),
+  ],
+})
+
+const notes = spaceView("notes", { name: SpaceName.make("メモ"), theme: neutralTheme })
 
 const household = spaceView("household", {
   name: SpaceName.make("家計"),
-  color: "purple",
+  theme: themed([color(200, 0.6)], { mode: "dark" }),
   pinned: { _tag: "Unavailable" },
   temporaryTabs: [tabView(51, { title: "ネットバンキング", url: "https://bank.example.com/" })],
 })
 
 export const fixtureView = (now: number): SidebarView =>
   sidebarView({
-    spaces: [work, hobby, reading, household],
+    spaces: [work, hobby, reading, travel, household, notes],
     activeSpaceId: work.id,
     favorites: [
       favoriteView(1, { title: "メール", url: "https://mail.example.com/inbox" }),

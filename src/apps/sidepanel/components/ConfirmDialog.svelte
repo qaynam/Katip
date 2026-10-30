@@ -20,7 +20,7 @@
 {#if request !== null}
   <div class="scrim">
     <div
-      class="dialog"
+      class="dialog glass"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="{ids}-title"
@@ -53,18 +53,16 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: rgb(0 0 0 / 0.28);
-    animation: fade-in 120ms ease-out;
+    background: rgb(0 0 0 / 0.18);
+    animation: fade-in 140ms ease-out;
   }
 
   .dialog {
     width: 100%;
     max-width: 300px;
-    padding: 18px 18px 14px;
+    padding: 18px 16px 14px;
     border-radius: 14px;
-    background: var(--menu-bg);
-    box-shadow: var(--menu-shadow);
-    color: var(--menu-text);
+    animation: dialog-in 160ms ease-out;
   }
 
   .title {
@@ -75,7 +73,7 @@
 
   .message {
     margin: 0 0 16px;
-    color: var(--text-muted-on-menu);
+    color: var(--glass-muted);
     font-size: 12.5px;
     line-height: 1.55;
   }
@@ -87,22 +85,29 @@
   }
 
   .actions button {
-    height: 30px;
+    height: 28px;
     padding: 0 14px;
     border: none;
     border-radius: 8px;
-    font: inherit;
+    font-size: 12.5px;
     font-weight: 600;
   }
 
   .cancel {
-    background: var(--menu-hover);
-    color: inherit;
+    background: var(--glass-hover);
+  }
+
+  .cancel:hover {
+    background: color-mix(in srgb, var(--glass-hover), var(--glass-text) 8%);
   }
 
   .confirm {
-    background: var(--danger-strong);
+    background: #d93a30;
     color: #fff;
+  }
+
+  .confirm:hover {
+    background: #c4322a;
   }
 
   @keyframes fade-in {
@@ -111,8 +116,16 @@
     }
   }
 
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .scrim {
+    .scrim,
+    .dialog {
       animation: none;
     }
   }

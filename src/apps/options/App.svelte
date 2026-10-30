@@ -6,7 +6,7 @@
     type Settings,
     type SettingsPatch,
   } from "#modules/settings"
-  import { SpaceColor } from "#modules/space"
+  import { TabGroupColor } from "#platform/browser"
   import IdleMinutesField from "./IdleMinutesField.svelte"
   import type { OptionsRuntime } from "./options-runtime"
   import SaveStatus, { type SaveOutcome } from "./SaveStatus.svelte"
@@ -71,7 +71,7 @@
 <main>
   <article class="sheet">
     <div class="index-tabs" aria-hidden="true">
-      {#each SpaceColor.literals as color (color)}
+      {#each TabGroupColor.literals as color (color)}
         <span style:background-color="var(--group-{color})"></span>
       {/each}
     </div>

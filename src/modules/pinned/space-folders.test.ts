@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option } from "effect"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { neutralTheme } from "#modules/theme"
 import {
   BookmarkId,
   Bookmarks,
@@ -16,7 +17,7 @@ const TestLayer = SpaceFolders.layer.pipe(Layer.provideMerge(FakeBrowser.layer))
 const space = (id: string, name: string = id): Space => ({
   id: SpaceId.make(id),
   name: SpaceName.make(name),
-  color: "grey",
+  theme: neutralTheme,
 })
 
 const topLevelFolderId = Effect.fnUntraced(

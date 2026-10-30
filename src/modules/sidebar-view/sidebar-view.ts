@@ -196,7 +196,7 @@ const spaceView = (
   return {
     id: space.id,
     name: space.name,
-    color: space.color,
+    theme: space.theme,
     pinned: Option.match(tree, {
       onNone: () => ({ _tag: "Unavailable" }),
       onSome: (nodes) => ({

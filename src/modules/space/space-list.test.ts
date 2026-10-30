@@ -1,12 +1,13 @@
-import { Result, Schema } from "effect"
+import { Array, Option, Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { SpaceColor, SpaceId, SpaceName, type Space } from "./space"
+import { groupColorOf, neutralTheme, presetPages, themeOf } from "#modules/theme"
+import { Space, SpaceId, SpaceName } from "./space"
 import {
   addSpace,
   moveSpace,
-  recolorSpace,
   removeSpace,
   renameSpace,
+  setSpaceTheme,
   type SpaceList,
 } from "./space-list"
 
@@ -16,7 +17,7 @@ const spaceName = (value: string) => SpaceName.make(value)
 const space = (id: string, overrides: Partial<Omit<Space, "id">> = {}): Space => ({
   id: spaceId(id),
   name: spaceName(id),
-  color: "grey",
+  theme: neutralTheme,
   ...overrides,
 })
 
@@ -51,26 +52,24 @@ describe("addSpace", () => {
     expect(added.at(-1)?.name).toBe("スペース 3")
   })
 
-  it("色を省略すると、まだ使われていない色のうちパレット順で最初のものが付く", () => {
-    const spaces = [space("a", { color: "grey" }), space("b", { color: "red" })]
+  it("テーマを省略すると、既存の Space と色の系統が重ならないプリセットが付く", () => {
+    const redPreset = Option.getOrThrow(
+      Array.findFirst(presetPages[0] ?? [], (colors) => groupColorOf(themeOf(colors)) === "red"),
+    )
+    const spaces = [space("a", { theme: themeOf(redPreset) })]
 
-    const added = addSpace(spaces, { id: spaceId("c") })
+    const added = addSpace(spaces, { id: spaceId("b") })
 
-    expect(added.at(-1)?.color).toBe("blue")
+    expect(added.map((s) => groupColorOf(s.theme))).not.toContain("grey")
+    expect(new Set(added.map((s) => groupColorOf(s.theme))).size).toBe(2)
   })
 
-  it("すべての色が使われているときは、パレットを一巡した色が付く", () => {
-    const spaces = SpaceColor.literals.map((color) => space(color, { color }))
+  it("名前とテーマを指定するとその値で作られる", () => {
+    const theme = themeOf([{ hue: 350, chroma: 0.6 }])
 
-    const added = addSpace(spaces, { id: spaceId("next") })
+    const added = addSpace([], { id: spaceId("a"), name: spaceName("趣味"), theme })
 
-    expect(added.at(-1)?.color).toBe(SpaceColor.literals[0])
-  })
-
-  it("名前と色を指定するとその値で作られる", () => {
-    const added = addSpace([], { id: spaceId("a"), name: spaceName("趣味"), color: "pink" })
-
-    expect(added).toStrictEqual([{ id: "a", name: "趣味", color: "pink" }])
+    expect(added).toStrictEqual([{ id: "a", name: "趣味", theme }])
   })
 })
 
@@ -90,19 +89,29 @@ describe("renameSpace", () => {
   })
 })
 
-describe("recolorSpace", () => {
-  it("指定した Space の色だけが変わる", () => {
+describe("setSpaceTheme", () => {
+  const green = themeOf([{ hue: 145, chroma: 0.7 }])
+
+  it("指定した Space のテーマだけが変わる", () => {
     const spaces = [space("a"), space("b")]
 
-    const recolored = recolorSpace(spaces, spaceId("a"), "green")
+    const updated = setSpaceTheme(spaces, spaceId("a"), green)
 
-    expect(Result.getOrThrow(recolored).map((s) => s.color)).toStrictEqual(["green", "grey"])
+    expect(Result.getOrThrow(updated).map((s) => s.theme)).toStrictEqual([green, neutralTheme])
   })
 
   it("存在しない Space を指定すると SpaceNotFound になる", () => {
-    const recolored = recolorSpace([space("a")], spaceId("missing"), "green")
+    const updated = setSpaceTheme([space("a")], spaceId("missing"), green)
 
-    expect(Result.isFailure(recolored) && recolored.failure._tag).toBe("SpaceNotFound")
+    expect(Result.isFailure(updated) && updated.failure._tag).toBe("SpaceNotFound")
+  })
+})
+
+describe("Space の保存値", () => {
+  it("テーマを持つ前の版で保存された Space は、無彩色のテーマとして読める", () => {
+    const decoded = Schema.decodeUnknownSync(Space)({ id: "a", name: "仕事", color: "blue" })
+
+    expect(decoded).toStrictEqual({ id: "a", name: "仕事", theme: neutralTheme })
   })
 })
 

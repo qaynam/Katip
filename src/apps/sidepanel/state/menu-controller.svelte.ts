@@ -1,4 +1,3 @@
-import type { SpaceColor } from "#modules/space"
 import type { Rect } from "../logic/menu-position"
 
 export type MenuEntry =
@@ -8,16 +7,11 @@ export type MenuEntry =
       readonly onSelect: () => void
       readonly tone?: "danger"
       readonly disabled?: boolean
-      readonly color?: SpaceColor
+      /** 項目の前に置く色の見本（CSS の背景） */
+      readonly swatch?: string
     }
   | { readonly _tag: "Separator" }
   | { readonly _tag: "Submenu"; readonly label: string; readonly entries: ReadonlyArray<MenuEntry> }
-  | {
-      readonly _tag: "ColorPicker"
-      readonly label: string
-      readonly selected: SpaceColor
-      readonly onPick: (color: SpaceColor) => void
-    }
 
 export const action = (
   label: string,
@@ -25,7 +19,7 @@ export const action = (
   options: {
     readonly tone?: "danger"
     readonly disabled?: boolean
-    readonly color?: SpaceColor
+    readonly swatch?: string
   } = {},
 ): MenuEntry => ({ _tag: "Action", label, onSelect, ...options })
 

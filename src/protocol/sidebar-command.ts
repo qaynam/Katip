@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
-import { SpaceColor, SpaceId, SpaceName } from "#modules/space"
+import { SpaceId, SpaceName } from "#modules/space"
+import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
 // 一時タブの並びは表示順（新しいタブを上に出す設定なら逆順）で指定させる。
@@ -28,10 +29,10 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("CreateSpace", {
     windowId: WindowId,
     name: Schema.optionalKey(SpaceName),
-    color: Schema.optionalKey(SpaceColor),
+    theme: Schema.optionalKey(SpaceTheme),
   }),
   Schema.TaggedStruct("RenameSpace", { spaceId: SpaceId, name: SpaceName }),
-  Schema.TaggedStruct("RecolorSpace", { spaceId: SpaceId, color: SpaceColor }),
+  Schema.TaggedStruct("SetSpaceTheme", { spaceId: SpaceId, theme: SpaceTheme }),
   Schema.TaggedStruct("DeleteSpace", { spaceId: SpaceId }),
   Schema.TaggedStruct("MoveSpace", { spaceId: SpaceId, toIndex: Schema.Int }),
 

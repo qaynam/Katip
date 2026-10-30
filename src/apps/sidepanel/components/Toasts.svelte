@@ -11,7 +11,7 @@
 
 <div class="toasts" role="status" aria-live="polite">
   {#each toasts.items as toast (toast.id)}
-    <div class="toast" class:error={toast.tone === "error"}>
+    <div class="toast glass" class:error={toast.tone === "error"}>
       <span class="message">{toast.message}</span>
       <button
         class="dismiss"
@@ -28,9 +28,9 @@
 <style>
   .toasts {
     position: absolute;
-    right: 10px;
+    right: 8px;
     bottom: 100%;
-    left: 10px;
+    left: 8px;
     z-index: 10;
     display: flex;
     flex-direction: column;
@@ -44,10 +44,7 @@
     align-items: flex-start;
     gap: 8px;
     padding: 9px 8px 9px 12px;
-    border-radius: 10px;
-    background: var(--toast-bg);
-    box-shadow: var(--menu-shadow);
-    color: var(--toast-text);
+    border-radius: 11px;
     font-size: 12px;
     line-height: 1.45;
     pointer-events: auto;
@@ -55,8 +52,7 @@
   }
 
   .toast.error {
-    background: var(--danger-strong);
-    color: #fff;
+    color: var(--danger);
   }
 
   .message {
@@ -73,8 +69,12 @@
     border: none;
     border-radius: 4px;
     background: none;
-    color: inherit;
-    opacity: 0.7;
+    opacity: 0.6;
+  }
+
+  .dismiss:hover {
+    background: var(--glass-hover);
+    opacity: 1;
   }
 
   @keyframes toast-in {

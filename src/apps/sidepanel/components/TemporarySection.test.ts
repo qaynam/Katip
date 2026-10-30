@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
 import { tick } from "svelte"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { TabId } from "#platform/browser"
 import { commandsOf, renderSidebar } from "../testing/render-sidebar"
 import { sidebarView, spaceView, tabView } from "../testing/view-builders"
@@ -39,20 +39,54 @@ describe("一時タブの行", () => {
     expect(connection.sentCommands).toStrictEqual([{ _tag: "CloseTab", tabId: TabId.make(1) }])
   })
 
-  it("「すべて閉じる」で表示中の Space の一時タブを閉じる", async () => {
+  it("「クリア」で表示中の Space の一時タブをすべて閉じる", async () => {
     const { connection } = await renderSidebar(viewWithTabs(tabView(1)))
 
-    await fireEvent.click(screen.getByRole("button", { name: "すべて閉じる" }))
+    await fireEvent.click(screen.getByRole("button", { name: "クリア" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "CloseTemporaryTabs", windowId: 1, spaceId: "work" },
     ])
   })
 
-  it("一時タブが無ければ「すべて閉じる」を出さない", async () => {
+  it("一時タブが無ければ「クリア」を出さない", async () => {
     await renderSidebar(viewWithTabs())
 
-    expect(screen.queryByRole("button", { name: "すべて閉じる" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "クリア" })).toBeNull()
+  })
+})
+
+describe("行のツールチップ", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const hover = (title: string) =>
+    fireEvent.pointerEnter(rowOf(title), { clientX: 40, clientY: 60, pointerId: 1 })
+
+  it("マウスを乗せてしばらくすると、タイトルと名前の変え方を示す", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    await renderSidebar(viewWithTabs(tabView(1, { title: "受信トレイ" })))
+
+    await hover("受信トレイ")
+    vi.advanceTimersByTime(1_000)
+    await tick()
+
+    const tooltip = screen.getByRole("tooltip")
+    expect(tooltip.textContent).toContain("受信トレイ")
+    expect(tooltip.textContent).toContain("ダブルクリックで名前を変更")
+  })
+
+  it("すぐにマウスを離せばツールチップを出さない", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    await renderSidebar(viewWithTabs(tabView(1, { title: "受信トレイ" })))
+
+    await hover("受信トレイ")
+    await fireEvent.pointerLeave(rowOf("受信トレイ"))
+    vi.advanceTimersByTime(1_000)
+    await tick()
+
+    expect(screen.queryByRole("tooltip")).toBeNull()
   })
 })
 

@@ -1,8 +1,9 @@
 import { Array, Option, Schema } from "effect"
-import { SpaceColor, SpaceId } from "#modules/space"
+import { SpaceId } from "#modules/space"
 import {
   type BrowserTab,
   type BrowserTabGroup,
+  TabGroupColor,
   TabGroupId,
   TabId,
   WindowId,
@@ -11,7 +12,7 @@ import type { ProjectedGroup, TabGroupProjection } from "./tab-group-projection"
 
 export const GroupAppearance = Schema.Struct({
   title: Schema.String,
-  color: SpaceColor,
+  color: TabGroupColor,
   collapsed: Schema.Boolean,
 })
 export type GroupAppearance = typeof GroupAppearance.Type

@@ -1,5 +1,6 @@
 import { Array, Match, Option } from "effect"
-import { SpaceId, SpaceName, type Space } from "#modules/space"
+import { SpaceId, SpaceName } from "#modules/space"
+import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
 import type {
   PinnedFolderView,
@@ -11,7 +12,8 @@ import type {
   TabView,
 } from "#protocol"
 import type { CommandResponse } from "../sidepanel/connection/memory-connection"
-import { hostOf, suggestedSpaceColor } from "../sidepanel/logic/view-queries"
+import { suggestedTheme } from "../sidepanel/logic/space-themes"
+import { hostOf } from "../sidepanel/logic/view-queries"
 import { pinnedFolder, tabView } from "../sidepanel/testing/view-builders"
 
 const succeeded = (
@@ -160,13 +162,13 @@ const moveSpace = (view: SidebarView, spaceId: SpaceId, toIndex: number): Sideba
 
 const createSpace = (
   view: SidebarView,
-  draft: Partial<Pick<Space, "name" | "color">>,
+  draft: { readonly name?: SpaceName; readonly theme?: SpaceTheme },
 ): SidebarView => {
   const id = SpaceId.make(freshId("space", new Set(view.spaces.map((space) => space.id))))
   const space: SpaceView = {
     id,
     name: draft.name ?? SpaceName.make(`スペース ${view.spaces.length + 1}`),
-    color: draft.color ?? suggestedSpaceColor(view.spaces),
+    theme: draft.theme ?? suggestedTheme(view.spaces),
     pinned: { _tag: "Available", nodes: [], canCreateFolder: true },
     temporaryTabs: [],
   }
@@ -207,8 +209,8 @@ export const respondInFixture = (command: SidebarCommand, view: SidebarView): Co
     Match.tag("RenameSpace", ({ spaceId, name }) =>
       succeeded(mapSpace(view, spaceId, (space) => ({ ...space, name }))),
     ),
-    Match.tag("RecolorSpace", ({ spaceId, color }) =>
-      succeeded(mapSpace(view, spaceId, (space) => ({ ...space, color }))),
+    Match.tag("SetSpaceTheme", ({ spaceId, theme }) =>
+      succeeded(mapSpace(view, spaceId, (space) => ({ ...space, theme }))),
     ),
     Match.tag("MoveSpace", ({ spaceId, toIndex }) => succeeded(moveSpace(view, spaceId, toIndex))),
     Match.tag("CreateSpace", (draft) => succeeded(createSpace(view, draft))),

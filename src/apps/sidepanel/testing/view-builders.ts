@@ -1,6 +1,7 @@
 import { ArchiveEntryId, type ArchiveEntry } from "#modules/archive"
 import { IdleMinutes } from "#modules/settings"
-import { SpaceId, SpaceName, type SpaceColor } from "#modules/space"
+import { SpaceId, SpaceName } from "#modules/space"
+import { neutralTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
@@ -68,7 +69,7 @@ export const spaceView = (
   return {
     id: SpaceId.make(id),
     name: SpaceName.make(id),
-    color: "blue" satisfies SpaceColor,
+    theme: neutralTheme,
     pinned: pinned ?? { _tag: "Available", nodes: pinnedNodes, canCreateFolder: true },
     temporaryTabs: [],
     ...rest,

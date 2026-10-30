@@ -1,10 +1,11 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
 import { describe, expect, it } from "vitest"
 import { SpaceName } from "#modules/space"
+import { themeOf } from "#modules/theme"
 import { commandsOf, renderSidebar } from "../testing/render-sidebar"
 import { sidebarView, spaceView } from "../testing/view-builders"
 
-const work = spaceView("work", { name: SpaceName.make("仕事"), color: "blue" })
+const work = spaceView("work", { name: SpaceName.make("仕事") })
 const hobby = spaceView("hobby", { name: SpaceName.make("趣味") })
 
 const startRenaming = async () => {
@@ -54,7 +55,9 @@ describe("Space の名前", () => {
     const input = await startRenaming()
     await fireEvent.input(input, { target: { value: "しご" } })
 
-    await pushView(sidebarView({ spaces: [{ ...work, color: "red" }, hobby] }))
+    await pushView(
+      sidebarView({ spaces: [{ ...work, theme: themeOf([{ hue: 20, chroma: 0.8 }]) }, hobby] }),
+    )
 
     expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Space の名前" }).value).toBe(
       "しご",
@@ -63,26 +66,33 @@ describe("Space の名前", () => {
 })
 
 describe("Space のメニュー", () => {
-  it("色を選ぶとその色に変える", async () => {
-    const { connection } = await renderSidebar(sidebarView({ spaces: [work] }))
-    await openSpaceMenu()
+  it("名前を右クリックしても開く", async () => {
+    await renderSidebar(sidebarView({ spaces: [work] }))
 
-    await fireEvent.click(screen.getByRole("menuitemradio", { name: "オレンジ" }))
+    await fireEvent.contextMenu(
+      within(screen.getByRole("heading", { name: "仕事" })).getByRole("button"),
+    )
 
-    expect(connection.sentCommands).toStrictEqual([
-      { _tag: "RecolorSpace", spaceId: "work", color: "orange" },
-    ])
+    expect(screen.getByRole("menu", { name: "Space のメニュー" })).toBeTruthy()
   })
 
-  it("9 色から選べ、今の色が選ばれた状態になっている", async () => {
+  it("「テーマを編集」でこの Space のテーマのピッカーを開く", async () => {
     await renderSidebar(sidebarView({ spaces: [work] }))
     await openSpaceMenu()
 
-    const swatches = screen.getAllByRole("menuitemradio")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "テーマを編集" }))
 
-    expect(swatches).toHaveLength(9)
-    expect(screen.getByRole("menuitemradio", { name: "青" }).getAttribute("aria-checked")).toBe(
-      "true",
+    expect(screen.getByRole("dialog", { name: "テーマ" })).toBeTruthy()
+  })
+
+  it("「名前を変更」で名前の編集を始める", async () => {
+    await renderSidebar(sidebarView({ spaces: [work] }))
+    await openSpaceMenu()
+
+    await fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }))
+
+    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Space の名前" }).value).toBe(
+      "仕事",
     )
   })
 

@@ -1,4 +1,5 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
+import { neutralTheme, SpaceTheme } from "#modules/theme"
 
 export const SpaceId = Schema.String.pipe(Schema.brand("SpaceId"))
 export type SpaceId = typeof SpaceId.Type
@@ -9,23 +10,12 @@ export const SpaceName = Schema.Trim.pipe(
 )
 export type SpaceName = typeof SpaceName.Type
 
-// Chrome のタブグループと同じ色集合に揃えておくと、グループ同期で色を変換せずに済む
-export const SpaceColor = Schema.Literals([
-  "grey",
-  "blue",
-  "red",
-  "yellow",
-  "green",
-  "pink",
-  "purple",
-  "cyan",
-  "orange",
-])
-export type SpaceColor = typeof SpaceColor.Type
-
 export const Space = Schema.Struct({
   id: SpaceId,
   name: SpaceName,
-  color: SpaceColor,
+  // テーマを持つ前の版で保存された Space は、無彩色のテーマとして読む
+  theme: SpaceTheme.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(Schema.encodeSync(SpaceTheme)(neutralTheme))),
+  ),
 })
 export type Space = typeof Space.Type

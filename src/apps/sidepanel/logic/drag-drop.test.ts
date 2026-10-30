@@ -31,8 +31,8 @@ const favorite = (id: number, index: number): DragSource => ({
   tabId: tabId(id),
   index,
 })
-const chip = (id: string, index: number): DragSource => ({
-  _tag: "SpaceChip",
+const spaceMark = (id: string, index: number): DragSource => ({
+  _tag: "SpaceMark",
   spaceId: SpaceId.make(id),
   index,
 })
@@ -80,8 +80,8 @@ describe("一時タブをドラッグしたとき", () => {
     })
   })
 
-  it("Space のスイッチャーには落とせない", () => {
-    expect(drop(temporaryTab(1), { _tag: "Switcher", slot: 0 })).toBeNull()
+  it("Space の印の並びには落とせない", () => {
+    expect(drop(temporaryTab(1), { _tag: "SpaceBar", slot: 0 })).toBeNull()
   })
 })
 
@@ -195,9 +195,9 @@ describe("Favorite をドラッグしたとき", () => {
   })
 })
 
-describe("Space のチップをドラッグしたとき", () => {
-  it("スイッチャーの中で前へ動かすと、その位置へ並べ替える", () => {
-    expect(drop(chip("c", 2), { _tag: "Switcher", slot: 0 })).toStrictEqual({
+describe("Space の印をドラッグしたとき", () => {
+  it("印の並びの中で前へ動かすと、その位置へ並べ替える", () => {
+    expect(drop(spaceMark("c", 2), { _tag: "SpaceBar", slot: 0 })).toStrictEqual({
       _tag: "MoveSpace",
       spaceId: SpaceId.make("c"),
       toIndex: 0,
@@ -205,7 +205,7 @@ describe("Space のチップをドラッグしたとき", () => {
   })
 
   it("末尾の隙間へ動かすと、最後の位置へ並べ替える", () => {
-    expect(drop(chip("a", 0), { _tag: "Switcher", slot: 3 })).toStrictEqual({
+    expect(drop(spaceMark("a", 0), { _tag: "SpaceBar", slot: 3 })).toStrictEqual({
       _tag: "MoveSpace",
       spaceId: SpaceId.make("a"),
       toIndex: 2,
@@ -213,8 +213,8 @@ describe("Space のチップをドラッグしたとき", () => {
   })
 
   it("タブの並びには落とせない", () => {
-    expect(drop(chip("a", 0), belowTab(1))).toBeNull()
-    expect(drop(chip("a", 0), pinnedTarget(null, 0))).toBeNull()
+    expect(drop(spaceMark("a", 0), belowTab(1))).toBeNull()
+    expect(drop(spaceMark("a", 0), pinnedTarget(null, 0))).toBeNull()
   })
 })
 

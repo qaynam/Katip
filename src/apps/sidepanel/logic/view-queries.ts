@@ -1,6 +1,6 @@
 import { Array, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
-import { SpaceColor, type SpaceId } from "#modules/space"
+import type { SpaceId } from "#modules/space"
 import type { BookmarkId } from "#platform/browser"
 import type { PinnedFolderView, PinnedItemView, SidebarView, SpaceView } from "#protocol"
 import type { PinnedPosition } from "./drag-drop"
@@ -28,16 +28,6 @@ export const archiveEntriesFor = (
     Array.filter((entry) => scope === "allSpaces" || entry.spaceId === spaceId),
     Array.sort(newestFirst),
   )
-
-export const suggestedSpaceColor = (spaces: ReadonlyArray<{ readonly color: SpaceColor }>) => {
-  const used = new Set(spaces.map((space) => space.color))
-  return pipe(
-    Array.findFirst(SpaceColor.literals, (color) => !used.has(color)),
-    Option.getOrElse(
-      () => SpaceColor.literals[spaces.length % SpaceColor.literals.length] ?? "grey",
-    ),
-  )
-}
 
 export const hostOf = (url: string): Option.Option<string> =>
   Option.liftThrowable(() => new URL(url).host)().pipe(Option.filter((host) => host !== ""))

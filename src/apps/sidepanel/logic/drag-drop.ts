@@ -18,7 +18,7 @@ export type DragSource =
       readonly position: PinnedPosition | null
     }
   | { readonly _tag: "Favorite"; readonly tabId: TabId; readonly index: number }
-  | { readonly _tag: "SpaceChip"; readonly spaceId: SpaceId; readonly index: number }
+  | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
 
 // slot は「現在の並び（ドラッグ中の要素を含む）の何番目の隙間か」。
 // 移動先の最終位置への換算は commandForDrop だけが行う
@@ -26,7 +26,7 @@ export type DropTarget =
   | { readonly _tag: "Temporary"; readonly placement: TemporaryPlacement }
   | { readonly _tag: "Pinned"; readonly parentId: BookmarkId | null; readonly slot: number }
   | { readonly _tag: "Favorites"; readonly slot: number }
-  | { readonly _tag: "Switcher"; readonly slot: number }
+  | { readonly _tag: "SpaceBar"; readonly slot: number }
 
 export type Edge = "before" | "after"
 
@@ -91,7 +91,7 @@ const openTabOf = (source: DragSource): Option.Option<TabId> =>
     TemporaryTab: ({ tabId }) => Option.some(tabId),
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId),
     Favorite: ({ tabId }) => Option.some(tabId),
-    SpaceChip: () => Option.none(),
+    SpaceMark: () => Option.none(),
   })
 
 const dropOnTemporary = (
@@ -140,8 +140,8 @@ const dropOnFavorites = (source: DragSource, slot: number): Option.Option<Sideba
         Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, index: slot })),
       )
 
-const dropOnSwitcher = (source: DragSource, slot: number): Option.Option<SidebarCommand> =>
-  source._tag === "SpaceChip"
+const dropOnSpaceBar = (source: DragSource, slot: number): Option.Option<SidebarCommand> =>
+  source._tag === "SpaceMark"
     ? reorder(source.index, slot, (toIndex) => ({
         _tag: "MoveSpace",
         spaceId: source.spaceId,
@@ -162,5 +162,5 @@ export const commandForDrop = (
     Temporary: ({ placement }) => dropOnTemporary(source, placement, spaceId),
     Pinned: (pinned) => dropOnPinned(source, pinned, spaceId),
     Favorites: ({ slot }) => dropOnFavorites(source, slot),
-    Switcher: ({ slot }) => dropOnSwitcher(source, slot),
+    SpaceBar: ({ slot }) => dropOnSpaceBar(source, slot),
   })
