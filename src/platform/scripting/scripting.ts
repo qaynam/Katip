@@ -59,6 +59,18 @@ export class Scripting extends Context.Service<
      * 許可の無いページ（`chrome://` や Chrome ウェブストアなど）では失敗する。
      */
     executeScript(tabId: TabId, files: ReadonlyArray<string>): Effect.Effect<void, BrowserApiError>
+    /**
+     * 開いているタブの最上位のフレームで、関数を `args` を渡して一度だけ実行する。
+     *
+     * @remarks
+     * 関数は文字列にして送られるので、外の変数や import を参照できない。`args` は JSON にできる値に限る。
+     * 許可の無いページでは失敗する（`activeTab` で一時的に許可されたタブか、ホストの許可が要る）。
+     */
+    executeFunction<const Args extends ReadonlyArray<unknown>>(
+      tabId: TabId,
+      func: (...args: Args) => void,
+      args: Args,
+    ): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/platform/scripting/Scripting") {
   static readonly layer = Layer.succeed(
@@ -87,6 +99,16 @@ export class Scripting extends Context.Service<
         Effect.asVoid(
           callChrome("scripting.executeScript", () =>
             chrome.scripting.executeScript({ target: { tabId }, files: [...files] }),
+          ),
+        ),
+      executeFunction: (tabId, func, args) =>
+        Effect.asVoid(
+          callChrome("scripting.executeScript", () =>
+            chrome.scripting.executeScript<[...typeof args], unknown>({
+              target: { tabId },
+              func,
+              args: [...args],
+            }),
           ),
         ),
     }),

@@ -22,6 +22,9 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
     "clipboardWrite",
     "search",
     "scripting",
+    // キーボードショートカットで操作したタブにだけ、一時的にスクリプトを注入できる。すべての
+    // サイトへのアクセスを許可していなくても、コピーしたことをそのページに表示できる
+    "activeTab",
   ],
   // Spotlight で閲覧履歴も探すとき。設定で有効にしたときにだけ許可を求める
   optional_permissions: ["history"],

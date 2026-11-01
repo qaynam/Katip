@@ -1,10 +1,11 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option, type Scope } from "effect"
-import { FakeBrowser } from "#platform/browser-testing"
+import { FakeBrowser, type TabSeed } from "#platform/browser-testing"
 import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
+import { FakeScripting } from "#platform/scripting"
 import { OperationTimeLimit } from "./program"
-import { Alarms, Bookmarks, Storage, Tabs, TabId } from "#platform/browser"
+import { Alarms, Bookmarks, type BrowserTab, Storage, Tabs, TabId } from "#platform/browser"
 import type {
   CommandOutcome,
   PinnedItemView,
@@ -778,27 +779,45 @@ describe("Spotlight", () => {
 })
 
 describe("URL のコピー", () => {
-  it.live("ショートカットでアクティブなタブの URL がコピーされ、サイドパネルに知らされる", () =>
+  const pageNoticesIn = (tabId: TabId) =>
+    Effect.map(
+      FakeScripting.use((scripting) => scripting.functionExecutions),
+      (executions) =>
+        executions.flatMap((execution) =>
+          execution.tabId === tabId && execution.name === "showPageToast" ? execution.args : [],
+        ),
+    )
+
+  const pressShortcut = Effect.fnUntraced(function* (command: string, tab: BrowserTab) {
+    yield* (yield* FakeBrowser).emit({ _tag: "CommandTriggered", command, tab: Option.some(tab) })
+  })
+
+  const startWithPage = (page: TabSeed) =>
+    Effect.gen(function* () {
+      const fake = yield* FakeBrowser
+      const { windowId, tabIds } = yield* fake.seedWindow({ tabs: [{ ...page, active: true }] })
+      yield* startBackground
+      const sidebar = yield* openSidebar(windowId)
+      yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+      return { sidebar, tab: yield* (yield* Tabs).get(tabIds[0]) }
+    })
+
+  it.live("ショートカットでアクティブなタブの URL がコピーされ、そのページの上に知らせが出る", () =>
     inBackground(
       Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://copy.example/page?q=1", active: true }],
-        })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        const { tab } = yield* startWithPage({ url: "https://copy.example/page?q=1" })
 
-        yield* fake.emit({
-          _tag: "CommandTriggered",
-          command: "copy-current-url",
-          tab: Option.some(yield* (yield* Tabs).get(tabIds[0])),
-        })
-        const notice = yield* sidebar.noticeWhere(() => true)
+        yield* pressShortcut("copy-current-url", tab)
+        const notices = yield* eventually(
+          Effect.map(
+            pageNoticesIn(tab.id),
+            Option.liftPredicate((all) => all.length > 0),
+          ),
+        )
 
-        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+        expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           ["https://copy.example/page?q=1"],
-          "URL をコピーしました",
+          ["URL をコピーしました"],
         ])
       }),
     ),
@@ -807,51 +826,63 @@ describe("URL のコピー", () => {
   it.live("ショートカットで Markdown のリンクとしてコピーすると、[タイトル](URL) の形で入る", () =>
     inBackground(
       Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://copy.example/page", title: "コピーするページ", active: true }],
+        const { tab } = yield* startWithPage({
+          url: "https://copy.example/page",
+          title: "コピーするページ",
         })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        yield* fake.emit({
-          _tag: "CommandTriggered",
-          command: "copy-current-url-as-markdown",
-          tab: Option.some(yield* (yield* Tabs).get(tabIds[0])),
-        })
-        const notice = yield* sidebar.noticeWhere(() => true)
+        yield* pressShortcut("copy-current-url-as-markdown", tab)
+        const notices = yield* eventually(
+          Effect.map(
+            pageNoticesIn(tab.id),
+            Option.liftPredicate((all) => all.length > 0),
+          ),
+        )
 
-        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+        expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           ["[コピーするページ](https://copy.example/page)"],
-          "Markdown のリンクをコピーしました",
+          ["Markdown のリンクをコピーしました"],
         ])
       }),
     ),
   )
 
+  it.live(
+    "ページの上に知らせを出せなければ（chrome:// のページなど）、サイドパネルに知らせる",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { sidebar, tab } = yield* startWithPage({ url: "https://copy.example/" })
+          yield* (yield* FakeScripting).failNextInjectionInto(tab.id)
+
+          yield* pressShortcut("copy-current-url", tab)
+          const notice = yield* sidebar.noticeWhere(() => true)
+
+          expect([notice, yield* pageNoticesIn(tab.id)]).toStrictEqual(["URL をコピーしました", []])
+        }),
+      ),
+  )
+
   it.live("URL の無いタブでショートカットを押すと、コピーできなかったと知らされる", () =>
     inBackground(
       Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://copy.example/", active: true }],
-        })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        const tab = yield* (yield* Tabs).get(tabIds[0])
+        const { tab } = yield* startWithPage({ url: "https://copy.example/" })
 
-        yield* fake.emit({
-          _tag: "CommandTriggered",
-          command: "copy-current-url",
-          tab: Option.some({ ...tab, url: Option.none(), pendingUrl: Option.none() }),
+        yield* pressShortcut("copy-current-url", {
+          ...tab,
+          url: Option.none(),
+          pendingUrl: Option.none(),
         })
-        const notice = yield* sidebar.noticeWhere(() => true)
+        const notices = yield* eventually(
+          Effect.map(
+            pageNoticesIn(tab.id),
+            Option.liftPredicate((all) => all.length > 0),
+          ),
+        )
 
-        expect([yield* (yield* ClipboardRecorder).written, notice]).toStrictEqual([
+        expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           [],
-          "コピーできませんでした",
+          ["コピーできませんでした"],
         ])
       }),
     ),

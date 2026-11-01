@@ -10,6 +10,7 @@ import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHistory } from "#platform/history"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { FakePermissions } from "#platform/permissions"
+import { FakeScripting } from "#platform/scripting"
 import {
   ClientMessage,
   RequestId,
@@ -743,27 +744,46 @@ describe("Spotlight で操作を選んだとき", () => {
     return seeded
   })
 
-  it.effect("URL のコピーを選ぶと、アクティブなタブの URL が入り、サイドパネルに知らせが出る", () =>
+  it.effect(
+    "URL のコピーを選ぶと、アクティブなタブの URL が入り、そのページの上に知らせが出る",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedPage
+          const spotlight = yield* connectSpotlight(windowId)
+          const copyUrl = yield* firstOf(
+            actionsOfKind("CopyUrl")((yield* spotlight.search("", "Actions")).results),
+          )
+
+          const outcome = yield* spotlight.choose(copyUrl)
+
+          expect({
+            outcome,
+            written: yield* (yield* ClipboardRecorder).written,
+            shown: yield* (yield* FakeScripting).functionExecutions,
+          }).toStrictEqual({
+            outcome: { _tag: "Succeeded" },
+            written: ["https://docs.example/guide"],
+            shown: [{ tabId: tabIds[0], name: "showPageToast", args: ["URL をコピーしました"] }],
+          })
+        }),
+      ),
+  )
+
+  it.effect("ページの上に知らせを出せなければ、サイドパネルに知らせる", () =>
     inBackground(
       Effect.gen(function* () {
-        const { windowId } = yield* seedPage
+        const { windowId, tabIds } = yield* seedPage
+        yield* (yield* FakeScripting).failNextInjectionInto(tabIds[0])
         const nextNotice = yield* watchSidebarNotices(windowId)
         const spotlight = yield* connectSpotlight(windowId)
         const copyUrl = yield* firstOf(
           actionsOfKind("CopyUrl")((yield* spotlight.search("", "Actions")).results),
         )
 
-        const outcome = yield* spotlight.choose(copyUrl)
+        yield* spotlight.choose(copyUrl)
 
-        expect({
-          outcome,
-          written: yield* (yield* ClipboardRecorder).written,
-          notice: yield* nextNotice,
-        }).toStrictEqual({
-          outcome: { _tag: "Succeeded" },
-          written: ["https://docs.example/guide"],
-          notice: "URL をコピーしました",
-        })
+        expect(yield* nextNotice).toBe("URL をコピーしました")
       }),
     ),
   )

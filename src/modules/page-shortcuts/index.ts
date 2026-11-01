@@ -9,3 +9,4 @@ export {
   type PressedKeys,
 } from "./page-shortcut"
 export { ENABLED_PAGE_SHORTCUTS_KEY, PAGE_SHORTCUT_PORT_NAME } from "./wire"
+export { showPageToast } from "./page-toast"

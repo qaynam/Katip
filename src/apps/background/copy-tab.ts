@@ -1,7 +1,9 @@
 import { Effect, Match, Option, Result } from "effect"
 import { markdownLinkOf } from "#modules/actions"
+import { showPageToast } from "#modules/page-shortcuts"
 import { BrowserApiError, type BrowserTab } from "#platform/browser"
 import { Clipboard } from "#platform/clipboard"
+import { Scripting } from "#platform/scripting"
 import { SidebarHub } from "./sidebar-hub"
 import { urlOf } from "./tab-admission"
 import { currentTranslator } from "./translation"
@@ -31,8 +33,21 @@ export const copyTab = Effect.fnUntraced(function* (tab: BrowserTab, format: Cop
   return translator.t(format === "Url" ? "actions.copied.url" : "actions.copied.markdownLink")
 })
 
+// サイドパネルを閉じていても気づけるよう、写したタブのページの上に出す。chrome:// のページや、
+// 許可の無いページには注入できないので、そのときだけサイドパネルに知らせる
+const showNotice = Effect.fnUntraced(function* (tab: BrowserTab, notice: string) {
+  const shownOnPage = yield* (yield* Scripting)
+    .executeFunction(tab.id, showPageToast, [notice])
+    .pipe(
+      Effect.as(true),
+      Effect.catch(() => Effect.succeed(false)),
+    )
+  if (!shownOnPage) yield* (yield* SidebarHub).notify(notice)
+})
+
 /**
- * {@link copyTab} で写し、写したこと（写せなければ写せなかったこと）をサイドパネルに知らせる。
+ * {@link copyTab} で写し、写したこと（写せなければ写せなかったこと）を、写したタブのページの上に
+ * 表示する。ページに表示できなければサイドパネルに知らせる。
  *
  * @returns 写せたか。
  */
@@ -46,6 +61,6 @@ export const copyTabWithNotice = Effect.fnUntraced(function* (tab: BrowserTab, f
         Effect.map(currentTranslator, (translator) => translator.t("actions.copyFailed")),
       ),
   })
-  yield* (yield* SidebarHub).notify(notice)
+  yield* showNotice(tab, notice)
   return Result.isSuccess(copied)
 })

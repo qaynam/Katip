@@ -72,3 +72,38 @@ describe("タブへの注入", () => {
     }).pipe(Effect.provide(FakeScripting.layer)),
   )
 })
+
+describe("タブでの関数の実行", () => {
+  const greet = (name: string) => void name
+
+  it.effect("実行した関数の名前と引数を、実行した順に記録する", () =>
+    Effect.gen(function* () {
+      const scripting = yield* Scripting
+      const tabId = TabId.make(7)
+
+      yield* scripting.executeFunction(tabId, greet, ["Katip"])
+
+      assert.deepStrictEqual(yield* (yield* FakeScripting).functionExecutions, [
+        { tabId, name: "greet", args: ["Katip"] },
+      ])
+    }).pipe(Effect.provide(FakeScripting.layer)),
+  )
+
+  it.effect("失敗させたタブでは、関数も一度だけ実行できない", () =>
+    Effect.gen(function* () {
+      const scripting = yield* Scripting
+      const fake = yield* FakeScripting
+      const tabId = TabId.make(7)
+      yield* fake.failNextInjectionInto(tabId)
+
+      const first = yield* Effect.exit(scripting.executeFunction(tabId, greet, ["a"]))
+      yield* scripting.executeFunction(tabId, greet, ["b"])
+
+      assert.isTrue(Exit.isFailure(first))
+      assert.deepStrictEqual(
+        (yield* fake.functionExecutions).map(({ args }) => args),
+        [["b"]],
+      )
+    }).pipe(Effect.provide(FakeScripting.layer)),
+  )
+})
