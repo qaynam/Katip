@@ -466,6 +466,9 @@ const splitCommands = {
     const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
     yield* tabs.move([tabId], { index: targetPosition + 1 })
     yield* tabs.createSplit([withTabId, tabId])
+    // 分割ビューは、その中のタブを表示しているときにしか画面に出ない。別のタブを表示したまま
+    // ドロップしても分割が見えるよう、ドラッグしたタブを前面に出す
+    yield* tabs.update(tabId, { active: true })
   }),
 
   Unsplit: ({ splitViewId }: { splitViewId: SplitViewId }) =>

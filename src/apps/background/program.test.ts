@@ -451,6 +451,29 @@ describe("分割ビュー", () => {
     ),
   )
 
+  it.live("別のタブを表示したまま重ねても、ドラッグしたタブが前面に出て分割ビューが見える", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [
+            { url: "https://a.example/", title: "A" },
+            { url: "https://b.example/", title: "B", active: true },
+            { url: "https://c.example/", title: "C" },
+          ],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[2], withTabId: tabIds[0] })
+        const dragged = yield* (yield* Tabs).get(tabIds[2])
+
+        expect([dragged.active, Option.isSome(dragged.splitViewId)]).toStrictEqual([true, true])
+      }),
+    ),
+  )
+
   it.live("分割を解除すると、2 つの単独の行に戻る", () =>
     inBackground(
       Effect.gen(function* () {
