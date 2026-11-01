@@ -1,3 +1,39 @@
 import type { CatalogSection } from "../../catalog"
 
-export const spotlight: CatalogSection<"spotlight"> = {}
+export const spotlight: CatalogSection<"spotlight"> = {
+  "spotlight.search.label": "タブ・ピン・Space・ブックマーク・履歴・コマンドを検索",
+  "spotlight.search.placeholder": "検索するか URL を入力",
+  "spotlight.commands.badge": "コマンド",
+  "spotlight.commands.label": "コマンドを検索",
+  "spotlight.commands.placeholder": "コマンドを検索",
+  "spotlight.results.label": "候補",
+  "spotlight.loading": "読み込み中…",
+  "spotlight.empty.noRecentTabs": "最近使ったタブはありません",
+  "spotlight.empty.noMatches": "一致するものはありません",
+  "spotlight.empty.noMatchingCommands": "一致するコマンドはありません",
+  "spotlight.unreachable": "Katip に接続できませんでした。もう一度お試しください",
+
+  "spotlight.kind.tab": "タブ",
+  "spotlight.kind.pin": "ピン",
+  "spotlight.kind.space": "Space",
+  "spotlight.kind.bookmark": "ブックマーク",
+  "spotlight.kind.history": "履歴",
+  "spotlight.kind.command": "コマンド",
+  "spotlight.kind.openUrl": "開く",
+  "spotlight.kind.searchWeb": "ウェブで検索",
+
+  "spotlight.detail.favorites": "Favorites",
+  "spotlight.detail.notInSpace": "Space に属さないタブ",
+  "spotlight.detail.otherWindow": "別のウィンドウ",
+  "spotlight.detail.currentSpace": "現在の Space",
+  "spotlight.detail.switchToSpace": "この Space に切り替える",
+  "spotlight.detail.splitView": "分割ビュー",
+  "spotlight.detail.openInNewTab": "新しいタブで開く",
+  "spotlight.detail.searchTheWeb": "既定の検索エンジンで検索",
+  "spotlight.time.justNow": "たった今",
+
+  "spotlight.hint.commands": "コマンド",
+  "spotlight.hint.select": "選択",
+  "spotlight.hint.open": "開く",
+  "spotlight.hint.back": "戻る",
+}

@@ -218,7 +218,7 @@ describe("決定", () => {
     expect(await pending).toStrictEqual({ _tag: "Succeeded" })
   })
 
-  it("結果の前に接続が切れたら Failed で解決する", async () => {
+  it("結果の前に接続が切れたら null で解決する", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -228,7 +228,7 @@ describe("決定", () => {
     const pending = connection.choose({ _tag: "SearchWeb", query: "katip" })
     port.dropFromBackground()
 
-    expect((await pending)._tag).toBe("Failed")
+    expect(await pending).toBeNull()
   })
 })
 

@@ -14,6 +14,9 @@ export interface SpotlightConnection {
    * 問い合わせは並行してよく、どの応答が最新の入力のものかは呼び出し側が判断する。
    */
   readonly search: (query: string, mode: SpotlightMode) => Promise<SearchResponse | null>
-  /** reject しない。結果が分からないときも Failed で解決する。 */
-  readonly choose: (result: SpotlightResult) => Promise<SpotlightOutcome>
+  /**
+   * reject しない。background に届かなかった、または結果の前に接続が切れて、開けたか分からないときは
+   * null で解決する。
+   */
+  readonly choose: (result: SpotlightResult) => Promise<SpotlightOutcome | null>
 }

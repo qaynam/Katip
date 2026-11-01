@@ -3,12 +3,13 @@ import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme, swatchOf, themeOf } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
 import type { SpotlightResult } from "#protocol"
+import { makeTranslator } from "#modules/i18n"
 import { displayOf, isMatchedCandidate } from "./result-display"
 
 const NOW = 1_800_000_000_000
 const DAY = 24 * 60 * 60 * 1000
 
-const display = (result: SpotlightResult) => displayOf(result, NOW)
+const display = (result: SpotlightResult) => displayOf(result, NOW, makeTranslator("ja"))
 
 const openTab = (
   overrides: Partial<Extract<SpotlightResult, { _tag: "OpenTab" }>> = {},
@@ -194,5 +195,26 @@ describe("URL を開く項目とウェブ検索の項目", () => {
         openTab(),
       ].map(isMatchedCandidate),
     ).toStrictEqual([false, false, true])
+  })
+})
+
+describe("表示する言語", () => {
+  it("補足と種類を表示する言語で書く", () => {
+    const shown = displayOf(
+      openTab({ isFavorite: true, spaceName: null }),
+      NOW,
+      makeTranslator("en"),
+    )
+
+    expect([shown.detail, shown.kindLabel]).toStrictEqual([
+      "Favorites · docs.example/design",
+      "Tab",
+    ])
+  })
+
+  it("background から届いた名前は訳さずにそのまま出す", () => {
+    const shown = displayOf(openTab(), NOW, makeTranslator("en"))
+
+    expect(shown.title).toBe("設計ドキュメント")
   })
 })

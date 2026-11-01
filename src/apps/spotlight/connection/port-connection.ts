@@ -1,12 +1,6 @@
 import { Schema } from "effect"
 import type { WindowId } from "#platform/browser"
-import {
-  RequestId,
-  type SpotlightClientMessage,
-  type SpotlightOutcome,
-  SpotlightServerMessage,
-} from "#protocol"
-import { strings } from "../strings"
+import { RequestId, type SpotlightClientMessage, SpotlightServerMessage } from "#protocol"
 import type { SearchResponse, SpotlightConnection } from "./spotlight-connection"
 
 /** chrome.runtime.Port のうち、接続が使う部分だけ。 */
@@ -145,9 +139,7 @@ export const createSpotlightPortConnection = (
         }),
         null,
       )
-      return reply?._tag === "ChoiceSettled"
-        ? reply.outcome
-        : ({ _tag: "Failed", reason: strings.unreachable } satisfies SpotlightOutcome)
+      return reply?._tag === "ChoiceSettled" ? reply.outcome : null
     },
     close: () => {
       const current = port

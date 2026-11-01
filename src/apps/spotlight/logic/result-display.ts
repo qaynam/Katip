@@ -1,7 +1,7 @@
 import { Array, Match, Option } from "effect"
+import type { MessageKey, Translator } from "#modules/i18n"
 import { swatchOf } from "#modules/theme"
 import type { SpotlightResult } from "#protocol"
-import { strings } from "../strings"
 import { readableUrl } from "./readable-url"
 import { relativeTimeLabel } from "./relative-time"
 
@@ -41,25 +41,46 @@ const withoutShortcut = (display: Omit<ResultDisplay, "shortcut">): ResultDispla
   shortcut: null,
 })
 
-const placeOfTab = (tab: Extract<SpotlightResult, { _tag: "OpenTab" }>) =>
-  tab.isFavorite ? strings.favorites : (tab.spaceName ?? strings.outsideSpaces)
+const kindLabels = {
+  OpenTab: "spotlight.kind.tab",
+  Pin: "spotlight.kind.pin",
+  Space: "spotlight.kind.space",
+  Bookmark: "spotlight.kind.bookmark",
+  History: "spotlight.kind.history",
+  Action: "spotlight.kind.command",
+  OpenUrl: "spotlight.kind.openUrl",
+  SearchWeb: "spotlight.kind.searchWeb",
+} as const satisfies Record<SpotlightResult["_tag"], MessageKey>
 
 const titleOrUrl = (title: string, url: string) => (title.trim() === "" ? readableUrl(url) : title)
 
 const neutralSwatch = swatchOf({ hue: 0, chroma: 0 })
 
-/** @param now - 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。 */
-export const displayOf = (result: SpotlightResult, now: number): ResultDisplay =>
-  Match.valueTags(result, {
+/**
+ * @param now - 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。
+ * @param translator - 補足と種類を書く言語。タイトルは background から届いたまま出す。
+ */
+export const displayOf = (
+  result: SpotlightResult,
+  now: number,
+  translator: Translator,
+): ResultDisplay => {
+  const { t } = translator
+  const kindLabel = t(kindLabels[result._tag])
+  const placeOfTab = (tab: Extract<SpotlightResult, { _tag: "OpenTab" }>) =>
+    tab.isFavorite
+      ? t("spotlight.detail.favorites")
+      : (tab.spaceName ?? t("spotlight.detail.notInSpace"))
+  return Match.valueTags(result, {
     OpenTab: (tab) =>
       withoutShortcut({
         title: tab.title,
         detail: joinDetail([
           placeOfTab(tab),
-          tab.isInOtherWindow ? strings.otherWindow : null,
+          tab.isInOtherWindow ? t("spotlight.detail.otherWindow") : null,
           readableUrl(tab.url),
         ]),
-        kindLabel: strings.kind.OpenTab,
+        kindLabel,
         icon: favicon(tab.url, tab.title, tab.favIconUrl),
       }),
     Pin: (pin) =>
@@ -67,16 +88,18 @@ export const displayOf = (result: SpotlightResult, now: number): ResultDisplay =
         title: pin.title,
         detail: joinDetail([
           [pin.spaceName, ...pin.folderPath].join(" › "),
-          pin.isSplit ? strings.splitView : readableUrl(pin.url),
+          pin.isSplit ? t("spotlight.detail.splitView") : readableUrl(pin.url),
         ]),
-        kindLabel: strings.kind.Pin,
+        kindLabel,
         icon: favicon(pin.url, pin.title),
       }),
     Space: (space) =>
       withoutShortcut({
         title: space.name,
-        detail: space.isActive ? strings.currentSpace : strings.switchSpace,
-        kindLabel: strings.kind.Space,
+        detail: space.isActive
+          ? t("spotlight.detail.currentSpace")
+          : t("spotlight.detail.switchToSpace"),
+        kindLabel,
         icon: {
           _tag: "Swatch",
           color: Option.getOrElse(
@@ -90,7 +113,7 @@ export const displayOf = (result: SpotlightResult, now: number): ResultDisplay =
       return withoutShortcut({
         title,
         detail: readableUrl(bookmark.url),
-        kindLabel: strings.kind.Bookmark,
+        kindLabel,
         icon: favicon(bookmark.url, title),
       })
     },
@@ -98,33 +121,37 @@ export const displayOf = (result: SpotlightResult, now: number): ResultDisplay =
       const title = titleOrUrl(page.title, page.url)
       return withoutShortcut({
         title,
-        detail: joinDetail([readableUrl(page.url), relativeTimeLabel(page.lastVisitedAt, now)]),
-        kindLabel: strings.kind.History,
+        detail: joinDetail([
+          readableUrl(page.url),
+          relativeTimeLabel(page.lastVisitedAt, now, translator),
+        ]),
+        kindLabel,
         icon: favicon(page.url, title),
       })
     },
     Action: (command): ResultDisplay => ({
       title: command.title,
       detail: "",
-      kindLabel: strings.kind.Action,
+      kindLabel,
       icon: { _tag: "Command" },
       shortcut: command.shortcut,
     }),
     OpenUrl: ({ url }) =>
       withoutShortcut({
         title: url,
-        detail: strings.openInNewTab,
-        kindLabel: strings.kind.OpenUrl,
+        detail: t("spotlight.detail.openInNewTab"),
+        kindLabel,
         icon: favicon(url, url),
       }),
     SearchWeb: ({ query }) =>
       withoutShortcut({
         title: query,
-        detail: strings.searchWithDefaultEngine,
-        kindLabel: strings.kind.SearchWeb,
+        detail: t("spotlight.detail.searchTheWeb"),
+        kindLabel,
         icon: { _tag: "Search" },
       }),
   })
+}
 
 /** 検索に一致した候補か。URL を開く項目とウェブ検索の項目は、何も一致しなくても出る。 */
 export const isMatchedCandidate = (result: SpotlightResult): boolean =>

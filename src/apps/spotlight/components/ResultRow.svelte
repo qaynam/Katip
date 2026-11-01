@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Translator } from "#modules/i18n"
   import type { SpotlightResult } from "#protocol"
   import type { FaviconResolver } from "../logic/favicon"
   import { displayOf } from "../logic/result-display"
@@ -10,6 +11,7 @@
     isSelected: boolean
     /** 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。 */
     now: number
+    translator: Translator
     /** 右端に種類を出すか。どの行も同じ種類と分かっているときは出さない。 */
     showsKind?: boolean
     faviconUrl: FaviconResolver
@@ -23,12 +25,13 @@
     result,
     isSelected,
     now,
+    translator,
     showsKind = true,
     faviconUrl,
     onchoose,
     onpoint,
   }: Props = $props()
-  const display = $derived(displayOf(result, now))
+  const display = $derived(displayOf(result, now, translator))
 </script>
 
 <!-- キーボードでは入力欄から aria-activedescendant で操作するので、押しても入力欄からフォーカスを奪わない -->

@@ -1,3 +1,39 @@
 import type { Message } from "../../message"
 
-export const spotlight = {} as const satisfies Readonly<Record<`spotlight.${string}`, Message>>
+export const spotlight = {
+  "spotlight.search.label": "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
+  "spotlight.search.placeholder": "Search or enter a URL",
+  "spotlight.commands.badge": "Commands",
+  "spotlight.commands.label": "Search commands",
+  "spotlight.commands.placeholder": "Search commands",
+  "spotlight.results.label": "Suggestions",
+  "spotlight.loading": "Loading…",
+  "spotlight.empty.noRecentTabs": "No recent tabs",
+  "spotlight.empty.noMatches": "No matches",
+  "spotlight.empty.noMatchingCommands": "No matching commands",
+  "spotlight.unreachable": "Couldn’t connect to Katip. Try again.",
+
+  "spotlight.kind.tab": "Tab",
+  "spotlight.kind.pin": "Pinned",
+  "spotlight.kind.space": "Space",
+  "spotlight.kind.bookmark": "Bookmark",
+  "spotlight.kind.history": "History",
+  "spotlight.kind.command": "Command",
+  "spotlight.kind.openUrl": "Open",
+  "spotlight.kind.searchWeb": "Web Search",
+
+  "spotlight.detail.favorites": "Favorites",
+  "spotlight.detail.notInSpace": "Not in a Space",
+  "spotlight.detail.otherWindow": "In another window",
+  "spotlight.detail.currentSpace": "Current Space",
+  "spotlight.detail.switchToSpace": "Switch to this Space",
+  "spotlight.detail.splitView": "Split View",
+  "spotlight.detail.openInNewTab": "Open in a new tab",
+  "spotlight.detail.searchTheWeb": "Search with your default search engine",
+  "spotlight.time.justNow": "Just now",
+
+  "spotlight.hint.commands": "Commands",
+  "spotlight.hint.select": "Select",
+  "spotlight.hint.open": "Open",
+  "spotlight.hint.back": "Back",
+} as const satisfies Readonly<Record<`spotlight.${string}`, Message>>

@@ -2,6 +2,7 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { type Locale, makeTranslator } from "#modules/i18n"
 import { SpaceName } from "#modules/space"
 import { TabId } from "#platform/browser"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
@@ -49,10 +50,12 @@ const respondByMode = (query: string, mode: SpotlightMode) =>
 
 const threeTabs = [tab(1, "メール"), tab(2, "カレンダー"), tab(3, "ドキュメント")]
 
-const renderSpotlight = (options: FakeConnectionOptions = {}) => {
+const renderSpotlight = (options: FakeConnectionOptions = {}, locale: Locale = "ja") => {
   const connection = createFakeConnection(options)
   const close = vi.fn()
-  render(App, { props: { connection, faviconUrl: () => null, close } })
+  render(App, {
+    props: { connection, faviconUrl: () => null, close, translator: makeTranslator(locale) },
+  })
   return { connection, close, input: screen.getByRole("combobox") }
 }
 
@@ -333,5 +336,46 @@ describe("履歴の行", () => {
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
 
     expect(screen.getByRole("option").textContent).toContain("3 日前")
+  })
+})
+
+describe("表示する言語", () => {
+  it("言語を英語にすると、検索欄と操作の案内が英語になる", async () => {
+    const { input } = renderSpotlight({ respond: () => threeTabs }, "en")
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
+
+    expect(input.getAttribute("placeholder")).toBe("Search or enter a URL")
+    expect(input.getAttribute("aria-label")).toBe(
+      "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
+    )
+    expect(screen.getAllByRole("option")[0]?.textContent).toContain("Tab")
+  })
+
+  it("コマンドモードの印とプレースホルダも訳される", async () => {
+    const { input } = renderSpotlight({ respond: respondByMode }, "en")
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect(input.getAttribute("placeholder")).toBe("Search commands")
+    expect(screen.getByText("Commands", { selector: ".mode-chip" })).toBeTruthy()
+  })
+
+  it("最後に訪れた時刻が、言語に合わせた相対時刻になる", async () => {
+    renderSpotlight({ respond: () => [historyPage("Effect blog", 3)] }, "en")
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+
+    expect(screen.getByRole("option").textContent).toContain("3 days ago")
+  })
+
+  it("background に届かなかったことも、表示する言語で出す", async () => {
+    const { connection } = renderSpotlight({}, "en")
+
+    await connection.answer("", [], { unreachable: true })
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("Couldn’t connect to Katip. Try again."),
+    )
   })
 })

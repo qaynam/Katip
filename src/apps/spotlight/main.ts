@@ -1,6 +1,8 @@
-import { Option } from "effect"
+import { Effect, Layer, Option } from "effect"
 import { mount } from "svelte"
-import { WindowId } from "#platform/browser"
+import { makeTranslator, resolveLocale } from "#modules/i18n"
+import { SettingsRepository } from "#modules/settings"
+import { Storage, WindowId } from "#platform/browser"
 import { callerWindowOfSpotlight, SPOTLIGHT_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
 import { createSpotlightPortConnection, type SpotlightPort } from "./connection/port-connection"
@@ -25,10 +27,21 @@ const lastFocusedNormalWindow = async () => {
   return window.id === undefined ? null : WindowId.make(window.id)
 }
 
+// 設定を読めなくても開けるよう、そのときはブラウザの言語で表示する
+const localePreference = Effect.runPromise(
+  SettingsRepository.use((settings) => settings.get).pipe(
+    Effect.map((settings) => settings.locale),
+    Effect.orElseSucceed(() => "auto" as const),
+    Effect.provide(SettingsRepository.layer.pipe(Layer.provide(Storage.layer))),
+  ),
+)
+
 const callerWindowId = await Option.match(callerWindowOfSpotlight(location.href), {
   onSome: (windowId) => Promise.resolve(windowId),
   onNone: lastFocusedNormalWindow,
 })
+const translator = makeTranslator(resolveLocale(await localePreference, navigator.languages))
+document.documentElement.lang = translator.languageTag
 
 if (callerWindowId === null) {
   window.close()
@@ -39,6 +52,7 @@ if (callerWindowId === null) {
       connection: createSpotlightPortConnection({ openPort, callerWindowId }),
       faviconUrl,
       close: () => window.close(),
+      translator,
     },
   })
 }

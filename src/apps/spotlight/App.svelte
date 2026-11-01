@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte"
+  import type { Translator } from "#modules/i18n"
   import type { ColorScheme, SpaceTheme } from "#modules/theme"
   import type { SpotlightMode, SpotlightResult } from "#protocol"
   import ResultRow from "./components/ResultRow.svelte"
@@ -10,16 +11,17 @@
   import { isMatchedCandidate } from "./logic/result-display"
   import { stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
-  import { strings } from "./strings"
 
   interface Props {
     connection: SpotlightConnection
     faviconUrl: FaviconResolver
     /** Spotlight のウィンドウを閉じる。 */
     close: () => void
+    translator: Translator
   }
 
-  const { connection, faviconUrl, close }: Props = $props()
+  const { connection, faviconUrl, close, translator }: Props = $props()
+  const t = $derived(translator.t)
 
   const RESULTS_ID = "spotlight-results"
   const optionId = (index: number) => `spotlight-option-${index}`
@@ -51,7 +53,7 @@
     if (ticket !== latestSearch) return
     isSearching = false
     if (response === null) {
-      notice = strings.unreachable
+      notice = t("spotlight.unreachable")
       return
     }
     notice = null
@@ -68,7 +70,8 @@
     isChoosing = true
     const outcome = await connection.choose(result)
     isChoosing = false
-    if (outcome._tag === "Succeeded") close()
+    if (outcome === null) notice = t("spotlight.unreachable")
+    else if (outcome._tag === "Succeeded") close()
     else notice = outcome.reason
   }
 
@@ -141,19 +144,23 @@
     <div class="search">
       <span class="search-glyph"><SearchGlyph size={20} /></span>
       {#if mode === "Actions"}
-        <span class="mode-chip">{strings.commandMode}</span>
+        <span class="mode-chip">{t("spotlight.commands.badge")}</span>
       {/if}
       <input
         bind:this={input}
         class="query"
         type="text"
         role="combobox"
-        aria-label={mode === "Actions" ? strings.commandSearchLabel : strings.searchLabel}
+        aria-label={mode === "Actions"
+          ? t("spotlight.commands.label")
+          : t("spotlight.search.label")}
         aria-expanded="true"
         aria-controls={RESULTS_ID}
         aria-autocomplete="list"
         aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
-        placeholder={mode === "Actions" ? strings.commandPlaceholder : strings.placeholder}
+        placeholder={mode === "Actions"
+          ? t("spotlight.commands.placeholder")
+          : t("spotlight.search.placeholder")}
         autocomplete="off"
         spellcheck="false"
         value={query}
@@ -167,14 +174,14 @@
 
     <div class="body">
       {#if !hasLoaded}
-        <p class="message" role="status">{strings.loading}</p>
+        <p class="message" role="status">{t("spotlight.loading")}</p>
       {:else if !hasMatches}
         <p class="message" role="status">
           {mode === "Actions"
-            ? strings.noMatchingCommands
+            ? t("spotlight.empty.noMatchingCommands")
             : query.trim() === ""
-              ? strings.noRecentTabs
-              : strings.noMatches}
+              ? t("spotlight.empty.noRecentTabs")
+              : t("spotlight.empty.noMatches")}
         </p>
       {/if}
       {#if results.length > 0}
@@ -183,7 +190,7 @@
           id={RESULTS_ID}
           class="results"
           role="listbox"
-          aria-label={strings.resultsLabel}
+          aria-label={t("spotlight.results.label")}
         >
           {#each results as result, index (index)}
             <ResultRow
@@ -191,6 +198,7 @@
               {result}
               isSelected={index === selectedIndex}
               now={respondedAt}
+              {translator}
               showsKind={mode === "All"}
               {faviconUrl}
               onchoose={() => choose(result)}
@@ -207,11 +215,11 @@
 
     <footer class="hints" aria-hidden="true">
       {#if mode === "All" && query === ""}
-        <span><kbd>tab</kbd>{strings.hints.commands}</span>
+        <span><kbd>tab</kbd>{t("spotlight.hint.commands")}</span>
       {/if}
-      <span><kbd>↑</kbd><kbd>↓</kbd>{strings.hints.select}</span>
-      <span><kbd>↵</kbd>{strings.hints.open}</span>
-      <span><kbd>esc</kbd>{mode === "Actions" ? strings.hints.back : strings.hints.close}</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>
+      <span><kbd>↵</kbd>{t("spotlight.hint.open")}</span>
+      <span><kbd>esc</kbd>{mode === "Actions" ? t("spotlight.hint.back") : t("common.close")}</span>
     </footer>
   </main>
 </div>
