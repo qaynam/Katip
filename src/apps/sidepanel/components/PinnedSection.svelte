@@ -10,6 +10,7 @@
 
   const { pinned, onReload }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const sectionKey = "pinned-section"
   const dropZone = $derived(ctx.drag.zoneFor(sectionKey))
@@ -35,16 +36,16 @@
 <section
   class="pinned"
   class:drop-after={dropZone === "after"}
-  aria-label="ピン留め"
+  aria-label={t("sidepanel.pinned.region")}
   ondragover={onDragOver}
 >
   {#if pinned._tag === "Unavailable"}
     <div class="unavailable" role="status">
-      <p>ピン留めを読み込めませんでした。ブックマークは変更されていません。</p>
-      <button type="button" onclick={onReload}>再読み込み</button>
+      <p>{t("sidepanel.pinned.unavailable")}</p>
+      <button type="button" onclick={onReload}>{t("sidepanel.pinned.reload")}</button>
     </div>
   {:else if pinned.nodes.length === 0}
-    <p class="empty" class:drop-into={dropZone === "into"}>タブをここにドラッグしてピン留め</p>
+    <p class="empty" class:drop-into={dropZone === "into"}>{t("sidepanel.pinned.empty")}</p>
   {:else}
     <PinnedNodes nodes={pinned.nodes} parentId={null} />
   {/if}

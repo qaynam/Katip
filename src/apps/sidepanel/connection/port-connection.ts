@@ -7,7 +7,7 @@ import {
   type CommandOutcome,
   type SidebarView,
 } from "#protocol"
-import { failedOutcome, type SidebarConnection, type SidebarEvent } from "./sidebar-connection"
+import type { SidebarConnection, SidebarEvent, Undelivered } from "./sidebar-connection"
 
 /** chrome.runtime.Port のうち、接続が使う部分だけ */
 export interface SidebarPort {
@@ -28,12 +28,14 @@ export interface PortConnectionOptions {
 }
 
 export interface PortConnection extends SidebarConnection {
-  /** 以後は再接続せず、未解決のコマンドを Failed で解決する */
+  /** 以後は再接続せず、未解決のコマンドを Undelivered で解決する */
   readonly close: () => void
 }
 
-const DISCONNECTED_REASON = "background との接続が切れたため、結果を確認できませんでした"
-const NOT_CONNECTED_REASON = "background に接続していません。少し待ってからやり直してください"
+const undelivered = (reason: Undelivered["reason"]): Undelivered => ({
+  _tag: "Undelivered",
+  reason,
+})
 
 const decodeServerMessage = Schema.decodeUnknownOption(ServerMessage)
 
@@ -42,7 +44,7 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
   const reconnectDelaysMs = options.reconnectDelaysMs ?? [0, 500, 1_000, 2_000, 5_000]
 
   const listeners = new Set<(event: SidebarEvent) => void>()
-  const pending = new Map<RequestId, (outcome: CommandOutcome) => void>()
+  const pending = new Map<RequestId, (outcome: CommandOutcome | Undelivered) => void>()
   let latestView: SidebarView | null = null
   let port: SidebarPort | null = null
   let nextRequestId = 1
@@ -54,10 +56,10 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
     for (const listener of listeners) listener(event)
   }
 
-  const settleAllPending = (reason: string) => {
+  const settleAllPending = (reason: Undelivered["reason"]) => {
     const resolvers = [...pending.values()]
     pending.clear()
-    for (const resolve of resolvers) resolve(failedOutcome(reason))
+    for (const resolve of resolvers) resolve(undelivered(reason))
   }
 
   const receive = (message: ServerMessage) => {
@@ -92,7 +94,7 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
   const handleDisconnect = (lost: SidebarPort) => {
     if (port !== lost) return
     port = null
-    settleAllPending(DISCONNECTED_REASON)
+    settleAllPending("Disconnected")
     scheduleReconnect()
   }
 
@@ -143,7 +145,7 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
         pending.set(requestId, resolve)
         if (!send({ _tag: "Run", requestId, command })) {
           pending.delete(requestId)
-          resolve(failedOutcome(NOT_CONNECTED_REASON))
+          resolve(undelivered("NotConnected"))
         }
       })
     },
@@ -154,7 +156,7 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
       const current = port
       port = null
       current?.disconnect()
-      settleAllPending(DISCONNECTED_REASON)
+      settleAllPending("Disconnected")
     },
   }
 }

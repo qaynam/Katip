@@ -13,6 +13,7 @@
 
   const { tab }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const dragSource: DragSource = $derived({ _tag: "TemporaryTab", tabId: tab.tabId })
 
   const rename = (draft: string) => {
@@ -38,7 +39,7 @@
   onRename={rename}
   onActivate={() => void ctx.run({ _tag: "ActivateTab", tabId: tab.tabId })}
   onClose={() => void ctx.run({ _tag: "CloseTab", tabId: tab.tabId })}
-  menuLabel="タブのメニュー"
+  menuLabel={t("sidepanel.tab.menu")}
   menuEntries={(startRename) => openTabMenu(ctx, tab.tabId, { isPinned: false, startRename })}
   {dragSource}
   dropTargetAt={(edge) => ({

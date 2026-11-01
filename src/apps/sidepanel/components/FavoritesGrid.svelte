@@ -10,6 +10,7 @@
 
   const { favorites }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const emptyKey = "favorites-empty"
 
@@ -35,7 +36,7 @@
   }
 </script>
 
-<section class="favorites" aria-label="Favorites">
+<section class="favorites" aria-label={t("sidepanel.favorites.region")}>
   {#if favorites.length === 0}
     <p
       class="empty"
@@ -43,7 +44,7 @@
       ondragover={(event) =>
         ctx.drag.offer(event, emptyKey, "into", { _tag: "Favorites", slot: 0 })}
     >
-      タブをここにドラッグして Favorites に追加
+      {t("sidepanel.favorites.empty")}
     </p>
   {:else}
     <ul class="grid" ondragover={onGridDragOver}>

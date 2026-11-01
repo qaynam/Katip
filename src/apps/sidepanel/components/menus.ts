@@ -1,11 +1,16 @@
 import { Option } from "effect"
+import type { MessageKey } from "#modules/i18n"
 import { LiveSort } from "#modules/live-folders"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { PinnedLiveFolderView, PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
-import { sourceOrigins, unseenCount, type LiveSourceKind } from "../logic/live-folders"
+import {
+  liveSourceNames,
+  sourceOrigins,
+  unseenCount,
+  type LiveSourceKind,
+} from "../logic/live-folders"
 import { themeSwatch } from "../logic/space-themes"
 import { openSplitViewOf, otherSpaces } from "../logic/view-queries"
-import { messages } from "../messages"
 import { action, separator, submenu, type MenuEntry } from "../state/menu-controller.svelte"
 import type { SidebarContext } from "../state/sidebar-context"
 import type { SpaceSetupSteps } from "../state/space-setup.svelte"
@@ -15,6 +20,7 @@ export const openTabMenu = (
   tabId: TabId,
   options: { readonly isPinned: boolean; readonly startRename: () => void },
 ): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
   const run = (command: SidebarCommand) => () => void ctx.run(command)
   const destinations = otherSpaces(ctx.view).map((space) =>
     action(space.name, run({ _tag: "MoveTabToSpace", tabId, spaceId: space.id }), {
@@ -22,23 +28,18 @@ export const openTabMenu = (
     }),
   )
   return [
-    action("Favorites に追加", run({ _tag: "AddToFavorites", tabId })),
+    action(t("sidepanel.tab.addToFavorites"), run({ _tag: "AddToFavorites", tabId })),
     options.isPinned
-      ? action("ピン留めを外す", run({ _tag: "UnpinTab", tabId }))
-      : action("ピン留め", run({ _tag: "PinTab", tabId })),
+      ? action(t("sidepanel.tab.unpin"), run({ _tag: "UnpinTab", tabId }))
+      : action(t("sidepanel.tab.pin"), run({ _tag: "PinTab", tabId })),
     ...(options.isPinned
-      ? [
-          action(
-            "ブックマークの URL を現在の URL に置き換え",
-            run({ _tag: "ReplacePinnedUrl", tabId }),
-          ),
-        ]
+      ? [action(t("sidepanel.tab.replacePinnedUrl"), run({ _tag: "ReplacePinnedUrl", tabId }))]
       : []),
-    action("名前を変更", options.startRename),
+    action(t("common.rename"), options.startRename),
     separator,
-    ...(destinations.length > 0 ? [submenu("Space へ移動", destinations)] : []),
-    action("アーカイブ", run({ _tag: "ArchiveTab", tabId })),
-    action("閉じる", run({ _tag: "CloseTab", tabId })),
+    ...(destinations.length > 0 ? [submenu(t("sidepanel.tab.moveToSpace"), destinations)] : []),
+    action(t("sidepanel.tab.archive"), run({ _tag: "ArchiveTab", tabId })),
+    action(t("common.close"), run({ _tag: "CloseTab", tabId })),
   ]
 }
 
@@ -46,6 +47,7 @@ export const temporarySplitMenu = (
   ctx: SidebarContext,
   splitViewId: SplitViewId,
 ): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
   const { pinned, id: spaceId } = ctx.activeSpace
   const pinAtEnd: SidebarCommand = {
     _tag: "PlaceSplitInPinned",
@@ -58,9 +60,16 @@ export const temporarySplitMenu = (
   }
   return [
     ...(ctx.view.canSplit
-      ? [action("分割を解除", () => void ctx.run({ _tag: "Unsplit", splitViewId }))]
+      ? [
+          action(
+            t("sidepanel.split.separate"),
+            () => void ctx.run({ _tag: "Unsplit", splitViewId }),
+          ),
+        ]
       : []),
-    action("ピン留め", () => void ctx.run(pinAtEnd), { disabled: pinned._tag !== "Available" }),
+    action(t("sidepanel.tab.pin"), () => void ctx.run(pinAtEnd), {
+      disabled: pinned._tag !== "Available",
+    }),
   ]
 }
 
@@ -69,10 +78,11 @@ const confirmSplitPinRemoval = async (
   split: PinnedSplitView,
   titles: readonly [string, string],
 ) => {
+  const { t } = ctx.translator
   const confirmed = await ctx.dialog.confirm({
-    title: "ピンを削除しますか？",
-    message: `「${titles[0]}」と「${titles[1]}」を並べたピンのブックマークを削除します。開いているタブは閉じません。`,
-    confirmLabel: "削除",
+    title: t("sidepanel.pin.deleteTitle"),
+    message: t("sidepanel.split.deleteMessage", { left: titles[0], right: titles[1] }),
+    confirmLabel: t("common.delete"),
   })
   if (confirmed) void ctx.run({ _tag: "RemovePinnedItem", bookmarkId: split.bookmarkId })
 }
@@ -82,14 +92,15 @@ export const pinnedSplitMenu = (
   split: PinnedSplitView,
   options: { readonly titles: readonly [string, string]; readonly startRename: () => void },
 ): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
   const splitViewId = openSplitViewOf(split)
   return [
-    action("名前を変更", options.startRename),
+    action(t("common.rename"), options.startRename),
     ...(splitViewId === null
       ? []
       : [
           action(
-            "ピン留めを外す",
+            t("sidepanel.tab.unpin"),
             () =>
               void ctx.run({
                 _tag: "PlaceSplitInTemporary",
@@ -100,9 +111,13 @@ export const pinnedSplitMenu = (
           ),
         ]),
     separator,
-    action("ピンを削除", () => void confirmSplitPinRemoval(ctx, split, options.titles), {
-      tone: "danger",
-    }),
+    action(
+      t("sidepanel.pin.delete"),
+      () => void confirmSplitPinRemoval(ctx, split, options.titles),
+      {
+        tone: "danger",
+      },
+    ),
   ]
 }
 
@@ -118,9 +133,9 @@ const liveSourceKinds: ReadonlyArray<LiveSourceKind> = ["Gmail", "GitHub"]
 
 export const addLiveFolderMenu = (ctx: SidebarContext, parentId: BookmarkId | null): MenuEntry =>
   submenu(
-    messages.liveFolder.addMenu,
+    ctx.translator.t("sidepanel.liveFolder.add"),
     liveSourceKinds.map((kind) =>
-      action(messages.liveFolder.sourceNames[kind], () =>
+      action(liveSourceNames[kind], () =>
         ctx.liveFolderDialog.open({ _tag: "Create", kind, spaceId: ctx.activeSpace.id, parentId }),
       ),
     ),
@@ -133,18 +148,24 @@ export const addLiveFolderMenu = (ctx: SidebarContext, parentId: BookmarkId | nu
 export const grantAccessAndRefresh = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
   const isGranted = await ctx.originAccess.request(sourceOrigins(folder.source._tag))
   if (!isGranted) {
-    ctx.toasts.show(messages.liveFolder.accessDenied(folder.source._tag), "error")
+    ctx.toasts.show(
+      ctx.translator.t("sidepanel.liveFolder.accessDenied", {
+        source: liveSourceNames[folder.source._tag],
+      }),
+      "error",
+    )
     return
   }
   await ctx.run({ _tag: "RefreshLiveFolder", bookmarkId: folder.bookmarkId })
 }
 
 const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
-  const title = folder.title || messages.liveFolder.untitled
+  const { t } = ctx.translator
+  const title = folder.title || t("sidepanel.liveFolder.untitled")
   const confirmed = await ctx.dialog.confirm({
-    title: messages.liveFolder.removeTitle,
-    message: messages.liveFolder.removeMessage(title),
-    confirmLabel: messages.common.delete,
+    title: t("sidepanel.liveFolder.deleteTitle"),
+    message: t("sidepanel.liveFolder.deleteMessage", { title }),
+    confirmLabel: t("common.delete"),
   })
   if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
 }
@@ -153,15 +174,27 @@ const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveF
 export const openSignInPage = (ctx: SidebarContext, url: string) =>
   void ctx.run({ _tag: "OpenUrl", windowId: ctx.view.windowId, url })
 
-const sortLabel = (sort: LiveSort, kind: LiveSourceKind): string =>
-  sort === "source" ? messages.liveFolder.sortsBySource[kind] : messages.liveFolder.sorts[sort]
+const sortMessages = {
+  newest: "sidepanel.liveFolder.sort.newest",
+  oldest: "sidepanel.liveFolder.sort.oldest",
+  title: "sidepanel.liveFolder.sort.title",
+} as const satisfies Record<Exclude<LiveSort, "source">, MessageKey>
+
+// "source" はまとめる単位が取得元で違う（差出人・リポジトリ）ので、呼び名も取得元ごとに持つ
+const sourceSortMessages = {
+  Gmail: "sidepanel.liveFolder.sort.sender",
+  GitHub: "sidepanel.liveFolder.sort.repository",
+} as const satisfies Record<LiveSourceKind, MessageKey>
+
+const sortMessageOf = (sort: LiveSort, kind: LiveSourceKind) =>
+  sort === "source" ? sourceSortMessages[kind] : sortMessages[sort]
 
 const liveFolderSortMenu = (ctx: SidebarContext, folder: PinnedLiveFolderView): MenuEntry =>
   submenu(
-    messages.liveFolder.sortMenu,
+    ctx.translator.t("sidepanel.liveFolder.sortBy"),
     LiveSort.literals.map((sort) =>
       action(
-        sortLabel(sort, folder.source._tag),
+        ctx.translator.t(sortMessageOf(sort, folder.source._tag)),
         () => void ctx.run({ _tag: "SetLiveFolderSort", bookmarkId: folder.bookmarkId, sort }),
         { checked: sort === folder.sort },
       ),
@@ -173,48 +206,54 @@ export const liveFolderMenu = (
   folder: PinnedLiveFolderView,
   options: { readonly startRename: () => void },
 ): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
   const { bookmarkId, status } = folder
   const failure = status._tag === "Failed" ? status : null
   const signInUrl = failure?.signInUrl ?? null
   return [
     action(
-      messages.liveFolder.refreshNow,
+      t("sidepanel.liveFolder.refreshNow"),
       () => void ctx.run({ _tag: "RefreshLiveFolder", bookmarkId }),
       { disabled: status._tag === "Refreshing" },
     ),
     action(
-      messages.liveFolder.markAllSeen,
+      t("sidepanel.liveFolder.markAllSeen"),
       () => void ctx.run({ _tag: "MarkLiveFolderSeen", bookmarkId }),
       { disabled: unseenCount(folder) === 0 },
     ),
     liveFolderSortMenu(ctx, folder),
     ...(failure?.needsPermission === true
-      ? [action(messages.liveFolder.grantAccess, () => void grantAccessAndRefresh(ctx, folder))]
+      ? [
+          action(
+            t("sidepanel.liveFolder.grantAccess"),
+            () => void grantAccessAndRefresh(ctx, folder),
+          ),
+        ]
       : []),
     ...(signInUrl !== null
-      ? [action(messages.liveFolder.signIn, () => openSignInPage(ctx, signInUrl))]
+      ? [action(t("sidepanel.liveFolder.signIn"), () => openSignInPage(ctx, signInUrl))]
       : []),
     ...(failure?.needsToken === true
       ? [
-          action(messages.liveFolder.setToken, () =>
+          action(t("sidepanel.liveFolder.setToken"), () =>
             ctx.liveFolderDialog.open({ _tag: "SetGitHubToken", bookmarkId }),
           ),
         ]
       : []),
-    action(messages.common.rename, options.startRename),
+    action(t("common.rename"), options.startRename),
     separator,
-    action(messages.liveFolder.remove, () => void confirmLiveFolderRemoval(ctx, folder), {
+    action(t("sidepanel.liveFolder.delete"), () => void confirmLiveFolderRemoval(ctx, folder), {
       tone: "danger",
     }),
   ]
 }
 
 const confirmSpaceDeletion = async (ctx: SidebarContext, space: SpaceView) => {
+  const { t } = ctx.translator
   const confirmed = await ctx.dialog.confirm({
-    title: `「${space.name}」を削除しますか？`,
-    message:
-      "この Space のピン留めとフォルダも削除されます。開いている一時タブは閉じずに、別の Space に移動します。",
-    confirmLabel: "Space を削除",
+    title: t("sidepanel.space.deleteTitle", { name: space.name }),
+    message: t("sidepanel.space.deleteMessage"),
+    confirmLabel: t("sidepanel.space.delete"),
   })
   if (confirmed) void ctx.run({ _tag: "DeleteSpace", spaceId: space.id })
 }
@@ -231,22 +270,29 @@ export const spaceMenuEntries = (
   ctx: SidebarContext,
   space: SpaceView,
 ): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
   const canCreateFolder =
     space.id === ctx.activeSpace.id &&
     space.pinned._tag === "Available" &&
     space.pinned.canCreateFolder
   return [
-    action("テーマを編集", setUpSpace(ctx, space, { rename: false, editTheme: true })),
-    action("名前を変更", setUpSpace(ctx, space, { rename: true, editTheme: false })),
+    action(
+      t("sidepanel.space.editTheme"),
+      setUpSpace(ctx, space, { rename: false, editTheme: true }),
+    ),
+    action(t("common.rename"), setUpSpace(ctx, space, { rename: true, editTheme: false })),
     ...(canCreateFolder
-      ? [action("新しいフォルダ", () => void createFolder(ctx, null)), addLiveFolderMenu(ctx, null)]
+      ? [
+          action(t("common.newFolder"), () => void createFolder(ctx, null)),
+          addLiveFolderMenu(ctx, null),
+        ]
       : []),
     separator,
-    action("Space を削除", () => void confirmSpaceDeletion(ctx, space), {
+    action(t("sidepanel.space.delete"), () => void confirmSpaceDeletion(ctx, space), {
       tone: "danger",
       disabled: ctx.view.spaces.length <= 1,
     }),
     separator,
-    action("設定を開く", () => void ctx.run({ _tag: "OpenSettings" })),
+    action(t("actions.openSettings"), () => void ctx.run({ _tag: "OpenSettings" })),
   ]
 }

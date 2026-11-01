@@ -1,4 +1,5 @@
 import { createContext } from "svelte"
+import type { Translator } from "#modules/i18n"
 import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
 import type { OriginAccess } from "../connection/origin-access"
 import type { FaviconResolver } from "../logic/favicon"
@@ -29,6 +30,8 @@ export interface SidebarContext {
   readonly tooltip: TooltipController
   readonly faviconUrl: FaviconResolver
   readonly toasts: ToastQueue
+  /** 設定した言語。開いている間に言語を変えると入れ替わるので、使うたびに読む */
+  readonly translator: Translator
   readonly originAccess: OriginAccess
   readonly liveFolderDialog: LiveFolderDialogController
   readonly folderSearch: FolderSearchController

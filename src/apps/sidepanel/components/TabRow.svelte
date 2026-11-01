@@ -60,6 +60,7 @@
   }: Props = $props()
 
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   let row = $state<HTMLLIElement>()
   let isEditing = $state(false)
   const dropZone = $derived(ctx.drag.zoneFor(rowKey))
@@ -123,7 +124,7 @@
   const scheduleTooltip = (event: PointerEvent) => {
     if (isEditing || ctx.drag.source !== null) return
     ctx.tooltip.schedule(
-      { title, hint: "ダブルクリックで名前を変更" },
+      { title, hint: t("sidepanel.tab.renameHint") },
       { x: event.clientX, y: event.clientY },
     )
   }
@@ -156,7 +157,7 @@
     <button
       class="return-button"
       type="button"
-      aria-label="ピンした URL に戻る"
+      aria-label={t("sidepanel.tab.backToPinnedUrl")}
       onclick={onReturnToPinnedUrl}
     >
       <span class="favicon"><Favicon {pageUrl} {favIconUrl} {title} /></span>
@@ -170,7 +171,7 @@
     {/if}
     <TitleEditor
       initial={renameInitial}
-      label="名前"
+      label={t("sidepanel.tab.nameLabel")}
       onCommit={finishRename}
       onCancel={() => (isEditing = false)}
     />
@@ -195,13 +196,17 @@
   {/if}
 
   {#if isAudible || isMuted}
-    <span class="audio" role="img" aria-label={isMuted ? "ミュート中" : "音声を再生中"}>
+    <span
+      class="audio"
+      role="img"
+      aria-label={t(isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
+    >
       <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
     </span>
   {/if}
 
   {#if onClose !== undefined && !isEditing}
-    <button class="close" type="button" aria-label="タブを閉じる" onclick={onClose}>
+    <button class="close" type="button" aria-label={t("actions.closeTab")} onclick={onClose}>
       <Icon name="close" size={13} />
     </button>
   {/if}

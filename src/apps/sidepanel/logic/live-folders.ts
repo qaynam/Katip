@@ -3,6 +3,12 @@ import type { PinnedLiveFolderView } from "#protocol"
 
 export type LiveSourceKind = LiveSource["_tag"]
 
+/** サービスの名前なので、どの言語でも訳さずに出す。 */
+export const liveSourceNames: Readonly<Record<LiveSourceKind, string>> = {
+  Gmail: "Gmail",
+  GitHub: "GitHub",
+}
+
 export const GITHUB_TOKEN_PAGE_URL =
   "https://github.com/settings/tokens/new?description=Katip&scopes=repo"
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte"
+  import type { MessageKey } from "#modules/i18n"
   import {
     addHarmonyColor,
     MAX_THEME_COLORS,
@@ -25,6 +26,7 @@
 
   const { picker, onClose }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const spaceId = untrack(() => picker.spaceId)
   const theme = $derived(
@@ -38,11 +40,11 @@
   const settle = () => ctx.themeDraft.settle()
   const commit = (next: SpaceTheme) => ctx.themeDraft.commit(spaceId, next)
 
-  const modes: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> = [
-    { mode: "auto", label: "自動", icon: "sparkles" },
-    { mode: "light", label: "ライト", icon: "sun" },
-    { mode: "dark", label: "ダーク", icon: "moon" },
-  ]
+  const modes = [
+    { mode: "auto", label: "sidepanel.theme.auto", icon: "sparkles" },
+    { mode: "light", label: "sidepanel.theme.light", icon: "sun" },
+    { mode: "dark", label: "sidepanel.theme.dark", icon: "moon" },
+  ] as const satisfies ReadonlyArray<{ mode: ThemeMode; label: MessageKey; icon: IconName }>
 
   let panel = $state<HTMLDivElement>()
   let position = $state<Point>(untrack(() => ({ x: picker.anchor.left, y: picker.anchor.bottom })))
@@ -71,7 +73,7 @@
   bind:this={panel}
   class="picker"
   role="dialog"
-  aria-label="テーマ"
+  aria-label={t("sidepanel.theme.label")}
   tabindex="-1"
   style:left="{position.x}px"
   style:top="{position.y}px"
@@ -83,15 +85,15 @@
       onChange={(colors) => preview({ ...theme, colors })}
       onSettle={settle}
     />
-    <div class="modes" role="radiogroup" aria-label="ライトとダーク">
+    <div class="modes" role="radiogroup" aria-label={t("sidepanel.theme.scheme")}>
       {#each modes as option (option.mode)}
         <button
           class="mode"
           type="button"
           role="radio"
           aria-checked={theme.mode === option.mode}
-          aria-label={option.label}
-          title={option.label}
+          aria-label={t(option.label)}
+          title={t(option.label)}
           onclick={() => commit({ ...theme, mode: option.mode })}
         >
           <Icon name={option.icon} />
@@ -101,7 +103,7 @@
     <div class="count">
       <button
         type="button"
-        aria-label="色を減らす"
+        aria-label={t("sidepanel.theme.removeColor")}
         disabled={theme.colors.length <= 1}
         onclick={() => commit({ ...theme, colors: removeLastColor(theme.colors) })}
       >
@@ -109,7 +111,7 @@
       </button>
       <button
         type="button"
-        aria-label="色を増やす"
+        aria-label={t("sidepanel.theme.addColor")}
         disabled={!hasColor || theme.colors.length >= MAX_THEME_COLORS}
         onclick={() => commit({ ...theme, colors: addHarmonyColor(theme.colors) })}
       >

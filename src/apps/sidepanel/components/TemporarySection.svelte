@@ -11,6 +11,7 @@
 
   const { space }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const sectionKey = "temporary-section"
   const dropZone = $derived(ctx.drag.zoneFor(sectionKey))
@@ -36,15 +37,15 @@
 <section
   class="temporary"
   class:drop-after={dropZone === "after"}
-  aria-label="一時タブ"
+  aria-label={t("sidepanel.temporary.region")}
   ondragover={onDragOver}
 >
   <div class="divider">
     <span class="rule"></span>
     {#if space.temporaryEntries.length > 0}
-      <button class="clear" type="button" title="一時タブをすべて閉じる" onclick={clear}>
+      <button class="clear" type="button" title={t("actions.closeTemporaryTabs")} onclick={clear}>
         <Icon name="arrowDown" size={11} />
-        <span>クリア</span>
+        <span>{t("sidepanel.temporary.clear")}</span>
       </button>
     {/if}
   </div>
@@ -54,7 +55,7 @@
     onclick={() => void ctx.run({ _tag: "OpenNewTab", windowId: ctx.view.windowId })}
   >
     <span class="plus"><Icon name="plus" size={15} /></span>
-    <span>新しいタブ</span>
+    <span>{t("common.newTab")}</span>
   </button>
   <ul class="tabs">
     {#each space.temporaryEntries as entry (entryKey(entry))}

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Option } from "effect"
+  import type { MessageKey } from "#modules/i18n"
   import { presetPages, type ThemeColor } from "#modules/theme"
   import { themeSwatch } from "../../logic/space-themes"
+  import { getSidebarContext } from "../../state/sidebar-context"
   import Icon from "../Icon.svelte"
 
   interface Props {
@@ -9,25 +11,34 @@
   }
 
   const { onPick }: Props = $props()
+  const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
-  const pageLabels = ["単色", "グラデーション"]
+  const pageLabels = [
+    "sidepanel.theme.presets.solid",
+    "sidepanel.theme.presets.gradient",
+  ] as const satisfies ReadonlyArray<MessageKey>
 
   let page = $state(0)
   const presets = $derived(presetPages[page] ?? [])
-  const pageLabel = $derived(pageLabels[page] ?? "プリセット")
+  const pageLabel = $derived(t(pageLabels[page] ?? "sidepanel.theme.presets"))
 </script>
 
 <div class="presets">
   <button
     class="arrow"
     type="button"
-    aria-label="前のプリセット"
+    aria-label={t("sidepanel.theme.presets.previous")}
     disabled={page === 0}
     onclick={() => (page -= 1)}
   >
     <Icon name="chevronLeft" size={14} />
   </button>
-  <div class="swatches" role="group" aria-label="{pageLabel}のプリセット">
+  <div
+    class="swatches"
+    role="group"
+    aria-label={t("sidepanel.theme.presets.of", { kind: pageLabel })}
+  >
     {#each presets as preset, index (index)}
       <button
         class="swatch"
@@ -41,7 +52,7 @@
   <button
     class="arrow"
     type="button"
-    aria-label="次のプリセット"
+    aria-label={t("sidepanel.theme.presets.next")}
     disabled={page === presetPages.length - 1}
     onclick={() => (page += 1)}
   >

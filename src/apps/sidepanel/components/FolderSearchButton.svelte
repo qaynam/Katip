@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { BookmarkId } from "#platform/browser"
-  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import Icon from "./Icon.svelte"
 
@@ -12,6 +11,7 @@
 
   const { bookmarkId, anchor }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const isOpen = $derived(ctx.folderSearch.current?.bookmarkId === bookmarkId)
 
   const open = (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
@@ -28,7 +28,7 @@
   class="search-button"
   class:open={isOpen}
   type="button"
-  aria-label={messages.folderSearch.open}
+  aria-label={t("sidepanel.folderSearch.open")}
   aria-haspopup="dialog"
   aria-expanded={isOpen}
   onclick={open}

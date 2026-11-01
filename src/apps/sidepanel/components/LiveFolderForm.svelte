@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Option, Result } from "effect"
   import { untrack } from "svelte"
+  import type { MessageKey } from "#modules/i18n"
   import { GitHubQuery, type LiveSource } from "#modules/live-folders"
   import type { BookmarkId } from "#platform/browser"
   import type { SidebarCommand } from "#protocol"
@@ -9,9 +10,8 @@
     gmailSourceFrom,
     type LiveFolderDraftError,
   } from "../logic/live-folder-drafts"
-  import { GITHUB_TOKEN_PAGE_URL, sourceOrigins } from "../logic/live-folders"
+  import { GITHUB_TOKEN_PAGE_URL, liveSourceNames, sourceOrigins } from "../logic/live-folders"
   import { findPinnedNode } from "../logic/view-queries"
-  import { messages } from "../messages"
   import type { LiveFolderDialogRequest } from "../state/live-folder-dialog.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
 
@@ -22,28 +22,42 @@
 
   const { request, onClose }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const ids = $props.id()
-  const text = messages.liveFolderDialog
+
+  const draftErrorMessages = {
+    InvalidAccountIndex: "sidepanel.liveFolderDialog.invalidAccountIndex",
+    TokenRequired: "sidepanel.liveFolderDialog.tokenRequired",
+    TokenHasWhitespace: "sidepanel.liveFolderDialog.tokenHasWhitespace",
+  } as const satisfies Record<LiveFolderDraftError, MessageKey>
+
+  const gitHubQueryMessages = {
+    "review-requested": "sidepanel.liveFolder.github.reviewRequested",
+    "authored-pull-requests": "sidepanel.liveFolder.github.authoredPullRequests",
+    "assigned-issues": "sidepanel.liveFolder.github.assignedIssues",
+    mentioned: "sidepanel.liveFolder.github.mentioned",
+  } as const satisfies Record<GitHubQuery, MessageKey>
 
   // 開いている間に依頼が変わりうるが、入力欄の構成は開いた時点で決めて、途中で出し入れしない
   const initial = untrack(() => request)
   const kind = initial._tag === "Create" ? initial.kind : "GitHub"
-  const title =
+  const titleMessage =
     initial._tag === "SetGitHubToken"
-      ? text.tokenTitle
+      ? "sidepanel.liveFolderDialog.tokenTitle"
       : kind === "Gmail"
-        ? text.gmailTitle
-        : text.gitHubTitle
+        ? "sidepanel.liveFolderDialog.gmailTitle"
+        : "sidepanel.liveFolderDialog.gitHubTitle"
 
   let accountIndex = $state("0")
   let label = $state("")
   let query = $state<GitHubQuery>("review-requested")
   let token = $state("")
-  let error = $state<string | null>(null)
+  // 表示している間に言語を変えても訳し直せるよう、文字列ではなく作り方を持つ
+  let error = $state.raw<(() => string) | null>(null)
   let isSubmitting = $state(false)
 
   const showDraftError = (reason: LiveFolderDraftError) => {
-    error = text.errors[reason]
+    error = () => t(draftErrorMessages[reason])
   }
 
   const sourceDraft = (): Result.Result<LiveSource, LiveFolderDraftError> =>
@@ -81,7 +95,8 @@
     const access = ctx.originAccess.request(sourceOrigins(kind))
     void whileSubmitting(async () => {
       if (!(await access)) {
-        error = text.accessDenied(kind)
+        error = () =>
+          t("sidepanel.liveFolderDialog.accessDenied", { source: liveSourceNames[kind] })
         return
       }
       const isCreated = await succeeds({
@@ -136,12 +151,14 @@
       oninput={() => (error = null)}
       {@attach focusFirstField}
     >
-      <h2 id="{ids}-title" class="title">{title}</h2>
+      <h2 id="{ids}-title" class="title">{t(titleMessage)}</h2>
 
       {#if initial._tag === "Create" && kind === "Gmail"}
-        <p class="description">{text.gmailDescription}</p>
+        <p class="description">{t("sidepanel.liveFolderDialog.gmailDescription")}</p>
         <div class="field">
-          <label class="label" for="{ids}-account">{text.accountIndex}</label>
+          <label class="label" for="{ids}-account"
+            >{t("sidepanel.liveFolderDialog.accountIndex")}</label
+          >
           <input
             id="{ids}-account"
             type="text"
@@ -149,27 +166,29 @@
             aria-describedby="{ids}-account-hint"
             bind:value={accountIndex}
           />
-          <p id="{ids}-account-hint" class="hint">{text.accountIndexHint}</p>
+          <p id="{ids}-account-hint" class="hint">
+            {t("sidepanel.liveFolderDialog.accountIndexHint")}
+          </p>
         </div>
         <div class="field">
-          <label class="label" for="{ids}-label">{text.label}</label>
+          <label class="label" for="{ids}-label">{t("sidepanel.liveFolderDialog.label")}</label>
           <input
             id="{ids}-label"
             type="text"
-            placeholder={text.labelPlaceholder}
+            placeholder={t("sidepanel.liveFolderDialog.labelPlaceholder")}
             aria-describedby="{ids}-label-hint"
             bind:value={label}
           />
-          <p id="{ids}-label-hint" class="hint">{text.labelHint}</p>
+          <p id="{ids}-label-hint" class="hint">{t("sidepanel.liveFolderDialog.labelHint")}</p>
         </div>
       {:else if initial._tag === "Create"}
-        <p class="description">{text.gitHubDescription}</p>
+        <p class="description">{t("sidepanel.liveFolderDialog.gitHubDescription")}</p>
         <fieldset class="queries">
-          <legend class="label">{text.queryLegend}</legend>
+          <legend class="label">{t("sidepanel.liveFolderDialog.queryLegend")}</legend>
           {#each GitHubQuery.literals as option (option)}
             <label class="query">
               <input type="radio" name="{ids}-query" value={option} bind:group={query} />
-              <span>{messages.liveFolder.gitHubQueries[option]}</span>
+              <span>{t(gitHubQueryMessages[option])}</span>
             </label>
           {/each}
         </fieldset>
@@ -177,7 +196,7 @@
 
       {#if initial._tag === "SetGitHubToken"}
         <div class="field">
-          <label class="label" for="{ids}-token">{text.token}</label>
+          <label class="label" for="{ids}-token">{t("sidepanel.liveFolderDialog.token")}</label>
           <input
             id="{ids}-token"
             type="password"
@@ -186,21 +205,25 @@
             aria-describedby="{ids}-token-help"
             bind:value={token}
           />
-          <p id="{ids}-token-help" class="hint">{text.tokenHowTo}</p>
+          <p id="{ids}-token-help" class="hint">{t("sidepanel.liveFolderDialog.tokenHowTo")}</p>
         </div>
         <a class="token-link" href={GITHUB_TOKEN_PAGE_URL} target="_blank" rel="noreferrer">
-          {text.tokenLink}
+          {t("sidepanel.liveFolderDialog.tokenLink")}
         </a>
       {/if}
 
       {#if error !== null}
-        <p class="error" role="alert">{error}</p>
+        <p class="error" role="alert">{error()}</p>
       {/if}
 
       <div class="actions">
-        <button class="cancel" type="button" onclick={onClose}>{messages.common.cancel}</button>
+        <button class="cancel" type="button" onclick={onClose}>{t("common.cancel")}</button>
         <button class="submit" type="submit" disabled={isSubmitting}>
-          {initial._tag === "Create" ? text.create : text.save}
+          {t(
+            initial._tag === "Create"
+              ? "sidepanel.liveFolderDialog.create"
+              : "sidepanel.liveFolderDialog.save",
+          )}
         </button>
       </div>
     </form>

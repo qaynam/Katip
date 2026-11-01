@@ -1,6 +1,9 @@
+import { Option, Schema } from "effect"
 import { mount } from "svelte"
+import { LocalePreference } from "#modules/i18n"
 import { SIDEBAR_PORT_NAME, type SidebarCommand } from "#protocol"
 import App from "../sidepanel/App.svelte"
+import { createMemoryLocalePreferences } from "../sidepanel/connection/locale-preferences"
 import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
 import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
 import { createPortConnection } from "../sidepanel/connection/port-connection"
@@ -24,6 +27,24 @@ const element = <E extends HTMLElement>(selector: string): E => {
 
 const commandLog = element<HTMLOListElement>("#command-log")
 const denyAccess = element<HTMLInputElement>("#deny-access")
+const localeSelect = element<HTMLSelectElement>("#locale")
+
+// このページから拡張の設定は読めないので、表示言語はツールバーで選び、URL に残して再読み込みでも保つ
+const decodeLocalePreference = Schema.decodeUnknownOption(LocalePreference)
+const initialLocale = Option.getOrElse(
+  decodeLocalePreference(params.get("locale")),
+  (): LocalePreference => "auto",
+)
+const localePreferences = createMemoryLocalePreferences(initialLocale)
+localeSelect.value = initialLocale
+localeSelect.addEventListener("change", () =>
+  Option.map(decodeLocalePreference(localeSelect.value), (chosen) => {
+    localePreferences.set(chosen)
+    const url = new URL(location.href)
+    url.searchParams.set("locale", chosen)
+    history.replaceState(null, "", url)
+  }),
+)
 
 const log = (text: string) => {
   const entry = document.createElement("li")
@@ -96,5 +117,13 @@ if (connection === null) {
   frame.textContent =
     "拡張に接続できません。Katip (dev) を読み込んだ Chrome でこのページを開き、拡張 ID を確認してください。"
 } else {
-  mount(App, { target: frame, props: { connection: withCommandLog(connection), originAccess } })
+  mount(App, {
+    target: frame,
+    props: {
+      connection: withCommandLog(connection),
+      originAccess,
+      localePreferences,
+      browserLanguages: navigator.languages,
+    },
+  })
 }

@@ -2,12 +2,14 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { beforeEach, vi } from "vitest"
+import type { LocalePreference } from "#modules/i18n"
 import type { SidebarCommand, SidebarView } from "#protocol"
 import App from "../App.svelte"
 import {
   createMemoryConnection,
   type MemoryConnectionOptions,
 } from "../connection/memory-connection"
+import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 
 // jsdom はレイアウトを持たず scrollIntoView も実装していない
@@ -20,22 +22,39 @@ export const renderSidebar = async (
   options: Pick<MemoryConnectionOptions, "respond"> & {
     /** 取得元へのアクセスを求められたときに許可するか。既定は許可する */
     readonly grantsAccess?: boolean
+    /** 設定で選んだ言語。既定は日本語 */
+    readonly locale?: LocalePreference
+    /** 言語の設定が自動のときに使うブラウザの言語 */
+    readonly browserLanguages?: ReadonlyArray<string>
   } = {},
 ) => {
-  const { grantsAccess = true, ...connectionOptions } = options
+  const {
+    grantsAccess = true,
+    locale = "ja",
+    browserLanguages = [],
+    ...connectionOptions
+  } = options
   const connection = createMemoryConnection({
     ...(view === null ? {} : { view }),
     ...connectionOptions,
   })
   const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
+  const localePreferences = createMemoryLocalePreferences(locale)
   const onReload = vi.fn()
-  const result = render(App, { props: { connection, originAccess, onReload } })
+  const result = render(App, {
+    props: { connection, originAccess, localePreferences, browserLanguages, onReload },
+  })
   await tick()
   return {
     ...result,
     connection,
     originAccess,
     onReload,
+    /** 開いたまま設定の言語を変えたことにする */
+    changeLocale: async (preference: LocalePreference) => {
+      localePreferences.set(preference)
+      await tick()
+    },
     pushView: async (next: SidebarView) => {
       connection.pushView(next)
       await tick()

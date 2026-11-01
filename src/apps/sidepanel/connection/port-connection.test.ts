@@ -164,22 +164,22 @@ describe("コマンドを実行したとき", () => {
     expect(runRequestIdOf(latestPort(), 0)).not.toBe(runRequestIdOf(latestPort(), 1))
   })
 
-  it("結果が届く前に切断されたら、失敗として解決する", async () => {
+  it("結果が届く前に切断されたら、届いたか分からないこととして解決する", async () => {
     connect()
     const closing = connection.run(closeTab)
 
     latestPort().dropFromServer()
 
-    expect((await closing)._tag).toBe("Failed")
+    expect(await closing).toStrictEqual({ _tag: "Undelivered", reason: "Disconnected" })
   })
 
-  it("再接続を待っている間に実行すると、すぐに失敗として解決する", async () => {
+  it("再接続を待っている間に実行すると、すぐに届けられなかったこととして解決する", async () => {
     connect()
     latestPort().dropFromServer()
 
     const outcome = await connection.run(closeTab)
 
-    expect(outcome._tag).toBe("Failed")
+    expect(outcome).toStrictEqual({ _tag: "Undelivered", reason: "NotConnected" })
   })
 })
 

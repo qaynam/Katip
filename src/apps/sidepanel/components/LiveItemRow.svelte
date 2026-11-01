@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { BookmarkId } from "#platform/browser"
   import type { LiveItemView } from "#protocol"
-  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
 
@@ -12,6 +11,7 @@
 
   const { item, folderId }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const open = () =>
     void ctx.run({
@@ -42,7 +42,7 @@
   >
     {#if item.isUnseen}
       <span class="unseen-dot" aria-hidden="true"></span>
-      <span class="visually-hidden">{messages.liveFolder.unseen}</span>
+      <span class="visually-hidden">{t("sidepanel.liveFolder.unseen")}</span>
     {/if}
     <span class="favicon"><Favicon pageUrl={item.url} favIconUrl={null} title={item.title} /></span>
     <span class="text">

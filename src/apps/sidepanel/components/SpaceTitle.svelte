@@ -14,6 +14,7 @@
 
   const { space }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   let header = $state<HTMLElement>()
   let isEditing = $state(false)
 
@@ -40,7 +41,7 @@
 
   const toggleMenu = (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
     ctx.menu.toggle({
-      label: "Space のメニュー",
+      label: t("sidepanel.space.menu"),
       anchor: event.currentTarget.getBoundingClientRect(),
       entries: spaceMenuEntries(ctx, space),
       trigger: event.currentTarget,
@@ -50,7 +51,7 @@
   const openMenuAtPointer = (event: MouseEvent) => {
     event.preventDefault()
     ctx.menu.open({
-      label: "Space のメニュー",
+      label: t("sidepanel.space.menu"),
       anchor: pointRect({ x: event.clientX, y: event.clientY }),
       entries: spaceMenuEntries(ctx, space),
       trigger: null,
@@ -62,7 +63,7 @@
   {#if isEditing}
     <TitleEditor
       initial={space.name}
-      label="Space の名前"
+      label={t("sidepanel.space.nameLabel")}
       onCommit={rename}
       onCancel={() => (isEditing = false)}
     />
@@ -81,7 +82,7 @@
   <button
     class="more"
     type="button"
-    aria-label="Space のメニュー"
+    aria-label={t("sidepanel.space.menu")}
     aria-haspopup="menu"
     onclick={toggleMenu}
   >

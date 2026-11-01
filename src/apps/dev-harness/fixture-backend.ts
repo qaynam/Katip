@@ -1,5 +1,6 @@
 import { Array, Match, Option, Order } from "effect"
-import type { LiveSort, LiveSource } from "#modules/live-folders"
+import { makeTranslator } from "#modules/i18n"
+import { defaultLiveFolderTitle, type LiveSort, type LiveSource } from "#modules/live-folders"
 import { SpaceId, SpaceName } from "#modules/space"
 import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
@@ -21,7 +22,6 @@ import type {
 import type { CommandResponse } from "../sidepanel/connection/memory-connection"
 import { suggestedTheme } from "../sidepanel/logic/space-themes"
 import { hostOf } from "../sidepanel/logic/view-queries"
-import { messages } from "../sidepanel/messages"
 import { withRecomputedPeeks } from "./fixture-peeks"
 import {
   liveItem,
@@ -559,11 +559,8 @@ const sampleLiveItems = (source: LiveSource, now: number): ReadonlyArray<LiveIte
   )
 }
 
-const defaultLiveFolderTitle = (source: LiveSource): string =>
-  Match.valueTags(source, {
-    Gmail: ({ label }) => label ?? "受信トレイ",
-    GitHub: ({ query }) => messages.liveFolder.gitHubQueries[query],
-  })
+// background が付ける名前を、フィクスチャの他のデータと同じく日本語で付ける
+const backgroundTranslator = makeTranslator("ja")
 
 const createLiveFolder = (
   view: SidebarView,
@@ -573,7 +570,7 @@ const createLiveFolder = (
   now: number,
 ): CommandResponse => {
   const folder = pinnedLiveFolder(freshId("live", bookmarkIds(view)), {
-    title: defaultLiveFolderTitle(source),
+    title: defaultLiveFolderTitle(source, backgroundTranslator),
     source,
     status: { _tag: "Ready", refreshedAt: now },
     items: sampleLiveItems(source, now),

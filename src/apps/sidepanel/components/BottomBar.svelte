@@ -17,6 +17,7 @@
 
   const { spaces, activeSpaceId, isArchiveOpen, onToggleArchive }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const switchTo = (spaceId: SpaceId) =>
     void ctx.run({ _tag: "SwitchSpace", windowId: ctx.view.windowId, spaceId })
@@ -38,7 +39,7 @@
     event.preventDefault()
     ctx.tooltip.hide()
     ctx.menu.open({
-      label: "Space のメニュー",
+      label: t("sidepanel.space.menu"),
       anchor: pointRect({ x: event.clientX, y: event.clientY }),
       entries: spaceMenuEntries(ctx, space),
       trigger: null,
@@ -96,14 +97,14 @@
     class="icon-button"
     class:pressed={isArchiveOpen}
     type="button"
-    aria-label="アーカイブ"
+    aria-label={t("sidepanel.archive.title")}
     aria-pressed={isArchiveOpen}
     onclick={onToggleArchive}
   >
     <Icon name="archive" />
   </button>
 
-  <nav class="marks" aria-label="Space の切り替え">
+  <nav class="marks" aria-label={t("sidepanel.space.switcher")}>
     <ul bind:this={markList} ondragover={onListDragOver} {@attach scrollHorizontally}>
       {#each spaces as space, index (space.id)}
         {@const key = `space-mark:${space.id}`}
@@ -140,7 +141,12 @@
     </ul>
   </nav>
 
-  <button class="icon-button" type="button" aria-label="Space を作成" onclick={createSpace}>
+  <button
+    class="icon-button"
+    type="button"
+    aria-label={t("sidepanel.space.create")}
+    onclick={createSpace}
+  >
     <Icon name="plus" />
   </button>
 </footer>

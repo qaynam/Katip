@@ -1,10 +1,10 @@
 <script lang="ts">
   import { Option } from "effect"
+  import type { Translator } from "#modules/i18n"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { OriginAccess } from "../connection/origin-access"
   import type { FaviconResolver } from "../logic/favicon"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
-  import { messages } from "../messages"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
   import { FolderSearchController } from "../state/folder-search.svelte"
@@ -38,12 +38,14 @@
     activeSpace: SpaceView
     run: (command: SidebarCommand) => Promise<CommandOutcome>
     toasts: ToastQueue
+    translator: Translator
     originAccess: OriginAccess
     faviconUrl: FaviconResolver
     onReload: () => void
   }
 
-  const { view, activeSpace, run, toasts, originAccess, faviconUrl, onReload }: Props = $props()
+  const { view, activeSpace, run, toasts, translator, originAccess, faviconUrl, onReload }: Props =
+    $props()
 
   const menu = new MenuController()
   const dialog = new DialogController()
@@ -76,6 +78,9 @@
     },
     get toasts() {
       return toasts
+    },
+    get translator() {
+      return translator
     },
     get originAccess() {
       return originAccess
@@ -117,7 +122,8 @@
     event.preventDefault()
     const outcome = drag.takeOutcome()
     if (outcome?._tag === "Run") void run(outcome.command)
-    else if (outcome?._tag === "SplitUnsupported") toasts.show(messages.split.unsupported)
+    else if (outcome?._tag === "SplitUnsupported")
+      toasts.show(translator.t("sidepanel.split.unsupported"))
   }
 
   const forgetDropTargetWhenLeaving = (event: DragEvent) => {
@@ -153,7 +159,7 @@
     {/key}
 
     <div class="bottom">
-      <Toasts {toasts} />
+      <Toasts {toasts} {translator} />
       <BottomBar
         spaces={view.spaces}
         activeSpaceId={activeSpace.id}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Option } from "effect"
   import { dialValueAt, valueAfterKey } from "../../logic/picker-geometry"
+  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     value: number
@@ -11,6 +12,8 @@
   }
 
   const { value, isAvailable, onChange, onSettle }: Props = $props()
+  const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   let isDragging = false
 
   const valueAt = (event: PointerEvent & { currentTarget: HTMLElement }) => {
@@ -56,7 +59,7 @@
   class="dial"
   role="slider"
   tabindex={isAvailable ? 0 : -1}
-  aria-label="グレイン"
+  aria-label={t("sidepanel.theme.grain")}
   aria-valuemin={0}
   aria-valuemax={100}
   aria-valuenow={Math.round(value * 100)}

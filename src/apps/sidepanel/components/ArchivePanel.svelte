@@ -5,7 +5,6 @@
   import { describeElapsed } from "../logic/elapsed-time"
   import { themeSwatch } from "../logic/space-themes"
   import { archiveEntriesFor, hostOf, type ArchiveScope } from "../logic/view-queries"
-  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
   import Icon from "./Icon.svelte"
@@ -17,6 +16,7 @@
 
   const { spaceId, now = Date.now }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const ids = $props.id()
 
   let scope = $state<ArchiveScope>("currentSpace")
@@ -38,14 +38,11 @@
     }
   }
 
-  const durationText = (minutes: IdleMinutes) => {
-    const { value, unit } = idleDurationOf(minutes)
-    return messages.autoArchive.durationUnits[unit](value)
-  }
+  const durationText = (minutes: IdleMinutes) => ctx.translator.duration(idleDurationOf(minutes))
 </script>
 
 <section class="archive" aria-labelledby="{ids}-heading">
-  <h2 id="{ids}-heading" class="heading">アーカイブ</h2>
+  <h2 id="{ids}-heading" class="heading">{t("sidepanel.archive.title")}</h2>
 
   <div class="settings">
     <label class="toggle">
@@ -54,11 +51,11 @@
         checked={autoArchive.enabled}
         onchange={(event) => toggle(event.currentTarget.checked)}
       />
-      <span>使っていないタブを自動でアーカイブ</span>
+      <span>{t("sidepanel.archive.autoArchive")}</span>
     </label>
     <label class="duration" class:disabled={!autoArchive.enabled}>
       <select
-        aria-label={messages.autoArchive.duration}
+        aria-label={t("sidepanel.archive.idleTime")}
         disabled={!autoArchive.enabled}
         onchange={(event) => chooseMinutes(event.currentTarget.value)}
       >
@@ -68,27 +65,27 @@
           </option>
         {/each}
       </select>
-      <span>{messages.autoArchive.durationSuffix}</span>
+      <span>{t("sidepanel.archive.idleTimeSuffix")}</span>
     </label>
   </div>
 
-  <div class="scope" role="radiogroup" aria-label="表示する範囲">
+  <div class="scope" role="radiogroup" aria-label={t("sidepanel.archive.scope")}>
     <button
       type="button"
       role="radio"
       aria-checked={scope === "currentSpace"}
-      onclick={() => (scope = "currentSpace")}>この Space</button
+      onclick={() => (scope = "currentSpace")}>{t("sidepanel.archive.thisSpace")}</button
     >
     <button
       type="button"
       role="radio"
       aria-checked={scope === "allSpaces"}
-      onclick={() => (scope = "allSpaces")}>すべての Space</button
+      onclick={() => (scope = "allSpaces")}>{t("sidepanel.archive.allSpaces")}</button
     >
   </div>
 
   {#if entries.length === 0}
-    <p class="empty">アーカイブしたタブはありません</p>
+    <p class="empty">{t("sidepanel.archive.empty")}</p>
   {:else}
     <ul class="entries">
       {#each entries as entry (entry.id)}
@@ -121,15 +118,15 @@
                   >
                 {/if}
                 <span>{Option.getOrElse(hostOf(entry.url), () => entry.url)}</span>
-                <span>{describeElapsed(entry.archivedAt, now())}</span>
+                <span>{describeElapsed(entry.archivedAt, now(), ctx.translator)}</span>
               </span>
             </span>
           </button>
           <button
             class="remove"
             type="button"
-            aria-label="アーカイブから削除"
-            title="アーカイブから削除"
+            aria-label={t("sidepanel.archive.remove")}
+            title={t("sidepanel.archive.remove")}
             onclick={() => void ctx.run({ _tag: "RemoveArchiveEntry", entryId: entry.id })}
           >
             <Icon name="close" size={14} />

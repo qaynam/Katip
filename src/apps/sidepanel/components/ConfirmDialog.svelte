@@ -2,6 +2,7 @@
   import { getSidebarContext } from "../state/sidebar-context"
 
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const ids = $props.id()
   const request = $derived(ctx.dialog.current)
 
@@ -35,7 +36,7 @@
           onclick={() => ctx.dialog.settle(false)}
           {@attach focus}
         >
-          キャンセル
+          {t("common.cancel")}
         </button>
         <button class="confirm" type="button" onclick={() => ctx.dialog.settle(true)}>
           {request.confirmLabel}

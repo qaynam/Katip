@@ -1,21 +1,23 @@
 <script lang="ts">
-  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import Icon from "./Icon.svelte"
 
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
+  // Chrome のショートカットの書き方に合わせ、どの言語でも訳さない
+  const SHORTCUT = "Alt+T"
 </script>
 
 <div class="spotlight-bar">
   <button
     class="spotlight"
     type="button"
-    aria-keyshortcuts={messages.spotlight.shortcut}
+    aria-keyshortcuts={SHORTCUT}
     onclick={() => void ctx.run({ _tag: "OpenSpotlight", windowId: ctx.view.windowId })}
   >
     <Icon name="search" size={14} />
-    <span class="label">{messages.spotlight.button}</span>
-    <kbd class="shortcut" aria-hidden="true">{messages.spotlight.shortcut}</kbd>
+    <span class="label">{t("sidepanel.spotlight.button")}</span>
+    <kbd class="shortcut" aria-hidden="true">{SHORTCUT}</kbd>
   </button>
 </div>
 

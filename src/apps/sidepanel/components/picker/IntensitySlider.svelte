@@ -19,6 +19,7 @@
 <script lang="ts">
   import { Option } from "effect"
   import { sliderValueAt, valueAfterKey } from "../../logic/picker-geometry"
+  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     value: number
@@ -29,6 +30,8 @@
   }
 
   const { value, isAvailable, onChange, onSettle }: Props = $props()
+  const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const id = $props.id()
   const clipId = `${id}-lit`
   let isDragging = false
@@ -74,7 +77,7 @@
   class:available={isAvailable}
   role="slider"
   tabindex={isAvailable ? 0 : -1}
-  aria-label="色の強さ"
+  aria-label={t("sidepanel.theme.intensity")}
   aria-valuemin={0}
   aria-valuemax={100}
   aria-valuenow={Math.round(value * 100)}

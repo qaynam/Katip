@@ -1,12 +1,14 @@
 <script lang="ts">
+  import type { Translator } from "#modules/i18n"
   import type { ToastQueue } from "../state/toast-queue.svelte"
   import Icon from "./Icon.svelte"
 
   interface Props {
     toasts: ToastQueue
+    translator: Translator
   }
 
-  const { toasts }: Props = $props()
+  const { toasts, translator }: Props = $props()
 </script>
 
 <div class="toasts" role="status" aria-live="polite">
@@ -16,7 +18,7 @@
       <button
         class="dismiss"
         type="button"
-        aria-label="通知を閉じる"
+        aria-label={translator.t("sidepanel.toast.dismiss")}
         onclick={() => toasts.dismiss(toast.id)}
       >
         <Icon name="close" size={12} />

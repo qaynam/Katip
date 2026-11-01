@@ -28,6 +28,7 @@
 
   const { folder, position }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   let isEditing = $state(false)
   let headerRow = $state<HTMLDivElement>()
@@ -74,9 +75,9 @@
 
   const confirmDeletion = async () => {
     const confirmed = await ctx.dialog.confirm({
-      title: "フォルダを削除しますか？",
-      message: `「${folder.title}」と、その中のピンとフォルダをすべて削除します。`,
-      confirmLabel: "削除",
+      title: t("sidepanel.folder.deleteTitle"),
+      message: t("sidepanel.folder.deleteMessage", { title: folder.title }),
+      confirmLabel: t("common.delete"),
     })
     if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
   }
@@ -85,15 +86,18 @@
     event.preventDefault()
     event.stopPropagation()
     ctx.menu.open({
-      label: "フォルダのメニュー",
+      label: t("sidepanel.folder.menu"),
       anchor: pointRect({ x: event.clientX, y: event.clientY }),
       trigger: null,
       entries: [
         ...(folder.canCreateSubfolder
-          ? [action("新しいフォルダ", createSubfolder), addLiveFolderMenu(ctx, folder.bookmarkId)]
+          ? [
+              action(t("common.newFolder"), createSubfolder),
+              addLiveFolderMenu(ctx, folder.bookmarkId),
+            ]
           : []),
-        action("名前を変更", () => (isEditing = true)),
-        action("フォルダを削除", () => void confirmDeletion(), { tone: "danger" }),
+        action(t("common.rename"), () => (isEditing = true)),
+        action(t("sidepanel.folder.delete"), () => void confirmDeletion(), { tone: "danger" }),
       ],
     })
   }
@@ -119,7 +123,7 @@
         <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
         <TitleEditor
           initial={folder.title}
-          label="フォルダの名前"
+          label={t("sidepanel.folder.nameLabel")}
           onCommit={rename}
           onCancel={() => (isEditing = false)}
         />
@@ -143,7 +147,7 @@
         ondragleave={() => ctx.drag.cancelHover()}
       >
         <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
-        <span class="title">{folder.title || "名前のないフォルダ"}</span>
+        <span class="title">{folder.title || t("sidepanel.folder.untitled")}</span>
       </button>
       {#if !folder.isExpanded && headerRow !== undefined}
         <FolderSearchButton bookmarkId={folder.bookmarkId} anchor={headerRow} />
@@ -158,7 +162,7 @@
         class:drop-into={ctx.drag.zoneFor(emptyKey) !== null}
         ondragover={(event) => ctx.drag.offer(event, emptyKey, "into", intoFolder)}
       >
-        ここにドラッグして追加
+        {t("sidepanel.folder.dropHere")}
       </p>
     {:else}
       <PinnedNodes nodes={folder.children} parentId={folder.bookmarkId} />

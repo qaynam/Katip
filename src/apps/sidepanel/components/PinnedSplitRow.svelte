@@ -17,6 +17,7 @@
 
   const { split, position, dropTargetAt }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const halfOf = (item: PinnedItemView): SplitHalf => {
     const tab = item.openTab?.tab ?? null
@@ -65,7 +66,7 @@
 <SplitRow
   rowKey="pinned-split:{split.bookmarkId}"
   {halves}
-  menuLabel="分割ビューのピンのメニュー"
+  menuLabel={t("sidepanel.split.pinnedMenu")}
   menuEntries={(_, startRename) =>
     pinnedSplitMenu(ctx, split, {
       titles: [halves[0].title, halves[1].title],

@@ -6,7 +6,6 @@
   import { unseenBadgeText, unseenCount } from "../logic/live-folders"
   import { pointRect } from "../logic/menu-position"
   import { selfAndDescendantFolderIds } from "../logic/view-queries"
-  import { messages } from "../messages"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import Icon from "./Icon.svelte"
@@ -22,6 +21,7 @@
 
   const { folder, position }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   let isEditing = $state(false)
   let headerRow = $state<HTMLDivElement>()
@@ -36,7 +36,7 @@
   })
   const unseen = $derived(unseenCount(folder))
   const failure = $derived(folder.status._tag === "Failed" ? folder.status : null)
-  const title = $derived(folder.title || messages.liveFolder.untitled)
+  const title = $derived(folder.title || t("sidepanel.liveFolder.untitled"))
 
   const toggle = (event: MouseEvent) => {
     if (event.detail > 1) return
@@ -71,7 +71,7 @@
     ctx.tooltip.hide()
     const isFromKeyboard = event.clientX === 0 && event.clientY === 0
     ctx.menu.open({
-      label: messages.liveFolder.menuLabel,
+      label: t("sidepanel.liveFolder.menu"),
       anchor:
         isFromKeyboard && headerRow !== undefined
           ? headerRow.getBoundingClientRect()
@@ -105,7 +105,7 @@
         <span class="glyph"><LiveSourceGlyph kind={folder.source._tag} /></span>
         <TitleEditor
           initial={folder.title}
-          label={messages.liveFolder.titleLabel}
+          label={t("sidepanel.liveFolder.nameLabel")}
           onCommit={rename}
           onCancel={() => (isEditing = false)}
         />
@@ -129,14 +129,16 @@
         <span class="title">{title}</span>
         {#if folder.status._tag === "Refreshing"}
           <span class="spinner" aria-hidden="true"></span>
-          <span class="visually-hidden">{messages.liveFolder.refreshing}</span>
+          <span class="visually-hidden">{t("sidepanel.liveFolder.refreshing")}</span>
         {:else if failure !== null}
           <span class="failed-mark" aria-hidden="true"><Icon name="alert" size={13} /></span>
-          <span class="visually-hidden">{messages.liveFolder.failed}</span>
+          <span class="visually-hidden">{t("sidepanel.liveFolder.failed")}</span>
         {/if}
         {#if unseen > 0}
           <span class="badge" aria-hidden="true">{unseenBadgeText(unseen)}</span>
-          <span class="visually-hidden">{messages.liveFolder.unseenCount(unseen)}</span>
+          <span class="visually-hidden"
+            >{t("sidepanel.liveFolder.unseenCount", { count: unseen })}</span
+          >
         {/if}
       </button>
       {#if !folder.isExpanded && headerRow !== undefined}
@@ -152,20 +154,20 @@
         <div class="actions">
           {#if failure.needsPermission}
             <button type="button" onclick={() => void grantAccessAndRefresh(ctx, folder)}>
-              {messages.liveFolder.grantAccess}
+              {t("sidepanel.liveFolder.grantAccess")}
             </button>
           {/if}
           {#if failure.signInUrl !== null}
             {@const signInUrl = failure.signInUrl}
             <button type="button" onclick={() => openSignInPage(ctx, signInUrl)}>
-              {messages.liveFolder.signIn}
+              {t("sidepanel.liveFolder.signIn")}
             </button>
           {/if}
           {#if failure.needsToken}
-            <button type="button" onclick={setToken}>{messages.liveFolder.setToken}</button>
+            <button type="button" onclick={setToken}>{t("sidepanel.liveFolder.setToken")}</button>
           {/if}
           {#if !failure.needsPermission && !failure.needsToken}
-            <button type="button" onclick={refresh}>{messages.liveFolder.retry}</button>
+            <button type="button" onclick={refresh}>{t("sidepanel.liveFolder.retry")}</button>
           {/if}
         </div>
       </div>
@@ -179,8 +181,8 @@
     {:else if failure === null}
       <p class="empty">
         {folder.status._tag === "Refreshing"
-          ? messages.liveFolder.loading
-          : messages.liveFolder.empty}
+          ? t("sidepanel.liveFolder.loading")
+          : t("sidepanel.liveFolder.empty")}
       </p>
     {/if}
   {/if}

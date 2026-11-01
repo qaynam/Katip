@@ -1,3 +1,169 @@
 import type { CatalogSection } from "../../catalog"
 
-export const sidepanel: CatalogSection<"sidepanel"> = {}
+export const sidepanel: CatalogSection<"sidepanel"> = {
+  "sidepanel.loading": "Cargando la barra lateral…",
+  "sidepanel.noSpaces": "No hay espacios que mostrar",
+  "sidepanel.connection.lost":
+    "Se perdió la conexión con Katip, así que no se pudo confirmar el resultado.",
+  "sidepanel.connection.notConnected":
+    "Todavía no hay conexión con Katip. Espera un momento y vuelve a intentarlo.",
+  "sidepanel.time.justNow": "Justo ahora",
+  "sidepanel.toast.dismiss": "Descartar",
+
+  "sidepanel.spotlight.button": "Buscar",
+  "sidepanel.split.unsupported":
+    "Este navegador no admite la vista dividida (requiere Chrome 155 o posterior)",
+
+  "sidepanel.favorites.region": "Favoritos",
+  "sidepanel.favorites.empty": "Arrastra pestañas aquí para añadirlas a Favoritos",
+
+  "sidepanel.space.menu": "Menú del espacio",
+  "sidepanel.space.nameLabel": "Nombre del espacio",
+  "sidepanel.space.switcher": "Cambiar de espacio",
+  "sidepanel.space.create": "Crear espacio",
+  "sidepanel.space.editTheme": "Editar tema",
+  "sidepanel.space.delete": "Eliminar espacio",
+  "sidepanel.space.deleteTitle": "¿Eliminar «{name}»?",
+  "sidepanel.space.deleteMessage":
+    "También se eliminarán las pestañas fijadas y las carpetas de este espacio. Las pestañas temporales abiertas no se cerrarán, sino que se moverán a otro espacio.",
+
+  "sidepanel.pinned.region": "Fijadas",
+  "sidepanel.pinned.empty": "Arrastra pestañas aquí para fijarlas",
+  "sidepanel.pinned.unavailable":
+    "No se pudieron cargar las pestañas fijadas. Tus marcadores no han cambiado.",
+  "sidepanel.pinned.reload": "Volver a cargar",
+
+  "sidepanel.temporary.region": "Pestañas temporales",
+  "sidepanel.temporary.clear": "Borrar",
+
+  "sidepanel.tab.menu": "Menú de la pestaña",
+  "sidepanel.tab.nameLabel": "Nombre",
+  "sidepanel.tab.renameHint": "Haz doble clic para cambiar el nombre",
+  "sidepanel.tab.backToPinnedUrl": "Volver a la URL fijada",
+  "sidepanel.tab.muted": "Silenciada",
+  "sidepanel.tab.playingAudio": "Reproduciendo audio",
+  "sidepanel.tab.addToFavorites": "Añadir a Favoritos",
+  "sidepanel.tab.pin": "Fijar",
+  "sidepanel.tab.unpin": "Dejar de fijar",
+  "sidepanel.tab.replacePinnedUrl": "Reemplazar la URL fijada por la URL actual",
+  "sidepanel.tab.moveToSpace": "Mover a un espacio",
+  "sidepanel.tab.archive": "Archivar",
+
+  "sidepanel.pin.menu": "Menú de la pestaña fijada",
+  "sidepanel.pin.delete": "Eliminar pestaña fijada",
+  "sidepanel.pin.deleteTitle": "¿Eliminar la pestaña fijada?",
+  "sidepanel.pin.deleteMessage": "Se eliminará el marcador de «{title}».",
+
+  "sidepanel.split.menu": "Menú de la vista dividida",
+  "sidepanel.split.pinnedMenu": "Menú de la vista dividida fijada",
+  "sidepanel.split.separate": "Separar pestañas",
+  "sidepanel.split.deleteMessage":
+    "Se eliminarán los marcadores de la vista dividida fijada de «{left}» y «{right}». Las pestañas abiertas no se cerrarán.",
+
+  "sidepanel.folder.menu": "Menú de la carpeta",
+  "sidepanel.folder.nameLabel": "Nombre de la carpeta",
+  "sidepanel.folder.untitled": "Carpeta sin nombre",
+  "sidepanel.folder.dropHere": "Arrastra aquí para añadir",
+  "sidepanel.folder.delete": "Eliminar carpeta",
+  "sidepanel.folder.deleteTitle": "¿Eliminar la carpeta?",
+  "sidepanel.folder.deleteMessage":
+    "Se eliminarán «{title}» y todas las pestañas fijadas y carpetas que contiene.",
+
+  "sidepanel.folderSearch.open": "Buscar en la carpeta",
+  "sidepanel.folderSearch.placeholder": "Buscar en la carpeta…",
+  "sidepanel.folderSearch.results": "Resultados",
+  "sidepanel.folderSearch.noMatch": "No hay coincidencias",
+  "sidepanel.folderSearch.empty": "Esta carpeta está vacía",
+
+  "sidepanel.liveFolder.add": "Añadir carpeta en vivo",
+  "sidepanel.liveFolder.menu": "Menú de la carpeta en vivo",
+  "sidepanel.liveFolder.nameLabel": "Nombre de la carpeta en vivo",
+  "sidepanel.liveFolder.untitled": "Carpeta en vivo sin nombre",
+  "sidepanel.liveFolder.refreshNow": "Actualizar ahora",
+  "sidepanel.liveFolder.markAllSeen": "Marcar todo como leído",
+  "sidepanel.liveFolder.delete": "Eliminar carpeta en vivo",
+  "sidepanel.liveFolder.deleteTitle": "¿Eliminar la carpeta en vivo?",
+  "sidepanel.liveFolder.deleteMessage":
+    "Se eliminará «{title}». Los correos y las incidencias que muestra no se modifican.",
+  "sidepanel.liveFolder.unseenCount": {
+    one: "{count} elemento sin leer",
+    other: "{count} elementos sin leer",
+  },
+  "sidepanel.liveFolder.unseen": "Sin leer",
+  "sidepanel.liveFolder.refreshing": "Actualizando",
+  "sidepanel.liveFolder.failed": "No se pudo actualizar",
+  "sidepanel.liveFolder.grantAccess": "Permitir acceso",
+  "sidepanel.liveFolder.signIn": "Iniciar sesión",
+  "sidepanel.liveFolder.setToken": "Configurar token",
+  "sidepanel.liveFolder.retry": "Reintentar",
+  "sidepanel.liveFolder.accessDenied":
+    "No se puede actualizar porque no se permitió el acceso a {source}",
+  "sidepanel.liveFolder.empty": "No hay elementos nuevos",
+  "sidepanel.liveFolder.loading": "Cargando…",
+  "sidepanel.liveFolder.sortBy": "Ordenar por",
+  "sidepanel.liveFolder.sort.newest": "Más recientes primero",
+  "sidepanel.liveFolder.sort.oldest": "Más antiguos primero",
+  "sidepanel.liveFolder.sort.title": "Título",
+  "sidepanel.liveFolder.sort.sender": "Remitente",
+  "sidepanel.liveFolder.sort.repository": "Repositorio",
+  "sidepanel.liveFolder.github.reviewRequested": "Solicitudes de revisión",
+  "sidepanel.liveFolder.github.authoredPullRequests": "Mis pull requests",
+  "sidepanel.liveFolder.github.assignedIssues": "Incidencias asignadas",
+  "sidepanel.liveFolder.github.mentioned": "Menciones",
+
+  "sidepanel.liveFolderDialog.gmailTitle": "Carpeta en vivo de Gmail",
+  "sidepanel.liveFolderDialog.gmailDescription": "Muestra tus correos sin leer.",
+  "sidepanel.liveFolderDialog.accountIndex": "Número de cuenta",
+  "sidepanel.liveFolderDialog.accountIndexHint":
+    "El número de mail.google.com/mail/u/número/. La primera cuenta con la que iniciaste sesión es la 0.",
+  "sidepanel.liveFolderDialog.label": "Etiqueta",
+  "sidepanel.liveFolderDialog.labelPlaceholder": "Recibidos",
+  "sidepanel.liveFolderDialog.labelHint": "Déjalo vacío para mostrar Recibidos.",
+  "sidepanel.liveFolderDialog.gitHubTitle": "Carpeta en vivo de GitHub",
+  "sidepanel.liveFolderDialog.gitHubDescription":
+    "Funciona si has iniciado sesión en GitHub en este navegador.",
+  "sidepanel.liveFolderDialog.queryLegend": "Mostrar",
+  "sidepanel.liveFolderDialog.tokenTitle": "Configurar el token de GitHub",
+  "sidepanel.liveFolderDialog.token": "Token de acceso",
+  "sidepanel.liveFolderDialog.tokenHowTo":
+    "Crea un token de acceso personal (classic) en github.com y pégalo aquí. Para incluir repositorios privados, selecciona el permiso repo. El token solo se usa para las solicitudes a GitHub.",
+  "sidepanel.liveFolderDialog.tokenLink": "Crear un token en github.com",
+  "sidepanel.liveFolderDialog.create": "Crear",
+  "sidepanel.liveFolderDialog.save": "Guardar",
+  "sidepanel.liveFolderDialog.accessDenied":
+    "No se creó la carpeta porque no se permitió el acceso a {source}. Vuelve a intentarlo para que se solicite el acceso de nuevo.",
+  "sidepanel.liveFolderDialog.invalidAccountIndex":
+    "Introduce un número entero igual o mayor que 0 como número de cuenta",
+  "sidepanel.liveFolderDialog.tokenRequired": "Introduce un token",
+  "sidepanel.liveFolderDialog.tokenHasWhitespace": "El token no puede contener espacios",
+
+  "sidepanel.archive.title": "Archivo",
+  "sidepanel.archive.autoArchive": "Archivar automáticamente las pestañas inactivas",
+  "sidepanel.archive.idleTime": "Tiempo antes de archivar",
+  "sidepanel.archive.idleTimeSuffix": "de inactividad",
+  "sidepanel.archive.scope": "Mostrar",
+  "sidepanel.archive.thisSpace": "Este espacio",
+  "sidepanel.archive.allSpaces": "Todos los espacios",
+  "sidepanel.archive.empty": "No hay pestañas archivadas",
+  "sidepanel.archive.remove": "Quitar del archivo",
+
+  "sidepanel.theme.label": "Tema",
+  "sidepanel.theme.scheme": "Claro y oscuro",
+  "sidepanel.theme.auto": "Automático",
+  "sidepanel.theme.light": "Claro",
+  "sidepanel.theme.dark": "Oscuro",
+  "sidepanel.theme.removeColor": "Quitar un color",
+  "sidepanel.theme.addColor": "Añadir un color",
+  "sidepanel.theme.colors": "Colores",
+  "sidepanel.theme.colorHint": "Haz clic para elegir un color para este espacio",
+  "sidepanel.theme.primaryColor": "Color principal",
+  "sidepanel.theme.nthColor": "Color {n}",
+  "sidepanel.theme.intensity": "Intensidad del color",
+  "sidepanel.theme.grain": "Grano",
+  "sidepanel.theme.presets": "Preajustes",
+  "sidepanel.theme.presets.solid": "Sólidos",
+  "sidepanel.theme.presets.gradient": "Degradados",
+  "sidepanel.theme.presets.of": "Preajustes: {kind}",
+  "sidepanel.theme.presets.previous": "Preajustes anteriores",
+  "sidepanel.theme.presets.next": "Preajustes siguientes",
+}

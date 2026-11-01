@@ -17,6 +17,7 @@
 
   const { item, position, dropTargetAt }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const display = $derived(pinnedItemDisplay(item))
   const openTab = $derived(item.openTab?.tab ?? null)
@@ -44,9 +45,9 @@
 
   const confirmRemoval = async () => {
     const confirmed = await ctx.dialog.confirm({
-      title: "ピンを削除しますか？",
-      message: `「${display.title}」のブックマークを削除します。`,
-      confirmLabel: "削除",
+      title: t("sidepanel.pin.deleteTitle"),
+      message: t("sidepanel.pin.deleteMessage", { title: display.title }),
+      confirmLabel: t("common.delete"),
     })
     if (confirmed) void ctx.run({ _tag: "RemovePinnedItem", bookmarkId: item.bookmarkId })
   }
@@ -54,8 +55,8 @@
   const menuEntries = (startRename: () => void) =>
     openTab === null
       ? [
-          action("名前を変更", startRename),
-          action("ピンを削除", () => void confirmRemoval(), { tone: "danger" }),
+          action(t("common.rename"), startRename),
+          action(t("sidepanel.pin.delete"), () => void confirmRemoval(), { tone: "danger" }),
         ]
       : openTabMenu(ctx, openTab.tabId, { isPinned: true, startRename })
 </script>
@@ -81,7 +82,7 @@
   onClose={openTab === null
     ? undefined
     : () => void ctx.run({ _tag: "CloseTab", tabId: openTab.tabId })}
-  menuLabel={openTab === null ? "閉じたピンのメニュー" : "タブのメニュー"}
+  menuLabel={t(openTab === null ? "sidepanel.pin.menu" : "sidepanel.tab.menu")}
   {menuEntries}
   {dragSource}
   {dropTargetAt}

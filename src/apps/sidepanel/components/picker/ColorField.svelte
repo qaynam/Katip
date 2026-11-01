@@ -9,6 +9,7 @@
   import { Array, Option } from "effect"
   import { colorAtPoint, pointOfColor, swatchOf, type ThemeColor } from "#modules/theme"
   import { FIELD_EDGE_INSET_PX, pickerPointAt, pointAfterKey } from "../../logic/picker-geometry"
+  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     colors: ReadonlyArray<ThemeColor>
@@ -18,6 +19,8 @@
   }
 
   const { colors, onChange, onSettle }: Props = $props()
+  const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   let field = $state<HTMLDivElement>()
   let draggedIndex: number | null = null
@@ -70,7 +73,7 @@
   bind:this={field}
   class="field"
   role="group"
-  aria-label="色"
+  aria-label={t("sidepanel.theme.colors")}
   style:--edge-inset="{FIELD_EDGE_INSET_PX}px"
   onpointerdown={grab}
   onpointermove={drag}
@@ -80,7 +83,7 @@
   <span class="dots"></span>
   <span class="dots tinted" style:--wheel={wheel}></span>
   {#if colors.length === 0}
-    <p class="hint">クリックしてこの Space の色を選ぶ</p>
+    <p class="hint">{t("sidepanel.theme.colorHint")}</p>
   {/if}
   {#each colors as color, index (index)}
     {@const point = pointOfColor(color)}
@@ -88,7 +91,9 @@
       class="point"
       class:primary={index === PRIMARY_INDEX}
       type="button"
-      aria-label={index === PRIMARY_INDEX ? "主色" : `${index + 1} 番目の色`}
+      aria-label={index === PRIMARY_INDEX
+        ? t("sidepanel.theme.primaryColor")
+        : t("sidepanel.theme.nthColor", { n: index + 1 })}
       data-color-index={index}
       style:--x={point.x}
       style:--y={point.y}

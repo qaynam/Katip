@@ -10,7 +10,6 @@
   } from "../logic/folder-search"
   import type { Point } from "../logic/menu-position"
   import { findPinnedNode } from "../logic/view-queries"
-  import { messages } from "../messages"
   import type { OpenFolderSearch } from "../state/folder-search.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
@@ -24,6 +23,7 @@
 
   const { search, onClose }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   const ids = $props.id()
   const openedAt = Date.now()
 
@@ -62,7 +62,9 @@
 
   const detailOf = (entry: FolderSearchEntry) =>
     [
-      entry.lastActivityAt === null ? "" : describeElapsed(entry.lastActivityAt, openedAt),
+      entry.lastActivityAt === null
+        ? ""
+        : describeElapsed(entry.lastActivityAt, openedAt, ctx.translator),
       entry.subtitle,
     ]
       .filter((part) => part !== "")
@@ -122,7 +124,7 @@
   bind:this={panel}
   class="folder-search glass"
   role="dialog"
-  aria-label={messages.folderSearch.open}
+  aria-label={t("sidepanel.folderSearch.open")}
   style:left="{position.x}px"
   style:top="{position.y}px"
   style:width="{width}px"
@@ -133,19 +135,24 @@
     <input
       type="text"
       role="combobox"
-      aria-label={messages.folderSearch.open}
+      aria-label={t("sidepanel.folderSearch.open")}
       aria-expanded="true"
       aria-autocomplete="list"
       aria-controls="{ids}-results"
       aria-activedescendant={matches.length === 0 ? undefined : optionId(highlighted)}
-      placeholder={messages.folderSearch.placeholder}
+      placeholder={t("sidepanel.folderSearch.placeholder")}
       value={query}
       oninput={(event) => editQuery(event.currentTarget.value)}
       onkeydown={onKeyDown}
       {@attach focusInput}
     />
   </div>
-  <div id="{ids}-results" class="results" role="listbox" aria-label={messages.folderSearch.results}>
+  <div
+    id="{ids}-results"
+    class="results"
+    role="listbox"
+    aria-label={t("sidepanel.folderSearch.results")}
+  >
     {#each matches as entry, index (entry.key)}
       {@const detail = detailOf(entry)}
       <button
@@ -170,14 +177,14 @@
         </span>
         {#if entry.isUnseen}
           <span class="unseen-dot" aria-hidden="true"></span>
-          <span class="visually-hidden">{messages.liveFolder.unseen}</span>
+          <span class="visually-hidden">{t("sidepanel.liveFolder.unseen")}</span>
         {/if}
       </button>
     {/each}
   </div>
   {#if matches.length === 0}
     <p class="empty">
-      {entries.length === 0 ? messages.folderSearch.empty : messages.folderSearch.noMatch}
+      {t(entries.length === 0 ? "sidepanel.folderSearch.empty" : "sidepanel.folderSearch.noMatch")}
     </p>
   {/if}
 </div>

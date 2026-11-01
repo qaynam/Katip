@@ -15,6 +15,7 @@
 
   const { splitViewId, tabs }: Props = $props()
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
 
   const halfOf = (tab: TabView): SplitHalf => ({
     tabId: tab.tabId,
@@ -48,7 +49,7 @@
 <SplitRow
   rowKey="temporary-split:{splitViewId}"
   {halves}
-  menuLabel="分割ビューのメニュー"
+  menuLabel={t("sidepanel.split.menu")}
   menuEntries={() => temporarySplitMenu(ctx, splitViewId)}
   {dragSource}
   dropTargetAt={(edge) => ({

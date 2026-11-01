@@ -43,6 +43,7 @@
   const { rowKey, halves, menuLabel, menuEntries, dragSource, dropTargetAt }: Props = $props()
 
   const ctx = getSidebarContext()
+  const t = $derived(ctx.translator.t)
   let row = $state<HTMLLIElement>()
   let editingIndex = $state<number | null>(null)
   const dropZone = $derived(ctx.drag.zoneFor(rowKey))
@@ -106,7 +107,7 @@
   const scheduleTooltip = (event: PointerEvent, half: SplitHalf) => {
     if (editingIndex !== null || ctx.drag.source !== null) return
     ctx.tooltip.schedule(
-      { title: half.title, hint: "ダブルクリックで名前を変更" },
+      { title: half.title, hint: t("sidepanel.tab.renameHint") },
       { x: event.clientX, y: event.clientY },
     )
   }
@@ -148,7 +149,7 @@
         </span>
         <TitleEditor
           initial={half.renameInitial}
-          label="名前"
+          label={t("sidepanel.tab.nameLabel")}
           onCommit={(draft) => finishRename(half, draft)}
           onCancel={() => (editingIndex = null)}
         />
@@ -168,13 +169,22 @@
         </button>
 
         {#if half.isAudible || half.isMuted}
-          <span class="audio" role="img" aria-label={half.isMuted ? "ミュート中" : "音声を再生中"}>
+          <span
+            class="audio"
+            role="img"
+            aria-label={t(half.isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
+          >
             <Icon name={half.isMuted ? "speakerMuted" : "speaker"} size={13} />
           </span>
         {/if}
 
         {#if half.onClose !== undefined}
-          <button class="close" type="button" aria-label="タブを閉じる" onclick={half.onClose}>
+          <button
+            class="close"
+            type="button"
+            aria-label={t("actions.closeTab")}
+            onclick={half.onClose}
+          >
             <Icon name="close" size={12} />
           </button>
         {/if}
