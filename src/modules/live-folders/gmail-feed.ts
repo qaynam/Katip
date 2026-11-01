@@ -84,7 +84,8 @@ const itemFrom =
       ),
       (updated) => ({
         id: entry.id,
-        title: Option.getOrElse(nonBlank(entry.title), () => "（件名なし）"),
+        // 件名の無いメールは空のまま残し、表示するときに表示の言語で件名なしと示す
+        title: Option.getOrElse(nonBlank(entry.title), () => ""),
         subtitle: senderOf(entry),
         url: Option.getOrElse(conversationUrlOf(entry), () => gmailMailboxUrl(accountIndex)),
         updatedAt: DateTime.toEpochMillis(updated),

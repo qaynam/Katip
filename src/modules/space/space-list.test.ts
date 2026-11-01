@@ -5,6 +5,7 @@ import { Space, SpaceId, SpaceName } from "./space"
 import {
   addSpace,
   moveSpace,
+  nextSpaceName,
   removeSpace,
   renameSpace,
   setSpaceTheme,
@@ -35,21 +36,31 @@ describe("SpaceName", () => {
   })
 })
 
+describe("名前を付けずに作る Space の名前", () => {
+  const numbered = (number: number) => `Space ${number}`
+
+  it("Space の数の次の番号で名前を付ける", () => {
+    expect(nextSpaceName([space("a"), space("b")], numbered)).toBe("Space 3")
+  })
+
+  it("その番号の名前が使われていれば、使われていない次の番号にする", () => {
+    const spaces = [space("a", { name: spaceName("Space 2") })]
+
+    expect(nextSpaceName(spaces, numbered)).toBe("Space 3")
+  })
+
+  it("Space が無ければ 1 から数える", () => {
+    expect(nextSpaceName([], numbered)).toBe("Space 1")
+  })
+})
+
 describe("addSpace", () => {
   it("一覧の末尾に追加される", () => {
     const spaces = [space("a"), space("b")]
 
-    const added = addSpace(spaces, { id: spaceId("c") })
+    const added = addSpace(spaces, { id: spaceId("c"), name: spaceName("c") })
 
     expect(idsOf(added)).toStrictEqual(["a", "b", "c"])
-  })
-
-  it("名前を省略すると、既存の名前と重複しない連番の名前が付く", () => {
-    const spaces = [space("a", { name: spaceName("スペース 2") })]
-
-    const added = addSpace(spaces, { id: spaceId("b") })
-
-    expect(added.at(-1)?.name).toBe("スペース 3")
   })
 
   it("テーマを省略すると、既存の Space と色の系統が重ならないプリセットが付く", () => {
@@ -58,7 +69,7 @@ describe("addSpace", () => {
     )
     const spaces = [space("a", { theme: themeOf(redPreset) })]
 
-    const added = addSpace(spaces, { id: spaceId("b") })
+    const added = addSpace(spaces, { id: spaceId("b"), name: spaceName("b") })
 
     expect(added.map((s) => groupColorOf(s.theme))).not.toContain("grey")
     expect(new Set(added.map((s) => groupColorOf(s.theme))).size).toBe(2)

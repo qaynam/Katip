@@ -22,6 +22,7 @@ import {
 import { SettingsRepository } from "#modules/settings"
 import {
   addSpace,
+  nextSpaceName,
   moveSpace,
   removeSpace,
   renameSpace,
@@ -64,27 +65,34 @@ import { KatipState } from "./katip-state"
 import { openSpotlight } from "./spotlight-window"
 import { refreshLiveFoldersWhere, scheduleLiveFolderRefresh } from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
+import {
+  currentTranslator,
+  numberedSpaceName,
+  type PlainMessageKey,
+  translate,
+} from "./translation"
 
 export class CommandRejected extends Schema.TaggedError<CommandRejected>()("CommandRejected", {
   reason: Schema.String,
 }) {}
 
-const reject = (reason: string) => Effect.fail(new CommandRejected({ reason }))
+const reject = (key: PlainMessageKey) =>
+  Effect.flatMap(translate(key), (reason) => Effect.fail(new CommandRejected({ reason })))
 
 const findSpace = Effect.fnUntraced(function* (spaceId: SpaceId) {
   const spaces = yield* (yield* KatipState).spaces.get
-  return yield* Effect.fromOption(
+  return yield* Option.match(
     Array.findFirst(spaces, (space) => space.id === spaceId),
-    () => new CommandRejected({ reason: "Space が見つかりません" }),
+    { onNone: () => reject("background.space.notFound"), onSome: Effect.succeed },
   )
 })
 
 const trackedOrReject = Effect.fnUntraced(function* (tabId: TabId) {
   const workspace = yield* (yield* KatipState).workspace.get
-  return yield* Effect.fromOption(
-    trackedTab(workspace, tabId),
-    () => new CommandRejected({ reason: "このタブはどの Space にも属していません" }),
-  )
+  return yield* Option.match(trackedTab(workspace, tabId), {
+    onNone: () => reject("background.tab.notInSpace"),
+    onSome: Effect.succeed,
+  })
 })
 
 const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
@@ -118,10 +126,11 @@ const spaceCommands = {
   ) {
     const state = yield* KatipState
     const id = yield* newSpaceId
+    const numbered = yield* numberedSpaceName
     const spaces = yield* state.spaces.update((current) =>
       addSpace(current, {
         id,
-        ...(command.name !== undefined && { name: command.name }),
+        name: command.name ?? nextSpaceName(current, numbered),
         ...(command.theme !== undefined && { theme: settleTheme(command.theme) }),
       }),
     )
@@ -151,7 +160,7 @@ const spaceCommands = {
   DeleteSpace: Effect.fnUntraced(function* ({ spaceId }: { spaceId: SpaceId }) {
     const state = yield* KatipState
     const successor = Array.findFirst(yield* state.spaces.get, (space) => space.id !== spaceId)
-    if (Option.isNone(successor)) return yield* reject("最後の Space は削除できません")
+    if (Option.isNone(successor)) return yield* reject("background.space.lastOne")
     const liveFolderIds = yield* (yield* PinnedBookmarks).loadSpaceTree(spaceId).pipe(
       Effect.map((tree) => liveFoldersIn(tree).map((live) => live.id)),
       Effect.orElseSucceed((): ReadonlyArray<BookmarkId> => []),
@@ -290,7 +299,7 @@ const resplitIfBroken = Effect.fnUntraced(function* (moved: ReadonlyArray<Browse
 
 const pinnedPosition = Effect.fnUntraced(function* (
   placement: PinnedPlacement,
-): Effect.fn.Return<PinnedPosition, CommandRejected, KatipState> {
+): Effect.fn.Return<PinnedPosition, CommandRejected, KatipState | SettingsRepository> {
   const space = yield* findSpace(placement.spaceId)
   return {
     parent:
@@ -348,7 +357,7 @@ const pinnedIdsOf = (node: PinnedNode): ReadonlyArray<BookmarkId> =>
   })
 
 const requireSplitSupport = Tabs.use((tabs) =>
-  tabs.supportsSplitView ? Effect.void : reject("この Chrome では分割ビューを使えません"),
+  tabs.supportsSplitView ? Effect.void : reject("background.split.unsupported"),
 )
 
 const splitPairOf = Effect.fnUntraced(function* (splitViewId: SplitViewId) {
@@ -358,7 +367,7 @@ const splitPairOf = Effect.fnUntraced(function* (splitViewId: SplitViewId) {
   )
   const [left, right] = pair
   if (left === undefined || right === undefined) {
-    return yield* reject("分割ビューが見つかりません")
+    return yield* reject("background.split.notFound")
   }
   return [left, right] as const
 })
@@ -434,10 +443,10 @@ const splitCommands = {
     const tabs = yield* Tabs
     const target = yield* tabs.get(withTabId)
     const dragged = yield* tabs.get(tabId)
-    if (target.pinned) return yield* reject("Favorites のタブとは分割できません")
-    if (Option.isSome(target.splitViewId)) return yield* reject("すでに分割しているタブです")
+    if (target.pinned) return yield* reject("background.split.withFavorite")
+    if (Option.isSome(target.splitViewId)) return yield* reject("background.split.alreadySplit")
     if (dragged.windowId !== target.windowId) {
-      return yield* reject("別のウィンドウのタブとは分割できません")
+      return yield* reject("background.split.otherWindow")
     }
     if (Option.isSome(dragged.splitViewId)) yield* tabs.unsplit(dragged.splitViewId.value)
     yield* unpinFromChrome(dragged)
@@ -641,10 +650,10 @@ const tabCommands = {
 }
 
 const bindingOf = (tracked: TrackedTab) =>
-  Effect.fromOption(
-    Option.fromNullishOr(tracked.pinned),
-    () => new CommandRejected({ reason: "このタブはピン留めされていません" }),
-  )
+  Option.match(Option.fromNullishOr(tracked.pinned), {
+    onNone: () => reject("background.tab.notPinned"),
+    onSome: Effect.succeed,
+  })
 
 const pinnedCommands = {
   OpenPinnedItem: Effect.fnUntraced(function* ({
@@ -658,7 +667,7 @@ const pinnedCommands = {
     const tabs = yield* Tabs
     const location = yield* (yield* PinnedBookmarks).locate(bookmarkId)
     if (location.node._tag === "PinnedFolder" || location.node._tag === "PinnedLiveFolder") {
-      return yield* reject("フォルダは開けません")
+      return yield* reject("background.folder.cannotOpen")
     }
     if (location.node._tag === "PinnedSplit") {
       return yield* openSplitPin(windowId, location.spaceId, location.node)
@@ -690,7 +699,7 @@ const pinnedCommands = {
     const pinned = yield* PinnedBookmarks
     const boundIds = pinnedIdsOf((yield* pinned.locate(bookmarkId)).node)
     yield* movePinnedNode(bookmarkId, yield* pinnedPosition(placement)).pipe(
-      Effect.catchTag("FolderDepthExceeded", () => reject("これ以上深い階層には入れられません")),
+      Effect.catchTag("FolderDepthExceeded", () => reject("background.folder.tooDeepToMove")),
     )
     yield* state.workspace.update((workspace) =>
       boundIds
@@ -717,7 +726,7 @@ const pinnedCommands = {
     title: string
   }) {
     const trimmed = title.trim()
-    if (trimmed === "") return yield* reject("名前を入力してください")
+    if (trimmed === "") return yield* reject("background.name.required")
     yield* (yield* PinnedBookmarks).rename(bookmarkId, trimmed)
   }),
 
@@ -749,7 +758,7 @@ const pinnedCommands = {
     const position = yield* pinnedPosition({ spaceId, parentId, index: Number.MAX_SAFE_INTEGER })
     return yield* (yield* PinnedBookmarks).createFolder(
       { parent: position.parent },
-      { title: "新しいフォルダ" },
+      { title: yield* translate("common.newFolder") },
       yield* currentNestingRule,
     )
   }),
@@ -775,7 +784,7 @@ const pinnedCommands = {
 
 const liveFolderOrReject = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
   const { node } = yield* (yield* PinnedBookmarks).locate(bookmarkId)
-  if (node._tag !== "PinnedLiveFolder") return yield* reject("ライブフォルダが見つかりません")
+  if (node._tag !== "PinnedLiveFolder") return yield* reject("background.liveFolder.notFound")
   return node
 })
 
@@ -807,7 +816,7 @@ const liveFolderCommands = {
     const position = yield* pinnedPosition({ spaceId, parentId, index: Number.MAX_SAFE_INTEGER })
     const folderId = yield* (yield* PinnedBookmarks).createLiveFolder(
       { parent: position.parent },
-      { title: defaultLiveFolderTitle(source), source },
+      { title: defaultLiveFolderTitle(source, yield* currentTranslator), source },
     )
     yield* (yield* LiveFolders).refresh(folderId, source)
     yield* scheduleLiveFolderRefresh
@@ -834,7 +843,10 @@ const liveFolderCommands = {
     yield* liveFolderOrReject(bookmarkId)
     const item = yield* Effect.flatMap(
       liveFolders.findItem(bookmarkId, itemId),
-      Option.match({ onNone: () => reject("項目が見つかりません"), onSome: Effect.succeed }),
+      Option.match({
+        onNone: () => reject("background.liveFolder.itemNotFound"),
+        onSome: Effect.succeed,
+      }),
     )
     yield* openInActiveSpace(windowId, item.url)
     yield* liveFolders.markItemSeen(bookmarkId, itemId)
@@ -856,7 +868,7 @@ const liveFolderCommands = {
 
   // サイドパネルから任意の文字列を受け取るので、javascript: や拡張・ブラウザの内部のページは開かない
   OpenUrl: Effect.fnUntraced(function* ({ windowId, url }: { windowId: WindowId; url: string }) {
-    if (!isWebUrl(url)) return yield* reject("この URL は開けません")
+    if (!isWebUrl(url)) return yield* reject("background.url.cannotOpen")
     yield* openInActiveSpace(windowId, url)
   }),
 
@@ -872,7 +884,7 @@ const archiveCommands = {
   ) {
     const state = yield* KatipState
     const entry = yield* (yield* ArchiveRepository).remove(command.entryId)
-    if (Option.isNone(entry)) return yield* reject("アーカイブが見つかりません")
+    if (Option.isNone(entry)) return yield* reject("background.archive.notFound")
     const tab = yield* (yield* Tabs).create({
       windowId: command.windowId,
       url: entry.value.url,
@@ -917,16 +929,24 @@ const executeCommand = (command: SidebarCommand) =>
     }),
   )
 
-const reasonFor = (error: { readonly _tag: string }): string =>
-  Match.value(error._tag).pipe(
-    Match.when("CommandRejected", () => (error as CommandRejected).reason),
-    Match.when("SpaceNotFound", () => "Space が見つかりません"),
-    Match.when("LastSpaceRemoval", () => "最後の Space は削除できません"),
-    Match.when("PinnedNodeNotFound", () => "ピン留めが見つかりません"),
-    Match.when("FolderDepthExceeded", () => "これ以上深い階層にはフォルダを作れません"),
-    Match.when("MoveIntoDescendant", () => "フォルダをそのフォルダ自身の中へは移せません"),
-    Match.orElse(() => "操作を完了できませんでした"),
-  )
+const reasonFor = (error: {
+  readonly _tag: string
+}): Effect.Effect<string, never, SettingsRepository> =>
+  error instanceof CommandRejected
+    ? Effect.succeed(error.reason)
+    : translate(
+        Match.value(error._tag).pipe(
+          Match.when("SpaceNotFound", (): PlainMessageKey => "background.space.notFound"),
+          Match.when("LastSpaceRemoval", (): PlainMessageKey => "background.space.lastOne"),
+          Match.when("PinnedNodeNotFound", (): PlainMessageKey => "background.pin.notFound"),
+          Match.when(
+            "FolderDepthExceeded",
+            (): PlainMessageKey => "background.folder.tooDeepToCreate",
+          ),
+          Match.when("MoveIntoDescendant", (): PlainMessageKey => "background.folder.intoItself"),
+          Match.orElse((): PlainMessageKey => "background.operation.failed"),
+        ),
+      )
 
 /**
  * サイドパネルのコマンドを実行し、結果を返す。失敗も `Failed` として返し、Effect としては失敗しない。
@@ -941,9 +961,9 @@ export const runSidebarCommand = (command: SidebarCommand) =>
           : null,
     })),
     Effect.catch((error: { readonly _tag: string }) =>
-      Effect.as(Effect.logWarning("コマンドが失敗した", command._tag, error), {
-        _tag: "Failed",
-        reason: reasonFor(error),
-      } satisfies CommandOutcome),
+      Effect.andThen(
+        Effect.logWarning("コマンドが失敗した", command._tag, error),
+        Effect.map(reasonFor(error), (reason): CommandOutcome => ({ _tag: "Failed", reason })),
+      ),
     ),
   )

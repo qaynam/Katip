@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest"
+import { makeTranslator } from "#modules/i18n"
 import { explainFailure, type LiveFetchFailure } from "./live-fetch-failure"
 import type { LiveSource } from "./live-source"
 
 const gmail: LiveSource = { _tag: "Gmail", accountIndex: 2, label: null }
 const github: LiveSource = { _tag: "GitHub", query: "review-requested" }
+const ja = makeTranslator("ja")
+const en = makeTranslator("en")
 
 const fixesOf = (failure: LiveFetchFailure, source: LiveSource = github) => {
-  const { needsPermission, needsToken, signInUrl } = explainFailure(failure, source)
+  const { needsPermission, needsToken, signInUrl } = explainFailure(failure, source, ja)
   return { needsPermission, needsToken, signInUrl }
 }
 
@@ -28,7 +31,7 @@ describe("失敗の説明", () => {
   })
 
   it("Gmail にログインしていなければ、そのアカウントの受信トレイを開いてログインすれば直ると示す", () => {
-    expect(explainFailure({ _tag: "NotSignedIn" }, gmail)).toStrictEqual({
+    expect(explainFailure({ _tag: "NotSignedIn" }, gmail, ja)).toStrictEqual({
       reason: "このアカウントで Gmail にログインしていません",
       needsPermission: false,
       needsToken: false,
@@ -37,7 +40,7 @@ describe("失敗の説明", () => {
   })
 
   it("GitHub にログインしていなければ、ログインページを開けば直ると示す", () => {
-    expect(explainFailure({ _tag: "NotSignedIn" }, github)).toStrictEqual({
+    expect(explainFailure({ _tag: "NotSignedIn" }, github, ja)).toStrictEqual({
       reason: "GitHub にログインしていません",
       needsPermission: false,
       needsToken: false,
@@ -60,12 +63,32 @@ describe("失敗の説明", () => {
   })
 
   it("応答を読み取れなければ、どの取得元の応答かを示す", () => {
-    expect(explainFailure({ _tag: "UnreadableResponse" }, github).reason).toBe(
+    expect(explainFailure({ _tag: "UnreadableResponse" }, github, ja).reason).toBe(
       "GitHub の応答を読み取れませんでした",
     )
   })
 
   it("状態コードで失敗したなら、理由にその状態コードを含める", () => {
-    expect(explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail).reason).toContain("502")
+    expect(explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail, ja).reason).toContain(
+      "502",
+    )
+  })
+})
+
+describe("表示の言語", () => {
+  it("英語に設定していれば、理由を英語で説明する", () => {
+    expect(explainFailure({ _tag: "NotSignedIn" }, github, en).reason).toBe(
+      "You aren't signed in to GitHub",
+    )
+  })
+
+  it("理由に取得元の名前と状態コードを埋め込む", () => {
+    expect([
+      explainFailure({ _tag: "RateLimited", retryAt: 0 }, github, en).reason,
+      explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail, en).reason,
+    ]).toStrictEqual([
+      "GitHub usage limit reached. Katip will try again later",
+      "Couldn't fetch the items (HTTP 502)",
+    ])
   })
 })

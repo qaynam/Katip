@@ -76,8 +76,8 @@ describe("未読フィードの解析", () => {
     expect(itemsOf(feedOf(entryOf({ title: "0042" })))[0]?.title).toBe("0042")
   })
 
-  it("件名が空なら件名なしと示す", () => {
-    expect(itemsOf(feedOf(entryOf({ title: "  " })))[0]?.title).toBe("（件名なし）")
+  it("件名が空なら、件名を空のまま残す", () => {
+    expect(itemsOf(feedOf(entryOf({ title: "  " })))[0]?.title).toBe("")
   })
 
   it("差出人の名前が無ければメールアドレスを示す", () => {

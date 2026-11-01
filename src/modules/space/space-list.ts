@@ -13,18 +13,19 @@ export class LastSpaceRemoval extends Schema.TaggedError<LastSpaceRemoval>()("La
   spaceId: SpaceId,
 }) {}
 
-const defaultName = (spaces: SpaceList): SpaceName => {
+/** 名前を付けずに作る Space の、番号を使った名前の付け方。番号は 1 から数える。 */
+export type NumberedSpaceName = (number: number) => string
+
+/** 既存の Space の名前と重ならない、番号を使った名前。番号は Space の数の次から探す。 */
+export const nextSpaceName = (spaces: SpaceList, numbered: NumberedSpaceName): SpaceName => {
   const taken = new Set<string>(spaces.map((space) => space.name))
-  const candidates = Array.makeBy(
-    spaces.length + 1,
-    (offset) => `スペース ${spaces.length + 1 + offset}`,
+  const candidates = Array.makeBy(spaces.length + 1, (offset) =>
+    SpaceName.make(numbered(spaces.length + 1 + offset)),
   )
   // 候補は既存の数より 1 つ多いので空きは必ずあり、フォールバックには到達しない
-  return SpaceName.make(
-    pipe(
-      Array.findFirst(candidates, (name) => !taken.has(name)),
-      Option.getOrElse(() => Array.headNonEmpty(candidates)),
-    ),
+  return pipe(
+    Array.findFirst(candidates, (name) => !taken.has(name)),
+    Option.getOrElse(() => Array.headNonEmpty(candidates)),
   )
 }
 
@@ -42,12 +43,12 @@ const defaultTheme = (spaces: SpaceList): SpaceTheme => {
 
 export const addSpace = (
   spaces: SpaceList,
-  draft: { readonly id: SpaceId; readonly name?: SpaceName; readonly theme?: SpaceTheme },
+  draft: { readonly id: SpaceId; readonly name: SpaceName; readonly theme?: SpaceTheme },
 ): SpaceList => [
   ...spaces,
   {
     id: draft.id,
-    name: draft.name ?? defaultName(spaces),
+    name: draft.name,
     theme: draft.theme ?? defaultTheme(spaces),
   },
 ]

@@ -1,6 +1,8 @@
 import { Array, Context, Effect, Layer, Option, Predicate, Record, Result, Semaphore } from "effect"
 import {
   addSpace,
+  nextSpaceName,
+  type NumberedSpaceName,
   renameSpace,
   SpaceId,
   type Space,
@@ -65,8 +67,12 @@ export class SpaceFolders extends Context.Service<
      * @remarks
      * ブックマーク側（フォルダの作成・改名と対応表）はここで書き込む。Space 一覧は保存しないので、
      * 返り値を呼び出し側が保存する。途中で失敗しても、次の呼び出しで同名のフォルダとの結び直しにより回復する。
+     * 名前の無いフォルダから Space を作るときは、`numbered` で名前を付けてフォルダも改名する。
      */
-    reconcileSpaces(spaces: SpaceList): Effect.Effect<SpaceList, BrowserApiError>
+    reconcileSpaces(
+      spaces: SpaceList,
+      numbered: NumberedSpaceName,
+    ): Effect.Effect<SpaceList, BrowserApiError>
     /**
      * Katip ルート直下にある、対応表に載った Space のフォルダを子孫まで読み込んで返す。
      *
@@ -166,15 +172,13 @@ export class SpaceFolders extends Context.Service<
         reconciliation: Reconciliation,
         folderId: BookmarkId,
         name: Option.Option<SpaceName>,
+        numbered: NumberedSpaceName,
       ) {
         const spaceId = yield* newSpaceId
-        const spaces = addSpace(
-          reconciliation.spaces,
-          Option.match(name, {
-            onNone: () => ({ id: spaceId }),
-            onSome: (name) => ({ id: spaceId, name }),
-          }),
-        )
+        const spaces = addSpace(reconciliation.spaces, {
+          id: spaceId,
+          name: Option.getOrElse(name, () => nextSpaceName(reconciliation.spaces, numbered)),
+        })
         const added = Array.findFirst(spaces, (space) => space.id === spaceId)
         if (Option.isNone(name) && Option.isSome(added)) {
           yield* bookmarks.update(folderId, { title: added.value.name })
@@ -183,7 +187,7 @@ export class SpaceFolders extends Context.Service<
       })
 
       const applyAction =
-        (rootId: BookmarkId) =>
+        (rootId: BookmarkId, numbered: NumberedSpaceName) =>
         (
           reconciliation: Reconciliation,
           action: SpaceFolderAction,
@@ -210,7 +214,7 @@ export class SpaceFolders extends Context.Service<
                 spaceFolders: Record.set(reconciliation.spaceFolders, spaceId, folder.id),
               })),
             CreateSpaceFromFolder: ({ folderId, name }) =>
-              discoverSpace(reconciliation, folderId, name),
+              discoverSpace(reconciliation, folderId, name, numbered),
             ForgetSpaceFolder: ({ spaceId }) =>
               Effect.succeed({
                 ...reconciliation,
@@ -261,7 +265,7 @@ export class SpaceFolders extends Context.Service<
           }
           yield* savedSpaceFolders.save(Record.remove(spaceFolders, spaceId))
         }, exclusively),
-        reconcileSpaces: Effect.fn("SpaceFolders.reconcileSpaces")(function* (spaces) {
+        reconcileSpaces: Effect.fn("SpaceFolders.reconcileSpaces")(function* (spaces, numbered) {
           const rootId = yield* ensureRootUnlocked
           const rootFolders = (yield* bookmarks.getChildren(rootId))
             .filter(isFolder)
@@ -271,7 +275,7 @@ export class SpaceFolders extends Context.Service<
           const reconciled = yield* Effect.reduce(
             plan,
             () => ({ spaces, spaceFolders }),
-            applyAction(rootId),
+            applyAction(rootId, numbered),
           )
           if (reconciled.spaceFolders !== spaceFolders) {
             yield* savedSpaceFolders.save(reconciled.spaceFolders)

@@ -3,6 +3,8 @@ export {
   addSpace,
   LastSpaceRemoval,
   moveSpace,
+  nextSpaceName,
+  type NumberedSpaceName,
   removeSpace,
   renameSpace,
   setSpaceTheme,

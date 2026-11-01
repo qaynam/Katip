@@ -1,4 +1,5 @@
 import { Match, Schema } from "effect"
+import type { Translator } from "#modules/i18n"
 import { signInUrlOf, type LiveSource } from "./live-source"
 
 /** 取得元から項目を取り込めなかった理由。キャッシュに残し、次に取得できるまで表示する。 */
@@ -42,22 +43,34 @@ const explanation = (
 const siteNameOf = (source: LiveSource): string =>
   Match.valueTags(source, { Gmail: () => "Gmail", GitHub: () => "GitHub" })
 
-export const explainFailure = (failure: LiveFetchFailure, source: LiveSource): FailureExplanation =>
+/** 失敗の理由を `translator` の言語で説明し、利用者が直せるならその手段を示す。 */
+export const explainFailure = (
+  failure: LiveFetchFailure,
+  source: LiveSource,
+  translator: Translator,
+): FailureExplanation =>
   Match.valueTags(failure, {
     PermissionMissing: () =>
-      explanation("取得元へのアクセスが許可されていません", { needsPermission: true }),
+      explanation(translator.t("background.liveFolder.permissionMissing"), {
+        needsPermission: true,
+      }),
     NotSignedIn: () =>
       explanation(
-        source._tag === "Gmail"
-          ? "このアカウントで Gmail にログインしていません"
-          : "GitHub にログインしていません",
+        translator.t(
+          source._tag === "Gmail"
+            ? "background.liveFolder.notSignedInGmail"
+            : "background.liveFolder.notSignedInGitHub",
+        ),
         { signInUrl: signInUrlOf(source) },
       ),
-    TokenRejected: () => explanation("GitHub のアクセストークンが無効です", { needsToken: true }),
-    AccessDenied: () => explanation("取得元へのアクセスが拒否されました"),
+    TokenRejected: () =>
+      explanation(translator.t("background.liveFolder.tokenRejected"), { needsToken: true }),
+    AccessDenied: () => explanation(translator.t("background.liveFolder.accessDenied")),
     RateLimited: () =>
-      explanation(`${siteNameOf(source)} の利用上限に達しました。しばらくしてから取得し直します`),
-    Unreachable: () => explanation("取得元に接続できませんでした"),
-    UnexpectedStatus: ({ status }) => explanation(`取得できませんでした（HTTP ${status}）`),
-    UnreadableResponse: () => explanation(`${siteNameOf(source)} の応答を読み取れませんでした`),
+      explanation(translator.t("background.liveFolder.rateLimited", { site: siteNameOf(source) })),
+    Unreachable: () => explanation(translator.t("background.liveFolder.unreachable")),
+    UnexpectedStatus: ({ status }) =>
+      explanation(translator.t("background.liveFolder.unexpectedStatus", { status })),
+    UnreadableResponse: () =>
+      explanation(translator.t("background.liveFolder.unreadable", { site: siteNameOf(source) })),
   })

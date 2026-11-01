@@ -43,6 +43,7 @@ import { SidebarHub } from "./sidebar-hub"
 import { runSpotlightChoice } from "./spotlight-choice"
 import { SpotlightHub } from "./spotlight-hub"
 import { urlOf } from "./tab-admission"
+import { numberedSpaceName, translate } from "./translation"
 
 const byWindowThenIndex = Order.combine(
   Order.mapInput(Order.Number, (tab: BrowserTab) => tab.windowId),
@@ -83,9 +84,15 @@ const syncTabGroupsIfEnabled = Effect.gen(function* () {
 const reconcileWithBookmarks = Effect.gen(function* () {
   const state = yield* KatipState
   const folders = yield* SpaceFolders
-  yield* state.spaces.updateEffect((spaces) => folders.reconcileSpaces(spaces))
+  const numbered = yield* numberedSpaceName
+  yield* state.spaces.updateEffect((spaces) => folders.reconcileSpaces(spaces, numbered))
   yield* pruneStaleBindings
 })
+
+const timedOut = Effect.map(translate("background.operation.timedOut"), (reason) => ({
+  _tag: "Failed" as const,
+  reason,
+}))
 
 const logFailure =
   (label: string) =>
@@ -196,10 +203,10 @@ export const program = Effect.gen(function* () {
                 hub.serve(port, (command) =>
                   serialize(runSidebarCommand(command)).pipe(
                     Effect.catchTag("TimeoutError", () =>
-                      Effect.as(Effect.logError("コマンドが時間内に終わらなかった", command), {
-                        _tag: "Failed" as const,
-                        reason: "時間内に完了しませんでした",
-                      }),
+                      Effect.andThen(
+                        Effect.logError("コマンドが時間内に終わらなかった", command),
+                        timedOut,
+                      ),
                     ),
                     Effect.tap(() => afterChange),
                   ),
@@ -211,10 +218,10 @@ export const program = Effect.gen(function* () {
                 spotlight.serve(port, (windowId, result) =>
                   serialize(runSpotlightChoice(windowId, result)).pipe(
                     Effect.catchTag("TimeoutError", () =>
-                      Effect.as(Effect.logError("Spotlight の決定が時間内に終わらなかった"), {
-                        _tag: "Failed" as const,
-                        reason: "時間内に完了しませんでした",
-                      }),
+                      Effect.andThen(
+                        Effect.logError("Spotlight の決定が時間内に終わらなかった"),
+                        timedOut,
+                      ),
                     ),
                     Effect.tap(() => afterChange),
                   ),

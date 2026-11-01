@@ -13,7 +13,7 @@ import type { SidebarCommand, SpotlightOutcome, SpotlightResult } from "#protoco
 import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
-import { currentTranslator } from "./translation"
+import { currentTranslator, translate } from "./translation"
 
 const succeeded: SpotlightOutcome = { _tag: "Succeeded" }
 
@@ -83,7 +83,7 @@ const onActiveTab = Effect.fnUntraced(function* <E, R>(
   run: (tab: BrowserTab) => Effect.Effect<SpotlightOutcome, E, R>,
 ) {
   const [activeTab] = yield* (yield* Tabs).query({ windowId: callerWindowId, active: true })
-  if (activeTab === undefined) return failed("対象のタブがありません")
+  if (activeTab === undefined) return failed(yield* translate("background.tab.noTarget"))
   return yield* run(activeTab)
 })
 
@@ -106,7 +106,9 @@ const togglePinOf = Effect.fnUntraced(function* (callerWindowId: WindowId, tab: 
 
 const closeTemporaryTabs = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const spaceId = activeSpaceOf(yield* (yield* KatipState).workspace.get, callerWindowId)
-  if (Option.isNone(spaceId)) return failed("表示している Space がありません")
+  if (Option.isNone(spaceId)) {
+    return failed(yield* translate("background.spotlight.noActiveSpace"))
+  }
   return yield* runAsSidebarCommand(callerWindowId, {
     _tag: "CloseTemporaryTabs",
     windowId: callerWindowId,
@@ -176,9 +178,9 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
     SearchWeb: ({ query }) => searchWeb(callerWindowId, query),
   }).pipe(
     Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight の候補を開けなかった", result._tag, error), {
-        _tag: "Failed",
-        reason: "開けませんでした",
-      } satisfies SpotlightOutcome),
+      Effect.andThen(
+        Effect.logWarning("Spotlight の候補を開けなかった", result._tag, error),
+        Effect.map(translate("background.spotlight.cannotOpen"), failed),
+      ),
     ),
   )

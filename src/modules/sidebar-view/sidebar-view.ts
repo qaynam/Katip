@@ -1,5 +1,6 @@
 import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
+import type { Translator } from "#modules/i18n"
 import {
   DEFAULT_LIVE_SORT,
   explainFailure,
@@ -47,6 +48,8 @@ export interface SidebarSources {
   readonly pinnedTrees: ReadonlyMap<SpaceId, PinnedTree>
   readonly folderExpansion: FolderExpansion
   readonly liveFolders: LiveFolderSnapshot
+  /** ビューに載せる文言（失敗の理由や名前の無いタブの名前など）の言語。 */
+  readonly translator: Translator
   readonly preferences: {
     readonly newTabsOnTop: boolean
     readonly showAllOpenTabsInCollapsedFolders: boolean
@@ -66,11 +69,12 @@ const urlOf = (tab: BrowserTab) =>
     Option.getOrElse(() => ""),
   )
 
-const pageTitleOf = (tab: BrowserTab) =>
+/** タイトルも URL も無いタブ（開いたばかりの新しいタブ）は `untitled` にする。 */
+const pageTitleOf = (tab: BrowserTab, untitled: string) =>
   pipe(
     tab.title,
     Option.orElse(() => Option.liftPredicate(urlOf(tab), (url) => url !== "")),
-    Option.getOrElse(() => "新しいタブ"),
+    Option.getOrElse(() => untitled),
   )
 
 const tabView = (tab: BrowserTab, title: string): TabView => ({
@@ -86,13 +90,15 @@ const tabView = (tab: BrowserTab, title: string): TabView => ({
   splitViewId: Option.getOrNull(tab.splitViewId),
 })
 
-const favoriteView = (tab: BrowserTab): FavoriteView => ({
-  tabId: tab.id,
-  title: pageTitleOf(tab),
-  url: urlOf(tab),
-  favIconUrl: Option.getOrNull(tab.favIconUrl),
-  isActive: tab.active,
-})
+const favoriteView =
+  (untitled: string) =>
+  (tab: BrowserTab): FavoriteView => ({
+    tabId: tab.id,
+    title: pageTitleOf(tab, untitled),
+    url: urlOf(tab),
+    favIconUrl: Option.getOrNull(tab.favIconUrl),
+    isActive: tab.active,
+  })
 
 interface SpaceTab {
   readonly tab: BrowserTab
@@ -138,6 +144,8 @@ interface PinnedProjection {
   readonly openTabs: ReadonlyMap<BookmarkId, SpaceTab>
   readonly folderExpansion: FolderExpansion
   readonly liveFolders: LiveFolderSnapshot
+  readonly translator: Translator
+  readonly untitledTab: string
   readonly rule: FolderNestingRule
   readonly showAllOpenTabsInCollapsedFolders: boolean
 }
@@ -158,7 +166,7 @@ const pinnedItemView = (
     onSome: ({ tab, tracked }) => {
       const navigatedAway = hasNavigatedAway(tracked.pinned?.pinnedUrl ?? bookmark.url, urlOf(tab))
       // 別ページへ移動した後もピンの名前を出し続けると、今どのページを見ているか分からなくなる
-      const title = navigatedAway ? pageTitleOf(tab) : bookmark.title
+      const title = navigatedAway ? pageTitleOf(tab, projection.untitledTab) : bookmark.title
       return {
         _tag: "PinnedItem",
         bookmarkId: bookmark.id,
@@ -204,6 +212,7 @@ const liveFolderStatus = (
   live: PinnedLiveFolder,
   record: Option.Option<LiveFolderRecord>,
   isRefreshing: boolean,
+  translator: Translator,
 ): LiveFolderStatus => {
   if (isRefreshing) return { _tag: "Refreshing" }
   return Option.match(record, {
@@ -212,7 +221,7 @@ const liveFolderStatus = (
     onSome: ({ lastAttempt }) =>
       lastAttempt._tag === "Fetched"
         ? { _tag: "Ready", refreshedAt: lastAttempt.at }
-        : { _tag: "Failed", ...explainFailure(lastAttempt.failure, live.source) },
+        : { _tag: "Failed", ...explainFailure(lastAttempt.failure, live.source, translator) },
   })
 }
 
@@ -228,13 +237,22 @@ const pinnedLiveFolderView = (
     title: live.title,
     source: live.source,
     isExpanded: isFolderExpanded(projection.folderExpansion, live.id),
-    status: liveFolderStatus(live, record, projection.liveFolders.refreshing.has(live.id)),
+    status: liveFolderStatus(
+      live,
+      record,
+      projection.liveFolders.refreshing.has(live.id),
+      projection.translator,
+    ),
     sort,
     items: Option.match(record, {
       onNone: () => [],
       onSome: (loaded) =>
         sortLiveItems(loaded.items, sort, live.source).map((item) => ({
           ...item,
+          title:
+            item.title.trim() === ""
+              ? projection.translator.t("background.liveFolder.noSubject")
+              : item.title,
           isUnseen: isUnseen(loaded, item),
         })),
     }),
@@ -277,6 +295,8 @@ const spaceView = (
     openTabs: byBookmark,
     folderExpansion: sources.folderExpansion,
     liveFolders: sources.liveFolders,
+    translator: sources.translator,
+    untitledTab: sources.translator.t("common.newTab"),
     rule,
     showAllOpenTabsInCollapsedFolders: sources.preferences.showAllOpenTabsInCollapsedFolders,
   }
@@ -295,7 +315,7 @@ const spaceView = (
     temporaryEntries: displayOrder(
       temporaryEntriesOf(
         temporary.map(({ tab, tracked }) =>
-          tabView(tab, tracked.titleOverride ?? pageTitleOf(tab)),
+          tabView(tab, tracked.titleOverride ?? pageTitleOf(tab, projection.untitledTab)),
         ),
       ),
       { newestOnTop: sources.preferences.newTabsOnTop },
@@ -351,7 +371,9 @@ export const projectSidebarView = (sources: SidebarSources): Option.Option<Sideb
         sources,
       ),
     ),
-    favorites: tabs.filter((tab) => tab.pinned).map(favoriteView),
+    favorites: tabs
+      .filter((tab) => tab.pinned)
+      .map(favoriteView(sources.translator.t("common.newTab"))),
     archive: sources.archive,
     autoArchive: sources.autoArchive,
     canSplit: sources.canSplit,

@@ -13,13 +13,15 @@ import { Tabs, type BrowserTab } from "#platform/browser"
 import { pruneStaleBindings } from "./bindings"
 import { KatipState, loadRestoreSnapshot } from "./katip-state"
 import { admitTab } from "./tab-admission"
+import { currentTranslator, numberedSpaceName } from "./translation"
 
 export const newSpaceId = Effect.sync(() => SpaceId.make(crypto.randomUUID()))
 
 const ensureAtLeastOneSpace = Effect.fnUntraced(function* (spaces: SpaceList) {
   if (spaces.length > 0) return spaces
   const folders = yield* SpaceFolders
-  const withHome = addSpace([], { id: yield* newSpaceId, name: SpaceName.make("ホーム") })
+  const home = SpaceName.make((yield* currentTranslator).t("common.home"))
+  const withHome = addSpace([], { id: yield* newSpaceId, name: home })
   yield* Effect.forEach(withHome, (space) => folders.ensureSpaceFolder(space))
   return withHome
 })
@@ -69,8 +71,9 @@ export const initialize = Effect.gen(function* () {
     )
   }
 
+  const numbered = yield* numberedSpaceName
   yield* state.spaces.updateEffect((spaces) =>
-    Effect.flatMap(folders.reconcileSpaces(spaces), ensureAtLeastOneSpace),
+    Effect.flatMap(folders.reconcileSpaces(spaces, numbered), ensureAtLeastOneSpace),
   )
 
   const tabs = Array.sort(yield* (yield* Tabs).query({}), byWindowThenIndex)

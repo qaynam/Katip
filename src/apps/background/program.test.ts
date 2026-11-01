@@ -192,15 +192,12 @@ describe("Space の操作", () => {
 
         const outcome = yield* sidebar.run({ _tag: "CreateSpace", windowId })
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(
-            spaceNamed(v, "スペース 2"),
-            (space) => temporaryTabsIn(space).length === 1,
-          ),
+          Option.exists(spaceNamed(v, "Space 2"), (space) => temporaryTabsIn(space).length === 1),
         )
 
         expect([outcome._tag, activeSpaceName(view)]).toStrictEqual([
           "Succeeded",
-          Option.some("スペース 2"),
+          Option.some("Space 2"),
         ])
       }),
     ),
@@ -215,7 +212,7 @@ describe("Space の操作", () => {
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.run({ _tag: "CreateSpace", windowId })
         const created = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
-        const doomed = Option.getOrThrow(spaceNamed(created, "スペース 2"))
+        const doomed = Option.getOrThrow(spaceNamed(created, "Space 2"))
 
         yield* sidebar.run({ _tag: "DeleteSpace", spaceId: doomed.id })
         const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
@@ -271,6 +268,55 @@ describe("Space の操作", () => {
   )
 })
 
+describe("表示の言語", () => {
+  it.live("英語に設定していれば、最初に作る Space の名前も、断る理由も英語になる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        yield* fake.seedStorage("sync", { "katip/settings": { locale: "en" } })
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const outcome = yield* sidebar.run({ _tag: "DeleteSpace", spaceId: view.activeSpaceId })
+
+        expect([view.spaces.map((space) => space.name), outcome]).toStrictEqual([
+          ["Home"],
+          { _tag: "Failed", reason: "The last Space can't be deleted" },
+        ])
+      }),
+    ),
+  )
+
+  it.live("英語に設定していれば、新しいフォルダと新しい Space に英語の名前が付く", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        yield* fake.seedStorage("sync", { "katip/settings": { locale: "en" } })
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+
+        yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null })
+        yield* sidebar.run({ _tag: "CreateSpace", windowId })
+        const view = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
+        const folders = Option.match(spaceNamed(view, "Home"), {
+          onNone: () => [],
+          onSome: (space) =>
+            space.pinned._tag === "Available" ? space.pinned.nodes.map((node) => node.title) : [],
+        })
+
+        expect([view.spaces.map((space) => space.name), folders]).toStrictEqual([
+          ["Home", "Space 2"],
+          ["New Folder"],
+        ])
+      }),
+    ),
+  )
+})
+
 describe("タブ", () => {
   it.live("アクティブな Space で開いたタブは、その Space の一時タブになる", () =>
     inBackground(
@@ -284,14 +330,11 @@ describe("タブ", () => {
 
         yield* (yield* Tabs).create({ windowId, url: "https://new.example/", active: false })
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(
-            spaceNamed(v, "スペース 2"),
-            (space) => temporaryTabsIn(space).length === 2,
-          ),
+          Option.exists(spaceNamed(v, "Space 2"), (space) => temporaryTabsIn(space).length === 2),
         )
 
         expect(
-          Option.map(spaceNamed(view, "スペース 2"), (s) => temporaryTabsIn(s).map((t) => t.url)),
+          Option.map(spaceNamed(view, "Space 2"), (s) => temporaryTabsIn(s).map((t) => t.url)),
         ).toStrictEqual(Option.some(["https://new.example/", "chrome://newtab/"]))
       }),
     ),
@@ -591,7 +634,7 @@ describe("フォルダの移動", () => {
         })
         yield* sidebar.run({ _tag: "CreateSpace", windowId })
         const work = Option.getOrThrow(
-          spaceNamed(yield* sidebar.viewWhere((v) => v.spaces.length === 2), "スペース 2"),
+          spaceNamed(yield* sidebar.viewWhere((v) => v.spaces.length === 2), "Space 2"),
         ).id
         const targetId = yield* createdIdOf(
           yield* sidebar.run({ _tag: "CreateFolder", spaceId: work, parentId: null }),
@@ -603,7 +646,7 @@ describe("フォルダの移動", () => {
           placement: { spaceId: work, parentId: targetId, index: 0 },
         })
         const openPinsInMovedFolder = (view: SidebarView) =>
-          pinnedNodesOf(view, "スペース 2").flatMap((target) =>
+          pinnedNodesOf(view, "Space 2").flatMap((target) =>
             target._tag === "PinnedFolder"
               ? target.children.flatMap((moved) =>
                   moved._tag === "PinnedFolder"

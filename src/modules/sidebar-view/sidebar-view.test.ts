@@ -2,6 +2,7 @@ import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import type { LiveFolderRecord, LiveItem, LiveSource } from "#modules/live-folders"
 import type { PinnedTree } from "#modules/pinned"
+import { makeTranslator } from "#modules/i18n"
 import { defaultSettings } from "#modules/settings"
 import { neutralTheme } from "#modules/theme"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
@@ -81,6 +82,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   ]),
   folderExpansion: {},
   liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map() },
+  translator: makeTranslator("ja"),
   preferences: {
     newTabsOnTop: false,
     showAllOpenTabsInCollapsedFolders: false,
@@ -675,5 +677,64 @@ describe("ライブフォルダ", () => {
       ["PinnedLiveFolder"],
       [],
     ])
+  })
+})
+
+describe("表示の言語", () => {
+  const untitledTab = browserTab(1, { url: Option.none(), title: Option.none() })
+
+  it("タイトルも URL も無いタブは、新しいタブとして表示の言語で示す", () => {
+    const workspace = inHome(switchSpace(emptyWorkspace, WINDOW, spaceId("home")), 1)
+
+    const titles = (["ja", "en"] as const).map((locale) =>
+      temporaryTabsOf(
+        homeOf(
+          project({ workspace, windowTabs: [untitledTab], translator: makeTranslator(locale) }),
+        ),
+      ).map((tab) => tab.title),
+    )
+
+    expect(titles).toStrictEqual([["新しいタブ"], ["New Tab"]])
+  })
+
+  it("件名の無いメールは、表示の言語で件名なしと示す", () => {
+    const live = bookmarkId("live")
+    const node = pinnedNodesOf(
+      project({
+        pinnedTrees: homeWithPin([
+          {
+            _tag: "PinnedLiveFolder",
+            id: live,
+            title: "受信トレイ",
+            source: { _tag: "Gmail", accountIndex: 0, label: null },
+          },
+        ]),
+        liveFolders: {
+          records: new Map([
+            [
+              live,
+              {
+                items: [
+                  {
+                    id: "m",
+                    title: "",
+                    subtitle: "",
+                    url: "https://mail.google.com/",
+                    updatedAt: 1,
+                  },
+                ],
+                lastAttempt: { _tag: "Fetched", at: 1 },
+                seenVersions: {},
+              },
+            ],
+          ]),
+          refreshing: new Set(),
+          sorts: new Map(),
+        },
+        translator: makeTranslator("en"),
+      }),
+    )[0] as PinnedLiveFolderView | undefined
+
+    expect(node?.items.map((item) => item.title)).toStrictEqual(["(no subject)"])
   })
 })

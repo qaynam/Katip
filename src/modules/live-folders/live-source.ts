@@ -1,4 +1,5 @@
 import { Match, Schema } from "effect"
+import type { MessageKey, Translator } from "#modules/i18n"
 
 /** GitHub のライブフォルダに並べる対象。 */
 export const GitHubQuery = Schema.Literals([
@@ -72,18 +73,27 @@ export const signInUrlOf = (source: LiveSource): string =>
     GitHub: () => "https://github.com/login",
   })
 
-const githubQueryTitles: Readonly<Record<GitHubQuery, string>> = {
-  "review-requested": "GitHub のレビュー依頼",
-  "authored-pull-requests": "GitHub の自分のプルリクエスト",
-  "assigned-issues": "GitHub の担当 Issue",
-  mentioned: "GitHub のメンション",
-}
+const githubQueryTitles = {
+  "review-requested": "background.liveFolder.title.reviewRequested",
+  "authored-pull-requests": "background.liveFolder.title.authoredPullRequests",
+  "assigned-issues": "background.liveFolder.title.assignedIssues",
+  mentioned: "background.liveFolder.title.mentioned",
+} as const satisfies Readonly<Record<GitHubQuery, MessageKey>>
 
-export const defaultLiveFolderTitle = (source: LiveSource): string =>
+/** 作ったときのライブフォルダの名前。`translator` の言語で付ける。 */
+export const defaultLiveFolderTitle = (source: LiveSource, translator: Translator): string =>
   Match.valueTags(source, {
     Gmail: ({ accountIndex, label }) => {
-      const mailbox = label === null ? "Gmail の受信トレイ" : `Gmail の ${label}`
-      return accountIndex === 0 ? mailbox : `${mailbox}（u/${accountIndex}）`
+      const mailbox =
+        label === null
+          ? translator.t("background.liveFolder.title.gmailInbox")
+          : translator.t("background.liveFolder.title.gmailLabel", { label })
+      return accountIndex === 0
+        ? mailbox
+        : translator.t("background.liveFolder.title.otherAccount", {
+            title: mailbox,
+            account: accountIndex,
+          })
     },
-    GitHub: ({ query }) => githubQueryTitles[query],
+    GitHub: ({ query }) => translator.t(githubQueryTitles[query]),
   })

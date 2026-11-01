@@ -14,6 +14,8 @@ import { SpaceFolders } from "./space-folders"
 
 const TestLayer = SpaceFolders.layer.pipe(Layer.provideMerge(FakeBrowser.layer))
 
+const numbered = (number: number) => `スペース ${number}`
+
 const space = (id: string, name: string = id): Space => ({
   id: SpaceId.make(id),
   name: SpaceName.make(name),
@@ -259,7 +261,7 @@ describe("Space とフォルダの照合", () => {
       const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
       yield* (yield* Bookmarks).update(folderId, { title: "本業" })
 
-      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")])
+      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
 
       assert.deepStrictEqual(
         spaces.map((s) => s.name),
@@ -275,7 +277,7 @@ describe("Space とフォルダの照合", () => {
         const folders = yield* SpaceFolders
         const addedId = yield* createFolder(yield* folders.ensureRoot, "読書")
 
-        const spaces = yield* folders.reconcileSpaces([])
+        const spaces = yield* folders.reconcileSpaces([], numbered)
 
         assert.deepStrictEqual(
           spaces.map((s) => s.name),
@@ -292,11 +294,14 @@ describe("Space とフォルダの照合", () => {
       const folders = yield* SpaceFolders
       const addedId = yield* createFolder(yield* folders.ensureRoot, "")
 
-      const spaces = yield* folders.reconcileSpaces([])
+      const spaces = yield* folders.reconcileSpaces([], numbered)
 
       const [discovered] = spaces
       assert.isDefined(discovered)
-      assert.strictEqual((yield* (yield* Bookmarks).get(addedId)).title, discovered.name)
+      assert.deepStrictEqual(
+        [discovered.name, (yield* (yield* Bookmarks).get(addedId)).title],
+        ["スペース 1", "スペース 1"],
+      )
     }).pipe(Effect.provide(TestLayer)),
   )
 
@@ -306,7 +311,7 @@ describe("Space とフォルダの照合", () => {
       const removedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
       yield* (yield* Bookmarks).removeTree(removedId)
 
-      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")])
+      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
 
       assert.deepStrictEqual(
         spaces.map((s) => s.name),
@@ -322,7 +327,7 @@ describe("Space とフォルダの照合", () => {
       yield* folders.ensureSpaceFolder(space("a", "仕事"))
       yield* (yield* Bookmarks).removeTree(yield* folders.ensureRoot)
 
-      yield* folders.reconcileSpaces([space("a", "仕事"), space("b", "趣味")])
+      yield* folders.reconcileSpaces([space("a", "仕事"), space("b", "趣味")], numbered)
 
       assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), [
         "仕事",
@@ -337,7 +342,7 @@ describe("Space とフォルダの照合", () => {
       const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
       yield* (yield* Storage).local.remove("katip/pinned/space-folders")
 
-      yield* folders.reconcileSpaces([space("work", "仕事")])
+      yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
 
       assert.strictEqual(yield* folders.ensureSpaceFolder(space("work", "仕事")), folderId)
       assert.lengthOf(yield* childrenOf(yield* folders.ensureRoot), 1)
@@ -348,9 +353,9 @@ describe("Space とフォルダの照合", () => {
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       yield* createFolder(yield* folders.ensureRoot, "読書")
-      const once = yield* folders.reconcileSpaces([space("work", "仕事")])
+      const once = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
 
-      const twice = yield* folders.reconcileSpaces(once)
+      const twice = yield* folders.reconcileSpaces(once, numbered)
 
       assert.deepStrictEqual(twice, once)
       assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), [

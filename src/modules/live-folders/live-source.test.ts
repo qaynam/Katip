@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest"
+import { makeTranslator } from "#modules/i18n"
 import {
   defaultLiveFolderTitle,
   originPatternOf,
   signInUrlOf,
   type LiveSource,
 } from "./live-source"
+
+const ja = makeTranslator("ja")
+const en = makeTranslator("en")
 
 const gmail = (accountIndex: number, label: string | null): LiveSource => ({
   _tag: "Gmail",
@@ -33,18 +37,27 @@ describe("ログインのために開くページ", () => {
 describe("作ったときの名前", () => {
   it("Gmail は受信トレイかラベルの名前になる", () => {
     expect([
-      defaultLiveFolderTitle(gmail(0, null)),
-      defaultLiveFolderTitle(gmail(0, "請求書")),
+      defaultLiveFolderTitle(gmail(0, null), ja),
+      defaultLiveFolderTitle(gmail(0, "請求書"), ja),
     ]).toStrictEqual(["Gmail の受信トレイ", "Gmail の 請求書"])
   })
 
   it("2 つ目以降の Google アカウントは、アカウントの番号を添えて区別する", () => {
-    expect(defaultLiveFolderTitle(gmail(1, null))).toBe("Gmail の受信トレイ（u/1）")
+    expect(defaultLiveFolderTitle(gmail(1, null), ja)).toBe("Gmail の受信トレイ（u/1）")
   })
 
   it("GitHub は並べる対象の名前になる", () => {
-    expect(defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" })).toBe(
+    expect(defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" }, ja)).toBe(
       "GitHub のレビュー依頼",
     )
+  })
+})
+
+describe("作ったときの名前の言語", () => {
+  it("英語に設定していれば、英語の名前を付ける", () => {
+    expect([
+      defaultLiveFolderTitle(gmail(1, null), en),
+      defaultLiveFolderTitle({ _tag: "GitHub", query: "mentioned" }, en),
+    ]).toStrictEqual(["Gmail Inbox (u/1)", "GitHub Mentions"])
   })
 })
