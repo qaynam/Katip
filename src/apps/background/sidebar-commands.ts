@@ -437,6 +437,13 @@ const splitCommands = {
     tabId: TabId
     withTabId: TabId
   }) {
+    // 分割ビューが画面に出ない不具合の調査用のログ（[split] で始まるもの）。原因が分かったら消す
+    yield* Effect.logInfo("[split] 分割を始める", {
+      tabId,
+      withTabId,
+      supportsSplitView: (yield* Tabs).supportsSplitView,
+      userAgent: globalThis.navigator?.userAgent,
+    })
     yield* requireSplitSupport
     if (tabId === withTabId) return
     const state = yield* KatipState
@@ -474,7 +481,18 @@ const splitCommands = {
     )
     const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
     yield* tabs.move([tabId], { index: targetPosition + 1 })
-    yield* tabs.createSplit([withTabId, tabId])
+    yield* Effect.logInfo(
+      "[split] 隣に並べた",
+      Array.sort(yield* tabs.query({ windowId: target.windowId }), byIndex).map((tab) => ({
+        id: tab.id,
+        index: tab.index,
+        active: tab.active,
+        groupId: Option.getOrNull(tab.groupId),
+        splitViewId: Option.getOrNull(tab.splitViewId),
+      })),
+    )
+    const splitViewId = yield* tabs.createSplit([withTabId, tabId])
+    yield* Effect.logInfo("[split] 分割ビューを作った", { splitViewId })
     // 分割ビューは、その中のタブを表示しているときにしか画面に出ない。別のタブを表示したまま
     // ドロップしても分割が見えるよう、ドラッグしたタブを前面に出す
     yield* tabs.update(tabId, { active: true })

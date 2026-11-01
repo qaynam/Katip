@@ -141,8 +141,13 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
     },
     run: (command) => {
       const requestId = RequestId.make(nextRequestId++)
+      // 分割ビューが画面に出ない不具合の調査用のログ。原因が分かったら消す
+      console.info("[katip] コマンドを送る", command._tag, command)
       return new Promise((resolve) => {
-        pending.set(requestId, resolve)
+        pending.set(requestId, (outcome) => {
+          console.info("[katip] コマンドの結果", command._tag, outcome)
+          resolve(outcome)
+        })
         if (!send({ _tag: "Run", requestId, command })) {
           pending.delete(requestId)
           resolve(undelivered("NotConnected"))
