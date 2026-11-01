@@ -170,16 +170,27 @@ const pinnedItemView = (
   })
 }
 
-const peekableItems = (
+const isPeekable = (item: PinnedItemView, showAll: boolean): boolean =>
+  item.openTab !== null && (showAll || item.openTab.tab.isActive)
+
+/**
+ * 閉じたフォルダの見出しの下に覗かせるもの。入れ子のフォルダの中も含め、フォルダの中での並び順に並べる。
+ * 分割ピンは、どちらかの側が条件を満たせば 2 つそろえたまま返す。
+ *
+ * @param showAll - 開いているピンをすべて覗かせるか。false ならアクティブなタブのピンだけ
+ */
+export const peekableItems = (
   nodes: ReadonlyArray<PinnedNodeView>,
   showAll: boolean,
-): ReadonlyArray<PinnedItemView> =>
-  nodes.flatMap((node): ReadonlyArray<PinnedItemView> => {
+): ReadonlyArray<PinnedItemView | PinnedSplitView> =>
+  nodes.flatMap((node): ReadonlyArray<PinnedItemView | PinnedSplitView> => {
     if (node._tag === "PinnedFolder") return peekableItems(node.children, showAll)
-    if (node._tag === "PinnedSplit") return peekableItems(node.items, showAll)
+    // 片側だけを覗かせると、開いたときの 2 つ並びの行と見た目が食い違う
+    if (node._tag === "PinnedSplit") {
+      return node.items.some((item) => isPeekable(item, showAll)) ? [node] : []
+    }
     if (node._tag === "PinnedLiveFolder") return []
-    if (node.openTab === null) return []
-    return showAll || node.openTab.tab.isActive ? [node] : []
+    return isPeekable(node, showAll) ? [node] : []
   })
 
 const pinnedSplitView = (split: PinnedSplit, projection: PinnedProjection): PinnedSplitView => ({

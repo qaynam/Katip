@@ -10,7 +10,8 @@
 
   interface Props {
     split: PinnedSplitView
-    position: PinnedPosition
+    /** 閉じたフォルダに覗かせているときは、入れ子の中にあって位置が分からないことがある */
+    position: PinnedPosition | null
     dropTargetAt: (edge: Edge) => DropTarget | null
   }
 

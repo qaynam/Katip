@@ -92,7 +92,7 @@ export interface PinnedFolderView {
   readonly isExpanded: boolean
   readonly canCreateSubfolder: boolean
   readonly children: ReadonlyArray<PinnedNodeView>
-  readonly peekedItems: ReadonlyArray<PinnedItemView>
+  readonly peekedItems: ReadonlyArray<PinnedItemView | PinnedSplitView>
 }
 
 interface PinnedFolderViewEncoded {
@@ -102,7 +102,9 @@ interface PinnedFolderViewEncoded {
   readonly isExpanded: boolean
   readonly canCreateSubfolder: boolean
   readonly children: ReadonlyArray<PinnedNodeViewEncoded>
-  readonly peekedItems: ReadonlyArray<typeof PinnedItemView.Encoded>
+  readonly peekedItems: ReadonlyArray<
+    typeof PinnedItemView.Encoded | typeof PinnedSplitView.Encoded
+  >
 }
 
 export type PinnedNodeView =
@@ -121,8 +123,8 @@ export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   children: Schema.Array(
     Schema.suspend((): Schema.Codec<PinnedNodeView, PinnedNodeViewEncoded> => PinnedNodeView),
   ),
-  // 閉じたフォルダの見出しの下に覗かせて表示するアイテム
-  peekedItems: Schema.Array(PinnedItemView),
+  // 閉じたフォルダの見出しの下に覗かせて表示するアイテム。分割ピンは 2 つそろえて 1 行で出す
+  peekedItems: Schema.Array(Schema.Union([PinnedItemView, PinnedSplitView])),
 })
 
 export const PinnedNodeView = Schema.Union([

@@ -40,6 +40,66 @@ describe("フォルダ", () => {
     expect(within(pinnedRegion()).getByText("開いている資料")).toBeTruthy()
   })
 
+  it("閉じたフォルダの下に、分割ピンが開いたときと同じ横並びの 1 行で出る", async () => {
+    const pair = pinnedSplit("pair", [
+      pinnedItem("left", {
+        title: "設計書",
+        openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(3) })),
+      }),
+      pinnedItem("right", { title: "プレビュー" }),
+    ])
+    await renderSidebar(
+      viewWithPins(
+        pinnedFolder("folder", {
+          title: "資料",
+          isExpanded: false,
+          children: [pair],
+          peekedItems: [pair],
+        }),
+      ),
+    )
+
+    const rowOf = (title: string) => screen.getByRole("button", { name: title }).closest("li")
+
+    expect(rowOf("設計書")).not.toBeNull()
+    expect(rowOf("設計書")).toBe(rowOf("プレビュー"))
+  })
+
+  it("覗かせている分割ピンも、ドラッグしてフォルダの外へ移せる", async () => {
+    const pair = pinnedSplit("pair", [
+      pinnedItem("left", {
+        title: "設計書",
+        openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(3) })),
+      }),
+      pinnedItem("right", { title: "プレビュー" }),
+    ])
+    const { connection } = await renderSidebar(
+      viewWithPins(
+        pinnedFolder("folder", {
+          title: "資料",
+          isExpanded: false,
+          children: [pair],
+          peekedItems: [pair],
+        }),
+        pinnedItem("after", { title: "後ろのピン" }),
+      ),
+    )
+    const rowOf = (title: string) =>
+      screen.getByRole("button", { name: title }).closest("li") as HTMLElement
+
+    await fireEvent.dragStart(rowOf("設計書"))
+    await dragOverAt(rowOf("後ろのピン"), 0.9)
+    await fireEvent.drop(rowOf("後ろのピン"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "MovePinnedItem",
+        bookmarkId: BookmarkId.make("pair"),
+        placement: { spaceId: "work", parentId: null, index: 2 },
+      },
+    ])
+  })
+
   it("開いたフォルダでは中身がすべて見える", async () => {
     await renderSidebar(
       viewWithPins(

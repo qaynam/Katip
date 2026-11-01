@@ -3,6 +3,7 @@ import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme, themeOf, type SpaceTheme, type ThemeColor } from "#modules/theme"
 import type { PinnedLiveFolderView, SidebarView } from "#protocol"
 import { SplitViewId } from "#platform/browser"
+import { withRecomputedPeeks } from "./fixture-peeks"
 import {
   archiveEntry,
   favoriteView,
@@ -150,6 +151,66 @@ const newsletters: PinnedLiveFolderView = pinnedLiveFolder("live-newsletters", {
   },
 })
 
+interface PageSeed {
+  readonly title: string
+  readonly url: string
+}
+
+/** 分割ビューのピン。`opened` が null なら両方とも閉じている */
+const splitPin = (
+  id: string,
+  [left, right]: readonly [PageSeed, PageSeed],
+  opened: { readonly firstTabId: number; readonly splitViewId: number } | null,
+) => {
+  const side = ({ title, url }: PageSeed, offset: number) =>
+    pinnedItem(`${id}-${offset}`, {
+      title,
+      url,
+      openTab:
+        opened === null
+          ? null
+          : openPinnedTab(
+              tabView(opened.firstTabId + offset, {
+                title,
+                url,
+                splitViewId: SplitViewId.make(opened.splitViewId),
+              }),
+            ),
+    })
+  return pinnedSplit(id, [side(left, 0), side(right, 1)])
+}
+
+const comparisons = pinnedFolder("comparisons", {
+  title: "見比べ",
+  isExpanded: false,
+  children: [
+    splitPin(
+      "compare-spec",
+      [
+        { title: "仕様書", url: "https://docs.example.com/spec/ja" },
+        { title: "Spec", url: "https://docs.example.com/spec/en" },
+      ],
+      { firstTabId: 81, splitViewId: 5 },
+    ),
+    splitPin(
+      "compare-design",
+      [
+        { title: "デザイン案 A", url: "https://design.example.com/a" },
+        { title: "デザイン案 B", url: "https://design.example.com/b" },
+      ],
+      { firstTabId: 83, splitViewId: 6 },
+    ),
+    splitPin(
+      "compare-closed",
+      [
+        { title: "旧版", url: "https://docs.example.com/v1" },
+        { title: "新版", url: "https://docs.example.com/v2" },
+      ],
+      null,
+    ),
+  ],
+})
+
 const workSpace = (now: number) =>
   spaceView("work", {
     name: SpaceName.make("仕事"),
@@ -185,11 +246,11 @@ const workSpace = (now: number) =>
               }),
               minutesOct21,
             ],
-            peekedItems: [minutesOct21],
           }),
           myPullRequests,
         ],
       }),
+      comparisons,
       workInbox(now),
       reviewRequests(now),
       mentions,
@@ -327,7 +388,7 @@ const household = spaceView("household", {
 
 export const fixtureView = (now: number): SidebarView => {
   const work = workSpace(now)
-  return sidebarView({
+  const view = sidebarView({
     spaces: [work, hobby, reading, travel, household, notes],
     activeSpaceId: work.id,
     favorites: [
@@ -365,4 +426,5 @@ export const fixtureView = (now: number): SidebarView => {
     ],
     autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(360) },
   })
+  return withRecomputedPeeks(view)
 }

@@ -28,7 +28,8 @@ export type DragSource =
       readonly bookmarkId: BookmarkId
       // 2 つのタブが分割ビューとして開いているときだけ値を持つ
       readonly openSplitViewId: SplitViewId | null
-      readonly position: PinnedPosition
+      // 覗かせている分割ピンは、ピンと同じく実際の親と位置が分からないことがある
+      readonly position: PinnedPosition | null
     }
   // 普通のフォルダもライブフォルダも、ブックマークのフォルダとして同じように動かす
   | {

@@ -319,6 +319,32 @@ describe("フィクスチャの素朴な応答", () => {
     })
   })
 
+  it("閉じたフォルダの中の開いている分割ピンは、2 つそろった 1 つとして覗かせる", () => {
+    const peeked = rootFolder(view, "comparisons")?.peekedItems ?? []
+
+    expect(peeked.map((node) => [node._tag, node.bookmarkId])).toStrictEqual([
+      ["PinnedSplit", "compare-spec"],
+      ["PinnedSplit", "compare-design"],
+    ])
+  })
+
+  it("フォルダを開くと何も覗かせず、閉じ直すとまた覗かせる", () => {
+    const expanded = viewAfter({
+      _tag: "SetFolderExpanded",
+      bookmarkId: BookmarkId.make("comparisons"),
+      isExpanded: true,
+    })
+    const collapsed = viewAfter(
+      { _tag: "SetFolderExpanded", bookmarkId: BookmarkId.make("comparisons"), isExpanded: false },
+      expanded,
+    )
+
+    expect([
+      rootFolder(expanded, "comparisons")?.peekedItems.length,
+      rootFolder(collapsed, "comparisons")?.peekedItems.length,
+    ]).toStrictEqual([0, 2])
+  })
+
   it("再現していないコマンドは、そのことを通知する", () => {
     const response = respondInFixture({ _tag: "ArchiveTab", tabId: TabId.make(31) }, view, NOW)
 

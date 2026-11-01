@@ -18,6 +18,7 @@
   import { addLiveFolderMenu, createFolder } from "./menus"
   import PinnedItemRow from "./PinnedItemRow.svelte"
   import PinnedNodes from "./PinnedNodes.svelte"
+  import PinnedSplitRow from "./PinnedSplitRow.svelte"
   import TitleEditor from "./TitleEditor.svelte"
 
   interface Props {
@@ -164,12 +165,20 @@
     {/if}
   {:else if folder.peekedItems.length > 0}
     <ul class="peek">
-      {#each folder.peekedItems as item (item.bookmarkId)}
-        <PinnedItemRow
-          {item}
-          position={childPosition(folder, item.bookmarkId)}
-          dropTargetAt={() => intoFolder}
-        />
+      {#each folder.peekedItems as node (node.bookmarkId)}
+        {#if node._tag === "PinnedSplit"}
+          <PinnedSplitRow
+            split={node}
+            position={childPosition(folder, node.bookmarkId)}
+            dropTargetAt={() => intoFolder}
+          />
+        {:else}
+          <PinnedItemRow
+            item={node}
+            position={childPosition(folder, node.bookmarkId)}
+            dropTargetAt={() => intoFolder}
+          />
+        {/if}
       {/each}
     </ul>
   {/if}

@@ -282,6 +282,93 @@ describe("ピン留め", () => {
   })
 })
 
+describe("閉じたフォルダに覗かせる分割ピン", () => {
+  const leftUrl = "https://spec.example/ja"
+  const rightUrl = "https://spec.example/en"
+  const splitPin: PinnedTree[number] = {
+    _tag: "PinnedSplit",
+    id: bookmarkId("pair"),
+    title: "仕様書 | Spec",
+    items: [
+      { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "仕様書", url: leftUrl },
+      { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "Spec", url: rightUrl },
+    ],
+  }
+  const collapsedFolderWith = (...children: PinnedTree) => homeWithPin([folder("f", children)])
+
+  /** 分割ピンの右側だけをタブで開いておく */
+  const rightSideOpen = (tab: Partial<BrowserTab> = {}) => ({
+    workspace: bindPinned(inHome(emptyWorkspace, 7), tabId(7), {
+      bookmarkId: bookmarkId("right"),
+      pinnedUrl: rightUrl,
+    }),
+    windowTabs: [browserTab(7, { url: Option.some(rightUrl), ...tab })],
+  })
+  const showingAllOpenTabs = (showAll: boolean) => ({
+    preferences: { ...sources().preferences, showAllOpenTabsInCollapsedFolders: showAll },
+  })
+
+  const peekedOf = (view: SidebarView) => {
+    const node = pinnedNodesOf(view)[0]
+    return node?._tag === "PinnedFolder"
+      ? node.peekedItems.map((peeked) =>
+          peeked._tag === "PinnedSplit"
+            ? peeked.items.map((item) => item.bookmarkId)
+            : peeked.bookmarkId,
+        )
+      : []
+  }
+
+  it("設定がオンなら、片方だけ開いていても、2 つそろった 1 行として覗かせる", () => {
+    const view = project({
+      ...rightSideOpen(),
+      ...showingAllOpenTabs(true),
+      pinnedTrees: collapsedFolderWith(splitPin),
+    })
+
+    expect(peekedOf(view)).toStrictEqual([["left", "right"]])
+  })
+
+  it("どちらの側も開いていなければ覗かせない", () => {
+    const view = project({
+      ...showingAllOpenTabs(true),
+      pinnedTrees: collapsedFolderWith(splitPin),
+    })
+
+    expect(peekedOf(view)).toStrictEqual([])
+  })
+
+  it("設定がオフでも、アクティブなタブを含む分割ピンは 1 行で覗かせる", () => {
+    const view = project({
+      ...rightSideOpen({ active: true }),
+      ...showingAllOpenTabs(false),
+      pinnedTrees: collapsedFolderWith(splitPin),
+    })
+
+    expect(peekedOf(view)).toStrictEqual([["left", "right"]])
+  })
+
+  it("設定がオフなら、開いていてもアクティブでない分割ピンは覗かせない", () => {
+    const view = project({
+      ...rightSideOpen({ active: false }),
+      ...showingAllOpenTabs(false),
+      pinnedTrees: collapsedFolderWith(splitPin),
+    })
+
+    expect(peekedOf(view)).toStrictEqual([])
+  })
+
+  it("入れ子のフォルダの中の分割ピンも、1 行で覗かせる", () => {
+    const view = project({
+      ...rightSideOpen(),
+      ...showingAllOpenTabs(true),
+      pinnedTrees: collapsedFolderWith(folder("inner", [splitPin])),
+    })
+
+    expect(peekedOf(view)).toStrictEqual([["left", "right"]])
+  })
+})
+
 describe("フォルダ", () => {
   const workspace = bindPinned(
     bindPinned(inHome(emptyWorkspace, 1, 2), tabId(1), {

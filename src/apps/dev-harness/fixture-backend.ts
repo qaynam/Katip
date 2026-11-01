@@ -22,6 +22,7 @@ import type { CommandResponse } from "../sidepanel/connection/memory-connection"
 import { suggestedTheme } from "../sidepanel/logic/space-themes"
 import { hostOf } from "../sidepanel/logic/view-queries"
 import { messages } from "../sidepanel/messages"
+import { withRecomputedPeeks } from "./fixture-peeks"
 import {
   liveItem,
   openPinnedTab,
@@ -70,11 +71,7 @@ const mapTree = (
       }),
       PinnedLiveFolder: onLiveFolder,
       PinnedFolder: (folder) =>
-        onFolder({
-          ...folder,
-          children: mapTree(folder.children, updates),
-          peekedItems: folder.peekedItems.map(onItem),
-        }),
+        onFolder({ ...folder, children: mapTree(folder.children, updates) }),
     }),
   )
 }
@@ -216,13 +213,7 @@ const withoutNode = (
   nodes.flatMap((node): ReadonlyArray<PinnedNodeView> => {
     if (node.bookmarkId === bookmarkId) return []
     if (node._tag !== "PinnedFolder") return [node]
-    return [
-      {
-        ...node,
-        children: withoutNode(node.children, bookmarkId),
-        peekedItems: node.peekedItems.filter((item) => item.bookmarkId !== bookmarkId),
-      },
-    ]
+    return [{ ...node, children: withoutNode(node.children, bookmarkId) }]
   })
 
 const insertNode = (
@@ -467,11 +458,7 @@ const openPinned = (view: SidebarView, bookmarkId: BookmarkId): SidebarView => {
             }
           : split,
       PinnedLiveFolder: (folder): PinnedNodeView => folder,
-      PinnedFolder: (folder) => ({
-        ...folder,
-        children: folder.children.map(open),
-        peekedItems: folder.peekedItems.map(openItemIfTarget),
-      }),
+      PinnedFolder: (folder) => ({ ...folder, children: folder.children.map(open) }),
     })
   const opened = mapSpaces(view, (space) => mapPinned(space, (nodes) => nodes.map(open)))
   const openedTab = Option.flatMap(findNode(opened, bookmarkId), (node) =>
@@ -700,12 +687,7 @@ const notReproduced = (view: SidebarView, command: SidebarCommand): CommandRespo
   notice: `フィクスチャでは ${command._tag} の結果を再現していません`,
 })
 
-/**
- * 検証ページで見た目を確かめるための、素朴なコマンドの解釈。background の規則は再現しない。
- *
- * @param now - 取得し直したライブフォルダの時刻に使う
- */
-export const respondInFixture = (
+const respondWithoutPeeks = (
   command: SidebarCommand,
   view: SidebarView,
   now: number,
@@ -852,3 +834,19 @@ export const respondInFixture = (
       Match.tag("SetGitHubToken", () => succeeded(view)),
       Match.orElse(() => notReproduced(view, command)),
     )
+
+/**
+ * 検証ページで見た目を確かめるための、素朴なコマンドの解釈。background の規則は再現しない。
+ *
+ * @param now - 取得し直したライブフォルダの時刻に使う
+ */
+export const respondInFixture = (
+  command: SidebarCommand,
+  view: SidebarView,
+  now: number,
+): CommandResponse => {
+  const response = respondWithoutPeeks(command, view, now)
+  return response.view === undefined
+    ? response
+    : { ...response, view: withRecomputedPeeks(response.view) }
+}

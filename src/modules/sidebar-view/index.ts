@@ -1,1 +1,1 @@
-export { projectSidebarView, type SidebarSources } from "./sidebar-view"
+export { peekableItems, projectSidebarView, type SidebarSources } from "./sidebar-view"
