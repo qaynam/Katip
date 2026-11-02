@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import { seedPins } from "./sidebar-actions"
 import { expect, test } from "./fixtures"
 
-test("設定画面で書き出すと、Space のピンと一時タブを書いた JSON ファイルがダウンロードされる", async ({
+test("exporting from the settings page downloads a JSON file with each Space's pins and temporary tabs", async ({
   context,
   site,
   sidebar,
@@ -15,6 +15,7 @@ test("設定画面で書き出すと、Space のピンと一時タブを書い�
   await expect(temporary.getByRole("button", { name: "Page /a" })).toBeVisible()
   const options = await context.newPage()
   await options.goto(new URL("options/index.html", background.url()).href)
+  await options.getByRole("tab", { name: "Data" }).click()
 
   const downloading = options.waitForEvent("download")
   await options.getByRole("button", { name: "Export" }).click()
