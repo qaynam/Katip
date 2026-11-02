@@ -101,9 +101,9 @@ const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
 
 const titleOf = (tab: BrowserTab) => Option.getOrElse(tab.title, () => urlOf(tab))
 
-// Space へ切り替えたらその Space のタブを前面に出す。1 つも無ければ新しいタブを開く。
-// 何も出さないと、サイドパネルは新しい Space を見せているのに、ブラウザは前の Space の
-// タブを表示し続け、どちらが正しいのか分からなくなる
+// Switching Spaces brings a tab of the new Space to the front, or opens a new tab if it has none.
+// Otherwise the side panel would show the new Space while the browser kept showing a tab of the
+// previous one, and it would be unclear which is right
 const switchToSpace = Effect.fnUntraced(function* (windowId: WindowId, spaceId: SpaceId) {
   const state = yield* KatipState
   const tabs = yield* Tabs
@@ -157,8 +157,8 @@ const spaceCommands = {
       ),
     ),
 
-  // ピン留めは Space と一緒にブックマークごと消えるが、開いている一時タブは閉じずに
-  // 残る Space へ移す。タブを閉じると、作業中のページを確認なしに失わせてしまう
+  // Pinned tabs go with the Space, bookmarks and all, but open temporary tabs aren't closed: they
+  // move to a remaining Space. Closing them would lose pages in use without asking
   DeleteSpace: Effect.fnUntraced(function* ({ spaceId }: { spaceId: SpaceId }) {
     const state = yield* KatipState
     const successor = Array.findFirst(yield* state.spaces.get, (space) => space.id !== spaceId)
@@ -182,7 +182,7 @@ const spaceCommands = {
     ),
 }
 
-/** ブックマークから消したライブフォルダの、取得中の処理とキャッシュを捨てる。 */
+/** Drops the running refreshes and the cache of live folders removed from the bookmarks. */
 const releaseLiveFolders = Effect.fnUntraced(function* (folderIds: ReadonlyArray<BookmarkId>) {
   if (folderIds.length === 0) return
   yield* (yield* LiveFolders).forget(folderIds)
@@ -193,8 +193,8 @@ const unpinFromChrome = Effect.fnUntraced(function* (tab: BrowserTab) {
   if (tab.pinned) yield* (yield* Tabs).update(tab.id, { pinned: false })
 })
 
-// 分割ピンの片方だけを外すと、残った 1 つのブックマークが普通のフォルダとして残ってしまう。
-// 分割ピンに属するタブを外すときは、分割ピンごと外して 2 つのタブを両方とも一時タブにする
+// Not one half of a split pin alone: the remaining bookmark would be left behind as a plain
+// folder. Unpinning a tab of a split pin removes the whole split pin and makes both tabs temporary
 const removePin = Effect.fnUntraced(function* (tracked: TrackedTab) {
   if (tracked.pinned === null) return
   const state = yield* KatipState
@@ -235,8 +235,8 @@ const splitPartnersIn = (windowTabs: ReadonlyArray<BrowserTab>) => (tabId: TabId
 }
 
 /**
- * タブ（分割ビューなら 2 つ）を Space の一時タブにして、表示順で指定した位置へ動かす。
- * ピン留めされていれば外し、Chrome で固定されていれば固定を外す。
+ * Makes the tabs (two for a split view) temporary tabs of the Space, and moves them to the given
+ * position in display order. Unpins them if they're pinned, in Katip or in Chrome.
  */
 const placeInTemporary = Effect.fnUntraced(function* (
   tabIds: ReadonlyArray<TabId>,
@@ -250,7 +250,7 @@ const placeInTemporary = Effect.fnUntraced(function* (
   const [first] = moving
   if (first === undefined) return
   yield* Effect.forEach(moving, unpinFromChrome, { discard: true })
-  // 分割ピンは 1 つ目のタブを外した時点で 2 つ分まとめて外れるので、毎回読み直す
+  // Re-read for each tab: unpinning the first tab of a split pin already unpins both
   yield* Effect.forEach(
     moving,
     (tab) =>
@@ -288,8 +288,8 @@ const placeInTemporary = Effect.fnUntraced(function* (
   yield* resplitIfBroken(moving)
 })
 
-// 分割ビューの 2 つを一緒に動かしたときに分割が保たれるかは Chrome の版によって違う。
-// 解けていたら、隣り合ったままなので作り直す
+// Whether a split view survives moving both of its tabs together depends on the Chrome version.
+// If it came apart, the tabs are still side by side, so the split is made again
 const resplitIfBroken = Effect.fnUntraced(function* (moved: ReadonlyArray<BrowserTab>) {
   const [left, right] = moved
   if (left === undefined || right === undefined || Option.isNone(left.splitViewId)) return
@@ -349,7 +349,7 @@ const placeInPinned = Effect.fnUntraced(function* (
   yield* state.workspace.update((workspace) => assignTab(workspace, tabId, spaceId, now))
 })
 
-/** ノードとその配下で、開いているタブが結びつきうるブックマークの ID。 */
+/** The IDs of the bookmarks in the node and below it that an open tab can be bound to. */
 const pinnedIdsOf = (node: PinnedNode): ReadonlyArray<BookmarkId> =>
   Match.valueTags(node, {
     PinnedBookmark: ({ id }): ReadonlyArray<BookmarkId> => [id],
@@ -377,7 +377,7 @@ const splitPairOf = Effect.fnUntraced(function* (splitViewId: SplitViewId) {
 const pinOf = (workspace: Workspace, tab: BrowserTab) =>
   Option.flatMap(trackedTab(workspace, tab.id), (tracked) => Option.fromNullishOr(tracked.pinned))
 
-// 2 つのタブが同じ分割ピンの左右に結びついていれば、その分割ピンのフォルダの ID を返す
+// The ID of the split pin's folder, if the two tabs are bound to its two sides
 const sharedSplitPin = Effect.fnUntraced(function* (left: BrowserTab, right: BrowserTab) {
   const workspace = yield* (yield* KatipState).workspace.get
   const pinned = yield* PinnedBookmarks
@@ -392,7 +392,8 @@ const sharedSplitPin = Effect.fnUntraced(function* (left: BrowserTab, right: Bro
     : Option.none<BookmarkId>()
 })
 
-// 閉じている側だけを、開いている側と並べて分割ビューで開く。両方とも開いていれば前面に出すだけ
+// Opens only the closed side, in a split view beside the open one. If both are open, only brings
+// them to the front
 const openSplitPin = Effect.fnUntraced(function* (
   windowId: WindowId,
   spaceId: SpaceId,
@@ -443,7 +444,7 @@ const pinSplit = Effect.fnUntraced(function* (
   if (Option.isSome(existing)) {
     yield* movePinnedNode(existing.value, position)
   } else {
-    // それぞれが別々にピン留めされていたら、その 2 つのピンは外して 1 つの分割ピンにまとめる
+    // Tabs pinned separately lose those two pins, which become one split pin
     yield* Effect.forEach(
       [left, right],
       (tab) =>
@@ -506,7 +507,7 @@ const splitCommands = {
         assignTab(workspace, tabId, targetSpace.value, now),
       )
     }
-    // 分割ビューにできるのは同じグループのタブどうしだけなので、先にグループを揃える
+    // Only tabs in the same group can form a split view, so the groups are matched first
     const current = yield* tabs.get(tabId)
     if (!Equal.equals(current.groupId, target.groupId)) {
       yield* Option.match(target.groupId, {
@@ -520,8 +521,8 @@ const splitCommands = {
     const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
     yield* tabs.move([tabId], { index: targetPosition + 1 })
     yield* tabs.createSplit([withTabId, tabId])
-    // 分割ビューは、その中のタブを表示しているときにしか画面に出ない。別のタブを表示したまま
-    // ドロップしても分割が見えるよう、ドラッグしたタブを前面に出す
+    // A split view is only on screen while one of its tabs is shown. The dragged tab is brought to
+    // the front so the split is visible even when it was dropped while another tab was shown
     yield* tabs.update(tabId, { active: true })
   }),
 
@@ -555,8 +556,8 @@ const tabCommands = {
 
   CloseTab: ({ tabId }: { tabId: TabId }) => Tabs.use((tabs) => tabs.remove([tabId])),
 
-  // ピンの名前はブックマークのタイトルそのものなので、上書きではなくブックマークを改名する。
-  // 空にしたときは、上書きを外したときと同じくページのタイトルに戻す
+  // Not an override for a pinned tab: a pin's name is its bookmark's title, so the bookmark is
+  // renamed. An empty name goes back to the page's title, as removing an override does
   RenameTab: Effect.fnUntraced(function* ({ tabId, title }: { tabId: TabId; title: string }) {
     const state = yield* KatipState
     const tracked = yield* trackedOrReject(tabId)
@@ -609,7 +610,7 @@ const tabCommands = {
 
   PinTab: Effect.fnUntraced(function* ({ tabId }: { tabId: TabId }) {
     const tracked = yield* trackedOrReject(tabId)
-    // 分割ビューの片方だけをピンにすると、もう片方が一時タブに残って分割ピンにならない
+    // Not one tab of a split view alone: the other would stay temporary, and no split pin forms
     const { splitViewId } = yield* (yield* Tabs).get(tabId)
     const space = yield* findSpace(tracked.spaceId)
     const atEnd: PinnedPosition = { parent: PinnedParent.SpaceRoot({ space }) }
@@ -749,7 +750,7 @@ const pinnedCommands = {
     yield* (yield* Tabs).update(tabId, { url: binding.pinnedUrl })
   }),
 
-  // ピンの名前はユーザーが付けたものなので、URL だけを今のページに置き換える
+  // Only the URL is replaced with the current page's: the pin's name is the user's own
   ReplacePinnedUrl: Effect.fnUntraced(function* ({ tabId }: { tabId: TabId }) {
     const state = yield* KatipState
     const pinned = yield* PinnedBookmarks
@@ -785,8 +786,8 @@ const pinnedCommands = {
     isExpanded: boolean
   }) => FolderExpansionStore.use((store) => store.setExpanded(bookmarkId, isExpanded)),
 
-  // ブックマークや分割ピンの ID にも付けられると、それらを消すときにはアイコンを捨てないので
-  // 保存値に残り続ける。普通のフォルダだけに付けさせる
+  // Only plain folders take an icon. Deleting a bookmark or split pin doesn't drop an icon, so an
+  // icon set on one would stay in storage forever
   SetFolderIcon: Effect.fnUntraced(function* ({
     bookmarkId,
     icon,
@@ -822,7 +823,7 @@ const parseUrl = Option.liftThrowable((url: string) => new URL(url))
 const isWebUrl = (url: string): boolean =>
   Option.exists(parseUrl(url), ({ protocol }) => protocol === "http:" || protocol === "https:")
 
-/** ウィンドウで見ている Space の一時タブとして開く。 */
+/** Opens the URL as a temporary tab of the Space shown in the window. */
 const openInActiveSpace = Effect.fnUntraced(function* (windowId: WindowId, url: string) {
   const state = yield* KatipState
   const tab = yield* (yield* Tabs).create({ windowId, url, active: true })
@@ -857,8 +858,8 @@ const liveFolderCommands = {
     yield* (yield* LiveFolders).refresh(live.id, live.source)
   }),
 
-  // 開いた項目は呼び出し元のウィンドウで見ている Space の一時タブにする。ライブフォルダの
-  // ある Space に入れると、別の Space を見ているときにタブが見えない所へ開いてしまう
+  // Not in the live folder's own Space but in the one shown in the calling window: while another
+  // Space is shown, the tab would open somewhere out of sight
   OpenLiveItem: Effect.fnUntraced(function* ({
     windowId,
     bookmarkId,
@@ -895,7 +896,8 @@ const liveFolderCommands = {
     yield* (yield* LiveFolders).setSort(bookmarkId, sort)
   }),
 
-  // サイドパネルから任意の文字列を受け取るので、javascript: や拡張・ブラウザの内部のページは開かない
+  // The side panel may send any string, so javascript: and the extension's or browser's internal
+  // pages are never opened
   OpenUrl: Effect.fnUntraced(function* ({ windowId, url }: { windowId: WindowId; url: string }) {
     if (!isWebUrl(url)) return yield* reject("background.url.cannotOpen")
     yield* openInActiveSpace(windowId, url)
@@ -978,7 +980,8 @@ const reasonFor = (error: {
       )
 
 /**
- * サイドパネルのコマンドを実行し、結果を返す。失敗も `Failed` として返し、Effect としては失敗しない。
+ * Runs a side panel command and returns its outcome. Failures are returned as `Failed` too; the
+ * Effect itself never fails.
  */
 export const runSidebarCommand = (command: SidebarCommand) =>
   executeCommand(command).pipe(
@@ -991,14 +994,14 @@ export const runSidebarCommand = (command: SidebarCommand) =>
     })),
     Effect.catch((error: { readonly _tag: string }) =>
       Effect.andThen(
-        Effect.logWarning("コマンドが失敗した", command._tag, error),
+        Effect.logWarning("A command failed", command._tag, error),
         Effect.map(reasonFor(error), (reason): CommandOutcome => ({ _tag: "Failed", reason })),
       ),
     ),
-    // 想定外の例外で止まったときも結果を返さないと、サイドパネルは応答を待ち続ける
+    // An outcome even for an unexpected exception: without one, the side panel waits forever
     Effect.catchDefect((defect) =>
       Effect.andThen(
-        Effect.logError("コマンドが想定外の例外で止まった", command._tag, defect),
+        Effect.logError("A command stopped on an unexpected exception", command._tag, defect),
         Effect.map(translate("background.operation.failed"), (reason): CommandOutcome => ({
           _tag: "Failed",
           reason,

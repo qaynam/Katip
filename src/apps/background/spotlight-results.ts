@@ -149,7 +149,7 @@ const spaceCandidate =
     },
   })
 
-// ブックマークレットは新しいタブで開いても動かないので候補にしない
+// Bookmarklets are left out: opened in a new tab, they don't work
 const isOpenableUrl = (url: string) => !url.toLowerCase().startsWith("javascript:")
 
 const bookmarkCandidates = Effect.fnUntraced(function* (
@@ -179,7 +179,7 @@ const historyCandidates = Effect.fnUntraced(function* (
   shownUrls: ReadonlySet<string>,
 ) {
   if (query.trim() === "") return []
-  // 任意の権限なので、許可されるまでは chrome.history そのものが無い
+  // An optional permission: until it's granted, chrome.history doesn't exist at all
   if (!(yield* (yield* Permissions).containsPermission("history"))) return []
   const pages = yield* (yield* History).search({
     text: query.trim(),
@@ -225,7 +225,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
       pinned !== null && openTabIds.has(tabId) ? [pinned.bookmarkId] : [],
     ),
   )
-  // 開いているピンは、そのタブを候補にする。ピンとしても出すと同じページが 2 行並ぶ
+  // An open pin is offered only as its tab; as a pin too, the same page would be listed twice
   const closedPins = pins.filter(({ node }) =>
     bookmarksOf(node).every((pin) => !openPinIds.has(pin.id)),
   )
@@ -238,10 +238,10 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   })
   const bookmarks = yield* bookmarkCandidates(query, pinnedIds).pipe(
     Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight でブックマークを検索できなかった", error), []),
+      Effect.as(Effect.logWarning("Spotlight couldn't search bookmarks", error), []),
     ),
   )
-  // 履歴には開いているタブやピンのページも残っているので、同じページが 2 行並ばないよう除く
+  // History also holds the pages of open tabs and pins; they're removed so no page is listed twice
   const shownUrls = new Set([
     ...tabs.map(urlOf),
     ...pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.url)),
@@ -249,7 +249,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   ])
   const history = yield* historyCandidates(query, shownUrls).pipe(
     Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight で履歴を検索できなかった", error), []),
+      Effect.as(Effect.logWarning("Spotlight couldn't search history", error), []),
     ),
   )
   return [
@@ -291,7 +291,7 @@ const shortcutEnvironment = Effect.gen(function* () {
   const assigned = yield* (yield* KeyboardShortcuts).assigned.pipe(
     Effect.catch((error) =>
       Effect.as(
-        Effect.logWarning("キーの割り当てを読めなかった", error),
+        Effect.logWarning("Couldn't read the assigned keys", error),
         new Map<string, string>(),
       ),
     ),
@@ -319,7 +319,7 @@ const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {
 
 const english = makeTranslator("en")
 
-// 表示の言語が英語以外でも、英語の名前で引けるようにする
+// Commands can also be found by their English names, whatever the display language
 const actionCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const context = yield* actionContextOf(callerWindowId)
   const translator = yield* currentTranslator
@@ -358,14 +358,14 @@ const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) 
 })
 
 /**
- * `callerWindowId` のウィンドウから開いた Spotlight に、`query` で並べる候補を求める。
+ * Finds the results to list for `query` in Spotlight opened over the `callerWindowId` window.
  *
  * @remarks
- * `Actions` では操作だけを返す。`All` では入力があるときだけ操作と閲覧履歴（`history` の権限が
- * あるときだけ）も候補に加える。
+ * `Actions` returns commands only. `All` adds commands and browsing history (the latter only with
+ * the `history` permission) only when something has been typed.
  *
- * 失敗しない。タブやブックマークを読めなかったときは候補を空とみなし、
- * URL を開く項目とウェブ検索の項目だけを返す。
+ * Never fails. When tabs or bookmarks can't be read, they're treated as having no results, and
+ * only the items for opening the URL and searching the web are returned.
  */
 export const findSpotlightResults = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
@@ -376,7 +376,7 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
   const actions = wantsActions
     ? yield* actionCandidates(callerWindowId).pipe(
         Effect.catch((error) =>
-          Effect.as(Effect.logWarning("Spotlight の操作を集められなかった", error), []),
+          Effect.as(Effect.logWarning("Couldn't gather Spotlight commands", error), []),
         ),
       )
     : []
@@ -384,7 +384,7 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
     mode === "All"
       ? yield* gatherCandidates(callerWindowId, query).pipe(
           Effect.catch((error) =>
-            Effect.as(Effect.logWarning("Spotlight の候補を集められなかった", error), []),
+            Effect.as(Effect.logWarning("Couldn't gather Spotlight results", error), []),
           ),
         )
       : []

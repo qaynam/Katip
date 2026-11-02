@@ -8,7 +8,7 @@ import { Tabs, type WindowId } from "#platform/browser"
 import { KatipState } from "./katip-state"
 import { currentTranslator } from "./translation"
 
-/** ウィンドウ 1 つ分のビューを、現在の状態とブラウザから組み立てる。 */
+/** Builds one window's view from the current state and the browser. */
 export const buildSidebarView = Effect.fnUntraced(function* (windowId: WindowId) {
   const state = yield* KatipState
   const settings = yield* (yield* SettingsRepository).get

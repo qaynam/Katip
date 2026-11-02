@@ -1,12 +1,12 @@
 import { Duration, Effect, Queue, Scope } from "effect"
 
 /**
- * 呼ばれるたびに待ち時間を置き、その間の呼び出しをまとめて 1 回だけ `effect` を実行する。
+ * Waits `delay` after each call, then runs `effect` once for all the calls made in the meantime.
  *
- * タブの読み込み中は onUpdated が短い間隔で何十回も届くため、そのたびに全ウィンドウの
- * ビューやタブグループを計算し直さないようにする。
+ * While a tab loads, onUpdated arrives dozens of times in quick succession; this keeps the views
+ * and tab groups of every window from being recomputed for each one.
  *
- * @returns 実行を予約する Effect。予約は即座に戻り、実行の完了を待たない。
+ * @returns An Effect that schedules a run. It returns at once, without waiting for the run.
  */
 export const makeDebounced = <E, R>(
   effect: Effect.Effect<void, E, R>,
@@ -21,7 +21,7 @@ export const makeDebounced = <E, R>(
           yield* Effect.sleep(delay)
           yield* Queue.clear(requests)
           yield* effect.pipe(
-            Effect.catchCause((cause) => Effect.logError("遅延実行した処理が失敗した", cause)),
+            Effect.catchCause((cause) => Effect.logError("A debounced effect failed", cause)),
           )
         }),
       ),

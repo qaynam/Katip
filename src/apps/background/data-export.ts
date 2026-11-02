@@ -8,7 +8,7 @@ import { ExportClientMessage, ExportServerMessage } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { KatipState } from "./katip-state"
 
-/** 今の状態を、書き出しファイルの中身にする。 */
+/** The current state, as the content of an export file. */
 export const exportFileContent = Effect.gen(function* () {
   const state = yield* KatipState
   const extension = yield* ExtensionInfo
@@ -32,7 +32,7 @@ export const exportFileContent = Effect.gen(function* () {
 const decodeClientMessage = Schema.decodeUnknownEffect(ExportClientMessage)
 const encodeServerMessage = Schema.encodeEffect(ExportServerMessage)
 
-// 送れないのは設定画面を閉じたときなので、送れなかった返事は捨てる
+// A reply only fails to send once the settings page has closed, so a failed reply is dropped
 const reply = (port: BrowserPort, message: ExportServerMessage) =>
   encodeServerMessage(message).pipe(
     Effect.orDie,
@@ -41,9 +41,9 @@ const reply = (port: BrowserPort, message: ExportServerMessage) =>
   )
 
 /**
- * 設定画面からの書き出しの求めを、切断されるまで受け持つ。
+ * Serves export requests from the settings page until it disconnects.
  *
- * @param content - 書き出しファイルの中身を作る。
+ * @param content - Builds the content of the export file.
  */
 export const serveDataExport = <E, R>(port: BrowserPort, content: Effect.Effect<string, E, R>) =>
   port.messages.pipe(
@@ -52,12 +52,13 @@ export const serveDataExport = <E, R>(port: BrowserPort, content: Effect.Effect<
         Option.isNone(message)
           ? Effect.void
           : content.pipe(
-              // 欠陥でも返事をする。返事が無いと、設定画面は待ち時間が過ぎるまで失敗を知らせられない
+              // Answers even on a defect: without an answer, the settings page can't report the
+              // failure until its timeout passes
               Effect.matchCauseEffect({
                 onSuccess: (exported): Effect.Effect<ExportServerMessage> =>
                   Effect.succeed({ _tag: "Exported", content: exported }),
                 onFailure: (cause) =>
-                  Effect.as(Effect.logError("書き出せなかった", cause), {
+                  Effect.as(Effect.logError("Couldn't export the data", cause), {
                     _tag: "Failed" as const,
                   }),
               }),

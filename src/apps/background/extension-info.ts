@@ -4,9 +4,9 @@ import { BrowserApiError } from "#platform/browser"
 export class ExtensionInfo extends Context.Service<
   ExtensionInfo,
   {
-    /** `chrome-extension://<id>/` の形。自拡張のページを Space に入れないために使う。 */
+    /** The origin of Katip's own pages, in the form `chrome-extension://<id>/`. */
     readonly origin: string
-    /** マニフェストに書いた拡張のバージョン。 */
+    /** The extension's version as written in the manifest. */
     readonly version: string
     readonly openOptionsPage: Effect.Effect<void, BrowserApiError>
   }

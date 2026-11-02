@@ -54,10 +54,10 @@ const activateSpacesOfActiveTabs = (
     )
 
 /**
- * service worker の起動時に、保存された状態をブラウザの現状に合わせる。
+ * Brings the saved state in line with the browser when the service worker starts.
  *
- * 起動を待つ間に届いたイベントは、この後で順に処理される。ここで所属させたタブの
- * TabCreated が後から届いても、所属済みなので二重には処理されない。
+ * Events that arrived while it starts are handled afterwards, in order. A TabCreated arriving
+ * later for a tab placed in a Space here isn't handled twice, since the tab already has a Space.
  */
 export const initialize = Effect.gen(function* () {
   const state = yield* KatipState

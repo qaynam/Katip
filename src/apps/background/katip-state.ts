@@ -13,8 +13,9 @@ export class KatipState extends Context.Service<
     readonly workspace: PersistedRef<Workspace>
     readonly restoreQueue: PersistedRef<RestoreQueue | null>
     /**
-     * session storage に所属の記録が無い状態で起動したか。ブラウザの再起動と拡張の再読み込みで
-     * 真になり、タブ ID を信用できないので URL 照合で所属を復元する。
+     * Whether it started with no record in session storage of which Space each tab belongs to.
+     * True after a browser restart or an extension reload; tab IDs can't be trusted then, so the
+     * Spaces are restored by matching URLs.
      */
     readonly isFreshSession: boolean
   }

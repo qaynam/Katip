@@ -10,7 +10,7 @@ const handleTabUpdated = Effect.fnUntraced(function* (
   const state = yield* KatipState
   const { changes, tab } = event
   if (changes.pinned === true) {
-    // Chrome で固定されたタブは Favorites になり、どの Space にも属さない
+    // A tab pinned in Chrome becomes a Favorite, which belongs to no Space
     yield* state.workspace.update((workspace) => forgetTab(workspace, tab.id))
     return
   }
@@ -19,9 +19,9 @@ const handleTabUpdated = Effect.fnUntraced(function* (
 })
 
 /**
- * ブラウザのイベントを所属の記録に反映する。
+ * Applies a browser event to the record of which Space each tab belongs to.
  *
- * ブックマークの変化はまとめて照合し直すため、ここでは扱わない。
+ * Bookmark events are left alone: bookmark changes are reconciled all at once instead.
  */
 export const handleBrowserEvent = (event: BrowserEvent) =>
   Effect.gen(function* () {

@@ -8,13 +8,13 @@ export const LIVE_FOLDER_REFRESH_ALARM = "katip/live-folders/refresh"
 
 const REFRESH_PERIOD_MINUTES = 5
 
-// サイドパネルはウィンドウごとに開き直されるので、開くたびに取得すると問い合わせが重なる
+// Side panels reopen in each window, so refreshing on every open would pile up requests
 const MIN_REFRESH_INTERVAL_MS = 60_000
 
 /**
- * ライブフォルダがあれば定期的な取得を予約し、無ければ予約を消す。
+ * Schedules periodic refreshes while any live folder exists, and clears the schedule otherwise.
  *
- * ライブフォルダを使わない人の service worker を、取得のためだけに起こさないため。
+ * This way the service worker of someone who doesn't use live folders isn't woken just to refresh.
  */
 export const scheduleLiveFolderRefresh = Effect.gen(function* () {
   const alarms = yield* Alarms
@@ -23,8 +23,8 @@ export const scheduleLiveFolderRefresh = Effect.gen(function* () {
     yield* alarms.clear(LIVE_FOLDER_REFRESH_ALARM)
     return
   }
-  // 同じ周期のアラームを作り直すと次の発火が先送りされる。service worker は頻繁に
-  // 起き直すので、起動のたびに作り直すと一度も発火しないことがある
+  // Not recreated on every start: recreating an alarm, even with the same period, pushes its next
+  // firing back, and the service worker restarts so often that it might never fire
   const current = (yield* alarms.getAll).find((alarm) => alarm.name === LIVE_FOLDER_REFRESH_ALARM)
   if (current !== undefined && Option.contains(current.periodInMinutes, REFRESH_PERIOD_MINUTES)) {
     return
@@ -38,10 +38,12 @@ const pinnedLiveFolders = Effect.gen(function* () {
 })
 
 /**
- * 前回の取得から間が空いたライブフォルダの取得を始める。取得が終わるのは待たない。
+ * Starts refreshing the live folders whose last refresh was long enough ago, without waiting for
+ * the refreshes to finish.
  *
- * すべての Space のピン留めを読めたときは、どこにも無くなったライブフォルダのキャッシュを捨てる。
- * 読めない Space があるときに捨てると、その Space にあるライブフォルダの中身まで失うため捨てない。
+ * When the pinned tabs of every Space could be read, drops the cache of live folders that no
+ * longer exist anywhere. If any Space couldn't be read nothing is dropped, since that would also
+ * lose the contents of the live folders in that Space.
  */
 export const refreshDueLiveFolders = Effect.gen(function* () {
   const liveFolders = yield* LiveFolders
@@ -60,7 +62,7 @@ export const refreshDueLiveFolders = Effect.gen(function* () {
   }
 })
 
-/** 取得元が条件に合うライブフォルダの取得を、前回の取得からの間隔によらず始める。 */
+/** Starts refreshing the live folders whose source matches, however recently they refreshed. */
 export const refreshLiveFoldersWhere = (matches: (source: LiveSource) => boolean) =>
   Effect.gen(function* () {
     const liveFolders = yield* LiveFolders

@@ -11,7 +11,7 @@ import { findSpotlightResults } from "./spotlight-results"
 const decodeClientMessage = Schema.decodeUnknownEffect(SpotlightClientMessage)
 const encodeServerMessage = Schema.encodeEffect(SpotlightServerMessage)
 
-// 送れないのは Spotlight が閉じられたときなので、送れなかった応答は捨てる
+// A reply only fails to send once Spotlight has closed, so a failed reply is dropped
 const reply = (port: BrowserPort, message: SpotlightServerMessage) =>
   encodeServerMessage(message).pipe(
     Effect.orDie,
@@ -23,10 +23,11 @@ export class SpotlightHub extends Context.Service<
   SpotlightHub,
   {
     /**
-     * Spotlight からの接続を、切断されるまで受け持つ。メッセージは届いた順に 1 つずつ処理する。
+     * Serves a Spotlight connection until it disconnects, handling messages one at a time in the
+     * order they arrive.
      *
-     * @param choose - 選ばれた候補を開く。`windowId` は Spotlight を開いたウィンドウ。
-     *   失敗は `SpotlightOutcome` に含めて返すこと。
+     * @param choose - Opens the chosen result. `windowId` is the window Spotlight was opened over.
+     *   Failures must be returned inside the `SpotlightOutcome`.
      */
     serve<R>(
       port: BrowserPort,
@@ -40,7 +41,7 @@ export class SpotlightHub extends Context.Service<
   static readonly layer = Layer.effect(
     SpotlightHub,
     Effect.gen(function* () {
-      // 検索に要るサービスを構築時に捕まえ、serve の要求を choose の分だけにする
+      // The services search needs are captured here, so serve requires only what choose does
       const searchContext =
         yield* Effect.context<Effect.Services<ReturnType<typeof findSpotlightResults>>>()
 

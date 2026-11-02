@@ -4,10 +4,10 @@ const readBuildId = () =>
   )
 
 /**
- * 開発ビルドが書き換わったら拡張を再読み込みする。
+ * Reloads the extension when the development build changes.
  *
- * service worker が起きている間しか見張らないが、サイドパネルや検証ページが開いていれば
- * 定期的な KeepAlive で起き続けるので、確認しながら作業する用途には足りる。
+ * It only watches while the service worker is awake, but an open side panel or development page
+ * keeps it awake with periodic KeepAlives, which is enough for checking changes while working.
  */
 export const reloadOnRebuild = async () => {
   const initial = await readBuildId().catch(() => null)
@@ -16,7 +16,7 @@ export const reloadOnRebuild = async () => {
       .then((current) => {
         if (current !== null && current !== initial) chrome.runtime.reload()
       })
-      // ビルド中は dist が一時的に空になり読めないことがある。次の確認で拾えばよい
+      // Ignored: dist can be briefly empty during a build, and the next check picks the change up
       .catch(() => undefined)
   }, 1000)
 }

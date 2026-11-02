@@ -39,9 +39,9 @@ export const placementContext = Effect.gen(function* () {
   } satisfies PlacementContext
 })
 
-// URL がまだ決まらないうちに作られたタブは、ひとまず通常の規則で置いておき、URL が
-// 決まった時点で復元レコードと照合し直す。再起動直後の数分しか意味を持たないので、
-// service worker が止まれば失われるメモリ上の記録で足りる
+// A tab created before its URL is known is placed by the usual rules for now, and matched against
+// the restore records again once its URL is known. Kept only in memory, though lost when the
+// service worker stops: it matters only in the few minutes after a restart
 const provisionalTabs = MutableHashSet.empty<TabId>()
 
 const claimFromRestoreQueue = Effect.fnUntraced(function* (tab: BrowserTab, url: string) {
@@ -61,9 +61,11 @@ const claimFromRestoreQueue = Effect.fnUntraced(function* (tab: BrowserTab, url:
 })
 
 /**
- * まだどの Space にも属していないタブを所属させる。再起動後の復元レコードがあればそれを優先する。
+ * Places a tab that belongs to no Space yet in one, preferring a restore record from before the
+ * restart when there is one.
  *
- * 既に所属しているタブには何もしないので、同じタブについて何度呼んでもよい。
+ * Does nothing to a tab that already has a Space, so it's safe to call any number of times for
+ * the same tab.
  */
 export const admitTab = Effect.fnUntraced(function* (tab: BrowserTab) {
   const state = yield* KatipState
@@ -77,7 +79,7 @@ export const admitTab = Effect.fnUntraced(function* (tab: BrowserTab) {
   }
 })
 
-/** URL が決まったタブを、仮置きしていたなら復元レコードと照合し直す。 */
+/** Once a provisionally placed tab's URL is known, matches it against the restore records again. */
 export const settleProvisionalTab = Effect.fnUntraced(function* (tab: BrowserTab) {
   if (!MutableHashSet.has(provisionalTabs, tab.id)) return
   const url = urlOf(tab)

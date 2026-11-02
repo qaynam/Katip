@@ -6,7 +6,7 @@ import { buildSidebarView } from "./sidebar-view-source"
 interface Subscriber {
   readonly id: number
   readonly port: BrowserPort
-  /** None は最後にフォーカスされたウィンドウを追いかける購読（開発用ページ）。 */
+  /** None follows whichever window was focused last, as the development page does. */
   readonly windowId: Option.Option<WindowId>
 }
 
@@ -18,7 +18,8 @@ const post = (port: BrowserPort, message: ServerMessage) =>
     Effect.orDie,
     Effect.flatMap((encoded) => port.post(encoded)),
     Effect.as(true),
-    // 切断の通知より先に送信が失敗することがある。購読の後始末は切断側で行う
+    // Not unsubscribed here: a send can fail before the disconnect arrives, and the disconnect
+    // cleans the subscription up
     Effect.catch(() => Effect.succeed(false)),
   )
 
@@ -26,15 +27,15 @@ export class SidebarHub extends Context.Service<
   SidebarHub,
   {
     /**
-     * サイドパネルからの接続を、切断されるまで受け持つ。
+     * Serves a side panel's connection until it disconnects.
      *
-     * @param run - 受け取ったコマンドの実行。失敗は `CommandOutcome` に含めて返すこと。
+     * @param run - Runs a received command. Failures must be returned inside the `CommandOutcome`.
      */
     serve<R>(
       port: BrowserPort,
       run: (command: SidebarCommand) => Effect.Effect<CommandOutcome, never, R>,
     ): Effect.Effect<void, never, R>
-    /** 購読中のすべてのサイドパネルへ、変化があったビューだけを送る。 */
+    /** Sends every subscribed side panel its view, if it changed since the last one sent. */
     readonly publish: Effect.Effect<void>
     notify(message: string): Effect.Effect<void>
   }
@@ -43,12 +44,12 @@ export class SidebarHub extends Context.Service<
     SidebarHub,
     Effect.gen(function* () {
       const windows = yield* Windows
-      // ビューの組み立てに要るサービスを構築時に捕まえ、publish を依存の無い Effect にする。
-      // 呼び出し側（デバウンスや各ハンドラ）にサービスの一覧を漏らさないため
+      // The services that building a view needs are captured here, so publish requires nothing
+      // and the list of services doesn't leak into its callers (the debounce and each handler)
       const viewContext =
         yield* Effect.context<Effect.Services<ReturnType<typeof buildSidebarView>>>()
       const subscribers = yield* Ref.make<ReadonlyArray<Subscriber>>([])
-      // ビューの全体を毎回送ると、タブの読み込み中にサイドパネルの再描画が止まらなくなる
+      // Sending the whole view every time would keep side panels redrawing nonstop while tabs load
       const lastSent = yield* Ref.make<ReadonlyMap<number, string>>(new Map())
       const nextId = yield* Ref.make(0)
 
@@ -71,7 +72,7 @@ export class SidebarHub extends Context.Service<
             yield* Ref.update(lastSent, (sent) => new Map(sent).set(subscriber.id, encoded))
           }
         }).pipe(
-          Effect.catchCause((cause) => Effect.logWarning("ビューを送れなかった", cause)),
+          Effect.catchCause((cause) => Effect.logWarning("Couldn't send the view", cause)),
           Effect.provideContext(viewContext),
         )
 

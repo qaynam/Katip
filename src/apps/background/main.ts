@@ -14,7 +14,8 @@ import { applicationLayer, program } from "./program"
 
 if (import.meta.env.MODE === "development") exposeLogsForDevelopment()
 
-// service worker を起こしたイベントを取りこぼさないよう、ほかの処理より先に同期的に購読する
+// Subscribed synchronously before anything else, so the event that woke the service worker isn't
+// missed
 const captured = captureBrowserEvents(chrome)
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
@@ -42,5 +43,6 @@ Effect.runFork(
     : runnable,
 )
 
-// service worker では import() が使えないので静的に読み込み、本番ビルドでは分岐ごと消させる
+// Imported statically, since a service worker can't use import(); production builds drop the
+// whole branch
 if (import.meta.env.MODE === "development") void reloadOnRebuild()

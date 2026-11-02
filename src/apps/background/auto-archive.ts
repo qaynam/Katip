@@ -12,8 +12,8 @@ import { urlOf } from "./tab-admission"
 
 export const AUTO_ARCHIVE_ALARM = "katip/auto-archive"
 
-// 同じ周期のアラームを作り直すと次の発火が先送りされる。service worker は頻繁に
-// 起き直すので、起動のたびに作り直すと一度も発火しないことがある
+// Not recreated on every start: recreating an alarm, even with the same period, pushes its next
+// firing back, and the service worker restarts so often that it might never fire
 export const scheduleAutoArchive = Effect.gen(function* () {
   const alarms = yield* Alarms
   const { autoArchive } = yield* (yield* SettingsRepository).get
@@ -42,7 +42,7 @@ export const runAutoArchive = Effect.gen(function* () {
       isAudible: tab.audible,
       isChromePinned: tab.pinned,
       isBoundToPin: Option.exists(tracked, (t) => t.pinned !== null),
-      // 所属していないタブは対象外なので、ここでは時刻を問わない
+      // A tab in no Space is never archived, so its time doesn't matter
       lastActiveAt: Option.match(tracked, { onNone: () => now, onSome: (t) => t.lastActiveAt }),
     }
   })

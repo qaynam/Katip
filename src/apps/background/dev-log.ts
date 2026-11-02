@@ -17,12 +17,12 @@ const describe = (value: unknown): string => {
 }
 
 /**
- * 開発ビルドで、background のログを localhost の検証ページから取り出せるようにする。
+ * In development builds, lets the development page on localhost read the background's logs.
  *
- * service worker の DevTools はブラウザ自動操作ツールから開けないため、ログを手元に溜め、
- * `runtime.onMessageExternal` で `{ type: "katip/dev-log" }` を受けたら返す。Port ではなく
- * 単発のメッセージにしているのは、Port はサイドパネル用の購読として background が受け持ち、
- * 知らない名前の接続を切ってしまうため。
+ * Browser automation tools can't open the service worker's DevTools, so the logs are kept here
+ * and sent back on `{ type: "katip/dev-log" }` through `runtime.onMessageExternal`. It's a
+ * one-off message rather than a Port because the background serves Ports as side panel
+ * subscriptions and disconnects those with names it doesn't know.
  */
 export const exposeLogsForDevelopment = () => {
   const entries: Array<Entry> = []

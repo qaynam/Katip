@@ -14,10 +14,10 @@ const bookmarkIdsIn = (tree: PinnedTree): ReadonlyArray<BookmarkId> =>
   )
 
 /**
- * 存在しなくなったブックマークへのバインディングを外す。
+ * Unbinds tabs from bookmarks that no longer exist.
  *
- * ツリーを読めなかった Space のバインディングは残す。一時的な読み込み失敗で、開いている
- * ピンを一時タブに落としてしまわないため。
+ * Bindings in a Space whose tree couldn't be read are kept, so that a passing read failure doesn't
+ * turn open pinned tabs into temporary tabs.
  */
 export const pruneStaleBindings = Effect.gen(function* () {
   const state = yield* KatipState

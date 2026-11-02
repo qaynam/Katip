@@ -26,8 +26,8 @@ const activateTab = Effect.fnUntraced(function* (tabId: TabId) {
   return succeeded
 })
 
-// ピンを開く・Space を切り替える規則はサイドパネルから操作したときと同じにしたいので、
-// 同じコマンドを実行する
+// Runs the side panel's command rather than its own logic, so pins open and Spaces switch by the
+// same rules as from the side panel
 const runAsSidebarCommand = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   command: SidebarCommand,
@@ -38,8 +38,8 @@ const runAsSidebarCommand = Effect.fnUntraced(function* (
   return succeeded
 })
 
-// タブの所属は作成イベントの処理でも決まるが、その時点でアクティブな Space が変わっていても
-// 開いたときの Space に入るよう、ここで所属させる
+// Not left to the handling of the creation event, which also places the tab: by then the active
+// Space may have changed, and the tab belongs in the Space active when it was opened
 const openTabInActiveSpace = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   url: Option.Option<string>,
@@ -116,7 +116,8 @@ const closeTemporaryTabs = Effect.fnUntraced(function* (callerWindowId: WindowId
   })
 })
 
-// ピン留め・タブを閉じる・Space へ移すなどは、サイドパネルから操作したときと同じ規則で動かす
+// Pinning, closing a tab, moving it to a Space and the like follow the same rules as from the
+// side panel
 const runAction = (callerWindowId: WindowId, action: Action) =>
   Match.valueTags(action, {
     CopyUrl: () => copyActiveTab(callerWindowId, "Url"),
@@ -149,12 +150,12 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
   })
 
 /**
- * Spotlight で選ばれた候補を開く。`callerWindowId` は Spotlight を開いたウィンドウで、
- * 開いたページはそこへ出し、そのウィンドウを前面に戻す（開いているタブを選んだときはそのタブのウィンドウ）。
- * 操作は、そのウィンドウでアクティブなタブを対象に実行する。
+ * Opens the result chosen in Spotlight. `callerWindowId` is the window Spotlight was opened over:
+ * pages open there, and that window is brought back to the front (for an open tab, the tab's own
+ * window is). Commands act on the active tab of that window.
  *
  * @remarks
- * 失敗しない。開けなかったときは理由を `Failed` で返す。
+ * Never fails. When the result can't be opened, returns the reason as `Failed`.
  */
 export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightResult) =>
   Match.valueTags(result, {
@@ -179,7 +180,7 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
   }).pipe(
     Effect.catch((error) =>
       Effect.andThen(
-        Effect.logWarning("Spotlight の候補を開けなかった", result._tag, error),
+        Effect.logWarning("Couldn't open the Spotlight result", result._tag, error),
         Effect.map(translate("background.spotlight.cannotOpen"), failed),
       ),
     ),

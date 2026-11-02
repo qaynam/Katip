@@ -11,15 +11,17 @@ import { currentTranslator } from "./translation"
 export type CopyFormat = "Url" | "MarkdownLink"
 
 /**
- * タブの URL を `format` の形でクリップボードに写し、写したことの知らせを表示する言語で返す。
+ * Copies the tab's URL to the clipboard in `format`, and returns the notice saying so in the
+ * display language.
  *
  * @remarks
- * URL を持たないタブ（読み込みを始める前の新しいタブなど）では、何も写さずに失敗する。
+ * Fails without copying anything for a tab with no URL, such as a new tab that hasn't started
+ * loading.
  */
 export const copyTab = Effect.fnUntraced(function* (tab: BrowserTab, format: CopyFormat) {
   const url = urlOf(tab)
   if (url === "") {
-    return yield* new BrowserApiError({ api: "clipboard", cause: "タブに URL が無い" })
+    return yield* new BrowserApiError({ api: "clipboard", cause: "the tab has no URL" })
   }
   const text = Match.value(format).pipe(
     Match.when("Url", () => url),
@@ -33,8 +35,8 @@ export const copyTab = Effect.fnUntraced(function* (tab: BrowserTab, format: Cop
   return translator.t(format === "Url" ? "actions.copied.url" : "actions.copied.markdownLink")
 })
 
-// サイドパネルを閉じていても気づけるよう、写したタブのページの上に出す。chrome:// のページや、
-// 許可の無いページには注入できないので、そのときだけサイドパネルに知らせる
+// Not in the side panel, which may be closed, but on the copied tab's page. chrome:// pages and
+// pages Katip has no access to can't be injected into, so only those fall back to the side panel
 const showNotice = Effect.fnUntraced(function* (tab: BrowserTab, notice: string) {
   const shownOnPage = yield* (yield* Scripting)
     .executeFunction(tab.id, showPageToast, [notice])
@@ -46,10 +48,10 @@ const showNotice = Effect.fnUntraced(function* (tab: BrowserTab, notice: string)
 })
 
 /**
- * {@link copyTab} で写し、写したこと（写せなければ写せなかったこと）を、写したタブのページの上に
- * 表示する。ページに表示できなければサイドパネルに知らせる。
+ * Copies with {@link copyTab}, and shows on the copied tab's page that it copied (or that it
+ * couldn't). Tells the side panel instead when the page can't show it.
  *
- * @returns 写せたか。
+ * @returns Whether it copied.
  */
 export const copyTabWithNotice = Effect.fnUntraced(function* (tab: BrowserTab, format: CopyFormat) {
   const copied = yield* Effect.result(copyTab(tab, format))
@@ -57,7 +59,7 @@ export const copyTabWithNotice = Effect.fnUntraced(function* (tab: BrowserTab, f
     onSuccess: Effect.succeed,
     onFailure: (error) =>
       Effect.andThen(
-        Effect.logWarning("タブの URL を写せなかった", error),
+        Effect.logWarning("Couldn't copy the tab's URL", error),
         Effect.map(currentTranslator, (translator) => translator.t("actions.copyFailed")),
       ),
   })

@@ -9,12 +9,12 @@ const isSpotlightPage = (extensionOrigin: string) => (tab: BrowserTab) =>
   urlOf(tab).startsWith(new URL(SPOTLIGHT_PAGE_PATH, extensionOrigin).href)
 
 /**
- * `callerWindowId` のウィンドウの上に Spotlight を開く。
+ * Opens Spotlight over the `callerWindowId` window.
  *
  * @remarks
- * 既にそのウィンドウのための Spotlight が開いていれば、新しく開かずに前面へ出す。
- * 別のウィンドウのために開いていたものは閉じてから開き直す。
- * Space を持たないウィンドウ（ポップアップや devtools）の上には開かない。
+ * If Spotlight is already open for that window, brings it to the front instead of opening another.
+ * One open for a different window is closed, then opened again.
+ * Never opens over a window without Spaces (popups and devtools).
  */
 export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowId: WindowId) {
   const windows = yield* Windows

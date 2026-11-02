@@ -2,19 +2,22 @@ import { Context, Option } from "effect"
 import type { PortSender } from "#platform/browser"
 
 /**
- * 拡張の外（他の拡張機能や Web ページ）から接続されたとき、受け付けるかどうか。
+ * Whether to accept a connection from outside the extension (another extension or a web page).
  *
  * @remarks
- * 既定ではすべて断る。マニフェストに `externally_connectable` が無いと、Chrome はほかのどの
- * 拡張機能からの接続も通すので、断らなければタブの一覧やライブフォルダの中身を読まれ、
- * タブを操作されてしまう。
+ * Refuses all by default. Without `externally_connectable` in the manifest, Chrome lets any other
+ * extension connect, and unless refused it could read the tab list and live folder contents, and
+ * operate on tabs.
  */
 export const AcceptsExternalConnection = Context.Reference<(sender: PortSender) => boolean>(
   "katip/background/AcceptsExternalConnection",
   { defaultValue: () => () => false },
 )
 
-/** localhost で動かす検証用ページからの接続か。開発ビルドでだけ受け付ける。 */
+/**
+ * Whether the connection comes from the development page served on localhost. Only development
+ * builds accept it.
+ */
 export const isLocalDevelopmentPage = (sender: PortSender): boolean =>
   Option.exists(
     sender.origin,

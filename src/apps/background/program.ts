@@ -59,8 +59,8 @@ const saveSnapshot = Effect.gen(function* () {
   )
 })
 
-// 同期を OFF にしたときは何もしない。既存のグループを解くと、ユーザーが手で整えた
-// タブストリップを壊してしまうため
+// Existing groups are left alone when syncing is off: ungrouping them would wreck a tab strip the
+// user arranged by hand
 const syncTabGroupsIfEnabled = Effect.gen(function* () {
   const settings = yield* (yield* SettingsRepository).get
   if (!settings.syncTabGroups) return
@@ -74,7 +74,7 @@ const syncTabGroupsIfEnabled = Effect.gen(function* () {
     .sync(desired)
     .pipe(
       Effect.catchTag("TabGroupSyncIncomplete", (error) =>
-        Effect.logWarning("タブグループの同期を一部完了できなかった", error.failures),
+        Effect.logWarning("Couldn't finish part of the tab group sync", error.failures),
       ),
     )
 })
@@ -99,25 +99,25 @@ const logFailure =
 
 const WINDOW_CLOSING_QUIET_MS = 5_000
 
-/** 状態を変える 1 回の処理に許す時間。 */
+/** How long a single state-changing operation may take. */
 export const OperationTimeLimit = Context.Reference<Duration.Input>(
   "katip/background/OperationTimeLimit",
   { defaultValue: () => "10 seconds" },
 )
 
 /**
- * background の本体。起動時の整合を取った後、ブラウザのイベント・サイドパネルの接続・
- * 設定の変更を処理し続ける。
+ * The background itself. After reconciling at startup, it keeps handling browser events, side
+ * panel connections, and settings changes.
  *
- * 状態を変える処理はすべて 1 つのセマフォで直列化する。イベントとコマンドが交互に
- * 状態を読み書きすると、片方の変更をもう片方が上書きしてしまうため。
+ * Every state-changing operation is serialized by one semaphore: if events and commands read and
+ * wrote the state interleaved, one would overwrite the other's changes.
  */
 export const program = Effect.gen(function* () {
   const lock = yield* Semaphore.make(1)
   const timeLimit = yield* OperationTimeLimit
-  // 状態を変える処理は 1 つずつしか進まないので、Chrome の API 呼び出しが 1 つでも返って
-  // こないと、タブの切り替えも含めて以降のすべての操作が詰まる。時間を超えたら打ち切って
-  // ロックを手放し、次の操作へ進める
+  // State-changing operations run one at a time, so a single Chrome API call that never returns
+  // would block every later operation, switching tabs included. Past the time limit the operation
+  // is cut off and lets go of the lock, so the next one can run
   const serialize = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Semaphore.withPermits(lock, 1)(Effect.timeout(effect, timeLimit))
   const hub = yield* SidebarHub
@@ -126,9 +126,10 @@ export const program = Effect.gen(function* () {
 
   const publishViews = yield* makeDebounced(hub.publish, "30 millis")
   const syncGroups = yield* makeDebounced(serialize(syncTabGroupsIfEnabled), "200 millis")
-  // ブラウザを終了すると、全タブについてウィンドウを閉じたことによる TabRemoved が届く。
-  // その後で記録を取り直すと、再起動時に必要な記録が空で上書きされ、開き直したタブが
-  // ピンや Space に戻れなくなる。ウィンドウを閉じた直後は記録を取り直さず、直前の記録を残す
+  // Quitting the browser sends a TabRemoved for every tab, marked as closed with its window. A
+  // snapshot taken after that would overwrite the one needed at restart with an empty one, and
+  // the reopened tabs couldn't return to their pins and Spaces. So right after a window closes,
+  // no new snapshot is taken and the previous one is kept
   const lastWindowClosingAt = yield* Ref.make(Number.NEGATIVE_INFINITY)
   const saveSnapshotUnlessClosing = Effect.gen(function* () {
     const sinceClosing = (yield* Clock.currentTimeMillis) - (yield* Ref.get(lastWindowClosingAt))
@@ -142,8 +143,9 @@ export const program = Effect.gen(function* () {
     "100 millis",
   )
 
-  // 取得は状態を変える処理のロックの外で進むので、始まりと終わりを表示へ知らせる。
-  // 取得はサイドパネルの接続を受けた直後から始まりうるので、接続を受け付けるより前に購読する
+  // Refreshes run outside the lock that state-changing operations take, so the views are published
+  // whenever one starts or ends. A refresh can start as soon as a side panel connects, so this
+  // subscribes before connections are accepted
   yield* (yield* LiveFolders).refreshEvents.pipe(
     Stream.runForEach(() => publishViews),
     Effect.forkScoped,
@@ -174,7 +176,7 @@ export const program = Effect.gen(function* () {
       ),
     )
 
-  const refreshLiveFoldersOnOpen = logFailure("ライブフォルダの取得を始められなかった")(
+  const refreshLiveFoldersOnOpen = logFailure("Couldn't start refreshing live folders")(
     serialize(refreshDueLiveFolders),
   )
 
@@ -191,7 +193,7 @@ export const program = Effect.gen(function* () {
                   serialize(runSidebarCommand(command)).pipe(
                     Effect.catchTag("TimeoutError", () =>
                       Effect.andThen(
-                        Effect.logError("コマンドが時間内に終わらなかった", command),
+                        Effect.logError("A command didn't finish in time", command),
                         timedOut,
                       ),
                     ),
@@ -206,7 +208,7 @@ export const program = Effect.gen(function* () {
                   serialize(runSpotlightChoice(windowId, result)).pipe(
                     Effect.catchTag("TimeoutError", () =>
                       Effect.andThen(
-                        Effect.logError("Spotlight の決定が時間内に終わらなかった"),
+                        Effect.logError("A Spotlight choice didn't finish in time"),
                         timedOut,
                       ),
                     ),
@@ -221,28 +223,29 @@ export const program = Effect.gen(function* () {
     Effect.forkScoped(),
   )
 
-  // 起動時の整合が失敗しても、処理を止めずに続ける。止めるとサイドパネルもショートカットも
-  // 一切応答しなくなり、ユーザーには何が起きたのか分からない
-  yield* logFailure("起動時の整合に失敗した")(serialize(initialize))
-  yield* logFailure("自動アーカイブの予約に失敗した")(scheduleAutoArchive)
-  yield* logFailure("ライブフォルダの取得の予約に失敗した")(scheduleLiveFolderRefresh)
+  // Not stopped when reconciling at startup fails: the side panel and shortcuts would stop
+  // responding entirely, and the user couldn't tell what happened
+  yield* logFailure("Couldn't reconcile at startup")(serialize(initialize))
+  yield* logFailure("Couldn't schedule auto archive")(scheduleAutoArchive)
+  yield* logFailure("Couldn't schedule live folder refreshes")(scheduleLiveFolderRefresh)
   yield* afterChange
 
-  // 許可されたら、許可を待って失敗していたライブフォルダをすぐに取得し直す。取り消されたら、
-  // 次の定期取得を待たずに許可が無いことを示す
+  // Not left to the next periodic refresh: once access is granted, live folders that failed for
+  // lack of it are refreshed at once, and once it's revoked, they show the missing access at once
   yield* (yield* Permissions).originChanges.pipe(
     Stream.runForEach(({ origins }) =>
-      logFailure("ライブフォルダの取得を始められなかった")(
+      logFailure("Couldn't start refreshing live folders")(
         serialize(refreshLiveFoldersWhere((source) => origins.includes(originPatternOf(source)))),
       ),
     ),
     Effect.forkScoped,
   )
 
-  // 所属の判定は復元レコードの読み込みを前提にするので、イベントは整合を取った後に処理する
+  // Events are handled only after reconciling: deciding a tab's Space relies on the restore
+  // records having been loaded
   yield* events.events.pipe(
     Stream.runForEach((event) =>
-      Effect.andThen(logFailure(`${event._tag} の処理に失敗した`)(handleEvent(event)), afterChange),
+      Effect.andThen(logFailure(`Couldn't handle ${event._tag}`)(handleEvent(event)), afterChange),
     ),
     Effect.forkScoped(),
   )
@@ -250,18 +253,18 @@ export const program = Effect.gen(function* () {
   yield* (yield* SettingsRepository).changes.pipe(
     Stream.runForEach(() =>
       Effect.andThen(
-        logFailure("自動アーカイブの予約に失敗した")(scheduleAutoArchive),
+        logFailure("Couldn't schedule auto archive")(scheduleAutoArchive),
         afterChange,
       ),
     ),
-    logFailure("設定の購読が止まった"),
+    logFailure("Stopped following settings changes"),
     Effect.forkScoped(),
   )
 
   return yield* Effect.never
 })
 
-/** {@link program} が使うサービスのうち、Chrome API 以外のもの。 */
+/** The services {@link program} uses, apart from the Chrome APIs. */
 export const applicationLayer = Layer.mergeAll(SidebarHub.layer, SpotlightHub.layer).pipe(
   Layer.provideMerge(
     Layer.mergeAll(
