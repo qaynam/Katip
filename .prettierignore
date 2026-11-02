@@ -1,6 +1,7 @@
 dist/
 pnpm-lock.yaml
 .e2e/
+.release/
 .claude/worktrees/
 # 書き出しファイルの見本は Katip が書いたままの形で残す。整形し直すと、その版の Katip が書いた
 # ファイルの見本でなくなる
