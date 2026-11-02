@@ -1,8 +1,8 @@
 name: Setup
-description: pnpm と Node.js を用意し、lockfile のとおりに依存を入れる
+description: Set up pnpm and Node.js and install dependencies exactly as locked
 inputs:
   cache:
-    description: pnpm のストアをキャッシュから戻し、ジョブの後に保存するか
+    description: Whether to restore the pnpm store from the cache and save it after the job
     default: "true"
 runs:
   using: composite

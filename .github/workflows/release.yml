@@ -18,11 +18,11 @@ jobs:
         with:
           persist-credentials: false
       - id: version
-        name: タグと package.json の版を照らし合わせる
+        name: Check the tag against the package.json version
         run: |
           version=$(node -p 'require("./package.json").version')
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::タグ $GITHUB_REF_NAME が package.json の版 $version と合わない"
+            echo "::error::Tag $GITHUB_REF_NAME does not match the package.json version $version"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -41,12 +41,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # 書き込み権限を持つジョブなので、ほかの実行が保存したキャッシュから入れた依存を、配る zip に入れない
+      # No dependency cache in a job with write access: a cache saved by another run must not end up in the zip we ship
       - uses: ./.github/actions/setup
         with:
           cache: "false"
       - run: pnpm package
-      - name: GitHub Release を作る
+      - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}

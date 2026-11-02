@@ -32,24 +32,34 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Split view exists only from Chrome 155, and the browser behaves differently with and without
+        # it (the split-related scenarios and contracts skip themselves where it is absent). 149 stands
+        # in for the Chrome versions without split view that the extension still supports
+        chrome: [stable, "149"]
+    name: e2e (chrome ${{ matrix.chrome }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # ランナーにある Google Chrome は --load-extension を受け付けず、Playwright が headless で
-      # 起動する Headless Shell は拡張を読み込めない
-      - name: Chrome for Testing を入れる
+      # Not the runner's Google Chrome: it rejects --load-extension. Not Playwright's headless
+      # Chromium either: that is the Headless Shell, which cannot load extensions
+      - name: Install Chrome for Testing
+        env:
+          CHROME: ${{ matrix.chrome }}
         run: |
-          chrome=$(pnpm dlx @puppeteer/browsers@3.2.6 install chrome@stable --path "$RUNNER_TEMP/chrome" --format '{{path}}')
+          chrome=$(pnpm dlx @puppeteer/browsers@3.2.6 install "chrome@$CHROME" --path "$RUNNER_TEMP/chrome" --format '{{path}}')
           "$chrome" --version
           echo "KATIP_E2E_CHROME=$chrome" >> "$GITHUB_ENV"
       - run: pnpm test:e2e
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-results
+          name: e2e-results-chrome-${{ matrix.chrome }}
           path: .e2e/results
-          # 既定では . で始まるディレクトリを上げないので、.e2e/ の中身が空になる
+          # Hidden directories are skipped by default, which would upload .e2e/ empty
           include-hidden-files: true
           retention-days: 14
