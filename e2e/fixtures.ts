@@ -1,15 +1,7 @@
-import {
-  test as base,
-  chromium,
-  type BrowserContext,
-  type Page,
-  type Worker,
-} from "@playwright/test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { test as base, type BrowserContext, type Page, type Worker } from "@playwright/test"
 import { createServer } from "node:http"
 import type { AddressInfo } from "node:net"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { extensionWorkerOf, launchWithExtension } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 
 interface KatipFixtures {
@@ -39,21 +31,13 @@ export const test = base.extend<KatipFixtures>({
 
   // eslint-disable-next-line no-empty-pattern -- Playwright は引数の分割代入から依存を読み取る
   context: async ({}, use) => {
-    const userDataDir = await mkdtemp(join(tmpdir(), "katip-e2e-"))
-    const executablePath = process.env.KATIP_E2E_CHROME
-    const context = await chromium.launchPersistentContext(userDataDir, {
-      ...(executablePath === undefined ? {} : { executablePath }),
-      headless: true,
-      args: [`--disable-extensions-except=${EXTENSION_DIR}`, `--load-extension=${EXTENSION_DIR}`],
-    })
+    const { context, close } = await launchWithExtension(EXTENSION_DIR)
     await use(context)
-    await context.close()
-    await rm(userDataDir, { recursive: true, force: true })
+    await close()
   },
 
   background: async ({ context }, use) => {
-    const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
-    await use(worker)
+    await use(await extensionWorkerOf(context))
   },
 
   sidebar: async ({ context, background }, use) => {
