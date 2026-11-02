@@ -21,7 +21,7 @@ const extensionId = params.get("extensionId") ?? DEFAULT_EXTENSION_ID
 
 const element = <E extends HTMLElement>(selector: string): E => {
   const found = document.querySelector<E>(selector)
-  if (found === null) throw new Error(`${selector} が index.html にありません`)
+  if (found === null) throw new Error(`${selector} is missing from index.html`)
   return found
 }
 
@@ -29,7 +29,8 @@ const commandLog = element<HTMLOListElement>("#command-log")
 const denyAccess = element<HTMLInputElement>("#deny-access")
 const localeSelect = element<HTMLSelectElement>("#locale")
 
-// このページから拡張の設定は読めないので、表示言語はツールバーで選び、URL に残して再読み込みでも保つ
+// Not the extension's setting, which this page can't read: the language is chosen in the toolbar
+// and kept in the URL so it survives a reload
 const decodeLocalePreference = Schema.decodeUnknownOption(LocalePreference)
 const initialLocale = Option.getOrElse(
   decodeLocalePreference(params.get("locale")),
@@ -55,12 +56,12 @@ const log = (text: string) => {
 
 const logCommand = (command: SidebarCommand) => log(JSON.stringify(command))
 
-// このページは拡張のページではないので chrome.permissions を使えない。許可するかどうかは
-// ツールバーのチェックで決め、求められたオリジンを記録に残す
+// Not chrome.permissions, which this page can't use since it isn't an extension page: the toolbar
+// checkbox decides, and the requested origins are logged
 const originAccess = createMemoryOriginAccess({
   decide: (origins) => {
     const isGranted = !denyAccess.checked
-    log(`permissions.request ${JSON.stringify(origins)} → ${isGranted ? "許可" : "拒否"}`)
+    log(`permissions.request ${JSON.stringify(origins)} → ${isGranted ? "granted" : "denied"}`)
     return isGranted
   },
 })
@@ -78,12 +79,12 @@ const fixtureConnection = () =>
     view: fixtureView(Date.now()),
     respond: (command, view) =>
       view === null
-        ? { outcome: { _tag: "Failed", reason: "ビューがありません" } }
+        ? { outcome: { _tag: "Failed", reason: "There's no view" } }
         : respondInFixture(command, view, Date.now()),
   })
 
-// 拡張の外のページでは、externally_connectable に一致する拡張が入っているときだけ
-// chrome.runtime.connect が生える
+// On a page outside the extension, chrome.runtime.connect only exists while an extension whose
+// externally_connectable matches the page is installed
 const extensionConnection = () =>
   typeof chrome === "undefined" || chrome.runtime?.connect === undefined
     ? null
@@ -115,7 +116,7 @@ const connection = mode === "fixture" ? fixtureConnection() : extensionConnectio
 if (connection === null) {
   frame.dataset["state"] = "unavailable"
   frame.textContent =
-    "拡張に接続できません。Katip (dev) を読み込んだ Chrome でこのページを開き、拡張 ID を確認してください。"
+    "Can't connect to the extension. Open this page in Chrome with Katip (dev) loaded, and check the extension ID."
 } else {
   mount(App, {
     target: frame,

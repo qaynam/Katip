@@ -1,7 +1,7 @@
 import { peekableItems } from "#modules/sidebar-view"
 import type { PinnedNodeView, SidebarView } from "#protocol"
 
-// フィクスチャは「閉じたフォルダでも開いているタブをすべて表示」をオンにした見た目にする
+// The fixture looks as it does with "Show all open tabs in collapsed folders" turned on
 const SHOW_ALL_OPEN_TABS_IN_COLLAPSED_FOLDERS = true
 
 const withPeeksIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<PinnedNodeView> =>
@@ -18,8 +18,9 @@ const withPeeksIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<Pinned
   })
 
 /**
- * 閉じたフォルダに覗かせるものを、background と同じ規則で作り直す。
- * 手で持つと、開閉・移動・タブを開くたびに中身と食い違うため、ビューを変えるたびに呼ぶ。
+ * Recomputes what collapsed folders show, by the background's rules. Call it on every change to
+ * the view: kept by hand, it would drift from the folders' contents with every expand, collapse,
+ * move, or opened tab.
  */
 export const withRecomputedPeeks = (view: SidebarView): SidebarView => ({
   ...view,

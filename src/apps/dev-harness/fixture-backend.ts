@@ -87,7 +87,7 @@ const mapPinned = (
 const tabsOfEntry = (entry: TemporaryEntry): ReadonlyArray<TabView> =>
   entry._tag === "TemporaryTab" ? [entry.tab] : entry.tabs
 
-// 分割ビューの片方が閉じたら、残ったタブは 1 つの一時タブに戻る
+// When one side of a split view closes, the remaining tab becomes a single temporary tab again
 const updateEntry = (
   entry: TemporaryEntry,
   update: (tab: TabView) => TabView | null,
@@ -506,7 +506,7 @@ const createFolder = (
   spaceId: SpaceId,
   parentId: BookmarkId | null,
 ): CommandResponse => {
-  const folder = pinnedFolder(freshId("folder", bookmarkIds(view)), { title: "新しいフォルダ" })
+  const folder = pinnedFolder(freshId("folder", bookmarkIds(view)), { title: "New Folder" })
   const next = mapSpace(view, spaceId, (space) =>
     mapPinned(space, (nodes) =>
       parentId === null
@@ -524,14 +524,14 @@ const createFolder = (
 
 const MINUTE_MS = 60_000
 
-/** 取得元から読んだことにする見本の項目。新しい順に並べ、先頭の 2 件を未読にする */
+/** Sample items as if read from the source: newest first, with the first two unread */
 const sampleLiveItems = (source: LiveSource, now: number): ReadonlyArray<LiveItemView> => {
   const samples = Match.valueTags(source, {
     Gmail: ({ accountIndex }) =>
       [
-        ["来週の打ち合わせの件", "佐藤 花子"],
-        ["請求書をお送りします", "経理部"],
-        ["勉強会のお知らせ", "コミュニティ運営"],
+        ["Meeting next week", "Hanako Sato"],
+        ["Your invoice", "Accounting"],
+        ["Study group announcement", "Community team"],
       ].map(([title, from], index) => ({
         id: `mail-${index}`,
         title: title ?? "",
@@ -540,9 +540,9 @@ const sampleLiveItems = (source: LiveSource, now: number): ReadonlyArray<LiveIte
       })),
     GitHub: ({ query }) =>
       [
-        ["サイドパネルにライブフォルダを表示する", "katip/katip#212"],
-        ["分割ビューの解除で順序が崩れる", "katip/katip#198"],
-        ["Spotlight の候補に Space を出す", "katip/katip#187"],
+        ["Show live folders in the side panel", "katip/katip#212"],
+        ["Separating a split view breaks the order", "katip/katip#198"],
+        ["Offer Spaces in Spotlight results", "katip/katip#187"],
       ].map(([title, repository], index) => ({
         id: `${query}-${index}`,
         title: title ?? "",
@@ -559,8 +559,8 @@ const sampleLiveItems = (source: LiveSource, now: number): ReadonlyArray<LiveIte
   )
 }
 
-// background が付ける名前を、フィクスチャの他のデータと同じく日本語で付ける
-const backgroundTranslator = makeTranslator("ja")
+// The names the background gives, in English like the rest of the fixture data
+const backgroundTranslator = makeTranslator("en")
 
 const createLiveFolder = (
   view: SidebarView,
@@ -605,7 +605,7 @@ const mapLiveFolder = (
 
 const byUpdatedAt = Order.mapInput(Order.Number, (item: LiveItemView) => item.updatedAt)
 const byTitle = Order.mapInput(Order.String, (item: LiveItemView) => item.title)
-// GitHub の補足には番号も入るので、リポジトリは URL から取る
+// Not from the subtitle, which for GitHub also holds the number: the repository comes from the URL
 const repositoryOrSender = (item: LiveItemView): string =>
   /^https:\/\/github\.com\/([^/]+\/[^/]+)\//.exec(item.url)?.[1] ?? item.subtitle
 const bySource = Order.mapInput(Order.String, repositoryOrSender)
@@ -671,7 +671,7 @@ const createSpace = (
   const id = SpaceId.make(freshId("space", new Set(view.spaces.map((space) => space.id))))
   const space: SpaceView = {
     id,
-    name: draft.name ?? SpaceName.make(`スペース ${view.spaces.length + 1}`),
+    name: draft.name ?? SpaceName.make(`Space ${view.spaces.length + 1}`),
     theme: draft.theme ?? suggestedTheme(view.spaces),
     pinned: { _tag: "Available", nodes: [], canCreateFolder: true },
     temporaryEntries: [],
@@ -681,7 +681,7 @@ const createSpace = (
 
 const notReproduced = (view: SidebarView, command: SidebarCommand): CommandResponse => ({
   ...succeeded(view),
-  notice: `フィクスチャでは ${command._tag} の結果を再現していません`,
+  notice: `The fixture doesn't reproduce the result of ${command._tag}`,
 })
 
 const respondWithoutPeeks = (
@@ -728,7 +728,7 @@ const respondWithoutPeeks = (
           openTemporaryTab(
             view,
             view.activeSpaceId,
-            tabView(nextTabId(view), { title: "新しいタブ", url: "chrome://newtab/" }),
+            tabView(nextTabId(view), { title: "New Tab", url: "chrome://newtab/" }),
           ),
         ),
       ),
@@ -845,9 +845,10 @@ const respondWithoutPeeks = (
     )
 
 /**
- * 検証ページで見た目を確かめるための、素朴なコマンドの解釈。background の規則は再現しない。
+ * A naive reading of commands, for checking how things look on the development page. It doesn't
+ * reproduce the background's rules.
  *
- * @param now - 取得し直したライブフォルダの時刻に使う
+ * @param now - The time given to refreshed live folders.
  */
 export const respondInFixture = (
   command: SidebarCommand,

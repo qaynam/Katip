@@ -11,7 +11,7 @@ const view = fixtureView(NOW)
 
 const viewAfter = (command: Parameters<typeof respondInFixture>[0], from: SidebarView = view) => {
   const { view: next } = respondInFixture(command, from, NOW)
-  if (next === undefined) throw new Error("ビューが返らなかった")
+  if (next === undefined) throw new Error("no view returned")
   return next
 }
 
@@ -29,7 +29,7 @@ const temporaryShape = (next: SidebarView) =>
 
 const rootFolder = (next: SidebarView, bookmarkId: string) => {
   const pinned = next.spaces[0]?.pinned
-  if (pinned?._tag !== "Available") throw new Error("ピン留めが読めない")
+  if (pinned?._tag !== "Available") throw new Error("the pinned tabs are unavailable")
   return pinned.nodes
     .flatMap((node) => (node._tag === "PinnedFolder" ? [node] : []))
     .find((folder) => folder.bookmarkId === bookmarkId)
@@ -50,12 +50,12 @@ const liveFolder = (next: SidebarView, bookmarkId: string) => {
       space.pinned._tag === "Available" ? liveFoldersIn(space.pinned.nodes) : [],
     )
     .find((folder) => folder.bookmarkId === bookmarkId)
-  if (found === undefined) throw new Error(`ライブフォルダ ${bookmarkId} が無い`)
+  if (found === undefined) throw new Error(`no live folder ${bookmarkId}`)
   return found
 }
 
-describe("フィクスチャの素朴な応答", () => {
-  it("Space を切り替えられる", () => {
+describe("the fixture's naive responses", () => {
+  it("switches Spaces", () => {
     const next = viewAfter({
       _tag: "SwitchSpace",
       windowId: view.windowId,
@@ -65,24 +65,24 @@ describe("フィクスチャの素朴な応答", () => {
     expect(next.activeSpaceId).toBe("hobby")
   })
 
-  it("一時タブを閉じると一覧から消える", () => {
+  it("closing a temporary tab removes it from the list", () => {
     const next = viewAfter({ _tag: "CloseTab", tabId: TabId.make(32) })
 
     expect(temporaryTabIds(next)).not.toContain(32)
   })
 
-  it("一時タブどうしを分割ビューにすると、落とした先の行の右に並ぶ", () => {
+  it("splitting two temporary tabs puts the dropped tab to the right of the row it was dropped on", () => {
     const next = viewAfter({ _tag: "SplitTabs", tabId: TabId.make(33), withTabId: TabId.make(32) })
 
     expect(temporaryShape(next)).toContainEqual([32, 33])
     expect(temporaryShape(next)).not.toContain(33)
   })
 
-  it("分割ビューを解除すると、2 つの一時タブに戻る", () => {
+  it("separating a split view turns it back into two temporary tabs", () => {
     const split = activeSpace(view)?.temporaryEntries.find(
       (entry) => entry._tag === "TemporarySplit",
     )
-    if (split?._tag !== "TemporarySplit") throw new Error("フィクスチャに分割ビューが無い")
+    if (split?._tag !== "TemporarySplit") throw new Error("the fixture has no split view")
 
     const next = viewAfter({ _tag: "Unsplit", splitViewId: split.splitViewId })
 
@@ -91,18 +91,18 @@ describe("フィクスチャの素朴な応答", () => {
     )
   })
 
-  it("分割ビューの片方を閉じると、残ったタブは 1 つの一時タブになる", () => {
+  it("closing one side of a split view leaves the other as a single temporary tab", () => {
     const split = activeSpace(view)?.temporaryEntries.find(
       (entry) => entry._tag === "TemporarySplit",
     )
-    if (split?._tag !== "TemporarySplit") throw new Error("フィクスチャに分割ビューが無い")
+    if (split?._tag !== "TemporarySplit") throw new Error("the fixture has no split view")
 
     const next = viewAfter({ _tag: "CloseTab", tabId: split.tabs[0].tabId })
 
     expect(temporaryShape(next)).toContain(split.tabs[1].tabId)
   })
 
-  it("フォルダを開閉できる", () => {
+  it("expands and collapses folders", () => {
     const next = viewAfter({
       _tag: "SetFolderExpanded",
       bookmarkId: BookmarkId.make("design-docs"),
@@ -112,7 +112,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "design-docs")?.isExpanded).toBe(false)
   })
 
-  it("フォルダのアイコンを変えられ、フォルダの絵にも戻せる", () => {
+  it("changes a folder's icon, and back to the default folder icon", () => {
     const withIcon = viewAfter({
       _tag: "SetFolderIcon",
       bookmarkId: BookmarkId.make("design-docs"),
@@ -129,7 +129,7 @@ describe("フィクスチャの素朴な応答", () => {
     ]).toStrictEqual(["lightbulb", null])
   })
 
-  it("ピン留めを別のフォルダの指定した位置へ動かせる", () => {
+  it("moves a pin to the given position in another folder", () => {
     const next = viewAfter({
       _tag: "MovePinnedItem",
       bookmarkId: BookmarkId.make("calendar"),
@@ -143,7 +143,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "design-docs")?.children[0]?.bookmarkId).toBe("calendar")
   })
 
-  it("フォルダを別のフォルダの中へ、中身ごと動かせる", () => {
+  it("moves a folder into another folder, contents and all", () => {
     const next = viewAfter({
       _tag: "MovePinnedItem",
       bookmarkId: BookmarkId.make("design-docs"),
@@ -162,7 +162,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "design-docs")).toBeUndefined()
   })
 
-  it("ライブフォルダをフォルダの中へ動かせる", () => {
+  it("moves a live folder into a folder", () => {
     const next = viewAfter({
       _tag: "MovePinnedItem",
       bookmarkId: BookmarkId.make("live-inbox"),
@@ -176,13 +176,13 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "empty-folder")?.children[0]?.bookmarkId).toBe("live-inbox")
   })
 
-  it("別の Space のタブをアクティブにすると、その Space に切り替わる", () => {
+  it("activating a tab of another Space switches to that Space", () => {
     const next = viewAfter({ _tag: "ActivateTab", tabId: TabId.make(41) })
 
     expect(next.activeSpaceId).toBe("hobby")
   })
 
-  it("作ったフォルダの ID を結果として返す", () => {
+  it("returns the created folder's ID in the outcome", () => {
     const response = respondInFixture(
       { _tag: "CreateFolder", spaceId: SpaceId.make("work"), parentId: null },
       view,
@@ -192,7 +192,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(response.outcome._tag === "Succeeded" && response.outcome.createdBookmarkId).toBeTruthy()
   })
 
-  it("Space のテーマを変えると、その Space のテーマだけが変わる", () => {
+  it("changing a Space's theme changes that Space's theme only", () => {
     const theme = { ...themeOf([{ hue: 350, chroma: 0.55 }]), mode: "light" as const }
 
     const next = viewAfter({ _tag: "SetSpaceTheme", spaceId: SpaceId.make("hobby"), theme })
@@ -203,7 +203,7 @@ describe("フィクスチャの素朴な応答", () => {
     )
   })
 
-  it("作成した Space は指定したテーマを持ち、表示中の Space になる", () => {
+  it("a created Space has the given theme and becomes the shown Space", () => {
     const theme = themeOf([{ hue: 150, chroma: 0.75 }])
 
     const next = viewAfter({ _tag: "CreateSpace", windowId: view.windowId, theme })
@@ -212,13 +212,13 @@ describe("フィクスチャの素朴な応答", () => {
     expect(next.spaces).toHaveLength(view.spaces.length + 1)
   })
 
-  it("フォルダを削除すると、ピン留めから消える", () => {
+  it("deleting a folder removes it from the pinned tabs", () => {
     const next = viewAfter({ _tag: "DeleteFolder", bookmarkId: BookmarkId.make("design-docs") })
 
     expect(rootFolder(next, "design-docs")).toBeUndefined()
   })
 
-  it("作ったライブフォルダは取得元の項目を並べた状態で現れ、その ID を結果として返す", () => {
+  it("a created live folder appears with items from its source, and its ID is returned in the outcome", () => {
     const response = respondInFixture(
       {
         _tag: "CreateLiveFolder",
@@ -230,16 +230,16 @@ describe("フィクスチャの素朴な応答", () => {
       NOW,
     )
     if (response.outcome._tag !== "Succeeded" || response.outcome.createdBookmarkId === null) {
-      throw new Error("ライブフォルダの ID が返らなかった")
+      throw new Error("no live folder ID returned")
     }
-    if (response.view === undefined) throw new Error("ビューが返らなかった")
+    if (response.view === undefined) throw new Error("no view returned")
 
     const created = liveFolder(response.view, response.outcome.createdBookmarkId)
     expect(created.status._tag).toBe("Ready")
     expect(created.items.length).toBeGreaterThan(0)
   })
 
-  it("ライブフォルダも開閉できる", () => {
+  it("expands and collapses live folders too", () => {
     const next = viewAfter({
       _tag: "SetFolderExpanded",
       bookmarkId: BookmarkId.make("live-inbox"),
@@ -249,17 +249,17 @@ describe("フィクスチャの素朴な応答", () => {
     expect(liveFolder(next, "live-inbox").isExpanded).toBe(false)
   })
 
-  it("ライブフォルダの名前を変えられる", () => {
+  it("renames a live folder", () => {
     const next = viewAfter({
       _tag: "RenamePinnedItem",
       bookmarkId: BookmarkId.make("live-inbox"),
-      title: "メール",
+      title: "Mail",
     })
 
-    expect(liveFolder(next, "live-inbox").title).toBe("メール")
+    expect(liveFolder(next, "live-inbox").title).toBe("Mail")
   })
 
-  it("取得に失敗したライブフォルダを取得し直すと、取得済みになる", () => {
+  it("refreshing a live folder that failed makes it ready", () => {
     const next = viewAfter({
       _tag: "RefreshLiveFolder",
       bookmarkId: BookmarkId.make("live-my-prs"),
@@ -271,7 +271,7 @@ describe("フィクスチャの素朴な応答", () => {
     })
   })
 
-  it("すべて既読にすると、未読の項目が無くなる", () => {
+  it("marking all as read leaves no unread items", () => {
     const next = viewAfter({
       _tag: "MarkLiveFolderSeen",
       bookmarkId: BookmarkId.make("live-inbox"),
@@ -280,9 +280,9 @@ describe("フィクスチャの素朴な応答", () => {
     expect(liveFolder(next, "live-inbox").items.some((item) => item.isUnseen)).toBe(false)
   })
 
-  it("ライブフォルダの項目を開くと一時タブとして開き、その項目は既読になる", () => {
+  it("opening a live folder item opens it as a temporary tab and marks it read", () => {
     const [first] = liveFolder(view, "live-inbox").items
-    if (first === undefined) throw new Error("フィクスチャの受信トレイが空")
+    if (first === undefined) throw new Error("the fixture's inbox is empty")
 
     const next = viewAfter({
       _tag: "OpenLiveItem",
@@ -297,7 +297,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(liveFolder(next, "live-inbox").items[0]?.isUnseen).toBe(false)
   })
 
-  it("ライブフォルダの並べ方を変えると、その並べ方で項目が並び直る", () => {
+  it("changing a live folder's sort reorders its items by it", () => {
     const next = viewAfter({
       _tag: "SetLiveFolderSort",
       bookmarkId: BookmarkId.make("live-inbox"),
@@ -310,7 +310,7 @@ describe("フィクスチャの素朴な応答", () => {
     expect(updatedAts).toStrictEqual([...updatedAts].sort((a, b) => a - b))
   })
 
-  it("リポジトリ順では、同じリポジトリの項目をまとめて新しい順に並べる", () => {
+  it("sorted by repository, groups each repository's items together, newest first", () => {
     const next = viewAfter({
       _tag: "SetLiveFolderSort",
       bookmarkId: BookmarkId.make("live-reviews"),
@@ -324,7 +324,7 @@ describe("フィクスチャの素朴な応答", () => {
     ])
   })
 
-  it("URL を開くと、表示中の Space の一時タブとして開く", () => {
+  it("opening a URL opens it as a temporary tab of the shown Space", () => {
     const next = viewAfter({
       _tag: "OpenUrl",
       windowId: view.windowId,
@@ -336,7 +336,7 @@ describe("フィクスチャの素朴な応答", () => {
     })
   })
 
-  it("閉じたフォルダの中の開いている分割ピンは、2 つそろった 1 つとして覗かせる", () => {
+  it("a collapsed folder shows an open split pin inside it as one item with both tabs", () => {
     const peeked = rootFolder(view, "comparisons")?.peekedItems ?? []
 
     expect(peeked.map((node) => [node._tag, node.bookmarkId])).toStrictEqual([
@@ -345,7 +345,7 @@ describe("フィクスチャの素朴な応答", () => {
     ])
   })
 
-  it("フォルダを開くと何も覗かせず、閉じ直すとまた覗かせる", () => {
+  it("an expanded folder shows nothing beneath its row, and collapsing it again shows the items again", () => {
     const expanded = viewAfter({
       _tag: "SetFolderExpanded",
       bookmarkId: BookmarkId.make("comparisons"),
@@ -362,7 +362,7 @@ describe("フィクスチャの素朴な応答", () => {
     ]).toStrictEqual([0, 2])
   })
 
-  it("再現していないコマンドは、そのことを通知する", () => {
+  it("a command it doesn't reproduce gets a notice saying so", () => {
     const response = respondInFixture({ _tag: "ArchiveTab", tabId: TabId.make(31) }, view, NOW)
 
     expect(response.notice).toContain("ArchiveTab")
