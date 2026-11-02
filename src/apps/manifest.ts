@@ -4,10 +4,28 @@ type BuildMode = "development" | "production"
 const DEVELOPMENT_PUBLIC_KEY =
   "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1NcVH3QU/wS6acXcUvFkkqNLkaAEPQh6F83b3us2DoqCNLlsArSL2k9AEocUbX3Pzzz9Zr6kWbwesAVcrsvsnn0IO206pbboppASdYB0N5beGkug7aA9ZkzIck2s4INm5U5Dd/NdNLiTjtXz7yfozehxBuYanzovkulYwVbUXvc8437BZAasznkP2CArE4yZC/Agwmaoz/W0l7V1MEbsR0skCSOJKcsGmhZUqlfAh5uTIK5Uvk4IYIuRNJjWKcHyH3qbLtrm8ELMVfNSvEdnSzm2QCf93dqHahEWhKZcMokEJQpnG1l1asuxNamSAOiPc325D1Ca2bXyTKNdornDyQIDAQAB"
 
-export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
+// semver のプレリリースやビルドメタデータを付けた版では、Chrome が拡張を読み込まない。
+// 付いた部分を落として通すと、別の版と同じ番号で配りかねないので、マニフェストを作らずに止める
+const isChromeExtensionVersion = (version: string): boolean => {
+  const parts = version.split(".")
+  return (
+    parts.length <= 4 && parts.every((part) => /^(0|[1-9]\d*)$/.test(part) && Number(part) <= 65535)
+  )
+}
+
+export const buildManifest = (mode: BuildMode, version: string): chrome.runtime.ManifestV3 => {
+  if (!isChromeExtensionVersion(version)) {
+    throw new Error(
+      `版 "${version}" は、0〜65535 の整数を点で 4 つまでつないだ形でないので、拡張の版にできない`,
+    )
+  }
+  return manifestOf(mode, version)
+}
+
+const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3 => ({
   manifest_version: 3,
   name: mode === "development" ? "Katip (dev)" : "Katip",
-  version: "0.1.0",
+  version,
   description: "サイドパネルで Space ごとにタブを整理する",
   homepage_url: "https://github.com/qaynam/Katip",
   minimum_chrome_version: "120",

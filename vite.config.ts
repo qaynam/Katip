@@ -1,5 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte"
-import { writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { build, defineConfig, type Plugin, type Rolldown } from "vite"
 import type { buildManifest } from "./src/apps/manifest"
@@ -7,24 +7,27 @@ import type { buildManifest } from "./src/apps/manifest"
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 const manifestSource = fromRoot("./src/apps/manifest.ts")
+const packageJsonPath = fromRoot("./package.json")
 
 type BuildMode = "development" | "production"
 
-// 設定ファイルから静的に import すると、ウォッチビルドは起動時のマニフェストを使い続ける。
-// ビルドのたびに読み直し、マニフェストの変更も再ビルドのきっかけにする
+// 設定ファイルから静的に import すると、ウォッチビルドは起動時のマニフェストと版を使い続ける。
+// ビルドのたびに読み直し、マニフェストや版の変更も再ビルドのきっかけにする
 const emitManifest = (mode: BuildMode): Plugin => ({
   name: "katip:emit-manifest",
   buildStart() {
     this.addWatchFile(manifestSource)
+    this.addWatchFile(packageJsonPath)
   },
   async generateBundle() {
     const latest: { buildManifest: typeof buildManifest } = await import(
       `${pathToFileURL(manifestSource).href}?t=${Date.now()}`
     )
+    const { version }: { version: string } = JSON.parse(readFileSync(packageJsonPath, "utf8"))
     this.emitFile({
       type: "asset",
       fileName: "manifest.json",
-      source: JSON.stringify(latest.buildManifest(mode), null, 2),
+      source: JSON.stringify(latest.buildManifest(mode, version), null, 2),
     })
   },
 })
