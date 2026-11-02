@@ -180,9 +180,14 @@ const chooseIdleMinutes = (minutes: number) =>
 
 const heading = () => screen.getByRole("heading", { level: 1 }).textContent
 
-/** The keys shown next to a command, as one string. */
+/** The keys shown beside a command, as one string. */
+// Not by role and name: ARIA forbids naming terms and definitions, so the command's text locates
+// its term and the definition that follows it
 const keysShownFor = (command: string) =>
-  screen.getByRole("definition", { name: command }).textContent?.trim()
+  screen
+    .getByText(command, { selector: "dt, dt label" })
+    .closest("dt")
+    ?.nextElementSibling?.textContent?.trim()
 
 describe("categories", () => {
   it("opens on General, which holds the language setting", async () => {

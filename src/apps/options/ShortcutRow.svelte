@@ -18,20 +18,19 @@
   } = $props()
 
   const id = $props.id()
-  const labelId = `${id}-label`
   const keysId = `${id}-keys`
   const switchId = `${id}-switch`
 </script>
 
 <div class="row">
-  <dt id={labelId} class="label">
+  <dt class="label">
     {#if toggle === undefined}
       {label}
     {:else}
       <label for={switchId}>{label}</label>
     {/if}
   </dt>
-  <dd class="keys" aria-labelledby={labelId}>
+  <dd class="keys">
     {#if shortcut !== undefined}
       <KeyCaps id={keysId} {shortcut} {notSetLabel} />
     {/if}
