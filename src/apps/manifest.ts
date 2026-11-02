@@ -80,6 +80,14 @@ const isChromeExtensionVersion = (version: string): boolean => {
  * @throws Error when `version` isn't a version Chrome loads: one to four dot-separated integers
  * from 0 to 65535.
  */
+// Rendered from scripts/brand/icon.ts by `node scripts/render-brand.ts` into src/apps/public/icons
+const EXTENSION_ICONS = {
+  16: "icons/icon-16.png",
+  32: "icons/icon-32.png",
+  48: "icons/icon-48.png",
+  128: "icons/icon-128.png",
+} as const
+
 export const buildManifest = (mode: BuildMode, version: string): chrome.runtime.ManifestV3 => {
   if (!isChromeExtensionVersion(version)) {
     throw new Error(
@@ -139,8 +147,9 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
     "https://github.com/*",
     "https://api.github.com/*",
   ],
+  icons: EXTENSION_ICONS,
   side_panel: { default_path: "sidepanel/index.html" },
-  action: { default_title: "Katip" },
+  action: { default_title: "Katip", default_icon: EXTENSION_ICONS },
   background: { service_worker: "background.js", type: "module" },
   options_page: "options/index.html",
   commands: Object.fromEntries(

@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { buildLocaleMessages, buildManifest } from "./manifest"
 
@@ -80,5 +82,19 @@ describe("the manifest's translations", () => {
       zh_CN: "打开侧边栏",
       es: "Abrir el panel lateral",
     })
+  })
+})
+
+describe("the manifest's icons", () => {
+  const publicFile = (path: string) => fileURLToPath(new URL(`./public/${path}`, import.meta.url))
+
+  it("point at icon files that ship with the extension, for the store and the toolbar", () => {
+    const { icons = {}, action = {} } = buildManifest("production", "1.0.0")
+    const paths = [...Object.values(icons), ...Object.values(action.default_icon ?? {})]
+
+    expect([
+      Object.keys(icons),
+      paths.filter((path) => !existsSync(publicFile(path))),
+    ]).toStrictEqual([["16", "32", "48", "128"], []])
   })
 })
