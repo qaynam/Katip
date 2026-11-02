@@ -62,7 +62,8 @@
   const { icon, size = 16 }: Props = $props()
 </script>
 
-<!-- 要素として埋め込むと SVG の文字列を {@html} で流し込むことになるので、マスクに使って文字色で塗る -->
+<!-- Embedding the SVG as an element would mean injecting its markup with {@html}, so it
+     serves as a mask painted with the text color -->
 <span
   class="glyph"
   data-folder-icon={icon}

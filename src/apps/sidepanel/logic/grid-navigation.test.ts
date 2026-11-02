@@ -7,29 +7,29 @@ import { gridIndexAfter } from "./grid-navigation"
 // 6  7
 const shape = { count: 8, columns: 3 }
 
-describe("格子の中のフォーカスの移動", () => {
-  it("→ で右隣、← で左隣へ動く", () => {
+describe("Moving focus within a grid", () => {
+  it("moves right with → and left with ←", () => {
     expect([
       gridIndexAfter("ArrowRight", 4, shape),
       gridIndexAfter("ArrowLeft", 4, shape),
     ]).toStrictEqual([Option.some(5), Option.some(3)])
   })
 
-  it("左右の移動は、行の端を越えて隣の行の端へ続く", () => {
+  it("wraps left and right moves past the end of a row into the adjacent row", () => {
     expect([
       gridIndexAfter("ArrowRight", 2, shape),
       gridIndexAfter("ArrowLeft", 3, shape),
     ]).toStrictEqual([Option.some(3), Option.some(2)])
   })
 
-  it("↓ で 1 行下、↑ で 1 行上の同じ列へ動く", () => {
+  it("moves down a row with ↓ and up a row with ↑, staying in the same column", () => {
     expect([
       gridIndexAfter("ArrowDown", 1, shape),
       gridIndexAfter("ArrowUp", 4, shape),
     ]).toStrictEqual([Option.some(4), Option.some(1)])
   })
 
-  it("格子の外へ出る向きには動かない", () => {
+  it("stays put on moves that would leave the grid", () => {
     expect([
       gridIndexAfter("ArrowLeft", 0, shape),
       gridIndexAfter("ArrowRight", 7, shape),
@@ -38,14 +38,14 @@ describe("格子の中のフォーカスの移動", () => {
     ]).toStrictEqual([Option.some(0), Option.some(7), Option.some(2), Option.some(5)])
   })
 
-  it("Home で先頭、End で末尾へ動く", () => {
+  it("moves to the first item with Home and to the last with End", () => {
     expect([gridIndexAfter("Home", 4, shape), gridIndexAfter("End", 4, shape)]).toStrictEqual([
       Option.some(0),
       Option.some(7),
     ])
   })
 
-  it("フォーカスを動かすキーでなければ、位置を返さない", () => {
+  it("returns no position for keys that don't move focus", () => {
     expect(gridIndexAfter("Enter", 4, shape)).toStrictEqual(Option.none())
   })
 })

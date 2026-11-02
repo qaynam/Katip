@@ -25,7 +25,7 @@
      * is prefixed with "/".
      */
     onReturnToPinnedUrl?: (() => void) | undefined
-    /** マウスを乗せたときに、名前の代わりに出す */
+    /** Shown instead of the name on hover. */
     tooltipTitle?: string | undefined
     renameInitial: string
     onRename: (draft: string) => void

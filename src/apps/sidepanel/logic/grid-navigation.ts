@@ -15,10 +15,11 @@ const destinations: Partial<Record<string, (current: number, shape: GridShape) =
 }
 
 /**
- * 左上から行ごとに並べた格子の中で、キーを押した後にフォーカスを置く位置。
- * 左右は行の端を越えて隣の行へ続き、上下は同じ列を動く。格子の外へ出る向きには動かない。
+ * Where focus goes after a key press in a grid laid out row by row from the top-left.
+ * Left and right wrap past the end of a row into the adjacent row, up and down stay in the
+ * same column, and moves that would leave the grid stay put.
  *
- * @returns フォーカスを動かすキーでなければ none。
+ * @returns None for keys that don't move focus.
  */
 export const gridIndexAfter = (
   key: string,

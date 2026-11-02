@@ -7,19 +7,19 @@ import { pinnedFolder, sidebarView, spaceView } from "../testing/view-builders"
 
 const viewWithFolder = (icon: FolderIcon | null = null) =>
   sidebarView({
-    spaces: [spaceView("work", { pinnedNodes: [pinnedFolder("docs", { title: "資料", icon })] })],
+    spaces: [spaceView("work", { pinnedNodes: [pinnedFolder("docs", { title: "Docs", icon })] })],
   })
 
-const folderHeader = () => screen.getByRole("button", { name: "資料" })
+const folderHeader = () => screen.getByRole("button", { name: "Docs" })
 
 const openPicker = async () => {
   await fireEvent.contextMenu(folderHeader())
-  await fireEvent.click(screen.getByRole("menuitem", { name: "アイコンを変更" }))
-  return screen.getByRole("dialog", { name: "フォルダのアイコン" })
+  await fireEvent.click(screen.getByRole("menuitem", { name: "Change Icon" }))
+  return screen.getByRole("dialog", { name: "Folder icon" })
 }
 
-describe("フォルダのアイコンの変更", () => {
-  it("フォルダのメニューから、標準のアイコンと選べるアイコンを並べた小窓を開ける", async () => {
+describe("Changing a folder's icon", () => {
+  it("opens a popover with the default icon and the available icons from the folder menu", async () => {
     await renderSidebar(viewWithFolder())
 
     const picker = await openPicker()
@@ -27,44 +27,44 @@ describe("フォルダのアイコンの変更", () => {
     const names = within(picker)
       .getAllByRole("button")
       .map((choice) => choice.getAttribute("aria-label"))
-    expect(names.slice(0, 3)).toStrictEqual(["標準のアイコン", "星", "しおり"])
+    expect(names.slice(0, 3)).toStrictEqual(["Default icon", "Star", "Bookmark"])
     expect(names).toHaveLength(25)
   })
 
-  it("アイコンを選ぶと、そのフォルダのアイコンにするよう頼み、小窓を閉じる", async () => {
+  it("asks to set the chosen icon on the folder and closes the popover", async () => {
     const { connection } = await renderSidebar(viewWithFolder())
     await openPicker()
 
-    await fireEvent.click(screen.getByRole("button", { name: "惑星" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Planet" }))
 
     expect(commandsOf(connection.sentCommands, "SetFolderIcon")).toStrictEqual([
       { _tag: "SetFolderIcon", bookmarkId: BookmarkId.make("docs"), icon: "planet" },
     ])
-    expect(screen.queryByRole("dialog", { name: "フォルダのアイコン" })).toBeNull()
+    expect(screen.queryByRole("dialog", { name: "Folder icon" })).toBeNull()
   })
 
-  it("標準のアイコンを選ぶと、フォルダの絵に戻すよう頼む", async () => {
+  it("asks to go back to the folder glyph when the default icon is chosen", async () => {
     const { connection } = await renderSidebar(viewWithFolder("star"))
     await openPicker()
 
-    await fireEvent.click(screen.getByRole("button", { name: "標準のアイコン" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Default icon" }))
 
     expect(commandsOf(connection.sentCommands, "SetFolderIcon")).toStrictEqual([
       { _tag: "SetFolderIcon", bookmarkId: BookmarkId.make("docs"), icon: null },
     ])
   })
 
-  it("今のアイコンだけを、選んでいるものとして示す", async () => {
+  it("marks only the current icon as selected", async () => {
     await renderSidebar(viewWithFolder("star"))
     const picker = await openPicker()
 
     const pressed = within(picker)
       .getAllByRole("button", { pressed: true })
       .map((choice) => choice.getAttribute("aria-label"))
-    expect(pressed).toStrictEqual(["星"])
+    expect(pressed).toStrictEqual(["Star"])
   })
 
-  it("開くと今のアイコンにフォーカスがあり、矢印キーで左右と上下の行へ動かせる", async () => {
+  it("focuses the current icon on open and moves focus sideways and between rows with the arrow keys", async () => {
     await renderSidebar(viewWithFolder("star"))
     await openPicker()
     const focusedName = () => document.activeElement?.getAttribute("aria-label")
@@ -74,21 +74,21 @@ describe("フォルダのアイコンの変更", () => {
     const afterRight = focusedName()
     await fireEvent.keyDown(document.activeElement as HTMLElement, { key: "ArrowDown" })
 
-    expect([opened, afterRight, focusedName()]).toStrictEqual(["星", "しおり", "ベル"])
+    expect([opened, afterRight, focusedName()]).toStrictEqual(["Star", "Bookmark", "Bell"])
   })
 
-  it("Escape で、何も頼まずに小窓を閉じ、フォルダにフォーカスを戻す", async () => {
+  it("closes the popover with Escape without asking for anything and returns focus to the folder", async () => {
     const { connection } = await renderSidebar(viewWithFolder())
     await openPicker()
 
     await fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Escape" })
 
-    expect(screen.queryByRole("dialog", { name: "フォルダのアイコン" })).toBeNull()
+    expect(screen.queryByRole("dialog", { name: "Folder icon" })).toBeNull()
     expect(commandsOf(connection.sentCommands, "SetFolderIcon")).toStrictEqual([])
     expect(document.activeElement).toBe(folderHeader())
   })
 
-  it("アイコンを選んだフォルダは、フォルダの絵の代わりにそのアイコンを見出しに出す", async () => {
+  it("shows the chosen icon instead of the folder glyph in the folder's header", async () => {
     await renderSidebar(viewWithFolder("moon"))
 
     const shown = folderHeader().querySelector<HTMLElement>("[data-folder-icon]")

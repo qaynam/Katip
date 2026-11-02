@@ -19,7 +19,8 @@
   const { picker, onClose }: Props = $props()
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
-  // 閉じると親が渡す picker は null になるので、選んだ後に使う値は開いた時点で取っておく
+  // The parent's picker becomes null once the popover closes, so the values used after a
+  // choice are captured when it opens
   const { bookmarkId, anchor, trigger } = untrack(() => picker)
 
   const COLUMNS = 5
@@ -46,7 +47,7 @@
     panel?.querySelectorAll<HTMLButtonElement>(".choice")[index]?.focus()
   }
 
-  // anchor は DOMRect のことがあり、座標がプロトタイプの getter なので展開では写せない
+  // anchor may be a DOMRect, whose coordinates are prototype getters that spreading doesn't copy
   const placeAndFocus = (node: HTMLDivElement) => {
     const { left, right, top, bottom } = anchor
     position = popoverPosition(node, { left, right, top, bottom: bottom + 4 })

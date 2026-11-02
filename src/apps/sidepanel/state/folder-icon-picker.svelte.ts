@@ -3,9 +3,9 @@ import type { Rect } from "../logic/menu-position"
 
 export interface OpenFolderIconPicker {
   readonly bookmarkId: BookmarkId
-  /** 小窓をこの矩形の下に出す */
+  /** The popover opens below this rect. */
   readonly anchor: Rect
-  /** 選んだときや Escape で閉じたときにフォーカスを戻す先 */
+  /** Where focus returns after a choice or when the popover is closed with Escape. */
   readonly trigger: HTMLElement
 }
 
