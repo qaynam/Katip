@@ -166,13 +166,16 @@ export class Tabs extends Context.Service<
       }),
       remove: (tabIds) => callChrome("tabs.remove", () => chrome.tabs.remove([...tabIds])),
       move: Effect.fn("Tabs.move")(function* (tabIds, options) {
-        const raws = yield* callChrome("tabs.move", () =>
-          chrome.tabs.move([...tabIds], {
-            index: options.index === "end" ? -1 : options.index,
-            windowId: options.windowId,
-          }),
+        // 型定義は配列を返すとしているが、Chrome は 1 つだけ動かしたときタブをそのまま返す
+        const moved: chrome.tabs.Tab | ReadonlyArray<chrome.tabs.Tab> = yield* callChrome(
+          "tabs.move",
+          () =>
+            chrome.tabs.move([...tabIds], {
+              index: options.index === "end" ? -1 : options.index,
+              windowId: options.windowId,
+            }),
         )
-        return Array.getSomes(raws.map(fromChromeTab))
+        return Array.getSomes(Array.ensure(moved).map(fromChromeTab))
       }),
       group: Effect.fn("Tabs.group")(function* (options) {
         const [first, ...rest] = options.tabIds

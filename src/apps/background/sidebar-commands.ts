@@ -1001,4 +1001,14 @@ export const runSidebarCommand = (command: SidebarCommand) =>
         Effect.map(reasonFor(error), (reason): CommandOutcome => ({ _tag: "Failed", reason })),
       ),
     ),
+    // 想定外の例外で止まったときも結果を返さないと、サイドパネルは応答を待ち続ける
+    Effect.catchDefect((defect) =>
+      Effect.andThen(
+        Effect.logError("コマンドが想定外の例外で止まった", command._tag, defect),
+        Effect.map(translate("background.operation.failed"), (reason): CommandOutcome => ({
+          _tag: "Failed",
+          reason,
+        })),
+      ),
+    ),
   )
