@@ -72,6 +72,51 @@ describe("起動", () => {
     ),
   )
 
+  // 製品の不具合の疑い: Chrome は Favorites のタブを閉じる直前にピン留めを外した変化を送るので、
+  // 閉じていくタブが一時タブとして所属し、記録を使ってしまう。直したら fails を外す
+  it.live.fails(
+    "再起動の直後に Favorites のタブを閉じても、同じ URL の記録は後から開いたタブのために残る",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          yield* fake.seedStorage("local", {
+            "katip/spaces": [
+              { id: "home", name: "ホーム", color: "grey" },
+              { id: "work", name: "仕事", color: "blue" },
+            ],
+            "katip/restore-snapshot": [
+              { url: "https://mail.example/", spaceId: "work", pinned: null, titleOverride: null },
+            ],
+          })
+          const {
+            windowId,
+            tabIds: [favorite],
+          } = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://mail.example/", title: "メール", pinned: true },
+              { url: "https://home.example/", title: "家", active: true },
+            ],
+          })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 2)
+
+          yield* (yield* Tabs).remove([favorite])
+          yield* (yield* Tabs).create({ windowId, url: "https://mail.example/", active: false })
+          const view = yield* sidebar.viewWhere((v) =>
+            v.spaces.some((space) =>
+              temporaryTabsIn(space).some((tab) => tab.url === "https://mail.example/"),
+            ),
+          )
+
+          expect(
+            temporaryTitles(view, "仕事").pipe(Option.map((titles) => titles.length)),
+          ).toStrictEqual(Option.some(1))
+        }),
+      ),
+  )
+
   it.live("ブラウザの再起動後は、記録した URL と一致するタブが元の Space に戻る", () =>
     inBackground(
       Effect.gen(function* () {
@@ -338,6 +383,45 @@ describe("タブ", () => {
         ).toStrictEqual(Option.some(["https://new.example/", "chrome://newtab/"]))
       }),
     ),
+  )
+
+  // 製品の不具合の疑い: Chrome はピン留めを外した変化を、移す前のウィンドウのタブとして送るので、
+  // 移る前のウィンドウで見ていた Space に入ってしまう。直したら fails を外す
+  it.live.fails(
+    "Favorites のタブを別のウィンドウへ移すと、移った先のウィンドウで見ている Space の一時タブになる",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const {
+            tabIds: [favorite],
+          } = yield* fake.seedWindow({
+            tabs: [{ url: "https://favorite.example/", pinned: true }, { active: true }],
+          })
+          const { windowId: destination } = yield* fake.seedWindow({ tabs: [{}], focused: true })
+          yield* startBackground
+          const sidebar = yield* openSidebar(destination)
+          yield* sidebar.run({ _tag: "CreateSpace", windowId: destination })
+          yield* sidebar.viewWhere((v) =>
+            Option.exists(activeSpaceName(v), (name) => name === "Space 2"),
+          )
+
+          yield* (yield* Tabs).move([favorite], { windowId: destination, index: "end" })
+          const view = yield* sidebar.viewWhere((v) =>
+            v.spaces.some((space) =>
+              temporaryTabsIn(space).some((tab) => tab.url === "https://favorite.example/"),
+            ),
+          )
+
+          expect(
+            view.spaces
+              .filter((space) =>
+                temporaryTabsIn(space).some((tab) => tab.url === "https://favorite.example/"),
+              )
+              .map((space) => space.name),
+          ).toStrictEqual(["Space 2"])
+        }),
+      ),
   )
 
   it.live("ピン留めしたタブを閉じても、閉じたピンとして残る", () =>
