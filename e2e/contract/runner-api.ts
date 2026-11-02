@@ -1,6 +1,6 @@
 import type { Observation } from "#platform/browser-contract"
 
-/** 契約を確かめる拡張の service worker が `globalThis.katipContract` に置くもの。 */
+/** What the contract extension's service worker exposes as `globalThis.katipContract`. */
 export interface ContractRunner {
   readonly supportsSplitView: boolean
   readonly chromeVersion: number

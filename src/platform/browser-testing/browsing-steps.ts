@@ -155,13 +155,12 @@ export const setPinned = Effect.fnUntraced(function* (
   yield* moveWithinWindow(tx, tabId, pinned ? boundary : boundary - 1)
 })
 
-/** 分割ビューに入っていれば、その分割を解く。 */
 export const leaveSplitView = Effect.fnUntraced(function* (tx: BrowsingTx, tabId: TabId) {
   const { tab } = yield* requireTab(tx, tabId)
   if (Option.isSome(tab.splitViewId)) yield* unsplitTabs(tx, tab.splitViewId.value)
 })
 
-/** Chrome はタブをウィンドウから抜く前に、分割・ピン留め・グループをこの順に解き、それぞれの変化を発火する。 */
+/** Before a tab leaves its window, Chrome releases its split view, pinning and group in this order, emitting each change. */
 export const releaseTab = Effect.fnUntraced(function* (tx: BrowsingTx, tabId: TabId) {
   yield* leaveSplitView(tx, tabId)
   const { tab } = yield* requireTab(tx, tabId)
@@ -221,7 +220,7 @@ export const detachTab = Effect.fnUntraced(function* (
   return { ...location, wasActive }
 })
 
-/** @param departed - 分割・ピン留め・グループを解く前の、抜けたタブの位置と状態。 */
+/** @param departed - Where the departed tab was, and its state before its split, pinning and group were released. */
 export const activateSuccessor = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   departed: DetachedTab,
@@ -275,8 +274,9 @@ export const removeTab = Effect.fnUntraced(function* (tx: BrowsingTx, tabId: Tab
 /**
  * タブを別のウィンドウへ移す。
  *
- * @param keepGroup - グループごと移すときは `true`。`false` なら分割・ピン留め・グループを解いてから
- *   抜け、移動先で両隣が同じグループならそのグループに入る。
+ * @param keepGroup - `true` when moving with the whole group. When `false`, the tab releases its
+ *   split, pinning and group before leaving, and joins a group at the destination only when both
+ *   neighbors are in it.
  */
 export const transferTab = Effect.fnUntraced(function* (
   tx: BrowsingTx,
@@ -299,7 +299,7 @@ export const transferTab = Effect.fnUntraced(function* (
   const { tabs } = yield* requireWindow(tx, windowId)
   const requested = target === "end" || target < 0 || target > tabs.length ? tabs.length : target
   const index = clampInsertion(tabs, requested, false)
-  // Chrome は別のウィンドウへ移したタブを、opener を外した状態で差し込む
+  // Chrome attaches a tab moved to another window without its opener
   yield* insertTab(tx, windowId, index, {
     ...detached.tab,
     openerTabId: Option.none(),
@@ -326,7 +326,7 @@ export const moveTab = Effect.fnUntraced(function* (
     target === "end" || target < 0 || target >= tabs.length ? tabs.length - 1 : target
   const index = clampMove(tabs, requested, location.tab.pinned)
   if (index === location.index) return index
-  // 2 つを一緒に動かすなら分割を保てそうに見えるが、Chrome は 1 つ目を動かす前に解く
+  // Moving both tabs together looks like it could keep the split, but Chrome dissolves it before the first move
   yield* leaveSplitView(tx, tabId)
   yield* unsplitSeparatedBy(tx, tabId, index)
   yield* moveWithinWindow(tx, tabId, index)
@@ -398,7 +398,7 @@ export const createTab = Effect.fnUntraced(function* (
 ): Effect.fn.Return<TabId, BrowserApiError> {
   const window = yield* requireWindow(tx, spec.windowId)
   const clamped = clampInsertion(window.tabs, spec.index, spec.pinned)
-  // 指定の位置にそのまま差し込まない。Chrome は分割ビューの 2 つの間には開かず、分割の右に開く
+  // Not inserted at the requested index: Chrome never opens a tab between a split, only to its right
   const index = splitsGap(window.tabs, clamped) ? clamped + 1 : clamped
   const [id, issued] = issueId(yield* tx.state)
   const tabId = TabId.make(id)
@@ -475,7 +475,7 @@ export const splitTabs = Effect.fnUntraced(function* (
   return splitViewId
 })
 
-/** `tabId` のタブを `toIndex` へ動かすと、間に割り込まれて隣り合わなくなる分割を解く。 */
+/** Dissolves the splits that moving `tabId` to `toIndex` would wedge apart. */
 const unsplitSeparatedBy = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   tabId: TabId,
@@ -510,9 +510,9 @@ export const unsplitTabs = Effect.fnUntraced(function* (tx: BrowsingTx, splitVie
  * 満たさなくなった分割を解く。
  *
  * @remarks
- * Chrome が操作の前に分割を解くと確かめた操作（片方や両方を動かす、間に動かし入れる、ピン留めを
- * 変える、閉じる、複製する、別のウィンドウへ移す）は、それぞれの手順で先に解く。ここではそれ以外の
- * 操作の後に残った、条件を満たさない分割だけを解く。
+ * The operations observed to dissolve a split before they run (moving one or both tabs, moving
+ * another tab between them, changing pinning, closing, duplicating, moving to another window)
+ * dissolve it in their own steps first. This only dissolves splits left invalid by other operations.
  */
 export const dissolveBrokenSplitViews = Effect.fnUntraced(function* (tx: BrowsingTx) {
   const state = yield* tx.state

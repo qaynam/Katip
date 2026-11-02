@@ -1,7 +1,7 @@
 import { test } from "./fixtures"
 
-test.fixme("ウィンドウごとに、そのウィンドウで見ている Space が別々に表示される", () => {})
-test.fixme("新しいウィンドウを開くと、そのウィンドウは既定の Space を表示する", () => {})
-test.fixme("一時タブを別のウィンドウへ移しても、同じ Space に属したまま、移った先のサイドバーに出る", () => {})
-test.fixme("ウィンドウを閉じても、閉じたウィンドウのピンは閉じたピンとして残る", () => {})
-test.fixme("Spotlight は呼び出したウィンドウの上に開き、選んだ結果をそのウィンドウで開く", () => {})
+test.fixme("each window shows its own Space", () => {})
+test.fixme("a new window shows the default Space", () => {})
+test.fixme("a temporary tab moved to another window stays in its Space and shows in that window's sidebar", () => {})
+test.fixme("closing a window keeps its pins as closed pins", () => {})
+test.fixme("Spotlight opens over the calling window and opens the chosen result there", () => {})

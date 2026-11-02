@@ -5,7 +5,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("Chrome でピン留めしたタブは、一時タブではなく Favorites に出る", async ({
+test("a tab pinned in Chrome shows in Favorites, not in the temporary tabs", async ({
   site,
   sidebar,
   background,
@@ -24,11 +24,7 @@ test("Chrome でピン留めしたタブは、一時タブではなく Favorites
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /b"])
 })
 
-test("Favorites のタイルを押すと、そのタブがアクティブになる", async ({
-  site,
-  sidebar,
-  background,
-}) => {
+test("clicking a Favorites tile activates the tab", async ({ site, sidebar, background }) => {
   await openPages(background, [`${site}/a`])
   await expect(temporaryTitles(sidebar)).toHaveCount(1)
   await background.evaluate(async (url) => {
@@ -44,6 +40,6 @@ test("Favorites のタイルを押すと、そのタブがアクティブにな�
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a pinned active"])
 })
 
-test.fixme("Favorites のタイルを並べ替えると、Chrome のピン留めしたタブの順も変わる", () => {})
-test.fixme("Favorites のタブは、どの Space に切り替えても表示される", () => {})
-test.fixme("Favorites のタブを別のウィンドウへ移すと、移った先のウィンドウで見ている Space の一時タブになる", () => {})
+test.fixme("reordering Favorites tiles reorders Chrome's pinned tabs", () => {})
+test.fixme("Favorites stay visible whichever Space is shown", () => {})
+test.fixme("moving a Favorite to another window makes it a temporary tab of the Space shown there", () => {})

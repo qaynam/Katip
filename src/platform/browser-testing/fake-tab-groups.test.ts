@@ -72,7 +72,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
   })
 
   describe("アクティブなタブを含むグループを折りたたんだとき", () => {
-    it.effect("アクティブなタブは変わらず、TabGroupUpdated だけが発火する", () =>
+    it.effect("keeps the active tab and emits only TabGroupUpdated", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups

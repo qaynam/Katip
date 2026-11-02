@@ -10,7 +10,7 @@ import {
   temporaryTitles,
 } from "./sidebar-actions"
 
-/** `paths` のページを開き、続けて開いた 2 つを本物の分割ビューにする */
+/** Opens the pages in `paths` and splits the two tabs into a real split view. */
 const openSplit = async (background: Worker, site: string, paths: readonly [string, string]) => {
   await openPages(
     background,
@@ -21,7 +21,7 @@ const openSplit = async (background: Worker, site: string, paths: readonly [stri
       const tabs = await chrome.tabs.query({})
       const ids = urls.map((url) => tabs.find((tab) => (tab.pendingUrl ?? tab.url) === url)?.id)
       const [left, right] = ids
-      if (left === undefined || right === undefined) throw new Error("分割するタブが無い")
+      if (left === undefined || right === undefined) throw new Error("no tabs to split")
       await chrome.tabs.createSplit([left, right])
     },
     paths.map((path) => `${site}${path}`),
@@ -34,16 +34,16 @@ const splitRowOf = (sidebar: Page, title: string) =>
     .getByRole("listitem")
     .filter({ has: sidebar.getByRole("group", { name: title }) })
 
-test.describe("分割ビューの API がある Chrome", () => {
+test.describe("on Chrome with the split view API", () => {
   test.beforeEach(async ({ sidebar, background }) => {
     test.skip(
       !(await isSplitViewAvailable(background)),
-      "分割ビューの API が無い Chrome（154 以前）",
+      "Chrome without the split view API (154 or earlier)",
     )
     await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
   })
 
-  test("一時タブを別の一時タブに重ねると、ブラウザの画面が分割され、重ねたタブが前に出る", async ({
+  test("dropping a temporary tab onto another splits the browser view and brings the dropped tab to the front", async ({
     site,
     sidebar,
     background,
@@ -63,7 +63,7 @@ test.describe("分割ビューの API がある Chrome", () => {
       .toStrictEqual(["/a split", "/b split active"])
   })
 
-  test("分割ビューの行は、2 つのタブを 1 行に並べて表す", async ({ site, sidebar, background }) => {
+  test("a split view row shows both tabs in one row", async ({ site, sidebar, background }) => {
     await openSplit(background, site, ["/a", "/b"])
 
     await expect(splitRowOf(sidebar, "Page /a").getByRole("group")).toHaveText([
@@ -72,7 +72,7 @@ test.describe("分割ビューの API がある Chrome", () => {
     ])
   })
 
-  test("分割ビューの行のメニューで Separate Tabs を選ぶと、2 つの単独のタブに戻る", async ({
+  test("Separate Tabs in the split row menu turns it back into two single tabs", async ({
     site,
     sidebar,
     background,
@@ -89,7 +89,7 @@ test.describe("分割ビューの API がある Chrome", () => {
     await expect(sidebar.getByRole("group", { name: "Page /a" })).toHaveCount(0)
   })
 
-  test("分割ビューの行のメニューで Pin を選ぶと、2 つを入れたフォルダの分割ピンになる", async ({
+  test("Pin in the split row menu makes a split pin: a folder holding both tabs", async ({
     site,
     sidebar,
     background,
@@ -108,7 +108,7 @@ test.describe("分割ビューの API がある Chrome", () => {
     await expect(temporaryTitles(sidebar)).toHaveCount(0)
   })
 
-  test("分割ビューの行をピン留めの領域へ落とすと、分割ピンになる", async ({
+  test("dropping a split row on the pinned area makes it a split pin", async ({
     site,
     sidebar,
     background,
@@ -126,7 +126,7 @@ test.describe("分割ビューの API がある Chrome", () => {
       .toStrictEqual(["Page /a | Page /b[Page /a Page /b]"])
   })
 
-  test("閉じた分割ピンを開くと、2 つのタブが分割ビューで並んで開く", async ({
+  test("opening a closed split pin opens both tabs side by side in a split view", async ({
     site,
     sidebar,
     background,
@@ -154,7 +154,7 @@ test.describe("分割ビューの API がある Chrome", () => {
       .toStrictEqual(["/a split active", "/b split"])
   })
 
-  test("開いている分割ピンを一時タブの上へ落とすと、分割ビューのまま一時タブに戻り、分割ピンは消える", async ({
+  test("dropping an open split pin on a temporary tab makes it temporary tabs in a split view and deletes the split pin", async ({
     site,
     sidebar,
     background,
@@ -187,7 +187,7 @@ test.describe("分割ビューの API がある Chrome", () => {
       .toStrictEqual(["/c", "/a split", "/b split"])
   })
 
-  test("分割ビューの行を一時タブの別の位置へ落としても、分割ビューのまま並ぶ", async ({
+  test("dropping a split row elsewhere in the temporary tabs keeps it a split view", async ({
     site,
     sidebar,
     background,
@@ -210,13 +210,16 @@ test.describe("分割ビューの API がある Chrome", () => {
   })
 })
 
-test.describe("分割ビューの API が無い Chrome", () => {
+test.describe("on Chrome without the split view API", () => {
   test.beforeEach(async ({ sidebar, background }) => {
-    test.skip(await isSplitViewAvailable(background), "分割ビューの API がある Chrome（155 以降）")
+    test.skip(
+      await isSplitViewAvailable(background),
+      "Chrome with the split view API (155 or later)",
+    )
     await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
   })
 
-  test("一時タブを別の一時タブに重ねても分割されず、対応していないことが知らされる", async ({
+  test("dropping a temporary tab onto another does not split and says split view is unsupported", async ({
     site,
     sidebar,
     background,

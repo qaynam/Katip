@@ -3,8 +3,8 @@ import { expect, test } from "./fixtures"
 import { openPages, pagesInBrowser, pinnedBookmarks, temporaryTitles } from "./sidebar-actions"
 
 /**
- * `url` のタブをアクティブにしてから、サイドバーの検索ボタンで Spotlight を開く。
- * タブは読み込みを終えていること（サイドバーにページの名前が出ていること）。
+ * Activates the tab at `url`, then opens Spotlight with the sidebar's search button.
+ * The tab must have finished loading (its page name shows in the sidebar).
  */
 const openSpotlightOver = async (
   context: BrowserContext,
@@ -35,7 +35,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("開いているタブの名前を入れて選ぶと、そのタブがアクティブになり、Spotlight が閉じる", async ({
+test("choosing an open tab by name activates it and closes Spotlight", async ({
   site,
   context,
   sidebar,
@@ -51,12 +51,7 @@ test("開いているタブの名前を入れて選ぶと、そのタブがア�
   await expect.poll(() => spotlight.isClosed()).toBe(true)
 })
 
-test("Pin Tab を選ぶと、アクティブなタブがピンになる", async ({
-  site,
-  context,
-  sidebar,
-  background,
-}) => {
+test("Pin Tab pins the active tab", async ({ site, context, sidebar, background }) => {
   await openPages(background, [`${site}/a`])
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
   const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
@@ -66,7 +61,7 @@ test("Pin Tab を選ぶと、アクティブなタブがピンになる", async 
   await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page /a"])
 })
 
-test("Duplicate Tab を選ぶと、アクティブなタブのすぐ右に複製が開き、同じ Space の一時タブになる", async ({
+test("Duplicate Tab opens a duplicate right after the active tab as a temporary tab of the same Space", async ({
   site,
   context,
   sidebar,
@@ -82,7 +77,7 @@ test("Duplicate Tab を選ぶと、アクティブなタブのすぐ右に複製
   await expect(temporaryTitles(sidebar)).toHaveCount(3)
 })
 
-test("URL を入れて Enter を押すと、見ている Space の一時タブとして開く", async ({
+test("entering a URL and pressing Enter opens it as a temporary tab of the shown Space", async ({
   site,
   context,
   sidebar,
@@ -100,10 +95,10 @@ test("URL を入れて Enter を押すと、見ている Space の一時タブ�
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /typed", "Page /a"])
 })
 
-test.fixme("ピンの名前を入れて選ぶと、閉じたピンならそのピンのタブとして開く", () => {})
-test.fixme("Space の名前を入れて選ぶと、その Space に切り替わる", () => {})
-test.fixme("ブックマークを選ぶと、見ている Space の一時タブとして開く", () => {})
-test.fixme("閲覧履歴を探す設定を有効にすると、閲覧履歴も候補に出る", () => {})
-test.fixme("> で始めるとコマンドだけを探す", () => {})
-test.fixme("Ctrl+N / Ctrl+P で候補を上下に選べる", () => {})
-test.fixme("Escape を押すと、何もせずに閉じる", () => {})
+test.fixme("choosing a closed pin by name opens it as that pin's tab", () => {})
+test.fixme("choosing a Space by name switches to it", () => {})
+test.fixme("choosing a bookmark opens it as a temporary tab of the shown Space", () => {})
+test.fixme("with history search enabled, browsing history appears in the suggestions", () => {})
+test.fixme("a query starting with > searches commands only", () => {})
+test.fixme("Ctrl+N / Ctrl+P move the selection down and up", () => {})
+test.fixme("Escape closes without doing anything", () => {})

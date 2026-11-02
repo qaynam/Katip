@@ -1,9 +1,9 @@
 import { fileURLToPath } from "node:url"
 
-/** E2E テストで Chrome に読み込ませる、本番ビルドの拡張の置き場所。 */
+/** Where the production build of the extension that E2E tests load into Chrome is written. */
 export const EXTENSION_DIR = fileURLToPath(new URL("../.e2e/extension", import.meta.url))
 
-/** ブラウザ API の契約を本物の Chrome で確かめる、テスト専用の拡張の置き場所。 */
+/** Where the test-only extension that checks the browser API contract on real Chrome is written. */
 export const CONTRACT_EXTENSION_DIR = fileURLToPath(
   new URL("../.e2e/contract-extension", import.meta.url),
 )

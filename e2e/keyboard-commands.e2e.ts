@@ -10,16 +10,16 @@ import {
 } from "./sidebar-actions"
 
 /**
- * `url` のタブをアクティブにしてから、そのタブでショートカットを押したときと同じ引数で
- * `chrome.commands.onCommand` を発火する。
+ * Activates the tab at `url`, then fires `chrome.commands.onCommand` with the same arguments as
+ * pressing the shortcut on that tab.
  */
 const pressShortcutOn = (background: Worker, url: string, command: string) =>
-  // headless の Chrome ではキーを押しても拡張のショートカットが届かないので、Chrome が
-  // リスナーに渡すのと同じ引数で、登録済みのリスナーを直接呼ぶ
+  // Not a key press: headless Chrome never delivers extension shortcuts, so call the registered
+  // listeners directly with the arguments Chrome would pass
   background.evaluate(
     async ({ url, command }) => {
       const [target] = await chrome.tabs.query({ url })
-      if (target?.id === undefined) throw new Error(`タブが開いていない: ${url}`)
+      if (target?.id === undefined) throw new Error(`no tab open at ${url}`)
       const active = await chrome.tabs.update(target.id, { active: true })
       const onCommand = chrome.commands.onCommand as unknown as {
         dispatch: (command: string, tab: chrome.tabs.Tab | undefined) => void
@@ -33,7 +33,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("一時タブで quick-pin-toggle を押すと、そのタブがピン留めの末尾にピンとして並ぶ", async ({
+test("quick-pin-toggle on a temporary tab adds it as a pin at the end of the pinned list", async ({
   site,
   sidebar,
   background,
@@ -48,7 +48,7 @@ test("一時タブで quick-pin-toggle を押すと、そのタブがピン留�
   await expect(temporaryTitles(sidebar)).toHaveCount(0)
 })
 
-test("ピンのタブで quick-pin-toggle を押すと、ピン留めが外れて一時タブに戻る", async ({
+test("quick-pin-toggle on a pinned tab unpins it back to a temporary tab", async ({
   site,
   sidebar,
   background,
@@ -64,19 +64,22 @@ test("ピンのタブで quick-pin-toggle を押すと、ピン留めが外れ�
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /docs"])
 })
 
-test("分割ビューのタブで quick-pin-toggle を押すと、2 つを入れた分割ピンになる", async ({
+test("quick-pin-toggle on a split view tab makes a split pin holding both tabs", async ({
   site,
   sidebar,
   background,
 }) => {
-  test.skip(!(await isSplitViewAvailable(background)), "分割ビューの API が無い Chrome（154 以前）")
+  test.skip(
+    !(await isSplitViewAvailable(background)),
+    "Chrome without the split view API (154 or earlier)",
+  )
   await openPages(background, [`${site}/a`, `${site}/b`])
   await background.evaluate(async (site) => {
     const ids = (await chrome.tabs.query({}))
       .filter((tab) => (tab.pendingUrl ?? tab.url ?? "").startsWith(site))
       .flatMap((tab) => (tab.id === undefined ? [] : [tab.id]))
     const [left, right] = ids
-    if (left === undefined || right === undefined) throw new Error("分割するタブが無い")
+    if (left === undefined || right === undefined) throw new Error("no tabs to split")
     await chrome.tabs.createSplit([left, right])
   }, site)
   await expect(sidebar.getByRole("group", { name: "Page /a" })).toBeVisible()
@@ -88,7 +91,7 @@ test("分割ビューのタブで quick-pin-toggle を押すと、2 つを入れ
     .toStrictEqual(["Page /a | Page /b[Page /a Page /b]"])
 })
 
-test("next-tab-in-space を押すと、表示の順で次のタブがアクティブになり、末尾からは先頭へ戻る", async ({
+test("next-tab-in-space activates the next tab in display order, wrapping from the last to the first", async ({
   site,
   sidebar,
   background,
@@ -103,7 +106,7 @@ test("next-tab-in-space を押すと、表示の順で次のタブがアクテ�
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b active"])
 })
 
-test("previous-tab-in-space を押すと、表示の順で前のタブがアクティブになる", async ({
+test("previous-tab-in-space activates the previous tab in display order", async ({
   site,
   sidebar,
   background,
@@ -116,7 +119,7 @@ test("previous-tab-in-space を押すと、表示の順で前のタブがアク�
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b active"])
 })
 
-test("open-spotlight を押すと、Spotlight が別の小さなウィンドウで開く", async ({
+test("open-spotlight opens Spotlight in a separate popup window", async ({
   site,
   context,
   background,
@@ -139,6 +142,6 @@ test("open-spotlight を押すと、Spotlight が別の小さなウィンドウ�
     .toStrictEqual(["popup"])
 })
 
-test.fixme("copy-current-url を押すと、アクティブなタブの URL がコピーされ、ページの上に知らせが出る", () => {})
-test.fixme("copy-current-url-as-markdown を押すと、[タイトル](URL) の形でコピーされる", () => {})
-test.fixme("_execute_action（Alt+S）を押すと、サイドパネルが開く", () => {})
+test.fixme("copy-current-url copies the active tab's URL and shows a notice on the page", () => {})
+test.fixme("copy-current-url-as-markdown copies it as [title](URL)", () => {})
+test.fixme("_execute_action (Alt+S) opens the side panel", () => {})

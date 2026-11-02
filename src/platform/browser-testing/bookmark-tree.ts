@@ -52,8 +52,8 @@ const permanentFolder = (
 })
 
 /**
- * 新しいプロファイルの Chrome と同じく、ブックマークバーとその他のブックマークだけを持つ。
- * モバイルのブックマークは同期した端末にブックマークがあるときだけ現れる。
+ * Like a new Chrome profile, only the bookmarks bar and other bookmarks exist. The mobile
+ * bookmarks folder appears only when a synced device has bookmarks.
  */
 export const initialBookmarkTree = (now: number): BookmarkTree => ({
   nodes: [
@@ -69,7 +69,7 @@ export const initialBookmarkTree = (now: number): BookmarkTree => ({
     permanentFolder("1", "Bookmarks Bar", "bookmarks-bar", now),
     permanentFolder("2", "Other Bookmarks", "other", now),
   ],
-  // 3 と 4 は Chrome がモバイルと管理対象のフォルダのために取っておく
+  // Chrome reserves 3 and 4 for the mobile and managed folders
   lastIssuedId: 4,
 })
 
@@ -227,7 +227,7 @@ export const createNode = (
   Result.gen(function* () {
     const parent = yield* requireParentFolder(tree, options.parentId ?? OTHER_BOOKMARKS_ID)
     const index = yield* requireIndexWithin(parent, options.index)
-    // Chrome は空の URL をフォルダの指定として扱う
+    // Not rejected as an invalid URL: Chrome treats an empty URL as a request for a folder
     const url =
       options.url === undefined || options.url === ""
         ? Option.none()
@@ -374,7 +374,7 @@ export const removeNode = (
           id,
           parentId: parent.id,
           index: parent.childIds.indexOf(id),
-          // Chrome は消したノード自身の親と位置を node に入れない（子には入れる）
+          // Chrome leaves the parent and index out of the removed node itself (its children keep them)
           node: {
             ...describeNode(tree, record, true),
             parentId: Option.none(),

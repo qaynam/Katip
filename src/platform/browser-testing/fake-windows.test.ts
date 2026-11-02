@@ -191,7 +191,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
 
   describe("ユーザーがウィンドウを閉じたとき", () => {
     it.effect(
-      "グループとピン留めを右から解いてから、右のタブから順に isWindowClosing で閉じ、WindowRemoved が続く",
+      "releases groups and pinning from the right, removes tabs from the right with isWindowClosing, then emits WindowRemoved",
       () =>
         Effect.gen(function* () {
           const fake = yield* FakeBrowser

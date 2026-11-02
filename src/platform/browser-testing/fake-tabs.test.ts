@@ -80,7 +80,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
     )
 
     it.effect(
-      "グループの最後のタブなら、グループを抜けてグループが消えてから TabRemoved が発火する",
+      "for the last tab of a group, the tab leaves the group and the group is removed before TabRemoved",
       () =>
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -569,31 +569,33 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
         }),
     )
 
-    it.effect("ピン留めすると、ピン留めの変化が発火してからピン留めの領域の末尾へ動く", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const tabs = yield* Tabs
-        const {
-          windowId,
-          tabIds: [, , pinning],
-        } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}, {}] })
+    it.effect(
+      "pinning emits the pinned change, then moves the tab to the end of the pinned area",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const {
+            windowId,
+            tabIds: [, , pinning],
+          } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}, {}] })
 
-        const updated = yield* tabs.update(pinning, { pinned: true })
+          const updated = yield* tabs.update(pinning, { pinned: true })
 
-        assert.strictEqual(updated.index, 1)
-        assert.deepStrictEqual(
-          (yield* fake.takeEmittedEvents).map((event) =>
-            event._tag === "TabUpdated" ? event.changes : event,
-          ),
-          [
-            { pinned: true },
-            { _tag: "TabMoved", tabId: pinning, windowId, fromIndex: 2, toIndex: 1 },
-          ],
-        )
-      }),
+          assert.strictEqual(updated.index, 1)
+          assert.deepStrictEqual(
+            (yield* fake.takeEmittedEvents).map((event) =>
+              event._tag === "TabUpdated" ? event.changes : event,
+            ),
+            [
+              { pinned: true },
+              { _tag: "TabMoved", tabId: pinning, windowId, fromIndex: 2, toIndex: 1 },
+            ],
+          )
+        }),
     )
 
-    it.effect("グループのタブをピン留めすると、ピン留めしてからグループを抜けて動く", () =>
+    it.effect("pinning a grouped tab pins it, ungroups it, then moves it", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -682,7 +684,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
 
   describe("タブをグループにまとめたとき", () => {
     it.effect(
-      "グループの作成と見た目の更新が発火し、まとめたタブの変化はタブストリップの順に発火する",
+      "emits the group creation and an appearance update, and the grouped tabs' changes in tab strip order",
       () =>
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -928,7 +930,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("新しい ID のタブに置き換わってから、discarded の変化が発火する", () =>
+    it.effect("replaces the tab with one under a new ID, then emits the discarded change", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -952,20 +954,18 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect(
-      "置き換わる前のタブを opener にしていたタブは、置き換わった後のタブを opener にする",
-      () =>
-        Effect.gen(function* () {
-          const fake = yield* FakeBrowser
-          const tabs = yield* Tabs
-          const {
-            tabIds: [, opener, child],
-          } = yield* fake.seedWindow({ tabs: [{ active: true }, {}, { openerIndex: 1 }] })
+    it.effect("tabs opened by the replaced tab take the replacement as their opener", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [, opener, child],
+        } = yield* fake.seedWindow({ tabs: [{ active: true }, {}, { openerIndex: 1 }] })
 
-          const discarded = yield* tabs.discard(opener)
+        const discarded = yield* tabs.discard(opener)
 
-          assert.deepStrictEqual((yield* tabs.get(child)).openerTabId, Option.some(discarded.id))
-        }),
+        assert.deepStrictEqual((yield* tabs.get(child)).openerTabId, Option.some(discarded.id))
+      }),
     )
 
     it.effect("破棄したタブをアクティブにすると、アクティブになってから読み込み直される", () =>
@@ -1188,7 +1188,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
   })
 
   describe("分割ビューのタブを閉じたとき", () => {
-    it.effect("閉じるタブも含めて両方が分割ビューから外れてから、TabRemoved が発火する", () =>
+    it.effect("both tabs, including the closing one, leave the split view before TabRemoved", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -1207,7 +1207,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("ウィンドウごと閉じると、タブを閉じる前に両方が分割ビューから外れる", () =>
+    it.effect("closing the window takes both tabs out of the split view before removing them", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const {
@@ -1249,7 +1249,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("両方を一緒に動かしても、両方が分割ビューから外れる", () =>
+    it.effect("moving both together still takes both out of the split view", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -1268,7 +1268,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("両方を今の位置へ動かすと、分割ビューのまま", () =>
+    it.effect("moving both to where they already are keeps the split view", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -1340,7 +1340,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("片方だけをグループに入れると、もう片方も同じグループに入り、分割ビューのまま", () =>
+    it.effect("grouping one puts the other in the same group and keeps the split view", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -1362,7 +1362,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("片方だけをグループから外すと、もう片方も外れ、分割ビューのまま", () =>
+    it.effect("ungrouping one ungroups the other too and keeps the split view", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs

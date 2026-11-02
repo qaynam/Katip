@@ -6,7 +6,7 @@ export const tabMoveSuite: ContractSuite = {
   name: "tabs.move",
   scenarios: [
     {
-      name: "1 つだけ動かしても、動かしたタブを 1 つ入れた配列を返す",
+      name: "moving a single tab still returns an array with that one tab",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -25,7 +25,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "複数を動かすと、前のタブを置いた位置の次に後のタブを置く",
+      name: "moving several tabs places each one right after where the previous one landed",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -44,7 +44,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "末尾を指定して複数を動かすと、指定した順に末尾へ並び、それぞれを動かした時点の位置を返す",
+      name: "moving several tabs to the end keeps their order and returns each tab as of its own move",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -63,7 +63,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "タブの数を超える位置を指定すると、末尾へ動く",
+      name: "an index beyond the tab count moves the tab to the end",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -78,7 +78,7 @@ export const tabMoveSuite: ContractSuite = {
       expected: { strip: ["b", "c", "a active"], moveEvents: ["a 0→2"] },
     },
     {
-      name: "ピン留めしていないタブをピン留めの領域へ動かそうとすると、領域のすぐ後ろで止まる",
+      name: "an unpinned tab moved into the pinned area stops right after it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -99,7 +99,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めしたタブをピン留めの領域の外へ動かそうとすると、領域の末尾で止まる",
+      name: "a pinned tab moved out of the pinned area stops at its end",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -122,7 +122,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めしたタブとしていないタブを一緒に動かすと、それぞれ自分の領域の中に置かれる",
+      name: "moving pinned and unpinned tabs together keeps each inside its own area",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -145,7 +145,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループの途中へ動かすと、そのグループに入る",
+      name: "moving a tab into the middle of a group joins the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -166,7 +166,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループの外へ動かすと、グループを抜ける",
+      name: "moving a tab out of its group leaves the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -187,7 +187,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループに属さないタブとグループの境目へ動かしても、グループには入らない",
+      name: "moving a tab to the boundary between an ungrouped tab and a group does not join the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -204,7 +204,7 @@ export const tabMoveSuite: ContractSuite = {
       expected: { strip: ["b", "a active", "c g1", "d g1"], moveEvents: ["a 0→1"] },
     },
     {
-      name: "別のウィンドウへ動かすと、元のウィンドウから外れて、移った先に付く",
+      name: "moving to another window detaches the tab and attaches it there",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -223,7 +223,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めしたタブを別のウィンドウへ動かすと、ピン留めを外してから移す",
+      name: "moving a pinned tab to another window unpins it before moving",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -244,7 +244,7 @@ export const tabMoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループのタブを別のウィンドウへ動かすと、グループを抜けてから移す",
+      name: "moving a grouped tab to another window ungroups it before moving",
       run: (stage) =>
         Effect.gen(function* () {
           const {

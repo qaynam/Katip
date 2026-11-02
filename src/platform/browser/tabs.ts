@@ -25,12 +25,12 @@ export interface TabCreateOptions {
   readonly pinned?: boolean
   readonly openerTabId?: TabId
   /**
-   * 開いたタブをこのタブと分割ビューにする。`index` を省略するとこのタブの右隣に開く。
-   * このタブがグループに入っていれば、開いたタブもグループに入ってから分割される。
+   * Splits the new tab with this tab. Without `index`, the new tab opens right of this tab.
+   * When this tab is in a group, the new tab joins the group before it is split.
    *
    * @remarks
-   * このタブが分割済みのとき、`windowId` がこのタブのウィンドウと違うとき、
-   * `index` がこのタブの隣にならないとき、{@link Tabs.supportsSplitView} が `false` のときは失敗する。
+   * Fails when this tab is already split, when `windowId` is not this tab's window, when `index`
+   * is not next to this tab, or when {@link Tabs.supportsSplitView} is `false`.
    */
   readonly splitWithTabId?: TabId
 }
@@ -65,47 +65,49 @@ export class Tabs extends Context.Service<
     create(options: TabCreateOptions): Effect.Effect<BrowserTab, BrowserApiError>
     update(tabId: TabId, options: TabUpdateOptions): Effect.Effect<BrowserTab, BrowserApiError>
     /**
-     * 元のタブの右隣に、同じページを開いた新しいタブを作ってアクティブにする。
+     * Opens the same page in a new active tab right after the original.
      *
      * @remarks
-     * 複製したタブの `openerTabId` は、元のタブではなく複製した時点でアクティブだったタブになる。
-     * 元のタブが分割ビューに入っていれば、先に分割が解ける。
+     * The duplicate's `openerTabId` is the tab that was active when duplicating, not the original.
+     * When the original is in a split view, the split is dissolved first.
      */
     duplicate(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     /**
-     * 先頭から順に閉じる。存在しない ID に当たるとそこで失敗し、それより前のタブは閉じたままになる。
+     * Closes the tabs in order. Fails at the first missing ID; tabs before it stay closed.
      *
      * @remarks
-     * 閉じる前に、分割ビュー・ピン留め・グループが解け、その変化のイベントが `TabRemoved` より先に届く。
+     * Before a tab is removed, its split view, pinning and group are released, and the events for
+     * those changes arrive before `TabRemoved`.
      */
     remove(tabIds: ReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
     /**
-     * タブを `index` から順に並べて置き、それぞれを動かした時点のタブを返す。
+     * Places the tabs one after another from `index` and returns each tab as of its own move.
      *
      * @remarks
-     * 後のタブは、前のタブを実際に置いた位置の次に置く。
-     * ピン留めされたタブとそうでないタブの境界は越えられず、境界に寄せられる。
-     * グループの途中に置いたタブはそのグループに入り、グループから離れたタブはグループを抜ける。
-     * 分割ビューのタブを動かすと、2 つを一緒に動かしても分割が解ける。2 つの間へ別のタブを
-     * 動かし入れても解ける。今の位置から動かないタブでは解けない。
-     * 別のウィンドウへ動かすと、先にピン留めとグループが解ける。
+     * Each tab goes right after where the previous one actually landed.
+     * Tabs cannot cross the boundary between pinned and unpinned tabs; they stop at it.
+     * A tab placed inside a group joins it, and a tab moved away from its group leaves it.
+     * Moving a tab of a split view dissolves the split, even when both tabs move together, and so
+     * does moving another tab between them. A tab that stays where it is keeps its split.
+     * Moving to another window releases the pinning and the group first.
      */
     move(
       tabIds: ReadonlyArray<TabId>,
       options: TabMoveOptions,
     ): Effect.Effect<ReadonlyArray<BrowserTab>, BrowserApiError>
     /**
-     * タブをグループにまとめ、そのグループの ID を返す。ピン留めされたタブは外される。
-     * 分割ビューの片方を渡すと、もう片方も一緒に入り、分割は保たれる。
+     * Groups the tabs and returns the group ID. Pinned tabs are unpinned.
+     * Passing one tab of a split view groups its partner too and keeps the split.
      */
     group(options: TabGroupOptions): Effect.Effect<TabGroupId, BrowserApiError>
-    /** 分割ビューの片方を渡すと、もう片方も一緒にグループを抜け、分割は保たれる。 */
+    /** Passing one tab of a split view ungroups its partner too and keeps the split. */
     ungroup(tabIds: Array.NonEmptyReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
     /**
-     * 破棄したタブを、新しい ID のタブとして返す。アクティブなタブは破棄できず失敗する。
+     * Returns the discarded tab under its new ID. Fails for the active tab.
      *
      * @remarks
-     * 元の ID は使えなくなり、`TabReplaced` が届く。分割ビューやグループは置き換わったタブに残る。
+     * The old ID becomes invalid and `TabReplaced` arrives. The split view and the group carry over
+     * to the replacement.
      */
     discard(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     /**

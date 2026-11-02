@@ -16,7 +16,7 @@ export interface BookmarkCreateOptions {
   /** 省略時は末尾。 */
   readonly index?: number
   readonly title?: string
-  /** 省略するか空文字にすると、フォルダを作る。 */
+  /** Omitted or empty, a folder is created. */
   readonly url?: string
 }
 

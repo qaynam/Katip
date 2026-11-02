@@ -22,8 +22,9 @@ const snapshotOf = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: Window
 })
 
 /**
- * ウィンドウを閉じる。Chrome は先に分割を左から、グループとピン留めを右から解き、
- * 右のタブから順に `isWindowClosing: true` で閉じる。閉じている途中で別のタブをアクティブにしない。
+ * Closes the window. Like Chrome, it first dissolves splits from the left and releases groups and
+ * pinning from the right, then removes the tabs from the right with `isWindowClosing: true`,
+ * without activating another tab along the way.
  */
 export const closeWindowWithTabs = Effect.fnUntraced(function* (
   tx: BrowsingTx,

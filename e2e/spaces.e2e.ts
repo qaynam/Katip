@@ -10,7 +10,7 @@ const spaceFolderTitles = (background: Worker) =>
       : (await chrome.bookmarks.getChildren(root.id)).map((node) => node.title)
   })
 
-/** 下のバーから Space を作り、続けて開く名前の入力に `name` を入れる。テーマの選択は閉じる */
+/** Creates a Space from the bottom bar, enters `name` in the name editor that opens, and closes the theme picker. */
 const createSpace = async (sidebar: Page, name: string) => {
   await sidebar.getByRole("button", { name: "Create Space" }).click()
   await sidebar.getByRole("textbox", { name: "Space name" }).fill(name)
@@ -23,7 +23,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("Space を作ると、付けた名前のブックマークのフォルダができ、その Space に新しいタブが開く", async ({
+test("creating a Space adds a bookmark folder with the entered name and opens a new tab in it", async ({
   sidebar,
   background,
 }) => {
@@ -37,7 +37,7 @@ test("Space を作ると、付けた名前のブックマークのフォルダ�
   await expect.poll(() => spaceFolderTitles(background)).toStrictEqual(["Home", "Work"])
 })
 
-test("下のバーで Space を切り替えると、その Space で最後に見ていたタブが前面に出る", async ({
+test("switching Spaces in the bottom bar brings that Space's last viewed tab to the front", async ({
   site,
   sidebar,
   background,
@@ -59,7 +59,7 @@ test("下のバーで Space を切り替えると、その Space で最後に見
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a active"])
 })
 
-test("タブのメニューで別の Space へ移すと、その Space に切り替わり、タブがその Space の一時タブになる", async ({
+test("moving a tab to another Space from its menu switches to that Space with the tab as a temporary tab", async ({
   site,
   sidebar,
   background,
@@ -84,10 +84,7 @@ test("タブのメニューで別の Space へ移すと、その Space に切り
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a active", "/b"])
 })
 
-test("Space の名前を変えると、ブックマークのフォルダの名前も変わる", async ({
-  sidebar,
-  background,
-}) => {
+test("renaming a Space renames its bookmark folder", async ({ sidebar, background }) => {
   await sidebar.getByRole("heading", { name: "Home" }).getByRole("button").dblclick()
   await sidebar.getByRole("textbox", { name: "Space name" }).fill("Personal")
   await sidebar.keyboard.press("Enter")
@@ -96,7 +93,7 @@ test("Space の名前を変えると、ブックマークのフォルダの名�
   await expect.poll(() => spaceFolderTitles(background)).toStrictEqual(["Personal"])
 })
 
-test("Space を削除すると、その Space の一時タブは閉じずに残る Space へ移り、フォルダは消える", async ({
+test("deleting a Space moves its temporary tabs to a remaining Space without closing them and removes the folder", async ({
   site,
   sidebar,
   background,
@@ -114,7 +111,7 @@ test("Space を削除すると、その Space の一時タブは閉じずに残�
   await expect.poll(() => spaceFolderTitles(background)).toStrictEqual(["Home"])
 })
 
-test("Space のメニューで Open Settings を選ぶと、設定画面がタブで開く", async ({
+test("Open Settings in the Space menu opens the settings page in a tab", async ({
   context,
   sidebar,
 }) => {
@@ -126,13 +123,13 @@ test("Space のメニューで Open Settings を選ぶと、設定画面がタ�
   await expect((await opened).getByRole("heading").first()).toBeVisible()
 })
 
-test("最後の Space は削除できない", async ({ sidebar }) => {
+test("the last Space cannot be deleted", async ({ sidebar }) => {
   await sidebar.getByRole("button", { name: "Space menu" }).click()
 
   await expect(sidebar.getByRole("menuitem", { name: "Delete Space" })).toBeDisabled()
 })
 
-test.fixme("Space のメニューで Edit Theme を選び色を変えると、サイドバーの背景がその色になる", () => {})
-test.fixme("下のバーで Space の印をドラッグすると、Space の並びが変わる", () => {})
-test.fixme("サイドバーを左右にスワイプすると、隣の Space に切り替わる", () => {})
-test.fixme("別の Space の Space フォルダのブックマークを消すと、その Space がなくなる", () => {})
+test.fixme("changing the color with Edit Theme in the Space menu recolors the sidebar background", () => {})
+test.fixme("dragging a Space mark in the bottom bar reorders the Spaces", () => {})
+test.fixme("swiping the sidebar sideways switches to the neighboring Space", () => {})
+test.fixme("deleting a Space folder's bookmark removes that Space", () => {})

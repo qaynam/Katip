@@ -5,7 +5,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("ピンをクリックすると、そのページがタブで開く", async ({ site, sidebar, background }) => {
+test("clicking a pin opens its page in a tab", async ({ site, sidebar, background }) => {
   await seedPins(background, [{ title: "Docs", url: `${site}/docs` }])
   const pinned = sidebar.getByRole("region", { name: "Pinned" })
 
@@ -18,7 +18,7 @@ test("ピンをクリックすると、そのページがタブで開く", async
     .toContain(`${site}/docs`)
 })
 
-test("フォルダに入れたタブを外へ出すと、開き直さなくてもフォルダの外に出る", async ({
+test("dragging a tab out of a folder shows it outside the folder without reopening the panel", async ({
   site,
   sidebar,
   background,
@@ -48,7 +48,7 @@ test("フォルダに入れたタブを外へ出すと、開き直さなくて�
   await expect(pinned.getByRole("button", { name: "Page /a" })).toBeVisible()
 })
 
-test("フォルダに入れたフォルダを外へ出すと、開き直さなくてもフォルダの外に出る", async ({
+test("dragging a folder out of a folder shows it outside without reopening the panel", async ({
   sidebar,
   background,
 }) => {
@@ -75,7 +75,7 @@ test("フォルダに入れたフォルダを外へ出すと、開き直さな�
   await expect(pinned.getByRole("button", { name: "Inner" })).toBeVisible()
 })
 
-test("開いているピンの名前を変えると、行の名前が変わる", async ({ site, sidebar, background }) => {
+test("renaming an open pin renames its row", async ({ site, sidebar, background }) => {
   await seedPins(background, [{ title: "Docs", url: `${site}/docs` }])
   const pinned = sidebar.getByRole("region", { name: "Pinned" })
   await pinned.getByRole("button", { name: "Docs" }).click()
@@ -86,7 +86,7 @@ test("開いているピンの名前を変えると、行の名前が変わる",
   await expect(pinned.getByRole("button", { name: "Handbook" })).toBeVisible()
 })
 
-test("ピンした URL から別のページへ移ったピンも、名前を変えると行の名前が変わる", async ({
+test("renaming a pin that navigated away from its pinned URL renames its row too", async ({
   site,
   sidebar,
   background,
@@ -99,7 +99,7 @@ test("ピンした URL から別のページへ移ったピンも、名前を変
     const tab = (await chrome.tabs.query({})).find(
       (each) => (each.pendingUrl ?? each.url) === `${site}/docs`,
     )
-    if (tab?.id === undefined) throw new Error("ピンのタブが開いていない")
+    if (tab?.id === undefined) throw new Error("the pinned tab is not open")
     await chrome.tabs.update(tab.id, { url: `${site}/elsewhere` })
   }, site)
   await expect(pinned.getByRole("button", { name: "Go back to the pinned URL" })).toBeVisible()
@@ -109,7 +109,11 @@ test("ピンした URL から別のページへ移ったピンも、名前を変
   await expect(pinned.getByRole("button", { name: "Handbook" })).toBeVisible()
 })
 
-test("別のピンや一時タブと同じ名前にも変えられる", async ({ site, sidebar, background }) => {
+test("a row can be renamed to the same name as another pin or temporary tab", async ({
+  site,
+  sidebar,
+  background,
+}) => {
   await seedPins(background, [
     { title: "One", url: `${site}/one` },
     { title: "Two", url: `${site}/two` },
@@ -129,11 +133,11 @@ test("別のピンや一時タブと同じ名前にも変えられる", async ({
   await expect(temporary.getByRole("button", { name: "Page /a" })).toHaveCount(2)
 })
 
-test.fixme("フォルダを押すと開閉し、サイドパネルを開き直しても開閉の状態が保たれる", () => {})
-test.fixme("閉じたフォルダの中の開いているタブは、閉じたフォルダのすぐ下に覗かせる", () => {})
-test.fixme("フォルダのメニューで Change Icon を選ぶと、選んだアイコンがフォルダに付く", () => {})
-test.fixme("フォルダのメニューで Delete Folder を選んで確かめると、中身ごとブックマークが消える", () => {})
-test.fixme("フォルダ内検索で名前を入れると、フォルダの中のピンだけが絞り込まれる", () => {})
-test.fixme("フォルダを自分の中のフォルダへは落とせず、理由が知らされる", () => {})
-test.fixme("閉じたピンを一時タブの領域へ落としても、何も起きない", () => {})
-test.fixme("ピンのブックマークを Chrome のブックマークの画面で変えると、サイドバーのピンも変わる", () => {})
+test.fixme("clicking a folder toggles it, and the state survives reopening the side panel", () => {})
+test.fixme("open tabs inside a collapsed folder peek out right below it", () => {})
+test.fixme("Change Icon in the folder menu puts the chosen icon on the folder", () => {})
+test.fixme("confirming Delete Folder in the folder menu deletes the bookmarks with their contents", () => {})
+test.fixme("searching inside a folder narrows to the pins in that folder", () => {})
+test.fixme("a folder cannot be dropped into its own subfolder, and the reason is shown", () => {})
+test.fixme("dropping a closed pin on the temporary tabs does nothing", () => {})
+test.fixme("editing a pin's bookmark in Chrome's bookmark manager updates the pin in the sidebar", () => {})

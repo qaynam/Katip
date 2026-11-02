@@ -9,7 +9,7 @@ export const bookmarkSuite: ContractSuite = {
   name: "bookmarks",
   scenarios: [
     {
-      name: "最初からあるのは、ブックマークバーとその他のブックマークのフォルダだけ",
+      name: "a new profile has only the bookmarks bar and other bookmarks folders",
       run: () =>
         Effect.gen(function* () {
           const root = yield* Bookmarks.use((bookmarks) => bookmarks.getTree)
@@ -23,7 +23,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { folders: ["bookmarks-bar", "other"] },
     },
     {
-      name: "親を指定せずに作ると、その他のブックマークの末尾に作る",
+      name: "creating without a parent appends to other bookmarks",
       run: () =>
         Effect.gen(function* () {
           const bookmarks = yield* Bookmarks
@@ -40,7 +40,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { parent: "other", last: true },
     },
     {
-      name: "index を指定して作ると、その位置にあった子の前に入る",
+      name: "creating at an index inserts before the child at that index",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId } = yield* stage.openBookmarks(["a", "b", "c"])
@@ -58,7 +58,7 @@ export const bookmarkSuite: ContractSuite = {
       },
     },
     {
-      name: "子の数を超える index で作ろうとすると、作らずに失敗する",
+      name: "creating at an index beyond the children fails without creating",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId } = yield* stage.openBookmarks(["a"])
@@ -75,7 +75,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { returned: "failed", tree: ["a"] },
     },
     {
-      name: "空の URL で作ると、フォルダができる",
+      name: "creating with an empty URL makes a folder",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId } = yield* stage.openBookmarks([])
@@ -89,7 +89,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["empty[]"], bookmarkEvents: ["created empty[?] in root@0"] },
     },
     {
-      name: "同じフォルダの中で後ろへ動かすと、指定した index の 1 つ手前に入る",
+      name: "moving backward within a folder lands one before the given index",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a", "b", "c", "d"])
@@ -107,7 +107,7 @@ export const bookmarkSuite: ContractSuite = {
       },
     },
     {
-      name: "同じフォルダの中で前へ動かすと、指定した index に入る",
+      name: "moving forward within a folder lands at the given index",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a", "b", "c", "d"])
@@ -119,7 +119,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["a", "d", "b", "c"], bookmarkEvents: ["moved d root@3→root@1"] },
     },
     {
-      name: "今の位置かそのすぐ後ろを指定して動かしても、何も変わらず何も届かない",
+      name: "moving to the current index or the one after it changes and emits nothing",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a", "b", "c"])
@@ -136,7 +136,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["a", "b", "c"] },
     },
     {
-      name: "index を省略して動かすと、同じフォルダの中でも末尾へ動く",
+      name: "moving without an index goes to the end, even within the same folder",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a", "b", "c"])
@@ -148,7 +148,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["b", "c", "a"], bookmarkEvents: ["moved a root@0→root@2"] },
     },
     {
-      name: "別のフォルダへ動かすと、そのフォルダの指定した index に入る",
+      name: "moving into another folder lands at the given index there",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks([
@@ -165,7 +165,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["F[x a y]"], bookmarkEvents: ["moved a root@0→F@1"] },
     },
     {
-      name: "フォルダを自分の中へは動かせない",
+      name: "a folder cannot be moved into itself",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks([
@@ -182,7 +182,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { returned: "failed", tree: ["F[G[]]"] },
     },
     {
-      name: "子の数を超える index へ動かそうとすると、動かさずに失敗する",
+      name: "moving to an index beyond the children fails without moving",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a", "b"])
@@ -197,7 +197,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { returned: "failed", tree: ["a", "b"] },
     },
     {
-      name: "タイトルと URL を一緒に変えると、タイトル、URL の順に 1 回ずつ変化が届く",
+      name: "changing title and URL together emits one change for the title, then one for the URL",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a"])
@@ -217,7 +217,7 @@ export const bookmarkSuite: ContractSuite = {
       },
     },
     {
-      name: "今と同じタイトルに変えても、変化は届かない",
+      name: "setting the same title emits no change",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks(["a"])
@@ -229,7 +229,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["a"] },
     },
     {
-      name: "フォルダに URL を設定しようとすると、変えずに失敗する",
+      name: "setting a URL on a folder fails without changing it",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks([{ folder: "F", children: [] }])
@@ -244,7 +244,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { returned: "failed", tree: ["F[]"] },
     },
     {
-      name: "中身のあるフォルダは remove では消せない",
+      name: "remove cannot delete a non-empty folder",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks([{ folder: "F", children: ["x"] }])
@@ -259,7 +259,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { returned: "failed", tree: ["F[x]"] },
     },
     {
-      name: "removeTree でフォルダを消すと、中身ごと消えたことが 1 回だけ届く",
+      name: "removeTree deletes a folder with its contents and emits a single removal",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId, id } = yield* stage.openBookmarks([
@@ -274,7 +274,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { tree: ["a"], bookmarkEvents: ["removed F[x G[y]] from root@1"] },
     },
     {
-      name: "getChildren で読んだ子のフォルダは、その子を読み込んでいない",
+      name: "folders read with getChildren do not have their children loaded",
       run: (stage) =>
         Effect.gen(function* () {
           const { rootId } = yield* stage.openBookmarks(["a", { folder: "F", children: ["x"] }])
@@ -286,7 +286,7 @@ export const bookmarkSuite: ContractSuite = {
       expected: { children: ["a", "F[?]"] },
     },
     {
-      name: "getSubTree は子孫まで読み込んで返す",
+      name: "getSubTree returns all descendants loaded",
       run: (stage) =>
         Effect.gen(function* () {
           const { id } = yield* stage.openBookmarks([

@@ -5,14 +5,14 @@ import { pageUrl, urlOf } from "./stage"
 
 const DISCARD_SURVIVES = {
   chromeVersion: 156,
-  reason: "149 の headless の Chrome は tabs.discard でブラウザごと落ちる（156 では落ちない）",
+  reason: "headless Chrome 149 crashes on tabs.discard (156 does not)",
 }
 
 export const tabCreateSuite: ContractSuite = {
   name: "tabs.create",
   scenarios: [
     {
-      name: "index を省略すると、ウィンドウの末尾に開く",
+      name: "without an index, the tab opens at the end of the window",
       run: (stage) =>
         Effect.gen(function* () {
           const { windowId } = yield* stage.openWindow(["a", "b"])
@@ -27,7 +27,7 @@ export const tabCreateSuite: ContractSuite = {
       expected: { returned: "c@2", strip: ["a active", "b", "c"], tabEvents: ["created c@2"] },
     },
     {
-      name: "active を省略すると、開いたタブがアクティブになる",
+      name: "without active, the new tab becomes active",
       run: (stage) =>
         Effect.gen(function* () {
           const { windowId } = yield* stage.openWindow(["a", "b"])
@@ -43,7 +43,7 @@ export const tabCreateSuite: ContractSuite = {
       },
     },
     {
-      name: "作ったタブは、作った時点で開くページの URL を url か pendingUrl に持つ",
+      name: "a created tab already holds the URL it opens in url or pendingUrl",
       run: (stage) =>
         Effect.gen(function* () {
           const { windowId } = yield* stage.openWindow(["a"])
@@ -57,7 +57,7 @@ export const tabCreateSuite: ContractSuite = {
       expected: { url: pageUrl("c") },
     },
     {
-      name: "ピン留めの領域の中の index を指定しても、ピン留めしないタブは領域のすぐ後ろに開く",
+      name: "an unpinned tab requested inside the pinned area opens right after it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -81,7 +81,7 @@ export const tabCreateSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めして開くと、ピン留めの領域の末尾に開く",
+      name: "a pinned tab opens at the end of the pinned area",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -105,7 +105,7 @@ export const tabCreateSuite: ContractSuite = {
       },
     },
     {
-      name: "タブの数を超える index を指定すると、末尾に開く",
+      name: "an index beyond the tab count opens the tab at the end",
       run: (stage) =>
         Effect.gen(function* () {
           const { windowId } = yield* stage.openWindow(["a", "b"])
@@ -120,7 +120,7 @@ export const tabCreateSuite: ContractSuite = {
       expected: { returned: "c@2", strip: ["a active", "b", "c"], tabEvents: ["created c@2"] },
     },
     {
-      name: "グループの途中に開くと、そのグループに入る",
+      name: "a tab opened inside a group joins that group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -140,7 +140,7 @@ export const tabCreateSuite: ContractSuite = {
       expected: { strip: ["a active", "b g1", "d g1", "c g1"], tabEvents: ["created d@2 g1"] },
     },
     {
-      name: "グループの末尾のすぐ後ろに開いても、そのグループには入らない",
+      name: "a tab opened right after the end of a group does not join it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -160,7 +160,7 @@ export const tabCreateSuite: ContractSuite = {
       expected: { strip: ["a g1 active", "b g1", "d", "c"], tabEvents: ["created d@2"] },
     },
     {
-      name: "分割ビューの API が無い Chrome では、splitWithTabId を指定すると開かずに失敗する",
+      name: "without the split view API, splitWithTabId fails without opening a tab",
       splitView: "unavailable",
       run: (stage) =>
         Effect.gen(function* () {
@@ -187,7 +187,7 @@ export const tabRemoveSuite: ContractSuite = {
   name: "tabs.remove",
   scenarios: [
     {
-      name: "アクティブなタブを閉じると、右隣のタブがアクティブになる",
+      name: "closing the active tab activates its right neighbor",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -204,7 +204,7 @@ export const tabRemoveSuite: ContractSuite = {
       expected: { strip: ["a", "c active"], tabEvents: ["removed b", "activated c"] },
     },
     {
-      name: "右端のアクティブなタブを閉じると、左隣のタブがアクティブになる",
+      name: "closing the active rightmost tab activates its left neighbor",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -221,7 +221,7 @@ export const tabRemoveSuite: ContractSuite = {
       expected: { strip: ["a", "b active"], tabEvents: ["removed c", "activated b"] },
     },
     {
-      name: "opener を指定して開いたタブを閉じると、開いた元のタブがアクティブになる",
+      name: "closing a tab opened with an opener activates the opener",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -241,7 +241,7 @@ export const tabRemoveSuite: ContractSuite = {
       expected: { strip: ["a active", "b", "c"], tabEvents: ["removed d", "activated a"] },
     },
     {
-      name: "複数を閉じると、指定した順に閉じる",
+      name: "closing several tabs closes them in the given order",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -256,7 +256,7 @@ export const tabRemoveSuite: ContractSuite = {
       expected: { strip: ["b active"], tabEvents: ["removed c", "removed a", "activated b"] },
     },
     {
-      name: "存在しないタブを指定すると失敗し、それより前に指定したタブだけが閉じる",
+      name: "a missing tab fails the call, and only the tabs listed before it are closed",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -276,7 +276,7 @@ export const tabRemoveSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a active", "c"], tabEvents: ["removed b"] },
     },
     {
-      name: "ピン留めしたタブを閉じると、ピン留めを外してから閉じる",
+      name: "closing a pinned tab unpins it before removing it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -296,7 +296,7 @@ export const tabRemoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループのタブを閉じると、グループを抜けてから閉じる",
+      name: "closing a grouped tab ungroups it before removing it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -316,7 +316,7 @@ export const tabRemoveSuite: ContractSuite = {
       },
     },
     {
-      name: "グループの最後のタブを閉じると、グループもなくなる",
+      name: "closing the last tab of a group removes the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -337,7 +337,7 @@ export const tabRemoveSuite: ContractSuite = {
       },
     },
     {
-      name: "ウィンドウの最後のタブを閉じると、ウィンドウを閉じるときの閉じ方ではなく閉じてから、ウィンドウも閉じる",
+      name: "closing the last tab of a window removes it as a normal close, then removes the window",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -357,7 +357,7 @@ export const windowCloseSuite: ContractSuite = {
   name: "windows.remove",
   scenarios: [
     {
-      name: "ウィンドウを閉じると、右のタブから順に閉じてからウィンドウを閉じる",
+      name: "closing a window removes its tabs from the right, then the window",
       run: (stage) =>
         Effect.gen(function* () {
           const { windowId } = yield* stage.openWindow(["a", "b", "c"])
@@ -376,7 +376,7 @@ export const windowCloseSuite: ContractSuite = {
       },
     },
     {
-      name: "グループとピン留めのあるウィンドウを閉じると、先に右からグループとピン留めを解く",
+      name: "closing a window first ungroups and unpins its tabs from the right",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -416,10 +416,10 @@ export const windowCloseSuite: ContractSuite = {
 }
 
 export const tabPinSuite: ContractSuite = {
-  name: "tabs.update でのピン留め",
+  name: "pinning with tabs.update",
   scenarios: [
     {
-      name: "ピン留めすると、ピン留めの領域の末尾へ動く",
+      name: "pinning moves the tab to the end of the pinned area",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -439,7 +439,7 @@ export const tabPinSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めを外すと、ピン留めの領域のすぐ後ろへ動く",
+      name: "unpinning moves the tab right after the pinned area",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -462,7 +462,7 @@ export const tabPinSuite: ContractSuite = {
       },
     },
     {
-      name: "グループのタブをピン留めすると、ピン留めしてからグループを抜ける",
+      name: "pinning a grouped tab pins it, then ungroups it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -483,7 +483,7 @@ export const tabPinSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留め済みのタブをもう一度ピン留めしても、何も届かない",
+      name: "pinning an already pinned tab emits nothing",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -503,10 +503,10 @@ export const tabPinSuite: ContractSuite = {
 }
 
 export const tabUpdateSuite: ContractSuite = {
-  name: "tabs.update・duplicate・discard",
+  name: "tabs.update, duplicate and discard",
   scenarios: [
     {
-      name: "アクティブにすると、アクティブになったことだけが届く",
+      name: "activating a tab emits only the activation",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -521,7 +521,7 @@ export const tabUpdateSuite: ContractSuite = {
       expected: { strip: ["a", "b active"], tabEvents: ["activated b"] },
     },
     {
-      name: "既にアクティブなタブをアクティブにしても、何も届かない",
+      name: "activating the already active tab emits nothing",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -536,7 +536,7 @@ export const tabUpdateSuite: ContractSuite = {
       expected: { strip: ["a active", "b"] },
     },
     {
-      name: "ミュートすると、ミュートの変化が届く",
+      name: "muting emits the muted change",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -551,7 +551,7 @@ export const tabUpdateSuite: ContractSuite = {
       expected: { strip: ["a active", "b muted"], tabEvents: ["updated b muted=true"] },
     },
     {
-      name: "複製すると、元のタブのすぐ右にアクティブなタブとして開き、opener はアクティブだったタブになる",
+      name: "duplicating opens an active tab right after the original, with the previously active tab as opener",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -578,7 +578,7 @@ export const tabUpdateSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めしたタブを複製すると、複製もピン留めされる",
+      name: "duplicating a pinned tab pins the duplicate too",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -599,7 +599,7 @@ export const tabUpdateSuite: ContractSuite = {
       },
     },
     {
-      name: "グループのタブを複製すると、複製もそのグループに入る",
+      name: "duplicating a grouped tab puts the duplicate in the same group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -620,7 +620,7 @@ export const tabUpdateSuite: ContractSuite = {
       },
     },
     {
-      name: "アクティブでないタブを破棄すると、タブの ID が新しくなり、置き換わったことが届く",
+      name: "discarding an inactive tab gives it a new ID and emits the replacement",
       skipBefore: DISCARD_SURVIVES,
       run: (stage) =>
         Effect.gen(function* () {

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 /**
- * `extensionDir` の拡張だけを読み込んだ Chrome を、使い捨てのプロファイルで起動する。
- * `KATIP_E2E_CHROME` があればその実行ファイルを使う。
+ * Launches Chrome with only the extension in `extensionDir`, on a throwaway profile.
+ * Uses the executable in `KATIP_E2E_CHROME` when set.
  */
 export const launchWithExtension = async (
   extensionDir: string,

@@ -1,7 +1,7 @@
 import { test } from "./fixtures"
 
-test.fixme("ブラウザを終了して開き直すと、一時タブは元の Space に、ピンのタブは同じピンに戻る", () => {})
-test.fixme("ブラウザを終了して開き直しても、分割ピンの 2 つのタブは同じ分割ピンに戻る", () => {})
-test.fixme("ブラウザを終了するときに閉じたタブで、再起動用の記録が空にならない", () => {})
-test.fixme("拡張を更新すると、開いているページのショートカットを入れ直す", () => {})
-test.fixme("service worker が止まって起き直しても、サイドパネルは繋ぎ直して同じ表示に戻る", () => {})
+test.fixme("after quitting and reopening the browser, temporary tabs return to their Spaces and pinned tabs to their pins", () => {})
+test.fixme("after quitting and reopening the browser, both tabs of a split pin return to the same split pin", () => {})
+test.fixme("tabs closed while the browser quits do not empty the restore record", () => {})
+test.fixme("updating the extension reinstalls the shortcuts in open pages", () => {})
+test.fixme("after the service worker stops and wakes up, the side panel reconnects and shows the same view", () => {})

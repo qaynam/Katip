@@ -18,7 +18,7 @@ const fakeBrowserFor = (scenario: ContractScenario) =>
   )
 
 for (const suite of contractSuites) {
-  describe(`fake の ${suite.name} は本物の Chrome と同じように振る舞う`, () => {
+  describe(`the fake ${suite.name} behaves like real Chrome`, () => {
     for (const scenario of suite.scenarios) {
       it.effect(scenario.name, () =>
         runContractScenario(scenario).pipe(

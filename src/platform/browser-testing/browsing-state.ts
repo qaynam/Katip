@@ -211,7 +211,7 @@ export const clampMove = (
   return pinned ? clamp(index, 0, boundary - 1) : clamp(index, boundary, tabs.length - 1)
 }
 
-/** `gap` の位置（その index のタブの直前）に差し込むと、同じ分割ビューの 2 つのタブの間に入るか。 */
+/** Whether inserting at `gap` (right before the tab at that index) would land between the two tabs of a split view. */
 export const splitsGap = (tabs: ReadonlyArray<TabRecord>, gap: number): boolean => {
   const left = Option.flatMap(Array.get(tabs, gap - 1), (tab) => tab.splitViewId)
   return (

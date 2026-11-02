@@ -61,7 +61,7 @@ export const makeFakeTabGroups = (world: FakeWorld): TabGroups["Service"] =>
         world,
         "tabGroups.update",
         Effect.fnUntraced(function* (tx) {
-          // 折りたたむグループにアクティブなタブがあっても、Chrome はアクティブなタブを変えない
+          // Unlike collapsing from the tab strip UI, the API keeps the active tab even inside the collapsed group
           const current = yield* requireGroup(tx, groupId)
           const next: GroupRecord = {
             ...current,

@@ -4,18 +4,18 @@ import type { ContractRig } from "./contract-rig"
 import { type ContractServices, makeStage, type Observation, type Stage } from "./stage"
 
 /**
- * 本物の Chrome と fake の両方で同じ観察結果になるべき、ブラウザの振る舞い。
- * `expected` は本物の Chrome で観察した結果。
+ * A browser behavior that must be observed identically on real Chrome and on the fake.
+ * `expected` is what was observed on real Chrome.
  */
 export interface ContractScenario {
-  /** 振る舞いを仕様として表す名前。テスト名になる。 */
+  /** States the behavior as a spec. Used as the test name. */
   readonly name: string
   /**
-   * 分割ビューを作る・解く API（Chrome 155 以降）の有無で結果が変わる場面だけが持つ。
-   * 本物の Chrome では、合わない版なら実行しない。
+   * Set only on scenarios whose outcome depends on the split view API (Chrome 155+).
+   * On real Chrome, the scenario is skipped on versions that do not match.
    */
   readonly splitView?: "available" | "unavailable"
-  /** これより前の版の本物の Chrome では実行しない。fake ではいつも実行する。 */
+  /** Skipped on real Chrome older than this version. Always runs on the fake. */
   readonly skipBefore?: { readonly chromeVersion: number; readonly reason: string }
   readonly run: (
     stage: Stage,

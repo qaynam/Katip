@@ -11,10 +11,10 @@ const withSplitView = (scenario: Omit<ContractScenario, "splitView">): ContractS
 })
 
 export const splitViewSuite: ContractSuite = {
-  name: "分割ビュー",
+  name: "split view",
   scenarios: [
     withSplitView({
-      name: "隣り合う 2 つのタブを分割すると、渡した順によらず左のタブから順に分割に入ったことが届く",
+      name: "splitting two adjacent tabs emits the split for the left tab first, regardless of argument order",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -36,7 +36,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "隣り合わないタブは分割できない",
+      name: "non-adjacent tabs cannot be split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -51,7 +51,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a active", "b", "c"] },
     }),
     withSplitView({
-      name: "分割済みのタブは、別のタブとも分割できない",
+      name: "a tab already in a split cannot be split with another tab",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -68,7 +68,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a s1 active", "b s1", "c"] },
     }),
     withSplitView({
-      name: "ピン留めの状態が違うタブどうしは分割できない",
+      name: "tabs with different pinned states cannot be split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -85,7 +85,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a pinned active", "b", "c"] },
     }),
     withSplitView({
-      name: "グループが違うタブどうしは分割できない",
+      name: "tabs in different groups cannot be split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -102,7 +102,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a active", "b g1", "c"] },
     }),
     withSplitView({
-      name: "ピン留めしたタブどうしは分割できる",
+      name: "two pinned tabs can be split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -124,7 +124,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割を解くと、2 つのタブが左から順に分割から外れる",
+      name: "unsplitting removes both tabs from the split, left first",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -144,7 +144,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "もう無い分割を解こうとすると失敗する",
+      name: "unsplitting a split that no longer exists fails",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -165,7 +165,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a active", "b", "c"] },
     }),
     withSplitView({
-      name: "splitWithTabId を指定して開くと、相手の右隣に開いて、相手から順に分割に入る",
+      name: "splitWithTabId opens the tab right of its partner and splits the partner first",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -187,7 +187,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "splitWithTabId と相手の位置を index に指定すると、相手の左に開いて分割される",
+      name: "splitWithTabId with the partner's index opens the tab to the left of the partner",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -216,7 +216,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "splitWithTabId と相手から離れた index を指定すると、開かずに失敗する",
+      name: "splitWithTabId with an index away from the partner fails without opening a tab",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -242,7 +242,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { returned: "failed", strip: ["a active", "b", "c"] },
     }),
     withSplitView({
-      name: "グループのタブを相手に開くと、開いたタブはグループに入ってから分割される",
+      name: "a tab split with a grouped partner joins the group before it is split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -272,7 +272,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "ピン留めしたタブを相手に開くと、開いたタブもピン留めされる",
+      name: "a tab split with a pinned partner is pinned too",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -297,7 +297,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方だけを動かすと、分割が解けてから動く",
+      name: "moving one tab of a split unsplits before moving",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -318,7 +318,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の 2 つを一緒に動かしても、分割が解ける",
+      name: "moving both tabs of a split together still unsplits them",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -339,7 +339,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の 2 つを今の位置へ動かしても、分割は解けない",
+      name: "moving both tabs of a split to where they already are keeps the split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -356,7 +356,7 @@ export const splitViewSuite: ContractSuite = {
       expected: { strip: ["a active", "b s1", "c s1"] },
     }),
     withSplitView({
-      name: "分割の間へ別のタブを動かし入れると、分割が解けてから動く",
+      name: "moving another tab between a split unsplits before moving",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -377,7 +377,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の間の index に開くと、分割の右に開き、分割は解けない",
+      name: "a tab opened at an index inside a split opens to its right and keeps the split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -402,7 +402,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方をピン留めすると、分割が解けてからピン留めされる",
+      name: "pinning one tab of a split unsplits before pinning",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -423,7 +423,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方を閉じると、分割が解けてから閉じる",
+      name: "closing one tab of a split unsplits before removing it",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -443,7 +443,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方をグループに入れると、もう片方もグループに入り、分割は保たれる",
+      name: "grouping one tab of a split groups its partner too and keeps the split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -464,7 +464,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方をグループから外すと、もう片方も外れ、分割は保たれる",
+      name: "ungrouping one tab of a split ungroups its partner too and keeps the split",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -486,7 +486,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方を複製すると、分割が解けてから、元のタブの右隣に複製が開く",
+      name: "duplicating one tab of a split unsplits, then opens the duplicate right after the original",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -512,7 +512,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方を破棄しても、新しい ID のタブで分割が保たれる",
+      name: "discarding one tab of a split keeps the split with the tab's new ID",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -532,7 +532,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割の片方を別のウィンドウへ動かすと、分割が解けてから移る",
+      name: "moving one tab of a split to another window unsplits before moving",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -558,7 +558,7 @@ export const splitViewSuite: ContractSuite = {
       },
     }),
     withSplitView({
-      name: "分割したタブのあるウィンドウを閉じると、先に分割を解いてから右のタブから閉じる",
+      name: "closing a window with a split unsplits first, then removes tabs from the right",
       run: (stage) =>
         Effect.gen(function* () {
           const {

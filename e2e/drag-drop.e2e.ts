@@ -12,8 +12,8 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test.describe("一時タブをドラッグしたとき", () => {
-  test("ピン留めの領域へ落とすと、ピンになり、Space のフォルダにブックマークができる", async ({
+test.describe("dragging a temporary tab", () => {
+  test("dropping it on the pinned area makes it a pin and bookmarks it in the Space folder", async ({
     site,
     sidebar,
     background,
@@ -33,7 +33,7 @@ test.describe("一時タブをドラッグしたとき", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page /a"])
   })
 
-  test("フォルダの中ほどへ落とすと、フォルダの中のピンになる", async ({
+  test("dropping it on the middle of a folder makes it a pin inside the folder", async ({
     site,
     sidebar,
     background,
@@ -53,7 +53,7 @@ test.describe("一時タブをドラッグしたとき", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Work[Page /a]"])
   })
 
-  test("Favorites へ落とすと、Chrome でピン留めされ、一時タブから消える", async ({
+  test("dropping it on Favorites pins it in Chrome and removes it from the temporary tabs", async ({
     site,
     sidebar,
     background,
@@ -74,7 +74,7 @@ test.describe("一時タブをドラッグしたとき", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a pinned"])
   })
 
-  test("別の一時タブの上寄りへ落とすと、表示ではそのタブの上に並ぶ", async ({
+  test("dropping it on the upper part of another temporary tab places it above that tab", async ({
     site,
     sidebar,
     background,
@@ -90,13 +90,13 @@ test.describe("一時タブをドラッグしたとき", () => {
     )
 
     await expect(temporaryTitles(sidebar)).toHaveText(["Page /a", "Page /c", "Page /b"])
-    // 新しいタブを上に出す設定（既定）では、表示の上ほど Chrome のタブの右にある
+    // Reversed because new tabs show at the top by default: higher in the list is further right in Chrome
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/b", "/c", "/a"])
   })
 })
 
-test.describe("ピンをドラッグしたとき", () => {
-  test("開いているピンを一時タブの上へ落とすと、ピン留めが外れて一時タブに戻り、ブックマークが消える", async ({
+test.describe("dragging a pin", () => {
+  test("dropping an open pin on a temporary tab unpins it back to a temporary tab and deletes the bookmark", async ({
     site,
     sidebar,
     background,
@@ -118,7 +118,7 @@ test.describe("ピンをドラッグしたとき", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual([])
   })
 
-  test("ピンの上寄りへ落とすと、そのピンの前に並び、ブックマークの順も変わる", async ({
+  test("dropping it on the upper part of another pin places it before that pin and reorders the bookmarks", async ({
     sidebar,
     background,
   }) => {
@@ -139,8 +139,8 @@ test.describe("ピンをドラッグしたとき", () => {
   })
 })
 
-test.describe("Favorites のタブをドラッグしたとき", () => {
-  test("一時タブの上へ落とすと、Chrome のピン留めが外れて一時タブに戻る", async ({
+test.describe("dragging a Favorite", () => {
+  test("dropping it on a temporary tab unpins it in Chrome and makes it a temporary tab", async ({
     site,
     sidebar,
     background,
@@ -164,7 +164,7 @@ test.describe("Favorites のタブをドラッグしたとき", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b"])
   })
 
-  test("ピン留めの領域へ落とすと、Chrome のピン留めが外れてピンになる", async ({
+  test("dropping it on the pinned area unpins it in Chrome and makes it a pin", async ({
     site,
     sidebar,
     background,
@@ -190,7 +190,7 @@ test.describe("Favorites のタブをドラッグしたとき", () => {
   })
 })
 
-test.fixme("分割ピンをフォルダの中ほどへ落とすと、分割ピンのままフォルダに入る", () => {})
-test.fixme("フォルダを別の Space のフォルダへ移すと、中で開いているピンのタブもその Space に移る", () => {})
-test.fixme("タブグループと同期している間は、フォルダを 2 段目より深くへは落とせない", () => {})
-test.fixme("ドラッグ中に Escape を押すと、何も変えずにやめる", () => {})
+test.fixme("dropping a split pin on the middle of a folder moves it into the folder as a split pin", () => {})
+test.fixme("moving a folder into another Space's folder moves its open pinned tabs to that Space", () => {})
+test.fixme("while syncing with tab groups, a folder cannot be dropped deeper than the second level", () => {})
+test.fixme("pressing Escape while dragging cancels without changes", () => {})

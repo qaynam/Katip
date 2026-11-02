@@ -83,7 +83,7 @@ const createGroup = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: Windo
     collapsed: false,
   }
   yield* tx.setState({ ...issued, groups: [...issued.groups, group] })
-  // Chrome は作ったばかりのグループについて、変わっていない見た目の更新も続けて送る
+  // Chrome follows a new group with an update of its unchanged appearance
   yield* tx.emit({ _tag: "TabGroupCreated", group: toBrowserTabGroup(group, windowId) })
   yield* tx.emit({ _tag: "TabGroupUpdated", group: toBrowserTabGroup(group, windowId) })
   return group.id
@@ -277,7 +277,7 @@ export const makeFakeTabs = (
             url: Option.getOrElse(tab.url, () => NEW_TAB_URL),
             active: true,
             pinned: tab.pinned,
-            // 複製元ではなく、複製した時点でアクティブだったタブが opener になる
+            // Not the original: Chrome makes the tab that was active the opener
             openerTabId: window.activeTabId,
             groupId: tab.groupId,
           })
@@ -293,8 +293,8 @@ export const makeFakeTabs = (
         { discard: true },
       ),
 
-    // 動かし終えてからまとめて読み直さない。Chrome は 1 つずつ動かし、それぞれを動かした
-    // 時点のタブを返す
+    // Not re-read after all moves: Chrome moves one tab at a time and returns each tab as of its
+    // own move
     move: (tabIds, options) =>
       Effect.map(
         Effect.reduce(
@@ -333,7 +333,7 @@ export const makeFakeTabs = (
           yield* Effect.forEach(options.tabIds, (tabId) => requireTab(tx, tabId), {
             discard: true,
           })
-          // 分割ビューの片方だけを入れても、Chrome はもう片方も一緒に入れて分割を保つ
+          // Chrome groups the partner of a split tab too, keeping the split
           const tabIds = withSplitPartners(yield* tx.state, options.tabIds)
           const windowId =
             options.groupId === undefined
@@ -413,7 +413,7 @@ export const makeFakeTabs = (
             return yield* tx.reject(`Cannot discard tab with id: ${tabId}.`)
           }
           if (tab.discarded) return yield* requireTabSnapshot(tx, tabId)
-          // Chrome は破棄したタブを新しい ID のタブに置き換える。分割やグループは置き換えた先に残る
+          // Not discarded in place: Chrome replaces the tab with one under a new ID, keeping its split and group
           const [id, issued] = issueId(yield* tx.state)
           const replacement = TabId.make(id)
           yield* tx.setState(

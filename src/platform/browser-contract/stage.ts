@@ -23,15 +23,15 @@ export type Json =
 
 export type Observation = { readonly [key: string]: Json }
 
-/** 場面が使ってよいブラウザのサービス。 */
+/** The browser services a scenario may use. */
 export type ContractServices = Tabs | TabGroups | Windows | Bookmarks
 
-/** 読み込みが一瞬で終わり、ネットワークにも出ない、名前ごとに違うページ。 */
+/** A distinct page per name that loads instantly and never touches the network. */
 export const pageUrl = (name: string) => `about:blank#${name}`
 
 export const bookmarkUrl = (title: string) => `https://example.com/${title}`
 
-/** `url` が決まる前のタブは `pendingUrl` に開こうとしている URL を持つ。 */
+/** Until navigation commits, a tab holds the URL it is opening in `pendingUrl`. */
 export const urlOf = (tab: BrowserTab) =>
   Option.getOrElse(
     Option.orElse(tab.url, () => tab.pendingUrl),
@@ -48,67 +48,72 @@ export interface OpenedWindow<Labels extends ReadonlyArray<string>> {
 
 export interface OpenedBookmarks {
   readonly rootId: BookmarkId
-  /** 仕込んだノードの ID。仕込んでいないタイトルを渡すと例外を投げる。 */
+  /** The ID of a seeded node. Throws for a title that was not seeded. */
   readonly id: (title: string) => BookmarkId
 }
 
 export interface ObservationTarget {
   readonly windows?: ReadonlyArray<WindowId>
-  /** 操作の戻り値を表す。イベントを表した後に呼ぶ。 */
+  /** Renders the return value of the action. Called after the events are rendered. */
   readonly returned?: () => Json
-  /** このフォルダの子を `tree` に入れる。 */
+  /** Puts the children of this folder in `tree`. */
   readonly bookmarks?: BookmarkId
 }
 
-/** 場面ごとに 1 つ作られ、作ったタブやブックマークに名前を付けて、観察した結果を名前で表す。 */
+/**
+ * Created once per scenario. Names the tabs and bookmarks the scenario creates and renders
+ * observations in terms of those names.
+ */
 export interface Stage {
   /**
-   * フォーカスしないウィンドウを開き、`labels` の順にタブを並べる。最初のタブがアクティブになる。
-   * 開くまでのイベントは観察に含めず、場面が終わるとウィンドウを閉じる。
+   * Opens an unfocused window with tabs in the order of `labels`. The first tab is active.
+   * Events up to this point are not observed, and the window is closed when the scenario ends.
    */
   openWindow<const Labels extends Array.NonEmptyReadonlyArray<string>>(
     labels: Labels,
   ): Effect.Effect<OpenedWindow<Labels>, BrowserApiError, Tabs | Windows | Scope.Scope>
   /**
-   * その他のブックマークに「root」フォルダを作り、`seeds` を順に入れる。タイトルはどれも違うこと。
-   * 作るまでのイベントは観察に含めず、場面が終わるとフォルダごと消す。
+   * Creates a "root" folder in Other Bookmarks and fills it with `seeds` in order. Titles must be
+   * unique. Events up to this point are not observed, and the folder is removed when the scenario ends.
    */
   openBookmarks(
     seeds: ReadonlyArray<BookmarkSeed>,
   ): Effect.Effect<OpenedBookmarks, BrowserApiError, Bookmarks | Scope.Scope>
-  /** 場面の中で開いたタブに名前を付ける。名前の無いタブは `?1`, `?2`… と表す。 */
+  /** Names a tab opened during the scenario. Unnamed tabs render as `?1`, `?2`, … */
   name(tabId: TabId, label: string): void
-  /** ここまでのイベントを観察に含めずに捨てる。 */
+  /** Discards the events so far without observing them. */
   readonly skipEvents: Effect.Effect<void>
   /**
-   * 前回から届いたイベントのうち、場面のウィンドウとブックマークに関わるものを、種類ごとに届いた順で表す。
+   * Renders the events received since the previous take that concern the scenario's windows and
+   * bookmarks, one column per kind, in arrival order.
    *
    * @remarks
-   * タブの移動とグループの変化は、タブの変化とは別の列にする。Katip はどちらにも反応せず、
-   * 他のイベントとの前後は Chrome の版によって違う（149 と 156 で入れ替わる）。
-   * 同じ理由で、タブが既に入っているグループへの変化（149 だけが送る）は表さない。
-   * 空の列は含めない。
+   * Tab moves and group changes get their own columns, apart from tab changes. Katip reacts to
+   * neither, and their order relative to other events differs between Chrome versions (it is
+   * swapped between 149 and 156). For the same reason, a group change to the group the tab is
+   * already in (sent only by 149) is not rendered. Empty columns are omitted.
    */
   readonly events: Effect.Effect<Observation>
   /**
-   * イベント、`returned`、ウィンドウのタブの並び、ブックマークの順に表す。名前の無いグループや
-   * 分割には、この順で初めて現れたものから `g1`・`s1` と名前を付ける。
+   * Renders the events, `returned`, the tab strips and the bookmarks, in this order. Unnamed groups
+   * and splits are named `g1`, `s1`, … in order of first appearance.
    *
    * @remarks
-   * タブの並びは、ウィンドウが 1 つなら `strip`、2 つ以上なら `strips` にウィンドウの名前ごとに入れる。
+   * A single window's tabs go in `strip`; with two or more windows they go in `strips`, keyed by
+   * window name.
    */
   observe(target: ObservationTarget): Effect.Effect<Observation, BrowserApiError, Tabs | Bookmarks>
-  /** `windowId` のタブを index 順に表す。 */
+  /** Renders the tabs of `windowId` in index order. */
   strip(windowId: WindowId): Effect.Effect<ReadonlyArray<string>, BrowserApiError, Tabs>
-  /** `id` の子を順に表す。フォルダは `F[子 …]`、子を読み込んでいないフォルダは `F[?]`。 */
+  /** Renders the children of `id`. A folder is `F[child …]`; one whose children are not loaded is `F[?]`. */
   tree(id: BookmarkId): Effect.Effect<ReadonlyArray<string>, BrowserApiError, Bookmarks>
-  /** 例: `"c@2 pinned g1 s1 active"` */
+  /** For example `"c@2 pinned g1 s1 active"`. */
   tab(tab: BrowserTab): string
   tabLabel(tabId: TabId): string
   groupLabel(groupId: TabGroupId): string
   splitLabel(splitViewId: SplitViewId): string
   bookmark(node: BookmarkNode): string
-  /** 成功すれば `render` した値、`BrowserApiError` で失敗すれば `"failed"`。 */
+  /** The rendered value on success, or `"failed"` on a `BrowserApiError`. */
   attempt<A, R>(
     effect: Effect.Effect<A, BrowserApiError, R>,
     render: (value: A) => Json,
@@ -357,7 +362,7 @@ export const makeStage: Effect.Effect<Stage, never, ContractRig> = Effect.gen(fu
         stageWindows.add(window.id)
         windows.of(window.id)
         const [firstTab] = yield* tabService.query({ windowId: window.id })
-        if (firstTab === undefined) return yield* Effect.die("開いたウィンドウにタブが無い")
+        if (firstTab === undefined) return yield* Effect.die("the opened window has no tab")
         tabs.set(firstTab.id, first)
         const restIds = yield* Effect.forEach(rest, (label) =>
           Effect.map(
@@ -369,7 +374,7 @@ export const makeStage: Effect.Effect<Stage, never, ContractRig> = Effect.gen(fu
           ),
         )
         yield* skipEvents
-        // forEach は tuple の長さを型に残さないので、渡された名前の並びに合わせて戻す
+        // forEach does not keep the tuple length in its type, so restore the shape of the labels
         return {
           windowId: window.id,
           tabs: [firstTab.id, ...restIds],
@@ -395,7 +400,7 @@ export const makeStage: Effect.Effect<Stage, never, ContractRig> = Effect.gen(fu
         rootId: root.id,
         id: (title: string) => {
           const found = ids.get(title)
-          if (found === undefined) throw new Error(`仕込んでいないブックマーク: ${title}`)
+          if (found === undefined) throw new Error(`no seeded bookmark titled ${title}`)
           return found
         },
       }

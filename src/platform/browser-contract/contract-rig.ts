@@ -3,18 +3,18 @@ import { type BrowserEvent, BrowserEvents, Tabs } from "#platform/browser"
 
 const QUIET_PERIOD = "30 millis"
 
-/** 契約の場面を動かす環境（本物の Chrome か fake か）ごとに違う部分。 */
+/** What differs between the environments that run contract scenarios (real Chrome or the fake). */
 export class ContractRig extends Context.Service<
   ContractRig,
   {
     /**
-     * 前回取り出してから届いたブラウザのイベントを、届いた順に取り出す。
-     * それまでに終えた API 呼び出しが起こしたイベントは、すべて含んでいなければならない。
+     * Takes the browser events received since the previous take, in arrival order.
+     * Must include every event caused by API calls that have already completed.
      */
     readonly takeEvents: Effect.Effect<ReadonlyArray<BrowserEvent>>
   }
 >()("katip/platform/browser-contract/ContractRig") {
-  /** 本物の Chrome のイベントを、購読を始めてから溜めて渡す。 */
+  /** Buffers real Chrome events from the moment the layer subscribes. */
   static readonly live = Layer.effect(
     ContractRig,
     Effect.gen(function* () {
@@ -24,9 +24,9 @@ export class ContractRig extends Context.Service<
         Stream.runForEach((event) => Ref.update(received, (log) => [...log, event])),
         Effect.forkScoped,
       )
-      // 呼び出しの応答より先にその呼び出しのイベントが届くことは確かめたが、それに頼り切ると
-      // 遅れて届くイベントを次の場面のものとして数えてしまう。往復を挟んで、届く数が
-      // 増えなくなるまで待つ
+      // Events were observed to arrive before the response of the call that caused them, but
+      // relying on that alone would count a late event toward the next step. Round-trip and
+      // wait until no more events arrive
       const settle: Effect.Effect<void> = Effect.gen(function* () {
         const before = (yield* Ref.get(received)).length
         yield* Effect.ignore(tabs.query({}))

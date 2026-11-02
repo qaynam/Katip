@@ -19,23 +19,21 @@ const childrenOf = (node: BookmarkNode) =>
 
 layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
   describe("最初の状態", () => {
-    it.effect(
-      "ルートの下には、新しいプロファイルと同じくブックマークバーとその他のブックマークだけがある",
-      () =>
-        Effect.gen(function* () {
-          const bookmarks = yield* Bookmarks
+    it.effect("the root holds only the bookmarks bar and other bookmarks, like a new profile", () =>
+      Effect.gen(function* () {
+        const bookmarks = yield* Bookmarks
 
-          const root = yield* bookmarks.getTree
+        const root = yield* bookmarks.getTree
 
-          assert.deepStrictEqual(
-            Option.map(root.children, (children) =>
-              children.map((child) =>
-                child._tag === "BookmarkFolder" ? child.folderType : Option.none(),
-              ),
+        assert.deepStrictEqual(
+          Option.map(root.children, (children) =>
+            children.map((child) =>
+              child._tag === "BookmarkFolder" ? child.folderType : Option.none(),
             ),
-            Option.some([Option.some("bookmarks-bar"), Option.some("other")]),
-          )
-        }),
+          ),
+          Option.some([Option.some("bookmarks-bar"), Option.some("other")]),
+        )
+      }),
     )
   })
 
@@ -287,7 +285,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
 
     it.effect(
-      "removeTree は中身ごと消し、親と位置を持たず子を含むノードの BookmarkRemoved を 1 回だけ発火する",
+      "removeTree deletes the contents too and emits a single BookmarkRemoved whose node has children but no parent or index",
       () =>
         Effect.gen(function* () {
           const fake = yield* FakeBrowser

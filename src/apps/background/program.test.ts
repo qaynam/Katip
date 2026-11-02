@@ -72,18 +72,18 @@ describe("起動", () => {
     ),
   )
 
-  // 製品の不具合の疑い: Chrome は Favorites のタブを閉じる直前にピン留めを外した変化を送るので、
-  // 閉じていくタブが一時タブとして所属し、記録を使ってしまう。直したら fails を外す
+  // Suspected product bug, kept as `fails` until fixed: Chrome unpins a Favorite right before closing
+  // it, so the closing tab is admitted as a temporary tab and consumes the restore record
   it.live.fails(
-    "再起動の直後に Favorites のタブを閉じても、同じ URL の記録は後から開いたタブのために残る",
+    "closing a Favorite right after a restart leaves the restore record for a tab opened later with the same URL",
     () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
           yield* fake.seedStorage("local", {
             "katip/spaces": [
-              { id: "home", name: "ホーム", color: "grey" },
-              { id: "work", name: "仕事", color: "blue" },
+              { id: "home", name: "Home", color: "grey" },
+              { id: "work", name: "Work", color: "blue" },
             ],
             "katip/restore-snapshot": [
               { url: "https://mail.example/", spaceId: "work", pinned: null, titleOverride: null },
@@ -94,8 +94,8 @@ describe("起動", () => {
             tabIds: [favorite],
           } = yield* fake.seedWindow({
             tabs: [
-              { url: "https://mail.example/", title: "メール", pinned: true },
-              { url: "https://home.example/", title: "家", active: true },
+              { url: "https://mail.example/", title: "Mail", pinned: true },
+              { url: "https://home.example/", title: "Home page", active: true },
             ],
           })
           yield* startBackground
@@ -111,7 +111,7 @@ describe("起動", () => {
           )
 
           expect(
-            temporaryTitles(view, "仕事").pipe(Option.map((titles) => titles.length)),
+            temporaryTitles(view, "Work").pipe(Option.map((titles) => titles.length)),
           ).toStrictEqual(Option.some(1))
         }),
       ),
@@ -385,10 +385,10 @@ describe("タブ", () => {
     ),
   )
 
-  // 製品の不具合の疑い: Chrome はピン留めを外した変化を、移す前のウィンドウのタブとして送るので、
-  // 移る前のウィンドウで見ていた Space に入ってしまう。直したら fails を外す
+  // Suspected product bug, kept as `fails` until fixed: Chrome sends the unpinning with the window the
+  // tab is leaving, so it lands in the Space shown in that window instead
   it.live.fails(
-    "Favorites のタブを別のウィンドウへ移すと、移った先のウィンドウで見ている Space の一時タブになる",
+    "moving a Favorite to another window makes it a temporary tab of the Space shown in the destination window",
     () =>
       inBackground(
         Effect.gen(function* () {

@@ -12,8 +12,8 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test.describe("一時タブ", () => {
-  test("押すと、そのタブがアクティブになる", async ({ site, sidebar, background }) => {
+test.describe("temporary tab", () => {
+  test("clicking it activates the tab", async ({ site, sidebar, background }) => {
     await openPages(background, [`${site}/a`, `${site}/b`])
 
     await sidebar
@@ -24,7 +24,7 @@ test.describe("一時タブ", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a active", "/b"])
   })
 
-  test("New Tab を押すと、新しいタブがアクティブになり、見ている Space の一時タブになる", async ({
+  test("New Tab opens an active tab as a temporary tab of the shown Space", async ({
     sidebar,
     background,
   }) => {
@@ -46,7 +46,7 @@ test.describe("一時タブ", () => {
       .toMatch(/^chrome:\/\/newtab/)
   })
 
-  test("メニューで Pin を選ぶと、ピン留めの末尾にピンとして並ぶ", async ({
+  test("Pin in the menu adds it as a pin at the end of the pinned list", async ({
     site,
     sidebar,
     background,
@@ -61,7 +61,7 @@ test.describe("一時タブ", () => {
     await expect(temporaryTitles(sidebar)).toHaveCount(0)
   })
 
-  test("メニューで Add to Favorites を選ぶと、Chrome でピン留めされて Favorites に並ぶ", async ({
+  test("Add to Favorites in the menu pins it in Chrome and lists it in Favorites", async ({
     site,
     sidebar,
     background,
@@ -81,7 +81,7 @@ test.describe("一時タブ", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a pinned"])
   })
 
-  test("閉じるボタンを押すと、そのタブだけが閉じる", async ({ site, sidebar, background }) => {
+  test("the close button closes only that tab", async ({ site, sidebar, background }) => {
     await openPages(background, [`${site}/a`, `${site}/b`])
     await expect(temporaryTitles(sidebar)).toHaveCount(2)
 
@@ -95,7 +95,7 @@ test.describe("一時タブ", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/b"])
   })
 
-  test("Clear を押すと、その Space の一時タブが閉じ、ピンのタブは残る", async ({
+  test("Clear closes the Space's temporary tabs and keeps pinned tabs", async ({
     site,
     sidebar,
     background,
@@ -112,8 +112,8 @@ test.describe("一時タブ", () => {
   })
 })
 
-test.describe("ピン", () => {
-  test("閉じたピンのメニューで Delete Pinned Tab を選んで確かめると、ブックマークが消える", async ({
+test.describe("pin", () => {
+  test("confirming Delete Pinned Tab in a closed pin's menu deletes the bookmark", async ({
     site,
     sidebar,
     background,
@@ -131,7 +131,7 @@ test.describe("ピン", () => {
     await expect(pinned.getByRole("button", { name: "Docs" })).toHaveCount(0)
   })
 
-  test("Space のメニューで New Folder を選ぶと、付けた名前のフォルダがピン留めの末尾にできる", async ({
+  test("New Folder in the Space menu adds a folder with the entered name at the end of the pinned list", async ({
     site,
     sidebar,
     background,
@@ -146,7 +146,7 @@ test.describe("ピン", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Docs", "Work[]"])
   })
 
-  test("開いているピンのメニューで Unpin を選ぶと、一時タブに戻り、ブックマークが消える", async ({
+  test("Unpin in an open pin's menu makes it a temporary tab and deletes the bookmark", async ({
     site,
     sidebar,
     background,
@@ -162,7 +162,7 @@ test.describe("ピン", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual([])
   })
 
-  test("開いているピンのタブを閉じても、閉じたピンとして残り、クリックで開き直せる", async ({
+  test("closing an open pin's tab keeps it as a closed pin that reopens on click", async ({
     site,
     sidebar,
     background,
@@ -180,7 +180,7 @@ test.describe("ピン", () => {
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Docs"])
   })
 
-  test("ピンした URL から移ったピンの戻るボタンを押すと、ピンの URL に戻る", async ({
+  test("the back button of a pin that navigated away returns it to the pinned URL", async ({
     site,
     sidebar,
     background,
@@ -199,7 +199,7 @@ test.describe("ピン", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/docs active"])
   })
 
-  test("移った先のページで Replace Pinned URL を選ぶと、ピンのブックマークが今の URL になる", async ({
+  test("Replace Pinned URL on a navigated pin updates its bookmark to the current URL", async ({
     site,
     sidebar,
     background,
@@ -229,7 +229,7 @@ test.describe("ピン", () => {
   })
 })
 
-test.fixme("タブを中ボタンで押すと、そのタブが閉じる", () => {})
-test.fixme("音を出しているタブには音のしるしが、ミュートしたタブにはミュートのしるしが出る", () => {})
-test.fixme("一時タブの名前を空にすると、ページのタイトルに戻る", () => {})
-test.fixme("読み込み中のタブは、読み込み中のしるしを出す", () => {})
+test.fixme("middle-clicking a tab closes it", () => {})
+test.fixme("audible tabs show a speaker and muted tabs show a muted speaker", () => {})
+test.fixme("clearing a temporary tab's name reverts to the page title", () => {})
+test.fixme("loading tabs show a loading indicator", () => {})

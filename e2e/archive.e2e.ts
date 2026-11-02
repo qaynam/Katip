@@ -5,7 +5,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("タブのメニューで Archive を選ぶと、タブが閉じてアーカイブに並ぶ", async ({
+test("Archive in the tab menu closes the tab and lists it in the archive", async ({
   site,
   sidebar,
   background,
@@ -22,7 +22,7 @@ test("タブのメニューで Archive を選ぶと、タブが閉じてアー�
   ).toBeVisible()
 })
 
-test("アーカイブの項目を押すと、元の Space の一時タブとして開き直し、アーカイブから消える", async ({
+test("clicking an archive entry reopens it as a temporary tab of its Space and removes it from the archive", async ({
   site,
   sidebar,
   background,
@@ -46,7 +46,7 @@ test("アーカイブの項目を押すと、元の Space の一時タブとし�
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
 })
 
-test("アーカイブから削除すると、開き直さずに一覧から消える", async ({
+test("removing an archive entry deletes it from the list without reopening it", async ({
   site,
   sidebar,
   background,
@@ -68,6 +68,6 @@ test("アーカイブから削除すると、開き直さずに一覧から消�
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual([])
 })
 
-test.fixme("自動アーカイブを入れると、選んだ時間より長く使っていない一時タブがアーカイブされて閉じる", () => {})
-test.fixme("自動アーカイブは、ピンや Favorites や音の出ているタブを閉じない", () => {})
-test.fixme("アーカイブの表示を All Spaces にすると、ほかの Space のアーカイブも Space の名前つきで出る", () => {})
+test.fixme("with auto archive on, temporary tabs unused for longer than the chosen time are archived and closed", () => {})
+test.fixme("auto archive never closes pins, Favorites or audible tabs", () => {})
+test.fixme("showing All Spaces in the archive lists other Spaces' entries with their Space names", () => {})

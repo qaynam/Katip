@@ -3,10 +3,10 @@ import { TabGroups, Tabs } from "#platform/browser"
 import type { ContractSuite } from "./scenario"
 
 export const tabGroupSuite: ContractSuite = {
-  name: "tabs.group・tabs.ungroup・tabGroups.update",
+  name: "tabs.group, tabs.ungroup and tabGroups.update",
   scenarios: [
     {
-      name: "離れたタブをまとめると、先頭のタブの位置に左から順に並べてグループを作る",
+      name: "grouping scattered tabs lines them up from the left at the first tab's position",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -30,7 +30,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "既にあるグループに加えると、グループの末尾へ動いて入る",
+      name: "adding a tab to an existing group moves it to the end of the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -51,7 +51,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "ピン留めしたタブをグループに入れると、ピン留めを外してから入る",
+      name: "grouping a pinned tab unpins it before it joins the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -72,7 +72,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "別のウィンドウのタブをグループに入れると、グループのウィンドウの末尾へ移ってからグループへ動く",
+      name: "grouping a tab from another window attaches it at the end of the group's window, then moves it into the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -97,7 +97,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "グループの左半分のタブを外すと、グループの左へ出る",
+      name: "ungrouping a tab in the left half of a group places it to the left of the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -118,7 +118,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "グループの右半分のタブを外すと、グループの右へ出る",
+      name: "ungrouping a tab in the right half of a group places it to the right of the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -139,7 +139,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "グループのタブを全部外すと、グループもなくなる",
+      name: "ungrouping every tab of a group removes the group",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -160,7 +160,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "名前と色を変えると、変えた後のグループを返し、変化が 1 回届く",
+      name: "changing title and color returns the updated group and emits one update",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -190,7 +190,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "アクティブなタブを含むグループを折りたたんでも、アクティブなタブは変わらない",
+      name: "collapsing a group that contains the active tab keeps that tab active",
       run: (stage) =>
         Effect.gen(function* () {
           const {
@@ -210,7 +210,7 @@ export const tabGroupSuite: ContractSuite = {
       },
     },
     {
-      name: "折りたたんだグループのタブをアクティブにすると、グループが開いてからアクティブになる",
+      name: "activating a tab in a collapsed group expands the group, then activates the tab",
       run: (stage) =>
         Effect.gen(function* () {
           const {

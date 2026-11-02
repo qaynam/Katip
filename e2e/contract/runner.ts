@@ -16,7 +16,7 @@ const run = (suiteName: string, scenarioName: string): Promise<Observation> => {
     .find((suite) => suite.name === suiteName)
     ?.scenarios.find((candidate) => candidate.name === scenarioName)
   if (scenario === undefined) {
-    return Promise.reject(new Error(`契約の場面が無い: ${suiteName} / ${scenarioName}`))
+    return Promise.reject(new Error(`no contract scenario: ${suiteName} / ${scenarioName}`))
   }
   return Effect.runPromise(runContractScenario(scenario).pipe(Effect.provide(layer)))
 }

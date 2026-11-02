@@ -1,6 +1,6 @@
 import { test } from "./fixtures"
 
-test.fixme("ページ上で URL のコピーのショートカットを押すと、URL がコピーされ、ページの上に知らせが出る", () => {})
-test.fixme("ページ上で Markdown のリンクのコピーのショートカットを押すと、[タイトル](URL) がコピーされる", () => {})
-test.fixme("ページ上のショートカットを切ると、そのショートカットはページで何もしない", () => {})
-test.fixme("入力欄に入力している間は、ページ上のショートカットが働かない", () => {})
+test.fixme("the copy URL shortcut on a page copies the URL and shows a notice on the page", () => {})
+test.fixme("the copy Markdown link shortcut on a page copies [title](URL)", () => {})
+test.fixme("a page shortcut that is turned off does nothing on the page", () => {})
+test.fixme("page shortcuts do nothing while typing in an input", () => {})

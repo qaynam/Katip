@@ -35,10 +35,11 @@ export class Windows extends Context.Service<
       options: WindowUpdateOptions,
     ): Effect.Effect<BrowserWindow, BrowserApiError>
     /**
-     * ウィンドウを中のタブごと閉じる。タブは右から順に `isWindowClosing: true` で閉じる。
+     * Closes the window with its tabs, from the right, with `isWindowClosing: true`.
      *
      * @remarks
-     * タブを閉じる前に、分割ビュー・グループ・ピン留めが解け、その変化のイベントが先に届く。
+     * Before the tabs are removed, split views, groups and pinning are released, and the events for
+     * those changes arrive first.
      */
     remove(windowId: WindowId): Effect.Effect<void, BrowserApiError>
   }

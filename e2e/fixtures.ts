@@ -5,17 +5,17 @@ import { extensionWorkerOf, launchWithExtension } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 
 interface KatipFixtures {
-  /** パスをタイトルにしたページを返す、手元の Web サーバーの URL。例: `${site}/a` のタイトルは "Page /a" */
+  /** URL of a local web server whose pages are titled after their path, e.g. `${site}/a` is "Page /a". */
   site: string
   context: BrowserContext
-  /** 拡張の service worker。chrome.* をそのまま呼んで、ブラウザの状態を仕込み、確かめる */
+  /** The extension's service worker. Calls chrome.* directly to arrange and inspect browser state. */
   background: Worker
-  /** サイドパネルの画面を、同じウィンドウのタブとして開いたもの */
+  /** The side panel page, opened as a tab in the same window. */
   sidebar: Page
 }
 
 export const test = base.extend<KatipFixtures>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright は引数の分割代入から依存を読み取る
+  // eslint-disable-next-line no-empty-pattern -- Playwright reads dependencies from the destructured argument
   site: async ({}, use) => {
     const server = createServer((request, response) => {
       const path = new URL(request.url ?? "/", "http://localhost").pathname
@@ -24,12 +24,12 @@ export const test = base.extend<KatipFixtures>({
     })
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
     await use(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
-    // Chrome が保つ keep-alive の接続を切らないと、close が終わらない
+    // close never finishes while Chrome keeps its keep-alive connections open
     server.closeAllConnections()
     await new Promise((resolve) => server.close(resolve))
   },
 
-  // eslint-disable-next-line no-empty-pattern -- Playwright は引数の分割代入から依存を読み取る
+  // eslint-disable-next-line no-empty-pattern -- Playwright reads dependencies from the destructured argument
   context: async ({}, use) => {
     const { context, close } = await launchWithExtension(EXTENSION_DIR)
     await use(context)
