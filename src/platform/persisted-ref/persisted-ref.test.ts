@@ -23,7 +23,7 @@ const storedCount = Effect.gen(function* () {
 })
 
 describe("makePersistedRef", () => {
-  it.effect("保存値が無ければ初期値から始まり、保存済みではないと分かる", () =>
+  it.effect("starts from the initial value and reports nothing stored when storage is empty", () =>
     Effect.gen(function* () {
       const ref = yield* counterRef
 
@@ -31,7 +31,7 @@ describe("makePersistedRef", () => {
     }).pipe(Effect.provide(FakeBrowser.layer)),
   )
 
-  it.effect("保存値があればその値から始まる", () =>
+  it.effect("starts from the stored value when there is one", () =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
       yield* fake.seedStorage("local", { [KEY]: { count: 7 } })
@@ -42,7 +42,7 @@ describe("makePersistedRef", () => {
     }).pipe(Effect.provide(FakeBrowser.layer)),
   )
 
-  it.effect("保存値の形が合わなければ初期値から始まる", () =>
+  it.effect("starts from the initial value when the stored value does not decode", () =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
       yield* fake.seedStorage("local", { [KEY]: { count: "broken" } })
@@ -53,7 +53,7 @@ describe("makePersistedRef", () => {
     }).pipe(Effect.provide(FakeBrowser.layer)),
   )
 
-  it.effect("更新した値は storage にも保存される", () =>
+  it.effect("saves updated values to storage", () =>
     Effect.gen(function* () {
       const ref = yield* counterRef
 
@@ -63,20 +63,22 @@ describe("makePersistedRef", () => {
     }).pipe(Effect.provide(FakeBrowser.layer)),
   )
 
-  it.effect("更新が失敗したら値も保存値も変わらない", () =>
+  it.effect("leaves both the value and storage unchanged when an update fails", () =>
     Effect.gen(function* () {
       const ref = yield* counterRef
 
-      const result = yield* ref.updateEffect(() => Effect.fail("拒否" as const)).pipe(Effect.flip)
+      const result = yield* ref
+        .updateEffect(() => Effect.fail("rejected" as const))
+        .pipe(Effect.flip)
 
       assert.deepStrictEqual(
         [result, yield* ref.get, yield* storedCount],
-        ["拒否", { count: 0 }, Option.none()],
+        ["rejected", { count: 0 }, Option.none()],
       )
     }).pipe(Effect.provide(FakeBrowser.layer)),
   )
 
-  it.effect("同時に更新しても、どの更新も失われない", () =>
+  it.effect("loses no update when updates run concurrently", () =>
     Effect.gen(function* () {
       const ref = yield* counterRef
 

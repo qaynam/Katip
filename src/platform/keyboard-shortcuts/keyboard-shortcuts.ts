@@ -8,11 +8,11 @@ export class KeyboardShortcuts extends Context.Service<
   KeyboardShortcuts,
   {
     /**
-     * マニフェストのコマンドの名前ごとに、今割り当てられているキーの書き方（Mac なら「⇧⌘C」など）。
-     * キーを割り当てていないコマンドは含まない。
+     * The keys currently assigned to each manifest command, keyed by command name and written the
+     * way the browser shows them (such as ⇧⌘C on a Mac). Commands without keys are left out.
      */
     readonly assigned: Effect.Effect<ReadonlyMap<string, string>, BrowserApiError>
-    /** ブラウザが macOS で動いているか。キーの書き方を OS に合わせるのに使う。 */
+    /** Whether the browser runs on macOS. */
     readonly isMac: Effect.Effect<boolean, BrowserApiError>
   }
 >()("katip/platform/keyboard-shortcuts/KeyboardShortcuts") {
@@ -37,7 +37,7 @@ export class KeyboardShortcuts extends Context.Service<
     }),
   )
 
-  /** テスト用。割り当てと OS を決めて返す。 */
+  /** For tests: fixed assignments and OS. */
   static readonly layerTest = (options: {
     readonly assigned?: Readonly<Record<string, string>>
     readonly isMac?: boolean

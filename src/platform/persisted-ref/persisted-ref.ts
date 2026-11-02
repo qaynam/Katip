@@ -2,10 +2,10 @@ import { Effect, Option, Schema, SynchronizedRef } from "effect"
 import type { BrowserApiError, StorageArea } from "#platform/browser"
 
 export interface PersistedRef<A> {
-  /** 起動時に storage に値があったか。無ければ初期値から始まっている。 */
+  /** Whether storage held a value at startup; if not, the ref started from the initial value. */
   readonly wasStored: boolean
   readonly get: Effect.Effect<A>
-  /** 新しい値を保存してから反映する。保存に失敗したら値は変わらない。 */
+  /** Saves the new value before applying it; if saving fails, the value stays unchanged. */
   updateEffect<E, R>(
     f: (value: A) => Effect.Effect<A, E, R>,
   ): Effect.Effect<A, E | BrowserApiError, R>
@@ -13,11 +13,11 @@ export interface PersistedRef<A> {
 }
 
 /**
- * storage の 1 キーをメモリに載せ、更新を直列化して書き戻す。
+ * Holds one storage key in memory and writes updates back one at a time.
  *
  * @remarks
- * 書き手が 1 つのページ（background）に限られる値に使う。他のページからの書き込みは取り込まない。
- * 保存値が無い・形が合わない場合は `initial` から始める。
+ * For values written by a single page (the background) only; writes from other pages are not
+ * picked up. Starts from `initial` when nothing is stored or the stored value does not decode.
  */
 export const makePersistedRef = Effect.fnUntraced(function* <A, I>(options: {
   readonly area: StorageArea
@@ -29,16 +29,18 @@ export const makePersistedRef = Effect.fnUntraced(function* <A, I>(options: {
     .getDecoded(options.key, options.schema)
     .pipe(
       Effect.catchTag("StorageDecodeError", (error) =>
-        Effect.logWarning("保存値を読めなかったので初期値から始める", error).pipe(
-          Effect.as(Option.none<A>()),
-        ),
+        Effect.logWarning(
+          "Could not decode the stored value; starting from the initial value",
+          error,
+        ).pipe(Effect.as(Option.none<A>())),
       ),
     )
   const ref = yield* SynchronizedRef.make(Option.getOrElse(stored, options.initial))
   const encode = Schema.encodeEffect(options.schema)
   const save = (value: A) =>
     encode(value).pipe(
-      // Codec の Type から作った値の encode は失敗しない。失敗するならスキーマの定義の誤り
+      // Not a typed failure: encoding a value of the Codec's Type cannot fail unless the schema
+      // itself is wrong
       Effect.orDie,
       Effect.flatMap((encoded) => options.area.set(options.key, encoded)),
       Effect.as(value),

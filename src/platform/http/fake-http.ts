@@ -25,18 +25,18 @@ export const unreachable: FakeReply = (request) =>
   Effect.fail(new HttpRequestError({ url: request.url, cause: new Error("unreachable (fake)") }))
 
 /**
- * テスト用。{@link Http} の代わりに、登録した応答を返して送られた要求を記録する。
- * `FakeHttp.layer` はこれと {@link Http} を、状態を共有させて提供する。
+ * For tests: stands in for {@link Http}, replying with registered responses and recording the
+ * requests sent. `FakeHttp.layer` provides this and {@link Http} sharing the same state.
  */
 export class FakeHttp extends Context.Service<
   FakeHttp,
   {
     /**
-     * URL が `urlPrefix` で始まる要求に `reply` で応える。後から登録したものほど優先する。
-     * どの登録にも当たらない要求は接続できなかったものとして失敗する。
+     * Answers requests whose URL starts with `urlPrefix` with `reply`; later routes win.
+     * A request matching no route fails as if the server could not be reached.
      */
     route(urlPrefix: string, reply: FakeReply): Effect.Effect<void>
-    /** 送られた要求を、送られた順に返す。 */
+    /** The requests sent, in the order sent. */
     readonly requests: Effect.Effect<ReadonlyArray<HttpRequest>>
   }
 >()("katip/platform/http/FakeHttp") {

@@ -3,7 +3,7 @@ import { BrowserApiError } from "#platform/browser"
 
 export interface OriginPermissionChange {
   readonly kind: "granted" | "revoked"
-  /** 変化したホストのマッチパターン（`https://example.com/*` の形）。 */
+  /** Match patterns of the hosts that changed, shaped like `https://example.com/*`. */
   readonly origins: ReadonlyArray<string>
 }
 
@@ -28,20 +28,22 @@ const changesFrom = (event: ChromePermissionEvent, kind: OriginPermissionChange[
 export class Permissions extends Context.Service<
   Permissions,
   {
-    /** `originPattern`（`https://example.com/*` の形）のホストへのアクセスが許可されているか。 */
+    /** Whether access is granted to the hosts of `originPattern`, like `https://example.com/*`. */
     containsOrigin(originPattern: string): Effect.Effect<boolean, BrowserApiError>
     /**
-     * `history` などの API の権限が許可されているか。
+     * Whether an API permission such as `history` is granted.
      *
-     * 任意の権限は、許可されるまで `chrome.history` のような API の名前空間そのものが無い。
+     * Until an optional permission is granted, its API namespace, such as `chrome.history`, does
+     * not exist at all.
      */
     containsPermission(permission: string): Effect.Effect<boolean, BrowserApiError>
     /**
-     * 購読を始めた後に、ホストへのアクセスの許可が増減したとき。
+     * Host access grants and revocations after subscribing.
      *
      * @remarks
-     * 購読したときにリスナーを登録するので、service worker を起こした許可の変化は届かない。
-     * 許可を求めるのは開いているサイドパネルなので、その間 service worker は起きている。
+     * The listener is registered on subscription, so a change that woke the service worker is not
+     * delivered. That is acceptable because permissions are requested from an open side panel,
+     * which keeps the service worker awake.
      */
     readonly originChanges: Stream.Stream<OriginPermissionChange>
   }

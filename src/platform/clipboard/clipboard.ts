@@ -13,8 +13,8 @@ const callChrome = <A>(api: string, run: () => Promise<A>) =>
 
 const decodeCopyResponse = Schema.decodeUnknownEffect(CopyResponse)
 
-// service worker には DOM もフォーカスも無く、navigator.clipboard も execCommand も使えない。
-// 書き込みだけのために画面の無い offscreen ドキュメントを開き、そこでコピーさせる
+// Not copied in the service worker: it has no DOM and no focus, so neither navigator.clipboard nor
+// execCommand works there. An offscreen document with no UI is opened just to do the copy
 const copyViaOffscreenDocument = (text: string) =>
   Effect.gen(function* () {
     const url = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH)
@@ -26,7 +26,7 @@ const copyViaOffscreenDocument = (text: string) =>
         chrome.offscreen.createDocument({
           url: OFFSCREEN_DOCUMENT_PATH,
           reasons: ["CLIPBOARD"],
-          justification: "アクティブなタブの URL をクリップボードへコピーする",
+          justification: "Copy the active tab's URL to the clipboard",
         }),
       )
     }
@@ -38,7 +38,7 @@ const copyViaOffscreenDocument = (text: string) =>
       Effect.mapError((cause) => new BrowserApiError({ api: "runtime.sendMessage", cause })),
     )
     if (!copied) {
-      return yield* new BrowserApiError({ api: "document.execCommand", cause: "copy に失敗した" })
+      return yield* new BrowserApiError({ api: "document.execCommand", cause: "copy failed" })
     }
   })
 
@@ -52,7 +52,7 @@ export class Clipboard extends Context.Service<
   )
 }
 
-/** テスト用。書き込まれた文字列を記録する。 */
+/** For tests: records every string written to the {@link Clipboard}. */
 export class ClipboardRecorder extends Context.Service<
   ClipboardRecorder,
   { readonly written: Effect.Effect<ReadonlyArray<string>> }

@@ -5,8 +5,8 @@ import { Http } from "./http"
 
 const get = (url: string) => Http.use((http) => http.send({ url, credentials: "omit" }))
 
-describe("登録した応答", () => {
-  it.effect("URL が登録した前置きで始まる要求に、その応答を返す", () =>
+describe("registered responses", () => {
+  it.effect("answer a request whose URL starts with the registered prefix", () =>
     Effect.gen(function* () {
       yield* (yield* FakeHttp).route("https://api.example/", () =>
         Effect.succeed(httpResponse(200, "ok")),
@@ -18,7 +18,7 @@ describe("登録した応答", () => {
     }).pipe(Effect.provide(FakeHttp.layer)),
   )
 
-  it.effect("同じ URL に当たる登録が複数あれば、後から登録した応答を返す", () =>
+  it.effect("the latest registration wins when several match the same URL", () =>
     Effect.gen(function* () {
       const fake = yield* FakeHttp
       yield* fake.route("https://api.example/", () => Effect.succeed(httpResponse(500)))
@@ -30,7 +30,7 @@ describe("登録した応答", () => {
     }).pipe(Effect.provide(FakeHttp.layer)),
   )
 
-  it.effect("どの登録にも当たらない要求は、接続できなかったものとして失敗する", () =>
+  it.effect("a request matching none fails as if the server could not be reached", () =>
     Effect.gen(function* () {
       const error = yield* Effect.flip(get("https://unknown.example/"))
 
@@ -39,8 +39,8 @@ describe("登録した応答", () => {
   )
 })
 
-describe("要求の記録", () => {
-  it.effect("失敗した要求も含め、送られた順に記録する", () =>
+describe("recording requests", () => {
+  it.effect("records requests in the order sent, including failed ones", () =>
     Effect.gen(function* () {
       yield* (yield* FakeHttp).route("https://a.example/", () => Effect.succeed(httpResponse(200)))
 

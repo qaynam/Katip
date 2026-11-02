@@ -15,14 +15,14 @@ const byLastVisitDescending = Order.flip(
 )
 
 /**
- * テスト用。仕込んだ閲覧履歴を {@link History} として返し、受けた検索を記録する。
- * `FakeHistory.layer` はこれと {@link History} を、状態を共有させて提供する。
+ * For tests: serves seeded browsing history as {@link History} and records the searches it
+ * receives. `FakeHistory.layer` provides this and {@link History} sharing the same state.
  */
 export class FakeHistory extends Context.Service<
   FakeHistory,
   {
     seed(pages: ReadonlyArray<HistoryPage>): Effect.Effect<void>
-    /** 受けた検索を、受けた順に返す。 */
+    /** The searches received, in the order received. */
     readonly searches: Effect.Effect<ReadonlyArray<HistoryQuery>>
   }
 >()("katip/platform/history/FakeHistory") {

@@ -3,17 +3,17 @@ import { BrowserApiError } from "#platform/browser"
 
 export interface HistoryPage {
   readonly url: string
-  /** タイトルを記録していないページは空文字。 */
+  /** Empty for a page with no recorded title. */
   readonly title: string
-  /** 最後に訪れた時刻（エポックミリ秒）。 */
+  /** When the page was last visited, in epoch milliseconds. */
   readonly lastVisitedAt: number
 }
 
 export interface HistoryQuery {
-  /** URL かタイトルに含まれる語。空文字ならすべて。 */
+  /** Words to find in the URL or title; an empty string matches every page. */
   readonly text: string
   readonly maxResults: number
-  /** この時刻（エポックミリ秒）以降に訪れたページだけを探す。 */
+  /** Only pages visited at or after this time, in epoch milliseconds, are searched. */
   readonly startTime: number
 }
 
@@ -27,14 +27,14 @@ export class History extends Context.Service<
   History,
   {
     /**
-     * 閲覧履歴を、最後に訪れたのが新しい順に探す。
+     * Searches browsing history, most recently visited first.
      *
-     * `history` の権限が無いと失敗する。権限は `#platform/permissions` で先に確かめること。
+     * Fails without the `history` permission; check it first with `#platform/permissions`.
      */
     search(query: HistoryQuery): Effect.Effect<ReadonlyArray<HistoryPage>, BrowserApiError>
   }
 >()("katip/platform/history/History") {
-  // 権限が無いと chrome.history そのものが無いので、使うときまで読まない
+  // chrome.history is not read until used: it does not exist at all without the permission
   static readonly layer = Layer.succeed(
     History,
     History.of({

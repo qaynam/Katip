@@ -6,8 +6,8 @@ import { Permissions } from "./permissions"
 const GMAIL = "https://mail.google.com/*"
 const GITHUB = "https://api.github.com/*"
 
-describe("ホストへのアクセスの許可", () => {
-  it.effect("最初はどのホストも許可されていない", () =>
+describe("host access", () => {
+  it.effect("no host is granted at first", () =>
     Effect.gen(function* () {
       const contains = yield* (yield* Permissions).containsOrigin(GMAIL)
 
@@ -15,7 +15,7 @@ describe("ホストへのアクセスの許可", () => {
     }).pipe(Effect.provide(FakePermissions.layer)),
   )
 
-  it.effect("許可したホストだけが許可されている", () =>
+  it.effect("only granted hosts are granted", () =>
     Effect.gen(function* () {
       const permissions = yield* Permissions
       yield* (yield* FakePermissions).grant([GMAIL])
@@ -29,7 +29,7 @@ describe("ホストへのアクセスの許可", () => {
     }).pipe(Effect.provide(FakePermissions.layer)),
   )
 
-  it.effect("取り消したホストは許可されていない", () =>
+  it.effect("a revoked host is no longer granted", () =>
     Effect.gen(function* () {
       const fake = yield* FakePermissions
       yield* fake.grant([GMAIL])
@@ -41,8 +41,8 @@ describe("ホストへのアクセスの許可", () => {
   )
 })
 
-describe("許可の変化の通知", () => {
-  it.effect("実際に許可が増減したホストだけが、増減の順に流れる", () =>
+describe("access change notifications", () => {
+  it.effect("carry only hosts whose access actually changed, in the order of the changes", () =>
     Effect.gen(function* () {
       const fake = yield* FakePermissions
       yield* fake.grant([GMAIL])
@@ -65,8 +65,8 @@ describe("許可の変化の通知", () => {
   )
 })
 
-describe("API の権限", () => {
-  it.effect("許可した API の権限だけが許可されている", () =>
+describe("API permissions", () => {
+  it.effect("only granted API permissions are granted", () =>
     Effect.gen(function* () {
       const permissions = yield* Permissions
       yield* (yield* FakePermissions).grantPermissions(["history"])
@@ -80,7 +80,7 @@ describe("API の権限", () => {
     }).pipe(Effect.provide(FakePermissions.layer)),
   )
 
-  it.effect("ホストへのアクセスの許可とは別に扱う", () =>
+  it.effect("are kept apart from host access", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant(["history"])
 

@@ -3,22 +3,28 @@ import { Context, Effect, Layer, Schema } from "effect"
 export interface HttpRequest {
   readonly url: string
   readonly headers?: Readonly<Record<string, string>>
-  /** `include` はブラウザが持つ送信先のサイトの cookie を付けて送る。 */
+  /** `include` sends the browser's cookies for the destination site. */
   readonly credentials: "include" | "omit"
-  /** `manual` ではリダイレクトをたどらず、{@link HttpResponse.isRedirect} が真の応答を返す。 */
+  /**
+   * `manual` does not follow redirects and returns a response whose
+   * {@link HttpResponse.isRedirect} is true.
+   */
   readonly redirect?: "follow" | "manual"
 }
 
 export interface HttpResponse {
-  /** たどらなかったリダイレクトでは 0。 */
+  /** 0 for a redirect that was not followed. */
   readonly status: number
   readonly isRedirect: boolean
-  /** ヘッダー名は小文字。 */
+  /** Header names are lowercase. */
   readonly headers: Readonly<Record<string, string>>
   readonly body: string
 }
 
-/** 応答を受け取れなかった（オフライン、DNS、CORS、中断など）。HTTP のエラー応答はこれにならない。 */
+/**
+ * No response arrived (offline, DNS, CORS, aborted and so on). An HTTP error response is not this
+ * error.
+ */
 export class HttpRequestError extends Schema.TaggedError<HttpRequestError>()("HttpRequestError", {
   url: Schema.String,
   cause: Schema.Defect(),

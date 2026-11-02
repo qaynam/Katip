@@ -18,23 +18,25 @@ const urlsFound = (text: string, options: { maxResults?: number; startTime?: num
     }),
   ).pipe(Effect.map((pages) => pages.map((found) => found.url)))
 
-describe("仕込んだ閲覧履歴の検索", () => {
-  it.effect("すべての語を URL かタイトルに含むページを、最後に訪れたのが新しい順に返す", () =>
-    Effect.gen(function* () {
-      yield* (yield* FakeHistory).seed([
-        page("https://docs.example/effect", "Effect のドキュメント", 100),
-        page("https://blog.example/effect", "Effect を使ってみた", 300),
-        page("https://docs.example/svelte", "Svelte", 200),
-      ])
+describe("searching seeded browsing history", () => {
+  it.effect(
+    "returns pages containing every word in the URL or title, most recently visited first",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* FakeHistory).seed([
+          page("https://docs.example/effect", "Effect documentation", 100),
+          page("https://blog.example/effect", "Trying out Effect", 300),
+          page("https://docs.example/svelte", "Svelte", 200),
+        ])
 
-      assert.deepStrictEqual(yield* urlsFound("EFFECT"), [
-        "https://blog.example/effect",
-        "https://docs.example/effect",
-      ])
-    }).pipe(Effect.provide(FakeHistory.layer)),
+        assert.deepStrictEqual(yield* urlsFound("EFFECT"), [
+          "https://blog.example/effect",
+          "https://docs.example/effect",
+        ])
+      }).pipe(Effect.provide(FakeHistory.layer)),
   )
 
-  it.effect("開始時刻より前に訪れたページと、上限を超えた分は返さない", () =>
+  it.effect("leaves out pages visited before the start time and results beyond the limit", () =>
     Effect.gen(function* () {
       yield* (yield* FakeHistory).seed([
         page("https://a.example/", "A", 100),
@@ -48,7 +50,7 @@ describe("仕込んだ閲覧履歴の検索", () => {
     }).pipe(Effect.provide(FakeHistory.layer)),
   )
 
-  it.effect("受けた検索を記録する", () =>
+  it.effect("records the searches it receives", () =>
     Effect.gen(function* () {
       yield* urlsFound("katip", { maxResults: 50 })
 
