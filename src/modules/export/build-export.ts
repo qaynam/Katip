@@ -146,7 +146,8 @@ const temporaryTabsOf = (
   )
 }
 
-const settingsOf = (settings: Settings): LatestExport["settings"] => ({
+/** Settings as the latest version of the export file writes them. */
+export const exportedSettingsOf = (settings: Settings): LatestExport["settings"] => ({
   newTabsOnTop: settings.newTabsOnTop,
   showAllOpenTabsInCollapsedFolders: settings.showAllOpenTabsInCollapsedFolders,
   syncTabGroups: settings.syncTabGroups,
@@ -218,7 +219,7 @@ export const buildExport = (
           .map((tab): ExportedLink => ({ title: pageTitleOf(tab), url: urlOf(tab) })),
         (a, b) => a.url === b.url,
       ),
-      settings: settingsOf(sources.settings),
+      settings: exportedSettingsOf(sources.settings),
     }),
   )
 }

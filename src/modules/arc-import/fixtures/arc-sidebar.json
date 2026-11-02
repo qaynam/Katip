@@ -1,0 +1,570 @@
+{
+  "version": 1,
+  "sidebar": {
+    "containers": [
+      { "global": {} },
+      {
+        "spaces": [
+          "space-work",
+          {
+            "id": "space-work",
+            "title": "Work",
+            "profile": { "default": {} },
+            "containerIDs": ["pinned", "work-pinned", "unpinned", "work-unpinned"],
+            "customInfo": {
+              "iconType": { "icon": "briefcase" },
+              "windowTheme": {
+                "background": {
+                  "single": {
+                    "_0": {
+                      "style": {
+                        "color": {
+                          "_0": {
+                            "blendedGradient": {
+                              "_0": {
+                                "baseColors": [
+                                  {
+                                    "red": 0.25,
+                                    "green": 0.45,
+                                    "blue": 0.95,
+                                    "alpha": 1,
+                                    "colorSpace": "extendedSRGB"
+                                  },
+                                  {
+                                    "red": 0.55,
+                                    "green": 0.45,
+                                    "blue": 0.65,
+                                    "alpha": 1,
+                                    "colorSpace": "extendedSRGB"
+                                  }
+                                ],
+                                "overlayColors": [
+                                  {
+                                    "red": 1,
+                                    "green": 1,
+                                    "blue": 1,
+                                    "alpha": 0.2,
+                                    "colorSpace": "extendedSRGB"
+                                  },
+                                  {
+                                    "red": 0,
+                                    "green": 0,
+                                    "blue": 0,
+                                    "alpha": 0.1,
+                                    "colorSpace": "extendedSRGB"
+                                  }
+                                ],
+                                "modifiers": {
+                                  "overlay": "plusLighter",
+                                  "intensityFactor": 0.5,
+                                  "noiseFactor": 0.3
+                                },
+                                "wheel": { "complementary": {} },
+                                "translucencyStyle": "regular"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "isVibrant": false,
+                      "contentOverBackgroundAppearance": "dark"
+                    }
+                  }
+                },
+                "primaryColorPalette": {
+                  "midTone": {
+                    "red": 0.4,
+                    "green": 0.4,
+                    "blue": 0.9,
+                    "alpha": 1,
+                    "colorSpace": "extendedSRGB"
+                  },
+                  "shaded": {
+                    "red": 0.3,
+                    "green": 0.3,
+                    "blue": 0.7,
+                    "alpha": 1,
+                    "colorSpace": "extendedSRGB"
+                  },
+                  "shadedDark": {
+                    "red": 0.2,
+                    "green": 0.2,
+                    "blue": 0.5,
+                    "alpha": 1,
+                    "colorSpace": "extendedSRGB"
+                  },
+                  "tintedLight": {
+                    "red": 0.8,
+                    "green": 0.8,
+                    "blue": 1,
+                    "alpha": 1,
+                    "colorSpace": "extendedSRGB"
+                  }
+                },
+                "semanticColorPalette": {
+                  "appearanceBased": {}
+                }
+              }
+            }
+          },
+          "space-reading",
+          {
+            "id": "space-reading",
+            "title": "Reading",
+            "profile": { "default": {} },
+            "newContainerIDs": [
+              { "unpinned": {} },
+              "reading-unpinned",
+              { "pinned": {} },
+              "reading-pinned"
+            ],
+            "customInfo": {
+              "iconType": { "icon": "book" },
+              "windowTheme": {
+                "primaryColorPalette": {
+                  "midTone": {
+                    "red": 0.3,
+                    "green": 0.7,
+                    "blue": 0.4,
+                    "alpha": 1,
+                    "colorSpace": "extendedSRGB"
+                  }
+                }
+              }
+            }
+          },
+          "space-untitled",
+          {
+            "id": "space-untitled",
+            "title": "",
+            "profile": { "default": {} },
+            "containerIDs": ["pinned", "untitled-pinned", "unpinned", "untitled-unpinned"]
+          }
+        ],
+        "items": [
+          "work-pinned",
+          {
+            "id": "work-pinned",
+            "parentID": null,
+            "childrenIds": [
+              "inbox",
+              "projects",
+              "design-split",
+              "local-notes",
+              "status",
+              "sketches"
+            ],
+            "title": null,
+            "createdAt": 700000000,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-work" } } }
+            }
+          },
+          "inbox",
+          {
+            "id": "inbox",
+            "parentID": "work-pinned",
+            "childrenIds": [],
+            "title": "Inbox",
+            "createdAt": 700000001,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://mail.example.com/inbox",
+                "savedTitle": "Inbox (3) – Mail",
+                "timeLastActiveAt": 700000100,
+                "savedMuteStatus": "allowAudio",
+                "referrerID": null,
+                "activeTabBeforeCreationID": null
+              }
+            }
+          },
+          "projects",
+          {
+            "id": "projects",
+            "parentID": "work-pinned",
+            "childrenIds": ["roadmap", "archive", "team-split"],
+            "title": "Projects",
+            "createdAt": 700000002,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "list": {} }
+          },
+          "roadmap",
+          {
+            "id": "roadmap",
+            "parentID": "projects",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000003,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://docs.example.com/roadmap",
+                "savedTitle": "Roadmap – Docs",
+                "timeLastActiveAt": 700000200
+              }
+            }
+          },
+          "archive",
+          {
+            "id": "archive",
+            "parentID": "projects",
+            "childrenIds": ["year-2025"],
+            "title": "Archive",
+            "createdAt": 700000004,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "list": {} }
+          },
+          "year-2025",
+          {
+            "id": "year-2025",
+            "parentID": "archive",
+            "childrenIds": ["review-2025"],
+            "title": "2025",
+            "createdAt": 700000005,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "list": {} }
+          },
+          "review-2025",
+          {
+            "id": "review-2025",
+            "parentID": "year-2025",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000006,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://docs.example.com/2025-review",
+                "savedTitle": "2025 Review"
+              }
+            }
+          },
+          "team-split",
+          {
+            "id": "team-split",
+            "parentID": "projects",
+            "childrenIds": ["board", "chat"],
+            "title": null,
+            "createdAt": 700000007,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "splitView": {
+                "itemWidthFactors": [0.5, 0.5],
+                "layoutOrientation": "horizontal",
+                "focusItemID": "board",
+                "customInfo": {},
+                "timeLastActiveAt": 700000300
+              }
+            }
+          },
+          "board",
+          {
+            "id": "board",
+            "parentID": "team-split",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000008,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://tracker.example.com/board", "savedTitle": "Board" }
+            }
+          },
+          "chat",
+          {
+            "id": "chat",
+            "parentID": "team-split",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000009,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://chat.example.com/team", "savedTitle": "Team Chat" }
+            }
+          },
+          "design-split",
+          {
+            "id": "design-split",
+            "parentID": "work-pinned",
+            "childrenIds": ["design", "spec", "prototype"],
+            "title": null,
+            "createdAt": 700000010,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "splitView": {
+                "itemWidthFactors": [0.34, 0.33, 0.33],
+                "layoutOrientation": "horizontal",
+                "focusItemID": "design",
+                "customInfo": {},
+                "timeLastActiveAt": 700000400
+              }
+            }
+          },
+          "design",
+          {
+            "id": "design",
+            "parentID": "design-split",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000011,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://design.example.com/file", "savedTitle": "Design" }
+            }
+          },
+          "spec",
+          {
+            "id": "spec",
+            "parentID": "design-split",
+            "childrenIds": [],
+            "title": "Spec",
+            "createdAt": 700000012,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://docs.example.com/spec", "savedTitle": "Spec v2 – Docs" }
+            }
+          },
+          "prototype",
+          {
+            "id": "prototype",
+            "parentID": "design-split",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000013,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://proto.example.com/latest", "savedTitle": "Prototype" }
+            }
+          },
+          "local-notes",
+          {
+            "id": "local-notes",
+            "parentID": "work-pinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000014,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "tab": { "savedURL": "file:///tmp/notes.txt", "savedTitle": "notes.txt" } }
+          },
+          "status",
+          {
+            "id": "status",
+            "parentID": "work-pinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000015,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "tab": { "savedURL": "https://status.example.com/", "savedTitle": "" } }
+          },
+          "sketches",
+          {
+            "id": "sketches",
+            "parentID": "work-pinned",
+            "childrenIds": [],
+            "title": "Sketches",
+            "createdAt": 700000016,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "easel": { "easelID": "easel-1" } }
+          },
+          "work-unpinned",
+          {
+            "id": "work-unpinned",
+            "parentID": null,
+            "childrenIds": ["news", "search"],
+            "title": null,
+            "createdAt": 700000017,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-work" } } }
+            }
+          },
+          "news",
+          {
+            "id": "news",
+            "parentID": "work-unpinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000018,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://news.example.com/today", "savedTitle": "Today’s News" }
+            }
+          },
+          "search",
+          {
+            "id": "search",
+            "parentID": "work-unpinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000019,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://search.example.com/?q=effect+schema",
+                "savedTitle": "effect schema – Search"
+              }
+            }
+          },
+          "reading-pinned",
+          {
+            "id": "reading-pinned",
+            "parentID": null,
+            "childrenIds": ["long-read"],
+            "title": null,
+            "createdAt": 700000020,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-reading" } } }
+            }
+          },
+          "long-read",
+          {
+            "id": "long-read",
+            "parentID": "reading-pinned",
+            "childrenIds": [],
+            "title": "Long Read",
+            "createdAt": 700000021,
+            "isUnread": true,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://blog.example.com/long-read",
+                "savedTitle": "A Very Long Read – Blog"
+              }
+            }
+          },
+          "reading-unpinned",
+          {
+            "id": "reading-unpinned",
+            "parentID": null,
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000022,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-reading" } } }
+            }
+          },
+          "untitled-pinned",
+          {
+            "id": "untitled-pinned",
+            "parentID": null,
+            "childrenIds": ["weather"],
+            "title": null,
+            "createdAt": 700000023,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-untitled" } } }
+            }
+          },
+          "weather",
+          {
+            "id": "weather",
+            "parentID": "untitled-pinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000024,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://weather.example.com/", "savedTitle": "Weather" }
+            }
+          },
+          "untitled-unpinned",
+          {
+            "id": "untitled-unpinned",
+            "parentID": null,
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000025,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-untitled" } } }
+            }
+          },
+          "top-apps",
+          {
+            "id": "top-apps",
+            "parentID": null,
+            "childrenIds": ["calendar", "music", "browser-settings"],
+            "title": null,
+            "createdAt": 700000026,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "topApps": { "_0": { "default": {} } } } }
+            }
+          },
+          "calendar",
+          {
+            "id": "calendar",
+            "parentID": "top-apps",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000027,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://calendar.example.com/", "savedTitle": "Calendar" }
+            }
+          },
+          "music",
+          {
+            "id": "music",
+            "parentID": "top-apps",
+            "childrenIds": [],
+            "title": "Music",
+            "createdAt": 700000028,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://music.example.com/",
+                "savedTitle": "Now Playing – Music"
+              }
+            }
+          },
+          "browser-settings",
+          {
+            "id": "browser-settings",
+            "parentID": "top-apps",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000029,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "tab": { "savedURL": "chrome://settings/", "savedTitle": "Settings" } }
+          }
+        ],
+        "topAppsContainerIDs": [{ "default": {} }, "top-apps"]
+      }
+    ]
+  },
+  "sidebarSyncState": { "container": {} },
+  "firebaseSyncState": { "syncData": {} }
+}

@@ -1,4 +1,4 @@
-export { buildExport, type ExportSources } from "./build-export"
+export { buildExport, exportedSettingsOf, type ExportSources } from "./build-export"
 export {
   decodeExportFile,
   encodeExportFile,
