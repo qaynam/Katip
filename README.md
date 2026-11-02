@@ -184,3 +184,9 @@ git push origin v0.1.0
 ```
 
 CI checks that the tag matches the version, runs every check, and creates a GitHub Release with the zip ready for the Chrome Web Store.
+
+## License
+
+The code is released under the [MIT License](LICENSE).
+
+The Katip name and logo are not covered by the license. You're welcome to fork and build on the code, but please give your version its own name and icon.
