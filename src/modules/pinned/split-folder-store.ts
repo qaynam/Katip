@@ -5,12 +5,12 @@ import { storedValue } from "./stored-value"
 const SplitFolderIds = Schema.Array(BookmarkId)
 
 /**
- * 分割ビューとしてピン留めしたフォルダの印。
+ * The marks on folders pinned as a split view.
  *
  * @remarks
- * 印はブックマークのタイトルではなくこの端末の storage に持つ。タイトルに記号を入れると
- * ブックマークマネージャや他の端末での表示が汚れるため。印を失ったフォルダは、中身の
- * 2 つのブックマークを持つ普通のフォルダとして表示されるだけで、ピンは失われない。
+ * The marks are kept in this device's storage, not in the bookmark titles: a symbol in a title
+ * would clutter it in the bookmark manager and on other devices. A folder that loses its mark
+ * just shows as an ordinary folder holding the two bookmarks; the pins aren't lost.
  */
 export class SplitFolderStore extends Context.Service<
   SplitFolderStore,
@@ -25,7 +25,8 @@ export class SplitFolderStore extends Context.Service<
     Effect.gen(function* () {
       const storage = yield* Storage
       const saved = storedValue(storage.local, "katip/pinned/split-folders", SplitFolderIds)
-      // 全フォルダ分を 1 つのキーに読み書きするので、並行した更新が互いを上書きしないよう直列にする
+      // Every folder is read and written under one key, so updates run one at a time to keep
+      // concurrent ones from overwriting each other
       const writeLock = yield* Semaphore.make(1)
 
       const load = Effect.map(

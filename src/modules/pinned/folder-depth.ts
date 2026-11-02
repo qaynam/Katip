@@ -1,18 +1,21 @@
-/** Space フォルダそのものの深さ。Space 直下のノードは深さ 1 になる。 */
+/** The depth of the Space folder itself. Nodes directly inside the Space are at depth 1. */
 export const SPACE_ROOT_DEPTH = 0
 
 export interface FolderNestingRule {
   readonly isTabGroupSyncEnabled: boolean
 }
 
-// タブグループは入れ子にできないため、同期中は Space 直下の 1 階層だけを投影対象にする
+// Tab groups can't nest, so while they are synced only the level directly inside the Space is
+// projected onto them
 export const maxFolderDepth = ({ isTabGroupSyncEnabled }: FolderNestingRule): number =>
   isTabGroupSyncEnabled ? 1 : 2
 
 /**
- * 深さ `parentDepth` のフォルダ（Space 直下なら {@link SPACE_ROOT_DEPTH}）の中に、新しいフォルダを作れるかを返す。
+ * Tells whether a new folder can be created inside the folder at `parentDepth`
+ * ({@link SPACE_ROOT_DEPTH} for directly inside the Space).
  *
- * 外部で作られた制限より深いフォルダは読み込みも表示もできるが、その中に新しいフォルダは作れない。
+ * Folders made deeper than the limit outside Katip can still be loaded and shown, but no new
+ * folder can be created inside them.
  */
 export const canCreateFolderInside = (parentDepth: number, rule: FolderNestingRule): boolean =>
   parentDepth + 1 <= maxFolderDepth(rule)

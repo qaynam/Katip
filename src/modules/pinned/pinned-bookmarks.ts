@@ -32,7 +32,9 @@ import { SplitFolderStore } from "./split-folder-store"
 import { SpaceFolders, type SpaceFolderOwner } from "./space-folders"
 
 export type PinnedParent = Data.TaggedEnum<{
-  /** Space フォルダの直下。フォルダが消えていれば作り直すので、Space 名も受け取る。 */
+  /**
+   * Directly inside the Space folder. Carries the Space's name too, to recreate a missing folder.
+   */
   SpaceRoot: { readonly space: SpaceFolderOwner }
   Folder: { readonly folderId: BookmarkId }
 }>
@@ -40,7 +42,7 @@ export const PinnedParent = Data.taggedEnum<PinnedParent>()
 
 export interface PinnedPosition {
   readonly parent: PinnedParent
-  /** 作成・移動した後に、親の子の中で占める位置。省略時は末尾。 */
+  /** The position among the parent's children once created or moved. The end when omitted. */
   readonly index?: number
 }
 
@@ -79,8 +81,8 @@ const isSameParent = (location: PinnedLocation, parent: PinnedParent): boolean =
     Folder: ({ folderId }) => Option.contains(location.parentFolderId, folderId),
   })
 
-// Chrome の move の index は移動するノード自身を含めた移動前の並びで数えるため、
-// 同じ親の中で後ろへ動かすときは 1 つ先を指さないと、目的の位置の 1 つ手前に入る
+// Chrome's move counts the index in the order before the move, the moving node included, so a
+// move later within the same parent has to point one further or it lands one short of the target
 const chromeMoveIndex = (from: PinnedLocation, to: PinnedPosition): number | undefined =>
   to.index !== undefined && isSameParent(from, to.parent) && from.index < to.index
     ? to.index + 1
@@ -89,14 +91,18 @@ const chromeMoveIndex = (from: PinnedLocation, to: PinnedPosition): number | und
 export class PinnedBookmarks extends Context.Service<
   PinnedBookmarks,
   {
-    /** 部分的に読めた結果は返さず、すべて読めなければ {@link PinnedTreeUnavailable} で失敗する。 */
+    /**
+     * Never returns a partly read tree: fails with {@link PinnedTreeUnavailable} unless all of it
+     * can be read.
+     */
     loadSpaceTree(spaceId: SpaceId): Effect.Effect<PinnedTree, PinnedTreeUnavailable>
-    /** 読めた Space のツリーだけを返す。含まれない Space は読めなかったものとして扱う。 */
+    /** Returns only the Space trees that could be read. A Space left out couldn't be read. */
     readonly loadAllSpaceTrees: Effect.Effect<ReadonlyMap<SpaceId, PinnedTree>>
     /**
-     * ノードがどの Space のどこにあるかを返す。
+     * Returns which Space the node is in and where.
      *
-     * Katip の Space フォルダ配下に無ければ、同じ ID のブックマークが Katip の外にあっても見つからない。
+     * A node that isn't under Katip's Space folders isn't found, even if a bookmark with that ID
+     * exists outside Katip.
      */
     locate(
       bookmarkId: BookmarkId,
@@ -106,35 +112,39 @@ export class PinnedBookmarks extends Context.Service<
       draft: PinnedBookmarkDraft,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | BrowserApiError>
     /**
-     * 分割ビューとしてピン留めする。2 つのブックマークを入れたフォルダを作り、分割の印を付ける。
+     * Pins a split view: creates a folder holding the two bookmarks and marks it as a split.
      *
-     * フォルダの深さ制限は受けない（ユーザーが中身を整理するフォルダではなく、1 つのピンとして扱う）。
+     * Not bound by the folder depth limit, since it counts as a single pin rather than a folder
+     * whose contents the user organizes.
      */
     createSplit(
       position: PinnedPosition,
       draft: PinnedSplitDraft,
     ): Effect.Effect<CreatedSplit, PinnedNodeNotFound | BrowserApiError>
     /**
-     * ライブフォルダを作る。空のフォルダを作り、ライブフォルダの印と取得元を付け、開いた状態で保存する。
+     * Creates a live folder: an empty folder marked as a live folder with its source, saved as
+     * expanded.
      *
-     * フォルダの深さ制限は受けない（中身をユーザーが整理するフォルダではなく、1 つのピンとして扱う）。
+     * Not bound by the folder depth limit, since it counts as a single pin rather than a folder
+     * whose contents the user organizes.
      */
     createLiveFolder(
       position: PinnedPosition,
       draft: PinnedLiveFolderDraft,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | BrowserApiError>
-    /** 作ったフォルダは開いた状態で保存する。 */
+    /** The created folder is saved as expanded. */
     createFolder(
       position: PinnedPosition,
       draft: { readonly title: string },
       rule: FolderNestingRule,
     ): Effect.Effect<BookmarkId, PinnedNodeNotFound | FolderDepthExceeded | BrowserApiError>
     /**
-     * ピン留めのノード（ブックマーク・分割ピン・ライブフォルダ・フォルダ）を移す。別の Space へも移せる。
+     * Moves a pinned node (a bookmark, split pin, live folder or folder), to another Space too.
      *
-     * フォルダは、移した後に配下のいちばん深いフォルダが `rule` の深さの上限を超え、かつ今より
-     * 深くなるなら {@link FolderDepthExceeded} で断る。今すでに上限より深いフォルダでも、同じ深さか
-     * 浅い所へは移せる。自身や配下のフォルダの中へは {@link MoveIntoDescendant} で断る。
+     * A folder is refused with {@link FolderDepthExceeded} when, after the move, the deepest folder
+     * in it would be past the depth limit of `rule` and deeper than it is now. A folder already
+     * deeper than the limit can still move to the same depth or shallower. A move into the folder
+     * itself or a folder inside it is refused with {@link MoveIntoDescendant}.
      */
     moveNode(
       bookmarkId: BookmarkId,
@@ -144,7 +154,10 @@ export class PinnedBookmarks extends Context.Service<
       void,
       PinnedNodeNotFound | FolderDepthExceeded | MoveIntoDescendant | BrowserApiError
     >
-    /** ブックマークとフォルダのどちらにも使える。Space フォルダの改名は {@link SpaceFolders} で行う。 */
+    /**
+     * Works for bookmarks and folders alike. Space folders are renamed through
+     * {@link SpaceFolders}.
+     */
     rename(
       bookmarkId: BookmarkId,
       title: string,
@@ -154,13 +167,17 @@ export class PinnedBookmarks extends Context.Service<
       draft: PinnedBookmarkDraft,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
     /**
-     * ブックマーク・分割ピン・ライブフォルダを削除する。分割ピンは中の 2 つのブックマークごと消える。
-     * ライブフォルダは印と開閉状態も捨てる（取得した中身のキャッシュは呼び出し側で捨てる）。
+     * Removes a bookmark, split pin or live folder. A split pin goes together with its two
+     * bookmarks. A live folder's mark and expansion state are dropped too; the cache of its fetched
+     * contents is the caller's to drop.
      */
     removeBookmark(
       bookmarkId: BookmarkId,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
-    /** 中身ごと消し、配下のフォルダの開閉状態とアイコンと、配下の分割ピン・ライブフォルダの印も捨てる。 */
+    /**
+     * Removes the folder with everything in it, dropping the expansion state and icons of its
+     * folders and the marks of the split pins and live folders inside it.
+     */
     removeFolder(folderId: BookmarkId): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
   }
 >()("katip/pinned/PinnedBookmarks") {
@@ -252,8 +269,8 @@ export class PinnedBookmarks extends Context.Service<
         const height = folderHeight(folder)
         const deepestAfter = to.depth + height
         const deepestNow = currentDepth + height - 1
-        // 上限を超えるかだけで断ると、タブグループ同期を ON にする前に作った入れ子のフォルダを
-        // 同じ親の中で並べ替えることすらできなくなる。今より深くする移動だけを断る
+        // Not refused just for being past the limit: nested folders made before tab group sync was
+        // turned on couldn't even be reordered within their parent. Only moves deeper are refused
         if (deepestAfter > maxFolderDepth(rule) && deepestAfter > deepestNow) {
           return yield* new FolderDepthExceeded({
             depth: deepestAfter,
@@ -279,7 +296,7 @@ export class PinnedBookmarks extends Context.Service<
             (spaceTrees) => new Map(spaceTrees.map(({ spaceId, tree }) => [spaceId, tree])),
           ),
           Effect.catch((error) =>
-            Effect.as(Effect.logWarning("ピン留めツリーを読めない", error), new Map()),
+            Effect.as(Effect.logWarning("Couldn't read the pinned trees", error), new Map()),
           ),
           Effect.withSpan("PinnedBookmarks.loadAllSpaceTrees"),
         ),
@@ -379,7 +396,8 @@ export class PinnedBookmarks extends Context.Service<
           yield* folderExpansion.forget([...folderIds, ...liveFolderIds])
           yield* folderIcons.forget(folderIds)
           yield* splitFolders.forget(splitIdsWithin(location.node))
-          // 外でブックマークを入れられて普通のフォルダとして見えているライブフォルダの印も残さない
+          // Also drops the marks of live folders that show as ordinary folders because bookmarks
+          // were put in them outside Katip
           yield* liveFolders.forget([...folderIds, ...liveFolderIds])
         }),
       })
@@ -387,8 +405,8 @@ export class PinnedBookmarks extends Context.Service<
   )
 
   /**
-   * {@link SpaceFolders}、{@link FolderExpansionStore}、{@link FolderIconStore}、
-   * {@link SplitFolderStore}、{@link LiveFolderStore} も合わせて提供する。
+   * Also provides {@link SpaceFolders}, {@link FolderExpansionStore}, {@link FolderIconStore},
+   * {@link SplitFolderStore} and {@link LiveFolderStore}.
    */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(SpaceFolders.layer),

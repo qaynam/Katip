@@ -7,18 +7,18 @@ const LiveFolderSources = Schema.Record(BookmarkId, LiveSource)
 type LiveFolderSources = typeof LiveFolderSources.Type
 
 /**
- * ライブフォルダとして作ったフォルダの印と、その取得元。
+ * The marks on folders created as live folders, each with the source it fetches from.
  *
  * @remarks
- * 分割ピンの印と同じく、ブックマークのタイトルではなくこの端末の storage に持つ。
- * 印を失ったフォルダは、空の普通のフォルダとして表示される。
+ * Like the split pin marks, these are kept in this device's storage, not in the bookmark titles.
+ * A folder that loses its mark shows as an empty ordinary folder.
  */
 export class LiveFolderStore extends Context.Service<
   LiveFolderStore,
   {
     readonly load: Effect.Effect<ReadonlyMap<BookmarkId, LiveSource>, BrowserApiError>
     mark(folderId: BookmarkId, source: LiveSource): Effect.Effect<void, BrowserApiError>
-    /** 印の無いフォルダが含まれていても構わない。 */
+    /** Folders without a mark may be included. */
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/pinned/LiveFolderStore") {
@@ -27,7 +27,8 @@ export class LiveFolderStore extends Context.Service<
     Effect.gen(function* () {
       const storage = yield* Storage
       const saved = storedValue(storage.local, "katip/pinned/live-folders", LiveFolderSources)
-      // 全フォルダ分を 1 つのキーに読み書きするので、並行した更新が互いを上書きしないよう直列にする
+      // Every folder is read and written under one key, so updates run one at a time to keep
+      // concurrent ones from overwriting each other
       const writeLock = yield* Semaphore.make(1)
 
       const loadSources = Effect.map(

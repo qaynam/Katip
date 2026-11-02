@@ -14,7 +14,7 @@ import { SpaceFolders } from "./space-folders"
 
 const TestLayer = SpaceFolders.layer.pipe(Layer.provideMerge(FakeBrowser.layer))
 
-const numbered = (number: number) => `スペース ${number}`
+const numbered = (number: number) => `Space ${number}`
 
 const space = (id: string, name: string = id): Space => ({
   id: SpaceId.make(id),
@@ -29,7 +29,7 @@ const topLevelFolderId = Effect.fnUntraced(
       Option.getOrElse(tree.children, () => []),
       (node) => node._tag === "BookmarkFolder" && Option.contains(node.folderType, folderType),
     )
-    return yield* Effect.fromOption(folder, () => new Error(`${folderType} フォルダが無い`))
+    return yield* Effect.fromOption(folder, () => new Error(`no ${folderType} folder`))
   },
   Effect.map((folder) => folder.id),
 )
@@ -56,8 +56,8 @@ const exists = Effect.fnUntraced(function* (id: BookmarkId) {
   return Option.isSome(yield* Effect.option((yield* Bookmarks).get(id)))
 })
 
-describe("Katip ルートフォルダの確保", () => {
-  it.effect("初回は「その他のブックマーク」直下にタイトル Katip のフォルダを作る", () =>
+describe("ensuring the Katip root folder", () => {
+  it.effect("the first time, creates a folder titled Katip directly inside Other Bookmarks", () =>
     Effect.gen(function* () {
       const otherBookmarksId = yield* topLevelFolderId("other")
 
@@ -69,19 +69,21 @@ describe("Katip ルートフォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("「その他のブックマーク」直下に Katip フォルダがすでにあれば、作らずにそれを使う", () =>
-    Effect.gen(function* () {
-      const otherBookmarksId = yield* topLevelFolderId("other")
-      const existingId = yield* createFolder(otherBookmarksId, "Katip")
+  it.effect(
+    "uses an existing Katip folder directly inside Other Bookmarks instead of creating one",
+    () =>
+      Effect.gen(function* () {
+        const otherBookmarksId = yield* topLevelFolderId("other")
+        const existingId = yield* createFolder(otherBookmarksId, "Katip")
 
-      const rootId = yield* (yield* SpaceFolders).ensureRoot
+        const rootId = yield* (yield* SpaceFolders).ensureRoot
 
-      assert.strictEqual(rootId, existingId)
-      assert.deepStrictEqual(titlesOf(yield* childrenOf(otherBookmarksId)), ["Katip"])
-    }).pipe(Effect.provide(TestLayer)),
+        assert.strictEqual(rootId, existingId)
+        assert.deepStrictEqual(titlesOf(yield* childrenOf(otherBookmarksId)), ["Katip"])
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ブックマークバーにある Katip フォルダはルートとみなさない", () =>
+  it.effect("a Katip folder on the bookmarks bar doesn't count as the root", () =>
     Effect.gen(function* () {
       const barKatipId = yield* createFolder(yield* topLevelFolderId("bookmarks-bar"), "Katip")
 
@@ -91,12 +93,12 @@ describe("Katip ルートフォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("一度確保したルートは、改名されても別の場所へ移されても使い続ける", () =>
+  it.effect("keeps using the root once ensured, even after it is renamed and moved elsewhere", () =>
     Effect.gen(function* () {
       const bookmarks = yield* Bookmarks
       const folders = yield* SpaceFolders
       const firstId = yield* folders.ensureRoot
-      yield* bookmarks.update(firstId, { title: "別の名前" })
+      yield* bookmarks.update(firstId, { title: "Another name" })
       yield* bookmarks.move(firstId, { parentId: yield* topLevelFolderId("bookmarks-bar") })
 
       const secondId = yield* folders.ensureRoot
@@ -105,21 +107,23 @@ describe("Katip ルートフォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("保存済みのルートが消されていたら新しく作り直し、以後はその ID を使う", () =>
-    Effect.gen(function* () {
-      const folders = yield* SpaceFolders
-      const removedId = yield* folders.ensureRoot
-      yield* (yield* Bookmarks).removeTree(removedId)
+  it.effect(
+    "when the saved root has been removed, creates a new one and uses its ID from then on",
+    () =>
+      Effect.gen(function* () {
+        const folders = yield* SpaceFolders
+        const removedId = yield* folders.ensureRoot
+        yield* (yield* Bookmarks).removeTree(removedId)
 
-      const recreatedId = yield* folders.ensureRoot
-      const laterId = yield* folders.ensureRoot
+        const recreatedId = yield* folders.ensureRoot
+        const laterId = yield* folders.ensureRoot
 
-      assert.notStrictEqual(recreatedId, removedId)
-      assert.strictEqual(laterId, recreatedId)
-    }).pipe(Effect.provide(TestLayer)),
+        assert.notStrictEqual(recreatedId, removedId)
+        assert.strictEqual(laterId, recreatedId)
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("保存済みの ID が壊れていたら、タイトルで探し直す", () =>
+  it.effect("when the saved ID is broken, looks the root up by title again", () =>
     Effect.gen(function* () {
       const existingId = yield* createFolder(yield* topLevelFolderId("other"), "Katip")
       yield* (yield* Storage).local.set("katip/pinned/root-folder-id", 42)
@@ -130,7 +134,7 @@ describe("Katip ルートフォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("並行して確保しても、ルートは 1 つしか作られない", () =>
+  it.effect("ensuring it concurrently still creates only one root", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
 
@@ -146,20 +150,20 @@ describe("Katip ルートフォルダの確保", () => {
   )
 })
 
-describe("Space フォルダの確保", () => {
-  it.effect("Katip ルート直下に Space 名のフォルダを作る", () =>
+describe("ensuring a Space folder", () => {
+  it.effect("creates a folder named after the Space directly inside the Katip root", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
 
-      const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+      const folderId = yield* folders.ensureSpaceFolder(space("work", "Work"))
 
       const folder = yield* (yield* Bookmarks).get(folderId)
-      assert.strictEqual(folder.title, "仕事")
+      assert.strictEqual(folder.title, "Work")
       assert.deepStrictEqual(folder.parentId, Option.some(yield* folders.ensureRoot))
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("2 回目以降は同じフォルダを使う", () =>
+  it.effect("uses the same folder from the second time on", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       const firstId = yield* folders.ensureSpaceFolder(space("work"))
@@ -170,7 +174,7 @@ describe("Space フォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("並行して確保しても、フォルダは 1 つしか作られない", () =>
+  it.effect("ensuring it concurrently still creates only one folder", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
 
@@ -184,47 +188,49 @@ describe("Space フォルダの確保", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダが外部で消されていたら作り直す", () =>
+  it.effect("recreates the folder when it was removed outside Katip", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      const removedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+      const removedId = yield* folders.ensureSpaceFolder(space("work", "Work"))
       yield* (yield* Bookmarks).removeTree(removedId)
 
-      const recreatedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+      const recreatedId = yield* folders.ensureSpaceFolder(space("work", "Work"))
 
       assert.notStrictEqual(recreatedId, removedId)
       assert.isTrue(yield* exists(recreatedId))
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダが Katip の外へ移されていたら、Katip ルート直下に作り直す", () =>
-    Effect.gen(function* () {
-      const folders = yield* SpaceFolders
-      const movedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
-      yield* (yield* Bookmarks).move(movedId, {
-        parentId: yield* topLevelFolderId("bookmarks-bar"),
-      })
+  it.effect(
+    "when the folder was moved out of Katip, recreates it directly inside the Katip root",
+    () =>
+      Effect.gen(function* () {
+        const folders = yield* SpaceFolders
+        const movedId = yield* folders.ensureSpaceFolder(space("work", "Work"))
+        yield* (yield* Bookmarks).move(movedId, {
+          parentId: yield* topLevelFolderId("bookmarks-bar"),
+        })
 
-      const recreatedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+        const recreatedId = yield* folders.ensureSpaceFolder(space("work", "Work"))
 
-      assert.notStrictEqual(recreatedId, movedId)
-      assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), ["仕事"])
-    }).pipe(Effect.provide(TestLayer)),
+        assert.notStrictEqual(recreatedId, movedId)
+        assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), ["Work"])
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("改名するとフォルダ名が新しい Space 名になる", () =>
+  it.effect("renaming gives the folder the Space's new name", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+      const folderId = yield* folders.ensureSpaceFolder(space("work", "Work"))
 
-      yield* folders.renameSpaceFolder(space("work", "本業"))
+      yield* folders.renameSpaceFolder(space("work", "Day job"))
 
-      assert.strictEqual((yield* (yield* Bookmarks).get(folderId)).title, "本業")
+      assert.strictEqual((yield* (yield* Bookmarks).get(folderId)).title, "Day job")
     }).pipe(Effect.provide(TestLayer)),
   )
 
   it.effect(
-    "Space を削除するとフォルダが中身ごと消え、もう一度確保すると新しいフォルダになる",
+    "removing the Space removes its folder with everything in it, and ensuring it again gives a new folder",
     () =>
       Effect.gen(function* () {
         const folders = yield* SpaceFolders
@@ -239,7 +245,7 @@ describe("Space フォルダの確保", () => {
       }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外へ移されたフォルダは、Space を削除しても消さない", () =>
+  it.effect("removing the Space leaves a folder that was moved out of Katip in place", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       const folderId = yield* folders.ensureSpaceFolder(space("work"))
@@ -254,34 +260,34 @@ describe("Space フォルダの確保", () => {
   )
 })
 
-describe("Space とフォルダの照合", () => {
-  it.effect("ブックマークマネージャでフォルダ名を変えると、Space 名がフォルダ名に変わる", () =>
+describe("reconciling Spaces with folders", () => {
+  it.effect("renaming the folder in the bookmark manager renames the Space to match", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
-      yield* (yield* Bookmarks).update(folderId, { title: "本業" })
+      const folderId = yield* folders.ensureSpaceFolder(space("work", "Work"))
+      yield* (yield* Bookmarks).update(folderId, { title: "Day job" })
 
-      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
+      const spaces = yield* folders.reconcileSpaces([space("work", "Work")], numbered)
 
       assert.deepStrictEqual(
         spaces.map((s) => s.name),
-        ["本業"],
+        ["Day job"],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
   it.effect(
-    "Katip ルート直下に追加されたフォルダから Space が作られ、そのフォルダが Space のフォルダになる",
+    "a folder added directly inside the Katip root becomes a new Space, and that folder becomes the Space's folder",
     () =>
       Effect.gen(function* () {
         const folders = yield* SpaceFolders
-        const addedId = yield* createFolder(yield* folders.ensureRoot, "読書")
+        const addedId = yield* createFolder(yield* folders.ensureRoot, "Reading")
 
         const spaces = yield* folders.reconcileSpaces([], numbered)
 
         assert.deepStrictEqual(
           spaces.map((s) => s.name),
-          ["読書"],
+          ["Reading"],
         )
         const [discovered] = spaces
         assert.isDefined(discovered)
@@ -289,85 +295,89 @@ describe("Space とフォルダの照合", () => {
       }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("名前の無いフォルダから作った Space には既定名が付き、フォルダ名もそれにそろう", () =>
-    Effect.gen(function* () {
-      const folders = yield* SpaceFolders
-      const addedId = yield* createFolder(yield* folders.ensureRoot, "")
+  it.effect(
+    "a Space made from a folder with no name gets the default name, and so does the folder",
+    () =>
+      Effect.gen(function* () {
+        const folders = yield* SpaceFolders
+        const addedId = yield* createFolder(yield* folders.ensureRoot, "")
 
-      const spaces = yield* folders.reconcileSpaces([], numbered)
+        const spaces = yield* folders.reconcileSpaces([], numbered)
 
-      const [discovered] = spaces
-      assert.isDefined(discovered)
-      assert.deepStrictEqual(
-        [discovered.name, (yield* (yield* Bookmarks).get(addedId)).title],
-        ["スペース 1", "スペース 1"],
-      )
-    }).pipe(Effect.provide(TestLayer)),
+        const [discovered] = spaces
+        assert.isDefined(discovered)
+        assert.deepStrictEqual(
+          [discovered.name, (yield* (yield* Bookmarks).get(addedId)).title],
+          ["Space 1", "Space 1"],
+        )
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダが消えた Space には、Space 名でフォルダが作り直される", () =>
+  it.effect("a Space whose folder is gone gets a new folder named after the Space", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      const removedId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
+      const removedId = yield* folders.ensureSpaceFolder(space("work", "Work"))
       yield* (yield* Bookmarks).removeTree(removedId)
 
-      const spaces = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
+      const spaces = yield* folders.reconcileSpaces([space("work", "Work")], numbered)
 
       assert.deepStrictEqual(
         spaces.map((s) => s.name),
-        ["仕事"],
+        ["Work"],
       )
-      assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), ["仕事"])
+      assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), ["Work"])
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip ルートごと消されていたら、ルートとすべての Space のフォルダを作り直す", () =>
+  it.effect("when the whole Katip root was removed, recreates it and every Space's folder", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      yield* folders.ensureSpaceFolder(space("a", "仕事"))
+      yield* folders.ensureSpaceFolder(space("a", "Work"))
       yield* (yield* Bookmarks).removeTree(yield* folders.ensureRoot)
 
-      yield* folders.reconcileSpaces([space("a", "仕事"), space("b", "趣味")], numbered)
+      yield* folders.reconcileSpaces([space("a", "Work"), space("b", "Hobbies")], numbered)
 
       assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), [
-        "仕事",
-        "趣味",
+        "Work",
+        "Hobbies",
       ])
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("対応表を失っても、同じ名前のフォルダと結び直して中のピン留めを保つ", () =>
-    Effect.gen(function* () {
-      const folders = yield* SpaceFolders
-      const folderId = yield* folders.ensureSpaceFolder(space("work", "仕事"))
-      yield* (yield* Storage).local.remove("katip/pinned/space-folders")
+  it.effect(
+    "even with the map lost, relinks the folder with the same name and keeps its pins",
+    () =>
+      Effect.gen(function* () {
+        const folders = yield* SpaceFolders
+        const folderId = yield* folders.ensureSpaceFolder(space("work", "Work"))
+        yield* (yield* Storage).local.remove("katip/pinned/space-folders")
 
-      yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
+        yield* folders.reconcileSpaces([space("work", "Work")], numbered)
 
-      assert.strictEqual(yield* folders.ensureSpaceFolder(space("work", "仕事")), folderId)
-      assert.lengthOf(yield* childrenOf(yield* folders.ensureRoot), 1)
-    }).pipe(Effect.provide(TestLayer)),
+        assert.strictEqual(yield* folders.ensureSpaceFolder(space("work", "Work")), folderId)
+        assert.lengthOf(yield* childrenOf(yield* folders.ensureRoot), 1)
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("一度照合した後に続けて照合しても、Space もフォルダも変わらない", () =>
+  it.effect("reconciling again right after leaves both the Spaces and the folders unchanged", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
-      yield* createFolder(yield* folders.ensureRoot, "読書")
-      const once = yield* folders.reconcileSpaces([space("work", "仕事")], numbered)
+      yield* createFolder(yield* folders.ensureRoot, "Reading")
+      const once = yield* folders.reconcileSpaces([space("work", "Work")], numbered)
 
       const twice = yield* folders.reconcileSpaces(once, numbered)
 
       assert.deepStrictEqual(twice, once)
       assert.deepStrictEqual(titlesOf(yield* childrenOf(yield* folders.ensureRoot)), [
-        "読書",
-        "仕事",
+        "Reading",
+        "Work",
       ])
     }).pipe(Effect.provide(TestLayer)),
   )
 })
 
-describe("Katip 配下かの判定", () => {
-  it.effect("Space フォルダの中の深い階層のブックマークは Katip 配下", () =>
+describe("telling whether a node is within Katip", () => {
+  it.effect("a bookmark deep inside a Space folder is within Katip", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       const spaceFolderId = yield* folders.ensureSpaceFolder(space("work"))
@@ -378,7 +388,7 @@ describe("Katip 配下かの判定", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip ルート自身も Katip 配下", () =>
+  it.effect("the Katip root itself is within Katip", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
 
@@ -386,7 +396,7 @@ describe("Katip 配下かの判定", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のブックマークは Katip 配下ではない", () =>
+  it.effect("a bookmark outside Katip isn't within Katip", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       yield* folders.ensureRoot
@@ -396,7 +406,7 @@ describe("Katip 配下かの判定", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ルートを確保する前は、どのブックマークも Katip 配下ではない", () =>
+  it.effect("before the root is ensured, no bookmark is within Katip", () =>
     Effect.gen(function* () {
       const katipLookalikeId = yield* createFolder(yield* topLevelFolderId("other"), "Katip")
 
@@ -404,7 +414,7 @@ describe("Katip 配下かの判定", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("存在しない ID は Katip 配下ではない", () =>
+  it.effect("an ID that doesn't exist isn't within Katip", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
       yield* folders.ensureRoot

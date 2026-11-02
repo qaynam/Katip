@@ -1,7 +1,7 @@
 import { Option, pipe } from "effect"
 
-// origin + pathname で比べると、chrome:// のように origin が "null" になる URL 同士が
-// すべて同じページに見えてしまう。クエリとハッシュだけを落とした href で比べる
+// Not origin + pathname: URLs whose origin is "null", such as chrome:// ones, would all look like
+// the same page. Compare the href with only the query and hash dropped
 const pageAddressOf = (url: string): string =>
   pipe(
     Option.fromNullishOr(URL.parse(url)),
@@ -14,9 +14,10 @@ const pageAddressOf = (url: string): string =>
   )
 
 /**
- * ピン留めした URL から別のページへ移動したかを判定する。
+ * Tells whether the tab has moved from the pinned URL to another page.
  *
- * クエリとハッシュの違いは移動とみなさない。URL として解釈できない文字列は、文字列として比べる。
+ * A different query or hash doesn't count as moving. Strings that don't parse as URLs are
+ * compared as plain strings.
  */
 export const hasNavigatedAway = (pinnedUrl: string, currentUrl: string): boolean =>
   pageAddressOf(pinnedUrl) !== pageAddressOf(currentUrl)

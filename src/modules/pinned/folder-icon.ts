@@ -1,11 +1,12 @@
 import { Schema } from "effect"
 
 /**
- * フォルダの絵の代わりに見出しに出せるアイコン。並びはアイコンを選ぶ一覧の並び順。
+ * An icon a folder heading can show in place of the folder picture, in the order the icon
+ * picker lists them.
  *
  * @remarks
- * 名前は保存値に残るので、絵柄の出どころではなく何を描いたものかで付ける。
- * 絵柄を差し替えても、保存値を読み替えずに済む。
+ * The names end up in saved values, so they say what the picture depicts rather than where the
+ * artwork comes from. The artwork can then be swapped without migrating saved values.
  */
 export const FolderIcon = Schema.Literals([
   "star",

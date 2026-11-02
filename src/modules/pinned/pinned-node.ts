@@ -17,16 +17,19 @@ export interface PinnedFolder {
   readonly children: PinnedTree
 }
 
-/** 分割ビューとしてピン留めした 2 つのブックマーク。並びは左、右の順。 */
+/** Two bookmarks pinned as a split view, left then right. */
 export interface PinnedSplit {
   readonly _tag: "PinnedSplit"
-  /** 2 つのブックマークを入れたフォルダの ID。 */
+  /** The ID of the folder holding the two bookmarks. */
   readonly id: BookmarkId
   readonly title: string
   readonly items: readonly [PinnedBookmark, PinnedBookmark]
 }
 
-/** 取得元から中身を取り込むフォルダ。中身はブックマークに持たないので、ノードとしては子を持たない。 */
+/**
+ * A folder whose contents are fetched from a source. The contents aren't kept as bookmarks, so
+ * the node has no children.
+ */
 export interface PinnedLiveFolder {
   readonly _tag: "PinnedLiveFolder"
   readonly id: BookmarkId
@@ -36,16 +39,16 @@ export interface PinnedLiveFolder {
 
 export type PinnedNode = PinnedBookmark | PinnedSplit | PinnedLiveFolder | PinnedFolder
 
-/** Space フォルダの直下に並ぶノード。順序はブックマークの並び順そのもの。 */
+/** The nodes directly inside a Space folder, in the bookmarks' own order. */
 export type PinnedTree = ReadonlyArray<PinnedNode>
 
 export interface PinnedNodeLocation {
   readonly node: PinnedNode
-  /** None は Space 直下を表す。 */
+  /** None means directly inside the Space. */
   readonly parentFolderId: Option.Option<BookmarkId>
-  /** Space 直下が 1。 */
+  /** 1 directly inside the Space. */
   readonly depth: number
-  /** 親の子の中での位置。 */
+  /** The position among the parent's children. */
   readonly index: number
 }
 
@@ -54,8 +57,8 @@ const pinnedBookmarkFrom = (node: BookmarkNode): Option.Option<PinnedBookmark> =
     ? Option.some({ _tag: "PinnedBookmark", id: node.id, title: node.title, url: node.url })
     : Option.none()
 
-// 印の付いたフォルダでも、外部で中身が 2 つのブックマークでなくなったものは分割として扱えない。
-// 普通のフォルダとして見せ、中のピンを失わせない
+// A marked folder whose contents were changed outside Katip so they are no longer two bookmarks
+// can't be a split. It shows as an ordinary folder so the pins inside aren't lost
 const pinnedSplitFrom = (folder: BookmarkFolder): Option.Option<PinnedSplit> =>
   Option.flatMap(folder.children, (children) => {
     const [left, right] = Array.getSomes(children.map(pinnedBookmarkFrom))
@@ -69,8 +72,8 @@ const pinnedSplitFrom = (folder: BookmarkFolder): Option.Option<PinnedSplit> =>
       : Option.none()
   })
 
-// 印の付いたフォルダでも、外部でブックマークを入れられたものはライブフォルダとして扱わない。
-// 普通のフォルダとして見せ、入れられたブックマークを隠さない
+// A marked folder that had bookmarks put in it outside Katip isn't a live folder. It shows as an
+// ordinary folder so those bookmarks aren't hidden
 const pinnedLiveFolderFrom = (
   folder: BookmarkFolder,
   source: LiveSource,
@@ -81,11 +84,11 @@ const pinnedLiveFolderFrom = (
       : Option.none(),
   )
 
-/** フォルダに付けた印。どちらも無いフォルダは普通のフォルダとして読む。 */
+/** The marks put on folders. A folder with neither mark is read as an ordinary folder. */
 export interface FolderMarks {
-  /** 分割ビューとしてピン留めしたフォルダの ID。 */
+  /** The IDs of folders pinned as a split view. */
   readonly splitFolders?: ReadonlySet<BookmarkId>
-  /** ライブフォルダとして作ったフォルダの ID と、その取得元。 */
+  /** The IDs of folders created as live folders, each with the source it fetches from. */
   readonly liveFolders?: ReadonlyMap<BookmarkId, LiveSource>
 }
 
@@ -114,9 +117,10 @@ const pinnedNodeFrom =
     })
 
 /**
- * Space フォルダのサブツリーを、Space 直下のピン留めツリーに変換する。
+ * Converts a Space folder's subtree into the pinned tree directly inside the Space.
  *
- * 子を読み込んでいないフォルダが 1 つでも含まれていれば None を返す（空のフォルダと区別できないため）。
+ * Returns None if any folder in it has its children unloaded, since such a folder can't be told
+ * apart from an empty one.
  */
 export const pinnedTreeFrom = (
   spaceFolder: BookmarkFolder,
@@ -149,7 +153,7 @@ export const findPinnedNode = (
   id: BookmarkId,
 ): Option.Option<PinnedNodeLocation> => findWithin(tree, id, Option.none(), SPACE_ROOT_DEPTH + 1)
 
-/** フォルダ自身と、配下のすべての階層のフォルダの ID を深さ優先の順で返す。 */
+/** Returns the IDs of the folder itself and of every folder at any depth inside it, depth first. */
 export const folderIdsWithin = (folder: PinnedFolder): ReadonlyArray<BookmarkId> => [
   folder.id,
   ...folder.children.flatMap((child) =>
@@ -157,7 +161,7 @@ export const folderIdsWithin = (folder: PinnedFolder): ReadonlyArray<BookmarkId>
   ),
 ]
 
-/** フォルダの配下にある、分割ビューとしてピン留めしたフォルダの ID。 */
+/** The IDs of the folders pinned as a split view anywhere inside the folder. */
 export const splitIdsWithin = (folder: PinnedFolder): ReadonlyArray<BookmarkId> =>
   folder.children.flatMap((child) =>
     Match.valueTags(child, {
@@ -168,7 +172,7 @@ export const splitIdsWithin = (folder: PinnedFolder): ReadonlyArray<BookmarkId> 
     }),
   )
 
-/** ツリーのすべての階層にあるライブフォルダを、ツリーの上から順に返す。 */
+/** Returns the live folders at every level of the tree, from the top of the tree down. */
 export const liveFoldersIn = (tree: PinnedTree): ReadonlyArray<PinnedLiveFolder> =>
   tree.flatMap((node) =>
     Match.valueTags(node, {
@@ -180,9 +184,9 @@ export const liveFoldersIn = (tree: PinnedTree): ReadonlyArray<PinnedLiveFolder>
   )
 
 /**
- * フォルダ自身を 1 段目として数えた、配下のフォルダの段数。
+ * How many levels of folders the folder spans, counting itself as the first.
  *
- * 分割ピンとライブフォルダは 1 つのピンとして扱い、段に数えない。
+ * Split pins and live folders count as single pins, not as levels.
  */
 export const folderHeight = (folder: PinnedFolder): number =>
   1 +

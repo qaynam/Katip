@@ -26,7 +26,7 @@ import { storedValue } from "./stored-value"
 
 const ROOT_FOLDER_TITLE = "Katip"
 
-/** フォルダを作り直すときに名前が要るので、ID だけでなく名前も受け取る。 */
+/** Carries the name as well as the ID, since recreating the folder needs a name. */
 export type SpaceFolderOwner = Pick<Space, "id" | "name">
 
 const isFolder = (node: BookmarkNode): node is BookmarkFolder =>
@@ -44,45 +44,55 @@ export class SpaceFolders extends Context.Service<
   SpaceFolders,
   {
     /**
-     * Katip ルートフォルダの ID を返す。
+     * Returns the ID of the Katip root folder.
      *
      * @remarks
-     * 保存済みの ID のフォルダが残っていれば、どこへ移されていてもそれを使う。
-     * 無いときだけ「その他のブックマーク」直下のタイトル "Katip" のフォルダを探し、それも無ければ作って ID を保存する。
+     * The folder with the saved ID is used wherever it has been moved, as long as it still exists.
+     * Only when it doesn't is a folder titled "Katip" looked for directly inside Other Bookmarks;
+     * if there is none either, one is created and its ID saved.
      */
     readonly ensureRoot: Effect.Effect<BookmarkId, BrowserApiError>
-    /** Space のフォルダの ID を返す。Katip ルート直下に見つからなければ Space 名で作り直す。 */
+    /**
+     * Returns the ID of the Space's folder, recreating it under the Space's name when it isn't
+     * found directly inside the Katip root.
+     */
     ensureSpaceFolder(space: SpaceFolderOwner): Effect.Effect<BookmarkId, BrowserApiError>
-    /** フォルダ名を Space 名にする。フォルダが消えていれば新しい名前で作り直す。 */
+    /** Renames the folder to the Space's name, recreating it under that name if it is gone. */
     renameSpaceFolder(space: SpaceFolderOwner): Effect.Effect<void, BrowserApiError>
     /**
-     * Space のフォルダを中身ごと消し、対応を忘れる。
+     * Removes the Space's folder with everything in it, and forgets the mapping.
      *
-     * フォルダが Katip ルートの外へ移されていたら、フォルダは消さずに対応だけを忘れる。
+     * If the folder has been moved out of the Katip root, only the mapping is forgotten and the
+     * folder stays.
      */
     removeSpaceFolder(spaceId: SpaceId): Effect.Effect<void, BrowserApiError>
     /**
-     * Space 一覧と Katip ルート直下のフォルダを一致させ、更新後の Space 一覧を返す。
+     * Brings the Space list and the folders directly inside the Katip root in line, and returns
+     * the updated Space list.
      *
      * @remarks
-     * ブックマーク側（フォルダの作成・改名と対応表）はここで書き込む。Space 一覧は保存しないので、
-     * 返り値を呼び出し側が保存する。途中で失敗しても、次の呼び出しで同名のフォルダとの結び直しにより回復する。
-     * 名前の無いフォルダから Space を作るときは、`numbered` で名前を付けてフォルダも改名する。
+     * The bookmark side (created and renamed folders, and the map) is written here. The Space list
+     * isn't saved, so the caller saves the returned one. A failure partway through recovers on the
+     * next call by relinking the folders with the same name. A Space created from a folder without
+     * a name is named with `numbered`, and the folder is renamed to match.
      */
     reconcileSpaces(
       spaces: SpaceList,
       numbered: NumberedSpaceName,
     ): Effect.Effect<SpaceList, BrowserApiError>
     /**
-     * Katip ルート直下にある、対応表に載った Space のフォルダを子孫まで読み込んで返す。
+     * Returns the folders of the mapped Spaces that are directly inside the Katip root, loaded
+     * with all their descendants.
      *
-     * ルートが未確保なら空。フォルダが Katip ルート直下に無い Space は含まない。
+     * Empty while there is no root yet. Spaces whose folder isn't directly inside the Katip root
+     * are left out.
      */
     readonly readSpaceSubtrees: Effect.Effect<ReadonlyMap<SpaceId, BookmarkFolder>, BrowserApiError>
     /**
-     * ノードが Katip ルート自身か、その子孫かを返す。
+     * Tells whether the node is the Katip root itself or inside it.
      *
-     * 祖先をたどるので、すでに削除されたノードは false になる。削除イベントでは親の ID で判定すること。
+     * It walks up the ancestors, so a node that has already been removed gives false. On a removal
+     * event, check the parent's ID instead.
      */
     isWithinKatip(bookmarkId: BookmarkId): Effect.Effect<boolean, BrowserApiError>
   }
@@ -98,8 +108,8 @@ export class SpaceFolders extends Context.Service<
         "katip/pinned/space-folders",
         SpaceFolderMap,
       )
-      // ルートやフォルダの作成と対応表の読み書きが並行すると、同じフォルダを二重に作ったり
-      // 対応表の更新を取りこぼしたりするため、構造を変える操作は 1 つずつ実行する
+      // Operations that change the structure run one at a time: creating the root or folders while
+      // the map is being read and written would create the same folder twice or drop map updates
       const structureLock = yield* Semaphore.make(1)
       const exclusively = <A, E>(effect: Effect.Effect<A, E>) => structureLock.withPermit(effect)
 
@@ -108,7 +118,8 @@ export class SpaceFolders extends Context.Service<
         Option.getOrElse((): SpaceFolderMap => ({})),
       )
 
-      // get は消えたノードでもほかの理由でも同じく失敗し、区別できない。どちらも「無い」とみなす
+      // get fails the same way for a removed node as for any other reason, so the two can't be told
+      // apart. Both count as missing
       const findNode = (id: BookmarkId) => Effect.option(bookmarks.get(id))
 
       const findFolder = (id: BookmarkId) => Effect.map(findNode(id), Option.filter(isFolder))
@@ -124,8 +135,9 @@ export class SpaceFolders extends Context.Service<
         const otherBookmarks = topLevelFolders.filter((folder) =>
           Option.contains(folder.folderType, "other"),
         )
-        // folderType を返さない古い Chrome では「その他のブックマーク」を見分けられない。
-        // 新しいルートを作ってピン留めを見失うよりは、最上位のどのフォルダの直下でも探すほうを選ぶ
+        // Older Chrome doesn't return folderType, so Other Bookmarks can't be told apart there.
+        // Searching directly inside every top-level folder beats creating a new root and losing
+        // track of the pins
         const searchedFolders = otherBookmarks.length > 0 ? otherBookmarks : topLevelFolders
         const existing = Array.findFirst(
           searchedFolders.flatMap(loadedChildren),

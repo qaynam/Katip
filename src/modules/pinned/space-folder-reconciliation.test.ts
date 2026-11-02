@@ -27,42 +27,42 @@ const spaceFolders = (entries: Record<string, string>): SpaceFolderMap =>
     Object.entries(entries).map(([space, folder]) => [spaceId(space), bookmarkId(folder)]),
   )
 
-describe("Space と Katip 直下のフォルダが対応しているとき", () => {
-  it("フォルダ名が外部で変わっていたら、Space 名をフォルダ名に合わせる", () => {
+describe("when a Space and a folder directly inside Katip are mapped to each other", () => {
+  it("a folder renamed outside Katip gives its name to the Space", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "f1" }),
-      rootFolders: [rootFolder("f1", "本業")],
+      rootFolders: [rootFolder("f1", "Day job")],
     })
 
     expect(plan).toStrictEqual([
-      SpaceFolderAction.AdoptFolderTitle({ spaceId: spaceId("work"), name: spaceName("本業") }),
+      SpaceFolderAction.AdoptFolderTitle({ spaceId: spaceId("work"), name: spaceName("Day job") }),
     ])
   })
 
-  it("フォルダ名と Space 名が同じなら何もしない", () => {
+  it("does nothing when the folder and the Space have the same name", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "f1" }),
-      rootFolders: [rootFolder("f1", "仕事")],
+      rootFolders: [rootFolder("f1", "Work")],
     })
 
     expect(plan).toStrictEqual([])
   })
 
-  it("前後の空白だけが違うフォルダ名は同じ名前とみなす", () => {
+  it("a folder name that differs only in surrounding whitespace counts as the same name", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "f1" }),
-      rootFolders: [rootFolder("f1", "  仕事 ")],
+      rootFolders: [rootFolder("f1", "  Work ")],
     })
 
     expect(plan).toStrictEqual([])
   })
 
-  it("フォルダ名が空白だけにされていたら、フォルダ名を Space 名に戻す", () => {
+  it("a folder renamed to only whitespace gets the Space's name back", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "f1" }),
       rootFolders: [rootFolder("f1", "   ")],
     })
@@ -70,54 +70,54 @@ describe("Space と Katip 直下のフォルダが対応しているとき", () 
     expect(plan).toStrictEqual([
       SpaceFolderAction.RestoreFolderTitle({
         folderId: bookmarkId("f1"),
-        title: spaceName("仕事"),
+        title: spaceName("Work"),
       }),
     ])
   })
 })
 
-describe("Space のフォルダが Katip 直下に見つからないとき", () => {
-  it("対応表のフォルダが消えていたら、フォルダを作り直す", () => {
+describe("when a Space's folder isn't found directly inside Katip", () => {
+  it("recreates the folder when the mapped folder is gone", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "gone" }),
       rootFolders: [],
     })
 
     expect(plan).toStrictEqual([
-      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("仕事") }),
+      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("Work") }),
     ])
   })
 
-  it("対応表のフォルダが Katip の外へ移されていたら、消えたものとして作り直す", () => {
+  it("a mapped folder moved out of Katip counts as gone and is recreated", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "moved-out" }),
-      rootFolders: [rootFolder("other", "趣味")],
+      rootFolders: [rootFolder("other", "Hobbies")],
     })
 
     expect(plan).toContainEqual(
-      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("仕事") }),
+      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("Work") }),
     )
   })
 
-  it("対応表に載っていない Space にもフォルダを作る", () => {
+  it("creates a folder for a Space missing from the map too", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({}),
       rootFolders: [],
     })
 
     expect(plan).toStrictEqual([
-      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("仕事") }),
+      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("work"), title: spaceName("Work") }),
     ])
   })
 
-  it("同じ名前の、どの Space にも対応していないフォルダがあれば、作らずにそのフォルダと結び直す", () => {
+  it("relinks an unowned folder with the same name instead of creating one", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({ work: "old-id" }),
-      rootFolders: [rootFolder("new-id", "仕事")],
+      rootFolders: [rootFolder("new-id", "Work")],
     })
 
     expect(plan).toStrictEqual([
@@ -125,52 +125,52 @@ describe("Space のフォルダが Katip 直下に見つからないとき", () 
     ])
   })
 
-  it("同じ名前の候補が複数あれば先に並んでいるフォルダと結び直し、残りのフォルダからは Space を作る", () => {
+  it("with several same-named candidates, relinks the first one and makes Spaces from the rest", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("work", "仕事")],
+      spaces: [space("work", "Work")],
       spaceFolders: spaceFolders({}),
-      rootFolders: [rootFolder("first", "仕事"), rootFolder("second", "仕事")],
+      rootFolders: [rootFolder("first", "Work"), rootFolder("second", "Work")],
     })
 
     expect(plan).toStrictEqual([
       SpaceFolderAction.RelinkFolder({ spaceId: spaceId("work"), folderId: bookmarkId("first") }),
       SpaceFolderAction.CreateSpaceFromFolder({
         folderId: bookmarkId("second"),
-        name: Option.some(spaceName("仕事")),
+        name: Option.some(spaceName("Work")),
       }),
     ])
   })
 
-  it("ほかの Space に対応しているフォルダとは、同じ名前でも結び直さない", () => {
+  it("doesn't relink a folder another Space owns, even with the same name", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("a", "仕事"), space("b", "仕事")],
+      spaces: [space("a", "Work"), space("b", "Work")],
       spaceFolders: spaceFolders({ a: "f1" }),
-      rootFolders: [rootFolder("f1", "仕事")],
+      rootFolders: [rootFolder("f1", "Work")],
     })
 
     expect(plan).toStrictEqual([
-      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("b"), title: spaceName("仕事") }),
+      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("b"), title: spaceName("Work") }),
     ])
   })
 })
 
-describe("どの Space にも対応していないフォルダが Katip 直下にあるとき", () => {
-  it("フォルダの名前で Space を作る", () => {
+describe("when a folder directly inside Katip belongs to no Space", () => {
+  it("creates a Space named after the folder", () => {
     const plan = planSpaceFolderReconciliation({
       spaces: [],
       spaceFolders: spaceFolders({}),
-      rootFolders: [rootFolder("f1", "読書")],
+      rootFolders: [rootFolder("f1", "Reading")],
     })
 
     expect(plan).toStrictEqual([
       SpaceFolderAction.CreateSpaceFromFolder({
         folderId: bookmarkId("f1"),
-        name: Option.some(spaceName("読書")),
+        name: Option.some(spaceName("Reading")),
       }),
     ])
   })
 
-  it("フォルダ名が Space 名として使えなければ、名前を決めずに Space を作る", () => {
+  it("creates a Space with no name decided when the folder name can't be a Space name", () => {
     const plan = planSpaceFolderReconciliation({
       spaces: [],
       spaceFolders: spaceFolders({}),
@@ -182,7 +182,7 @@ describe("どの Space にも対応していないフォルダが Katip 直下�
     ])
   })
 
-  it("Space はフォルダの並び順に作る", () => {
+  it("creates the Spaces in the folders' order", () => {
     const plan = planSpaceFolderReconciliation({
       spaces: [],
       spaceFolders: spaceFolders({}),
@@ -195,8 +195,8 @@ describe("どの Space にも対応していないフォルダが Katip 直下�
   })
 })
 
-describe("対応表が Space 一覧と食い違っているとき", () => {
-  it("一覧に無い Space の対応は忘れる", () => {
+describe("when the map disagrees with the Space list", () => {
+  it("forgets the mapping of a Space not in the list", () => {
     const plan = planSpaceFolderReconciliation({
       spaces: [],
       spaceFolders: spaceFolders({ deleted: "gone" }),
@@ -208,20 +208,20 @@ describe("対応表が Space 一覧と食い違っているとき", () => {
     ])
   })
 
-  it("2 つの Space が同じフォルダを指していたら、一覧で先の Space がフォルダを持ち、後の Space にはフォルダを作る", () => {
+  it("when two Spaces point at one folder, the Space first in the list keeps it and the later one gets a new folder", () => {
     const plan = planSpaceFolderReconciliation({
-      spaces: [space("a", "仕事"), space("b", "趣味")],
+      spaces: [space("a", "Work"), space("b", "Hobbies")],
       spaceFolders: spaceFolders({ a: "f1", b: "f1" }),
-      rootFolders: [rootFolder("f1", "仕事")],
+      rootFolders: [rootFolder("f1", "Work")],
     })
 
     expect(plan).toStrictEqual([
-      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("b"), title: spaceName("趣味") }),
+      SpaceFolderAction.CreateSpaceFolder({ spaceId: spaceId("b"), title: spaceName("Hobbies") }),
     ])
   })
 })
 
-it("Space も対応表もフォルダも空なら何もしない", () => {
+it("does nothing when there are no Spaces, mappings or folders", () => {
   const plan = planSpaceFolderReconciliation({
     spaces: [],
     spaceFolders: spaceFolders({}),

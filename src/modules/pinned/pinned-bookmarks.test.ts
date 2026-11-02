@@ -25,8 +25,8 @@ const space = (id: string, name: string = id): Space => ({
   theme: neutralTheme,
 })
 
-const work = space("work", "仕事")
-const hobby = space("hobby", "趣味")
+const work = space("work", "Work")
+const hobby = space("hobby", "Hobbies")
 
 const spaceRoot = (owner: Space) => PinnedParent.SpaceRoot({ space: owner })
 const inFolder = (folderId: BookmarkId) => PinnedParent.Folder({ folderId })
@@ -54,7 +54,7 @@ const outsideFolderId = Effect.fnUntraced(
       Option.getOrElse(tree.children, () => []),
       (node) => node._tag === "BookmarkFolder" && Option.contains(node.folderType, folderType),
     )
-    return yield* Effect.fromOption(folder, () => new Error(`${folderType} フォルダが無い`))
+    return yield* Effect.fromOption(folder, () => new Error(`no ${folderType} folder`))
   },
   Effect.map((folder) => folder.id),
 )
@@ -72,22 +72,22 @@ const outline = (tree: PinnedTree): ReadonlyArray<unknown> =>
     node._tag === "PinnedFolder" ? { [node.title]: outline(node.children) } : node.title,
   )
 
-describe("ピン留めツリーの読み込み", () => {
-  it.effect("Space フォルダの中身を、フォルダの入れ子と並び順を保って読み込む", () =>
+describe("loading pinned trees", () => {
+  it.effect("loads the Space folder's contents, keeping the folder nesting and order", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       yield* addPin(spaceFolderId, "a")
-      const folderId = yield* addFolder(spaceFolderId, "資料")
+      const folderId = yield* addFolder(spaceFolderId, "Notes")
       yield* addPin(folderId, "b")
       yield* addPin(spaceFolderId, "c")
 
       const tree = yield* (yield* PinnedBookmarks).loadSpaceTree(work.id)
 
-      assert.deepStrictEqual(outline(tree), ["a", { 資料: ["b"] }, "c"])
+      assert.deepStrictEqual(outline(tree), ["a", { Notes: ["b"] }, "c"])
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダがまだ無い Space は、空ではなく読めないものとして扱う", () =>
+  it.effect("a Space with no folder yet counts as unreadable, not empty", () =>
     Effect.gen(function* () {
       const error = yield* Effect.flip((yield* PinnedBookmarks).loadSpaceTree(work.id))
 
@@ -95,7 +95,7 @@ describe("ピン留めツリーの読み込み", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Space のフォルダが外部で消されていたら読めない", () =>
+  it.effect("can't load a Space whose folder was removed outside Katip", () =>
     Effect.gen(function* () {
       yield* (yield* Bookmarks).removeTree(yield* spaceFolderOf(work))
 
@@ -105,7 +105,7 @@ describe("ピン留めツリーの読み込み", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("全 Space 分をまとめて読むと、フォルダのある Space のツリーだけが返る", () =>
+  it.effect("loading every Space at once returns only the trees of Spaces that have a folder", () =>
     Effect.gen(function* () {
       yield* addPin(yield* spaceFolderOf(work), "a")
       yield* spaceFolderOf(hobby)
@@ -118,7 +118,7 @@ describe("ピン留めツリーの読み込み", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip ルートごと消されていたら、まとめて読んでも何も返らない", () =>
+  it.effect("when the whole Katip root was removed, loading every Space returns nothing", () =>
     Effect.gen(function* () {
       yield* spaceFolderOf(work)
       yield* (yield* Bookmarks).removeTree(yield* (yield* SpaceFolders).ensureRoot)
@@ -130,10 +130,10 @@ describe("ピン留めツリーの読み込み", () => {
   )
 })
 
-describe("ノードの位置", () => {
-  it.effect("どの Space の、どのフォルダの何番目にあるかが分かる", () =>
+describe("locating a node", () => {
+  it.effect("tells the Space, the folder and the position within the folder", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "Notes")
       yield* addPin(folderId, "a")
       const pinId = yield* addPin(folderId, "b")
 
@@ -146,7 +146,7 @@ describe("ノードの位置", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のブックマークは見つからない", () =>
+  it.effect("a bookmark outside Katip isn't found", () =>
     Effect.gen(function* () {
       yield* spaceFolderOf(work)
       const outsideId = yield* addPin(yield* outsideFolderId("bookmarks-bar"), "outside")
@@ -157,7 +157,7 @@ describe("ノードの位置", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Space フォルダそのものはピン留めのノードとしては見つからない", () =>
+  it.effect("a Space folder itself isn't found as a pinned node", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
 
@@ -168,8 +168,8 @@ describe("ノードの位置", () => {
   )
 })
 
-describe("ブックマークの作成", () => {
-  it.effect("位置を省略すると Space 直下の末尾に作る", () =>
+describe("creating a bookmark", () => {
+  it.effect("without an index, creates it at the end directly inside the Space", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       yield* addPin(spaceFolderId, "a")
@@ -183,7 +183,7 @@ describe("ブックマークの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("位置を指定するとその位置に作る", () =>
+  it.effect("with an index, creates it at that index", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       yield* addPin(spaceFolderId, "a")
@@ -198,9 +198,9 @@ describe("ブックマークの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダの中に作れる", () =>
+  it.effect("can create it inside a folder", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "Notes")
 
       yield* (yield* PinnedBookmarks).createBookmark(
         { parent: inFolder(folderId) },
@@ -211,21 +211,23 @@ describe("ブックマークの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Space のフォルダが外部で消されていても、作り直してそこに作る", () =>
-    Effect.gen(function* () {
-      yield* (yield* Bookmarks).removeTree(yield* spaceFolderOf(work))
+  it.effect(
+    "when the Space's folder was removed outside Katip, recreates it and creates it there",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* Bookmarks).removeTree(yield* spaceFolderOf(work))
 
-      const createdId = yield* (yield* PinnedBookmarks).createBookmark(
-        { parent: spaceRoot(work) },
-        { title: "new", url: "https://example.com/new" },
-      )
+        const createdId = yield* (yield* PinnedBookmarks).createBookmark(
+          { parent: spaceRoot(work) },
+          { title: "new", url: "https://example.com/new" },
+        )
 
-      const location = yield* (yield* PinnedBookmarks).locate(createdId)
-      assert.strictEqual(location.spaceId, work.id)
-    }).pipe(Effect.provide(TestLayer)),
+        const location = yield* (yield* PinnedBookmarks).locate(createdId)
+        assert.strictEqual(location.spaceId, work.id)
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のフォルダの中には作れない", () =>
+  it.effect("can't create one inside a folder outside Katip", () =>
     Effect.gen(function* () {
       yield* spaceFolderOf(work)
       const outsideId = yield* addFolder(yield* outsideFolderId("bookmarks-bar"), "outside")
@@ -243,12 +245,12 @@ describe("ブックマークの作成", () => {
   )
 })
 
-describe("フォルダの作成", () => {
-  it.effect("作ったフォルダは開いた状態で保存される", () =>
+describe("creating a folder", () => {
+  it.effect("the created folder is saved as expanded", () =>
     Effect.gen(function* () {
       const folderId = yield* (yield* PinnedBookmarks).createFolder(
         { parent: spaceRoot(work) },
-        { title: "資料" },
+        { title: "Notes" },
         syncOff,
       )
 
@@ -256,7 +258,7 @@ describe("フォルダの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("深さ 1 のフォルダの中にフォルダを作れる", () =>
+  it.effect("can create a folder inside a folder at depth 1", () =>
     Effect.gen(function* () {
       const depth1 = yield* addFolder(yield* spaceFolderOf(work), "1")
 
@@ -270,7 +272,7 @@ describe("フォルダの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("深さ 2 のフォルダの中にはフォルダを作れない", () =>
+  it.effect("can't create a folder inside a folder at depth 2", () =>
     Effect.gen(function* () {
       const depth2 = yield* addFolder(yield* addFolder(yield* spaceFolderOf(work), "1"), "2")
 
@@ -287,7 +289,7 @@ describe("フォルダの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("タブグループ同期が ON のときは、深さ 1 のフォルダの中にフォルダを作れない", () =>
+  it.effect("with tab group sync on, can't create a folder inside a folder at depth 1", () =>
     Effect.gen(function* () {
       const depth1 = yield* addFolder(yield* spaceFolderOf(work), "1")
 
@@ -299,7 +301,7 @@ describe("フォルダの作成", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ブックマークの中にはフォルダを作れない", () =>
+  it.effect("can't create a folder inside a bookmark", () =>
     Effect.gen(function* () {
       const pinId = yield* addPin(yield* spaceFolderOf(work), "a")
 
@@ -312,8 +314,8 @@ describe("フォルダの作成", () => {
   )
 })
 
-describe("ブックマークの移動", () => {
-  it.effect("同じ親の中で後ろへ動かすと、指定した位置に入る", () =>
+describe("moving a bookmark", () => {
+  it.effect("moved later within the same parent, it lands at the given index", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       const a = yield* addPin(spaceFolderId, "a")
@@ -326,7 +328,7 @@ describe("ブックマークの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("同じ親の中で前へ動かすと、指定した位置に入る", () =>
+  it.effect("moved earlier within the same parent, it lands at the given index", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       yield* addPin(spaceFolderId, "a")
@@ -339,10 +341,10 @@ describe("ブックマークの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別の Space のフォルダへ、指定した位置に移せる", () =>
+  it.effect("can be moved into another Space's folder at a given index", () =>
     Effect.gen(function* () {
       const pinId = yield* addPin(yield* spaceFolderOf(work), "a")
-      const hobbyFolderId = yield* addFolder(yield* spaceFolderOf(hobby), "資料")
+      const hobbyFolderId = yield* addFolder(yield* spaceFolderOf(hobby), "Notes")
       yield* addPin(hobbyFolderId, "x")
 
       yield* (yield* PinnedBookmarks).moveNode(
@@ -356,10 +358,10 @@ describe("ブックマークの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("位置を省略すると移動先の末尾に入る", () =>
+  it.effect("without an index, it lands at the end of the destination", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
-      const folderId = yield* addFolder(spaceFolderId, "資料")
+      const folderId = yield* addFolder(spaceFolderId, "Notes")
       const pinId = yield* addPin(spaceFolderId, "a")
       yield* addPin(folderId, "x")
 
@@ -369,7 +371,7 @@ describe("ブックマークの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のブックマークを移動しようとすると拒否される", () =>
+  it.effect("moving a bookmark outside Katip is refused", () =>
     Effect.gen(function* () {
       const barId = yield* outsideFolderId("bookmarks-bar")
       const outsideId = yield* addPin(barId, "outside")
@@ -383,7 +385,7 @@ describe("ブックマークの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のフォルダへは移せない", () =>
+  it.effect("can't be moved into a folder outside Katip", () =>
     Effect.gen(function* () {
       const pinId = yield* addPin(yield* spaceFolderOf(work), "a")
       const outsideId = yield* addFolder(yield* outsideFolderId("bookmarks-bar"), "outside")
@@ -398,25 +400,25 @@ describe("ブックマークの移動", () => {
   )
 })
 
-describe("フォルダの移動", () => {
-  it.effect("フォルダを、中身ごと別のフォルダの中へ移せる", () =>
+describe("moving a folder", () => {
+  it.effect("moves a folder into another folder with everything in it", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
-      const moving = yield* addFolder(spaceFolderId, "資料")
+      const moving = yield* addFolder(spaceFolderId, "Notes")
       yield* addPin(moving, "x")
-      const target = yield* addFolder(spaceFolderId, "まとめ")
+      const target = yield* addFolder(spaceFolderId, "Projects")
 
       yield* (yield* PinnedBookmarks).moveNode(moving, { parent: inFolder(target) }, syncOff)
 
       const location = yield* (yield* PinnedBookmarks).locate(moving)
       assert.deepStrictEqual(
         [yield* titlesIn(target), yield* titlesIn(moving), location.depth],
-        [["資料"], ["x"], 2],
+        [["Notes"], ["x"], 2],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("同じ親の中で後ろへ動かすと、フォルダも指定した位置に入る", () =>
+  it.effect("a folder moved later within the same parent lands at the given index too", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       const folderId = yield* addFolder(spaceFolderId, "f1")
@@ -433,9 +435,9 @@ describe("フォルダの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別の Space へ移すと、中身ごとその Space のピン留めになる", () =>
+  it.effect("moved to another Space, it and its contents become that Space's pins", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "Notes")
       const pinId = yield* addPin(folderId, "x")
 
       yield* (yield* PinnedBookmarks).moveNode(folderId, { parent: spaceRoot(hobby) }, syncOff)
@@ -448,12 +450,12 @@ describe("フォルダの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("配下にフォルダを持つフォルダを、上限を超える深さへは移せない", () =>
+  it.effect("a folder with folders inside can't be moved to where it would be past the limit", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
-      const outer = yield* addFolder(spaceFolderId, "外")
-      yield* addFolder(outer, "内")
-      const target = yield* addFolder(spaceFolderId, "まとめ")
+      const outer = yield* addFolder(spaceFolderId, "Outer")
+      yield* addFolder(outer, "Inner")
+      const target = yield* addFolder(spaceFolderId, "Projects")
 
       const error = yield* Effect.flip(
         (yield* PinnedBookmarks).moveNode(outer, { parent: inFolder(target) }, syncOff),
@@ -466,43 +468,45 @@ describe("フォルダの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("中の分割ピンとライブフォルダは深さに数えず、上限の深さまで移せる", () =>
-    Effect.gen(function* () {
-      const pinned = yield* PinnedBookmarks
-      const outer = yield* pinned.createFolder(
-        { parent: spaceRoot(work) },
-        { title: "外" },
-        syncOff,
-      )
-      yield* pinned.createSplit(
-        { parent: inFolder(outer) },
-        {
-          title: "メール | 予定",
-          left: { title: "メール", url: "https://mail.example/" },
-          right: { title: "予定", url: "https://calendar.example/" },
-        },
-      )
-      yield* pinned.createLiveFolder(
-        { parent: inFolder(outer) },
-        { title: "レビュー依頼", source: { _tag: "GitHub", query: "review-requested" } },
-      )
-      const target = yield* pinned.createFolder(
-        { parent: spaceRoot(work) },
-        { title: "まとめ" },
-        syncOff,
-      )
+  it.effect(
+    "split pins and live folders inside don't count as depth, so it can go down to the limit",
+    () =>
+      Effect.gen(function* () {
+        const pinned = yield* PinnedBookmarks
+        const outer = yield* pinned.createFolder(
+          { parent: spaceRoot(work) },
+          { title: "Outer" },
+          syncOff,
+        )
+        yield* pinned.createSplit(
+          { parent: inFolder(outer) },
+          {
+            title: "Mail | Calendar",
+            left: { title: "Mail", url: "https://mail.example/" },
+            right: { title: "Calendar", url: "https://calendar.example/" },
+          },
+        )
+        yield* pinned.createLiveFolder(
+          { parent: inFolder(outer) },
+          { title: "Review requests", source: { _tag: "GitHub", query: "review-requested" } },
+        )
+        const target = yield* pinned.createFolder(
+          { parent: spaceRoot(work) },
+          { title: "Projects" },
+          syncOff,
+        )
 
-      yield* pinned.moveNode(outer, { parent: inFolder(target) }, syncOff)
+        yield* pinned.moveNode(outer, { parent: inFolder(target) }, syncOff)
 
-      assert.strictEqual((yield* pinned.locate(outer)).depth, 2)
-    }).pipe(Effect.provide(TestLayer)),
+        assert.strictEqual((yield* pinned.locate(outer)).depth, 2)
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("タブグループ同期が ON のときは、フォルダをフォルダの中へ移せない", () =>
+  it.effect("with tab group sync on, a folder can't be moved into a folder", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
-      const moving = yield* addFolder(spaceFolderId, "資料")
-      const target = yield* addFolder(spaceFolderId, "まとめ")
+      const moving = yield* addFolder(spaceFolderId, "Notes")
+      const target = yield* addFolder(spaceFolderId, "Projects")
 
       const error = yield* Effect.flip(
         (yield* PinnedBookmarks).moveNode(moving, { parent: inFolder(target) }, syncOn),
@@ -512,23 +516,23 @@ describe("フォルダの移動", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("すでに上限より深いフォルダも、同じ深さの中でなら並べ替えられる", () =>
+  it.effect("a folder already deeper than the limit can still be reordered at the same depth", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
-      const outer = yield* addFolder(spaceFolderId, "外")
-      yield* addFolder(outer, "内")
+      const outer = yield* addFolder(spaceFolderId, "Outer")
+      yield* addFolder(outer, "Inner")
       yield* addPin(spaceFolderId, "p")
 
       yield* (yield* PinnedBookmarks).moveNode(outer, { parent: spaceRoot(work), index: 1 }, syncOn)
 
-      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["p", "外"])
+      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["p", "Outer"])
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("自分自身や自分の子孫の中へは移せない", () =>
+  it.effect("a folder can't be moved into itself or a folder inside it", () =>
     Effect.gen(function* () {
-      const outer = yield* addFolder(yield* spaceFolderOf(work), "外")
-      const inner = yield* addFolder(outer, "内")
+      const outer = yield* addFolder(yield* spaceFolderOf(work), "Outer")
+      const inner = yield* addFolder(outer, "Inner")
       const pinned = yield* PinnedBookmarks
 
       const errors = [
@@ -545,50 +549,50 @@ describe("フォルダの移動", () => {
   )
 })
 
-describe("改名と更新", () => {
-  it.effect("ブックマークもフォルダも改名できる", () =>
+describe("renaming and updating", () => {
+  it.effect("renames bookmarks and folders alike", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
       const pinId = yield* addPin(spaceFolderId, "a")
       const folderId = yield* addFolder(spaceFolderId, "f")
       const pinned = yield* PinnedBookmarks
 
-      yield* pinned.rename(pinId, "ピン")
-      yield* pinned.rename(folderId, "フォルダ")
+      yield* pinned.rename(pinId, "Pin")
+      yield* pinned.rename(folderId, "Folder")
 
-      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["ピン", "フォルダ"])
+      assert.deepStrictEqual(yield* titlesIn(spaceFolderId), ["Pin", "Folder"])
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Space フォルダはピン留めの改名では変えられない", () =>
+  it.effect("a Space folder can't be renamed as a pin", () =>
     Effect.gen(function* () {
       const spaceFolderId = yield* spaceFolderOf(work)
 
       const error = yield* Effect.flip((yield* PinnedBookmarks).rename(spaceFolderId, "x"))
 
       assert.strictEqual(error._tag, "PinnedNodeNotFound")
-      assert.strictEqual((yield* (yield* Bookmarks).get(spaceFolderId)).title, "仕事")
+      assert.strictEqual((yield* (yield* Bookmarks).get(spaceFolderId)).title, "Work")
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ブックマークの URL とタイトルを置き換えられる", () =>
+  it.effect("replaces a bookmark's URL and title", () =>
     Effect.gen(function* () {
       const pinId = yield* addPin(yield* spaceFolderOf(work), "a")
 
       yield* (yield* PinnedBookmarks).updateBookmark(pinId, {
-        title: "新しいページ",
+        title: "New page",
         url: "https://example.com/new",
       })
 
       const updated = yield* (yield* Bookmarks).get(pinId)
-      assert.strictEqual(updated.title, "新しいページ")
+      assert.strictEqual(updated.title, "New page")
       assert.deepStrictEqual(updated._tag === "Bookmark" && updated.url, "https://example.com/new")
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダに URL は設定できない", () =>
+  it.effect("can't give a folder a URL", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "Notes")
 
       const error = yield* Effect.flip(
         (yield* PinnedBookmarks).updateBookmark(folderId, { title: "x", url: "https://x.test/" }),
@@ -599,8 +603,8 @@ describe("改名と更新", () => {
   )
 })
 
-describe("削除", () => {
-  it.effect("ブックマークを削除できる", () =>
+describe("removing", () => {
+  it.effect("removes a bookmark", () =>
     Effect.gen(function* () {
       const pinId = yield* addPin(yield* spaceFolderOf(work), "a")
 
@@ -610,9 +614,9 @@ describe("削除", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ブックマークの削除ではフォルダを消せない", () =>
+  it.effect("removing a bookmark can't remove a folder", () =>
     Effect.gen(function* () {
-      const folderId = yield* addFolder(yield* spaceFolderOf(work), "資料")
+      const folderId = yield* addFolder(yield* spaceFolderOf(work), "Notes")
 
       const error = yield* Effect.flip((yield* PinnedBookmarks).removeBookmark(folderId))
 
@@ -621,7 +625,7 @@ describe("削除", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("Katip の外のブックマークは削除できない", () =>
+  it.effect("can't remove a bookmark outside Katip", () =>
     Effect.gen(function* () {
       yield* spaceFolderOf(work)
       const outsideId = yield* addPin(yield* outsideFolderId("bookmarks-bar"), "outside")
@@ -633,23 +637,33 @@ describe("削除", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダを中身ごと削除し、配下のフォルダの開閉状態も捨てる", () =>
-    Effect.gen(function* () {
-      const pinned = yield* PinnedBookmarks
-      const store = yield* FolderExpansionStore
-      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "1" }, syncOff)
-      const inner = yield* pinned.createFolder({ parent: inFolder(outer) }, { title: "2" }, syncOff)
-      const pinId = yield* addPin(inner, "a")
+  it.effect(
+    "removes a folder with everything in it and drops the expansion state of its folders",
+    () =>
+      Effect.gen(function* () {
+        const pinned = yield* PinnedBookmarks
+        const store = yield* FolderExpansionStore
+        const outer = yield* pinned.createFolder(
+          { parent: spaceRoot(work) },
+          { title: "1" },
+          syncOff,
+        )
+        const inner = yield* pinned.createFolder(
+          { parent: inFolder(outer) },
+          { title: "2" },
+          syncOff,
+        )
+        const pinId = yield* addPin(inner, "a")
 
-      yield* pinned.removeFolder(outer)
+        yield* pinned.removeFolder(outer)
 
-      assert.isFalse(yield* exists(outer))
-      assert.isFalse(yield* exists(pinId))
-      assert.deepStrictEqual(yield* store.load, {})
-    }).pipe(Effect.provide(TestLayer)),
+        assert.isFalse(yield* exists(outer))
+        assert.isFalse(yield* exists(pinId))
+        assert.deepStrictEqual(yield* store.load, {})
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("フォルダを削除すると、そのフォルダと配下のフォルダのアイコンも捨てる", () =>
+  it.effect("removing a folder drops the icons of it and the folders inside it", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const icons = yield* FolderIconStore
@@ -667,33 +681,39 @@ describe("削除", () => {
   )
 })
 
-describe("分割ビューのピン留め", () => {
+describe("split view pins", () => {
   const draft = {
-    title: "メール | 予定",
-    left: { title: "メール", url: "https://mail.example/" },
-    right: { title: "予定", url: "https://calendar.example/" },
+    title: "Mail | Calendar",
+    left: { title: "Mail", url: "https://mail.example/" },
+    right: { title: "Calendar", url: "https://calendar.example/" },
   }
 
-  it.effect("2 つのブックマークを持つ分割ピンとして作られ、ツリーで 1 つのピンとして読める", () =>
-    Effect.gen(function* () {
-      const pinned = yield* PinnedBookmarks
+  it.effect(
+    "is created as a split pin holding two bookmarks and loads as one pin in the tree",
+    () =>
+      Effect.gen(function* () {
+        const pinned = yield* PinnedBookmarks
 
-      yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
-      const tree = yield* pinned.loadSpaceTree(work.id)
+        yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
+        const tree = yield* pinned.loadSpaceTree(work.id)
 
-      assert.deepStrictEqual(
-        tree.map((node) =>
-          node._tag === "PinnedSplit" ? [node.title, node.items.map((item) => item.title)] : node,
-        ),
-        [["メール | 予定", ["メール", "予定"]]],
-      )
-    }).pipe(Effect.provide(TestLayer)),
+        assert.deepStrictEqual(
+          tree.map((node) =>
+            node._tag === "PinnedSplit" ? [node.title, node.items.map((item) => item.title)] : node,
+          ),
+          [["Mail | Calendar", ["Mail", "Calendar"]]],
+        )
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("深さの上限に達したフォルダの中にも作れる", () =>
+  it.effect("can be created inside a folder already at the depth limit", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
-      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "外" }, syncOn)
+      const outer = yield* pinned.createFolder(
+        { parent: spaceRoot(work) },
+        { title: "Outer" },
+        syncOn,
+      )
 
       const created = yield* pinned.createSplit({ parent: inFolder(outer) }, draft)
       const location = yield* pinned.locate(created.folderId)
@@ -702,13 +722,13 @@ describe("分割ビューのピン留め", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別の Space のフォルダへ移せる", () =>
+  it.effect("can be moved into another Space's folder", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const created = yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
       const folder = yield* pinned.createFolder(
         { parent: spaceRoot(hobby) },
-        { title: "旅" },
+        { title: "Travel" },
         syncOff,
       )
 
@@ -722,7 +742,7 @@ describe("分割ビューのピン留め", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("削除すると中の 2 つのブックマークも消える", () =>
+  it.effect("removing it removes its two bookmarks too", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const created = yield* pinned.createSplit({ parent: spaceRoot(work) }, draft)
@@ -741,11 +761,11 @@ describe("分割ビューのピン留め", () => {
   )
 })
 
-describe("ライブフォルダ", () => {
+describe("live folders", () => {
   const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
-  const draft = { title: "レビュー依頼", source: reviews }
+  const draft = { title: "Review requests", source: reviews }
 
-  it.effect("取得元を持つライブフォルダとして作られ、開いた状態で保存される", () =>
+  it.effect("is created as a live folder with its source and saved as expanded", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
 
@@ -755,17 +775,21 @@ describe("ライブフォルダ", () => {
       assert.deepStrictEqual(
         [tree, isFolderExpanded(yield* (yield* FolderExpansionStore).load, folderId)],
         [
-          [{ _tag: "PinnedLiveFolder", id: folderId, title: "レビュー依頼", source: reviews }],
+          [{ _tag: "PinnedLiveFolder", id: folderId, title: "Review requests", source: reviews }],
           true,
         ],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("深さの上限に達したフォルダの中にも作れる", () =>
+  it.effect("can be created inside a folder already at the depth limit", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
-      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "外" }, syncOn)
+      const outer = yield* pinned.createFolder(
+        { parent: spaceRoot(work) },
+        { title: "Outer" },
+        syncOn,
+      )
 
       const folderId = yield* pinned.createLiveFolder({ parent: inFolder(outer) }, draft)
       const location = yield* pinned.locate(folderId)
@@ -774,13 +798,13 @@ describe("ライブフォルダ", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別の Space のフォルダへ移せる", () =>
+  it.effect("can be moved into another Space's folder", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
       const folder = yield* pinned.createFolder(
         { parent: spaceRoot(hobby) },
-        { title: "旅" },
+        { title: "Travel" },
         syncOff,
       )
 
@@ -794,18 +818,18 @@ describe("ライブフォルダ", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("改名できる", () =>
+  it.effect("can be renamed", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
 
-      yield* pinned.rename(folderId, "見てほしい PR")
+      yield* pinned.rename(folderId, "PRs to review")
 
-      assert.strictEqual((yield* pinned.locate(folderId)).node.title, "見てほしい PR")
+      assert.strictEqual((yield* pinned.locate(folderId)).node.title, "PRs to review")
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("中にブックマークは作れない", () =>
+  it.effect("no bookmark can be created inside it", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
@@ -821,7 +845,7 @@ describe("ライブフォルダ", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("削除するとフォルダが消え、印と開閉状態も捨てる", () =>
+  it.effect("removing it removes the folder and drops its mark and expansion state", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const folderId = yield* pinned.createLiveFolder({ parent: spaceRoot(work) }, draft)
@@ -839,12 +863,12 @@ describe("ライブフォルダ", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("中にあるフォルダを削除すると、ライブフォルダの印と開閉状態も捨てる", () =>
+  it.effect("removing the folder it is in drops its mark and expansion state too", () =>
     Effect.gen(function* () {
       const pinned = yield* PinnedBookmarks
       const outer = yield* pinned.createFolder(
         { parent: spaceRoot(work) },
-        { title: "外" },
+        { title: "Outer" },
         syncOff,
       )
       yield* pinned.createLiveFolder({ parent: inFolder(outer) }, draft)

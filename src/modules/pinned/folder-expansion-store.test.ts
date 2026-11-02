@@ -10,8 +10,8 @@ const TestLayer = FolderExpansionStore.layer.pipe(Layer.provideMerge(FakeBrowser
 const folderA = BookmarkId.make("a")
 const folderB = BookmarkId.make("b")
 
-describe("フォルダの開閉状態の保存", () => {
-  it.effect("保存した開閉状態を読み直せる", () =>
+describe("saving folder expansion", () => {
+  it.effect("the saved expansion states can be loaded back", () =>
     Effect.gen(function* () {
       const store = yield* FolderExpansionStore
 
@@ -24,7 +24,7 @@ describe("フォルダの開閉状態の保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("同じフォルダへ続けて書き込むと、最後の値が残る", () =>
+  it.effect("writing the same folder twice in a row keeps the last value", () =>
     Effect.gen(function* () {
       const store = yield* FolderExpansionStore
 
@@ -35,7 +35,7 @@ describe("フォルダの開閉状態の保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別々のフォルダへ並行して書き込んでも、どちらの書き込みも失われない", () =>
+  it.effect("concurrent writes to different folders are both kept", () =>
     Effect.gen(function* () {
       const store = yield* FolderExpansionStore
 
@@ -49,7 +49,7 @@ describe("フォルダの開閉状態の保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("忘れたフォルダは閉じた状態に戻り、ほかのフォルダの状態は残る", () =>
+  it.effect("a forgotten folder goes back to collapsed while other folders keep their state", () =>
     Effect.gen(function* () {
       const store = yield* FolderExpansionStore
       yield* store.setExpanded(folderA, true)
@@ -63,7 +63,7 @@ describe("フォルダの開閉状態の保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("保存値が壊れていたら、すべてのフォルダを閉じた状態として読む", () =>
+  it.effect("a broken saved value reads as every folder collapsed", () =>
     Effect.gen(function* () {
       const storage = yield* Storage
       const store = yield* FolderExpansionStore

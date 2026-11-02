@@ -7,9 +7,11 @@ export class FolderExpansionStore extends Context.Service<
   FolderExpansionStore,
   {
     readonly load: Effect.Effect<FolderExpansion, BrowserApiError>
-    /** 同じフォルダへの書き込みが重なっても、最後に呼んだ値が残る。 */
+    /** When writes for the same folder overlap, the value of the last call wins. */
     setExpanded(folderId: BookmarkId, isExpanded: boolean): Effect.Effect<void, BrowserApiError>
-    /** 消したフォルダの保存値を捨てる。保存値の無いフォルダは閉じているものとして扱われる。 */
+    /**
+     * Drops the saved values of removed folders. A folder with no saved value counts as collapsed.
+     */
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/pinned/FolderExpansionStore") {
@@ -18,7 +20,8 @@ export class FolderExpansionStore extends Context.Service<
     Effect.gen(function* () {
       const storage = yield* Storage
       const saved = storedValue(storage.local, "katip/pinned/folder-expansion", FolderExpansion)
-      // 全フォルダ分を 1 つのキーに読み書きするので、並行した更新が互いを上書きしないよう直列にする
+      // Every folder is read and written under one key, so updates run one at a time to keep
+      // concurrent ones from overwriting each other
       const writeLock = yield* Semaphore.make(1)
 
       const load = Effect.map(

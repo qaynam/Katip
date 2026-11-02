@@ -9,8 +9,8 @@ const TestLayer = FolderIconStore.layer.pipe(Layer.provideMerge(FakeBrowser.laye
 const folderA = BookmarkId.make("a")
 const folderB = BookmarkId.make("b")
 
-describe("フォルダのアイコンの保存", () => {
-  it.effect("選んだアイコンを読み直せる", () =>
+describe("saving folder icons", () => {
+  it.effect("the chosen icons can be loaded back", () =>
     Effect.gen(function* () {
       const store = yield* FolderIconStore
 
@@ -27,7 +27,7 @@ describe("フォルダのアイコンの保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("同じフォルダに選び直すと、最後に選んだアイコンが残る", () =>
+  it.effect("choosing again for the same folder keeps the last icon chosen", () =>
     Effect.gen(function* () {
       const store = yield* FolderIconStore
 
@@ -38,7 +38,7 @@ describe("フォルダのアイコンの保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("別々のフォルダへ並行して選んでも、どちらのアイコンも失われない", () =>
+  it.effect("icons chosen concurrently for different folders are both kept", () =>
     Effect.gen(function* () {
       const store = yield* FolderIconStore
 
@@ -50,7 +50,7 @@ describe("フォルダのアイコンの保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("忘れたフォルダはアイコンを持たなくなり、ほかのフォルダのアイコンは残る", () =>
+  it.effect("a forgotten folder loses its icon while other folders keep theirs", () =>
     Effect.gen(function* () {
       const store = yield* FolderIconStore
       yield* store.setIcon(folderA, "star")
@@ -62,7 +62,7 @@ describe("フォルダのアイコンの保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("知らない名前で保存されたフォルダだけを、アイコンを持たないものとして読む", () =>
+  it.effect("only the folders saved with an unknown icon name read as having no icon", () =>
     Effect.gen(function* () {
       const storage = yield* Storage
       const store = yield* FolderIconStore
@@ -72,7 +72,7 @@ describe("フォルダのアイコンの保存", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("保存値が壊れていたら、どのフォルダもアイコンを持たないものとして読む", () =>
+  it.effect("a broken saved value reads as no folder having an icon", () =>
     Effect.gen(function* () {
       const storage = yield* Storage
       const store = yield* FolderIconStore

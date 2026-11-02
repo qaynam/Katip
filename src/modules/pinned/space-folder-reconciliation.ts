@@ -11,20 +11,26 @@ export interface KatipRootFolder {
 }
 
 export type SpaceFolderAction = Data.TaggedEnum<{
-  /** フォルダ名が外部で変えられたので、Space 名をフォルダ名に合わせる。 */
+  /** The folder was renamed outside Katip, so the Space takes the folder's name. */
   AdoptFolderTitle: { readonly spaceId: SpaceId; readonly name: SpaceName }
-  /** フォルダ名が Space 名として使えない値にされたので、フォルダ名を Space 名に戻す。 */
+  /**
+   * The folder was renamed to something that can't be a Space name, so it gets the Space's name
+   * back.
+   */
   RestoreFolderTitle: { readonly folderId: BookmarkId; readonly title: SpaceName }
-  /** Space のフォルダが見つからないが、同じ名前の持ち主のいないフォルダがあるので、それを Space のフォルダにする。 */
+  /**
+   * The Space's folder is missing, but an unowned folder has the same name, so that folder becomes
+   * the Space's folder.
+   */
   RelinkFolder: { readonly spaceId: SpaceId; readonly folderId: BookmarkId }
-  /** Space のフォルダが見つからないので、Katip 直下に作る。 */
+  /** The Space's folder is missing, so one is created directly inside the Katip root. */
   CreateSpaceFolder: { readonly spaceId: SpaceId; readonly title: SpaceName }
-  /** どの Space のものでもないフォルダから Space を作る。`name` が None なら Space 側の既定名を使う。 */
+  /** Creates a Space from a folder no Space owns. `name` None means the Space's default name. */
   CreateSpaceFromFolder: {
     readonly folderId: BookmarkId
     readonly name: Option.Option<SpaceName>
   }
-  /** Space 一覧に無い Space の対応を対応表から消す。 */
+  /** Removes from the map a Space that is no longer in the Space list. */
   ForgetSpaceFolder: { readonly spaceId: SpaceId }
 }>
 export const SpaceFolderAction = Data.taggedEnum<SpaceFolderAction>()
@@ -32,7 +38,7 @@ export const SpaceFolderAction = Data.taggedEnum<SpaceFolderAction>()
 export interface SpaceFolderReconciliationInput {
   readonly spaces: SpaceList
   readonly spaceFolders: SpaceFolderMap
-  /** Katip ルート直下のフォルダ。並び順が新しく作る Space の順になる。 */
+  /** The folders directly inside the Katip root. Spaces created from them follow this order. */
   readonly rootFolders: ReadonlyArray<KatipRootFolder>
 }
 
@@ -56,8 +62,9 @@ interface FolderAssignment {
   readonly unclaimedFolders: ReadonlyArray<KatipRootFolder>
 }
 
-// 対応表を失ったときや、Chrome Sync がフォルダを作り直して ID が変わったときに、新しい空の
-// フォルダを作ると中のピン留めを見失う。同名で持ち主のいないフォルダがあれば、そちらに結び直す
+// Not always a new empty folder: when the map is lost, or Chrome Sync recreates the folder under a
+// new ID, the pins inside would be lost track of. An unowned folder with the same name is relinked
+// instead
 const assignFolder = (assignment: FolderAssignment, space: Space): FolderAssignment =>
   Option.match(
     Array.findFirst(assignment.unclaimedFolders, (folder) => hasSpaceName(folder, space.name)),
@@ -82,12 +89,14 @@ const assignFolder = (assignment: FolderAssignment, space: Space): FolderAssignm
   )
 
 /**
- * Space 一覧と Katip ルート直下のフォルダを突き合わせ、両者を一致させるための操作を返す。
+ * Matches the Space list against the folders directly inside the Katip root and returns the
+ * actions that bring the two in line.
  *
  * @remarks
- * 名前が食い違うときはフォルダ側を正とする（ブックマークマネージャや Chrome Sync での変更を取り込む）。
- * 対応表のフォルダが Katip 直下に無ければ、消えたものとして扱う。
- * 操作は「名前の同期 → フォルダの結び直し・作成 → 対応の破棄 → フォルダからの Space 作成」の順に並ぶ。
+ * When names disagree, the folder wins, so renames made in the bookmark manager or through Chrome
+ * Sync are taken in. A mapped folder that isn't directly inside the Katip root counts as gone.
+ * The actions come in this order: name syncs, then relinked or created folders, then forgotten
+ * mappings, then Spaces created from folders.
  */
 export const planSpaceFolderReconciliation = ({
   spaces,

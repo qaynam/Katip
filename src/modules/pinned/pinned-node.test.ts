@@ -57,9 +57,9 @@ const pinFolder = (id: string, children: ReadonlyArray<PinnedNode>): PinnedFolde
   children,
 })
 
-describe("Space フォルダのサブツリーからピン留めツリーへの変換", () => {
-  it("ブックマークは ID・タイトル・URL を持つピンになる", () => {
-    const spaceFolder = loadedFolder("space", [chromeBookmark("b1", "ドキュメント")])
+describe("converting a Space folder's subtree into a pinned tree", () => {
+  it("a bookmark becomes a pin with its ID, title and URL", () => {
+    const spaceFolder = loadedFolder("space", [chromeBookmark("b1", "Docs")])
 
     const tree = pinnedTreeFrom(spaceFolder)
 
@@ -68,14 +68,14 @@ describe("Space フォルダのサブツリーからピン留めツリーへの�
         {
           _tag: "PinnedBookmark",
           id: "b1",
-          title: "ドキュメント",
+          title: "Docs",
           url: "https://example.com/b1",
         },
       ]),
     )
   })
 
-  it("フォルダは中身を同じ順序で持つピン留めフォルダになる", () => {
+  it("a folder becomes a pinned folder holding its contents in the same order", () => {
     const spaceFolder = loadedFolder("space", [
       loadedFolder("f1", [chromeBookmark("b2"), chromeBookmark("b1")]),
     ])
@@ -85,7 +85,7 @@ describe("Space フォルダのサブツリーからピン留めツリーへの�
     expect(tree).toStrictEqual(Option.some([pinFolder("f1", [pin("b2"), pin("b1")])]))
   })
 
-  it("空のフォルダは子を持たないピン留めフォルダになる", () => {
+  it("an empty folder becomes a pinned folder with no children", () => {
     const spaceFolder = loadedFolder("space", [loadedFolder("f1", [])])
 
     const tree = pinnedTreeFrom(spaceFolder)
@@ -93,11 +93,11 @@ describe("Space フォルダのサブツリーからピン留めツリーへの�
     expect(tree).toStrictEqual(Option.some([pinFolder("f1", [])]))
   })
 
-  it("Space フォルダが空なら空のツリーになる", () => {
+  it("an empty Space folder becomes an empty tree", () => {
     expect(pinnedTreeFrom(loadedFolder("space", []))).toStrictEqual(Option.some([]))
   })
 
-  it("外部で作られた 3 階層以上のフォルダもそのまま変換する", () => {
+  it("folders nested three or more levels deep outside Katip are converted as they are", () => {
     const spaceFolder = loadedFolder("space", [
       loadedFolder("f1", [loadedFolder("f2", [loadedFolder("f3", [chromeBookmark("b1")])])]),
     ])
@@ -109,7 +109,7 @@ describe("Space フォルダのサブツリーからピン留めツリーへの�
     )
   })
 
-  it("子を読み込んでいないフォルダが含まれていたら、一部だけの結果を返さない", () => {
+  it("returns no partial result when a folder inside has its children unloaded", () => {
     const spaceFolder = loadedFolder("space", [
       chromeBookmark("b1"),
       chromeFolder("f1", Option.none()),
@@ -118,15 +118,15 @@ describe("Space フォルダのサブツリーからピン留めツリーへの�
     expect(pinnedTreeFrom(spaceFolder)).toStrictEqual(Option.none())
   })
 
-  it("Space フォルダ自体の子を読み込んでいなければ、結果を返さない", () => {
+  it("returns no result when the Space folder's own children are unloaded", () => {
     expect(pinnedTreeFrom(chromeFolder("space", Option.none()))).toStrictEqual(Option.none())
   })
 })
 
-describe("ピン留めツリーからのノードの検索", () => {
+describe("finding a node in a pinned tree", () => {
   const tree = [pin("b1"), pinFolder("f1", [pin("b2"), pinFolder("f2", [pin("b3")])]), pin("b4")]
 
-  it("Space 直下のノードは、親フォルダ無し・深さ 1 で見つかる", () => {
+  it("a node directly inside the Space is found with no parent folder, at depth 1", () => {
     const found = findPinnedNode(tree, bookmarkId("b4"))
 
     expect(found).toStrictEqual(
@@ -134,7 +134,7 @@ describe("ピン留めツリーからのノードの検索", () => {
     )
   })
 
-  it("フォルダの中のノードは、親フォルダの ID・深さ 2 で見つかる", () => {
+  it("a node inside a folder is found with the folder's ID as its parent, at depth 2", () => {
     const found = findPinnedNode(tree, bookmarkId("b2"))
 
     expect(found).toStrictEqual(
@@ -147,13 +147,13 @@ describe("ピン留めツリーからのノードの検索", () => {
     )
   })
 
-  it("深さ 2 のフォルダの中のノードは深さ 3 で見つかる", () => {
+  it("a node inside a folder at depth 2 is found at depth 3", () => {
     const found = findPinnedNode(tree, bookmarkId("b3"))
 
     expect(Option.map(found, (location) => location.depth)).toStrictEqual(Option.some(3))
   })
 
-  it("フォルダ自体も、その深さとともに見つかる", () => {
+  it("a folder itself is found too, with its depth", () => {
     const found = findPinnedNode(tree, bookmarkId("f2"))
 
     expect(
@@ -161,35 +161,35 @@ describe("ピン留めツリーからのノードの検索", () => {
     ).toStrictEqual(Option.some(["PinnedFolder", 2]))
   })
 
-  it("ツリーに無い ID は見つからない", () => {
+  it("an ID not in the tree isn't found", () => {
     expect(findPinnedNode(tree, bookmarkId("missing"))).toStrictEqual(Option.none())
   })
 
-  it("空のツリーからは何も見つからない", () => {
+  it("nothing is found in an empty tree", () => {
     expect(findPinnedNode([], bookmarkId("b1"))).toStrictEqual(Option.none())
   })
 })
 
-describe("フォルダ配下のフォルダ ID", () => {
-  it("フォルダ自身と、配下のすべての階層のフォルダの ID を返す", () => {
+describe("folder IDs within a folder", () => {
+  it("returns the IDs of the folder itself and of the folders at every level inside it", () => {
     const folder = pinFolder("f1", [pinFolder("f2", [pinFolder("f3", [])]), pinFolder("f4", [])])
 
     expect(folderIdsWithin(folder)).toStrictEqual(["f1", "f2", "f3", "f4"])
   })
 
-  it("ブックマークの ID は含めない", () => {
+  it("leaves out bookmark IDs", () => {
     const folder = pinFolder("f1", [pin("b1"), pinFolder("f2", [pin("b2")])])
 
     expect(folderIdsWithin(folder)).toStrictEqual(["f1", "f2"])
   })
 })
 
-describe("分割ビューとしてピン留めしたフォルダ", () => {
+describe("folders pinned as a split view", () => {
   const splitIds = new Set([bookmarkId("split")])
 
-  it("印の付いたフォルダの中身が 2 つのブックマークなら、左右の順で分割ピンになる", () => {
+  it("a marked folder holding two bookmarks becomes a split pin, left then right", () => {
     const spaceFolder = loadedFolder("space", [
-      loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")], "左 | 右"),
+      loadedFolder("split", [chromeBookmark("left"), chromeBookmark("right")], "Left | Right"),
     ])
 
     const tree = pinnedTreeFrom(spaceFolder, { splitFolders: splitIds })
@@ -199,14 +199,14 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
         {
           _tag: "PinnedSplit",
           id: bookmarkId("split"),
-          title: "左 | 右",
+          title: "Left | Right",
           items: [pin("left"), pin("right")],
         },
       ]),
     )
   })
 
-  it("印の付いたフォルダでも、中身が 2 つのブックマークでなくなっていたら普通のフォルダになる", () => {
+  it("a marked folder that no longer holds two bookmarks becomes an ordinary folder", () => {
     const spaceFolder = loadedFolder("space", [loadedFolder("split", [chromeBookmark("only")])])
 
     const tree = pinnedTreeFrom(spaceFolder, { splitFolders: splitIds })
@@ -214,7 +214,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
     expect(tree).toStrictEqual(Option.some([pinFolder("split", [pin("only")])]))
   })
 
-  it("印の無いフォルダは、中身が 2 つのブックマークでも普通のフォルダになる", () => {
+  it("an unmarked folder stays an ordinary folder even when it holds two bookmarks", () => {
     const spaceFolder = loadedFolder("space", [
       loadedFolder("folder", [chromeBookmark("a"), chromeBookmark("b")]),
     ])
@@ -224,7 +224,7 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
     expect(tree).toStrictEqual(Option.some([pinFolder("folder", [pin("a"), pin("b")])]))
   })
 
-  it("分割ピンの中のブックマークも、分割ピンを親として見つかる", () => {
+  it("a bookmark inside a split pin is found with the split pin as its parent", () => {
     const tree = Option.getOrThrow(
       pinnedTreeFrom(
         loadedFolder("space", [
@@ -242,23 +242,23 @@ describe("分割ビューとしてピン留めしたフォルダ", () => {
   })
 })
 
-describe("ライブフォルダとして作ったフォルダ", () => {
+describe("folders created as live folders", () => {
   const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
   const liveFolders = new Map([[bookmarkId("live"), reviews]])
 
-  it("印の付いた空のフォルダは、取得元を持つライブフォルダになる", () => {
-    const spaceFolder = loadedFolder("space", [loadedFolder("live", [], "レビュー")])
+  it("a marked empty folder becomes a live folder with its source", () => {
+    const spaceFolder = loadedFolder("space", [loadedFolder("live", [], "Reviews")])
 
     const tree = pinnedTreeFrom(spaceFolder, { liveFolders })
 
     expect(tree).toStrictEqual(
       Option.some([
-        { _tag: "PinnedLiveFolder", id: bookmarkId("live"), title: "レビュー", source: reviews },
+        { _tag: "PinnedLiveFolder", id: bookmarkId("live"), title: "Reviews", source: reviews },
       ]),
     )
   })
 
-  it("印の付いたフォルダでも、外でブックマークを入れられていたら普通のフォルダとして中身を見せる", () => {
+  it("a marked folder that had bookmarks put in it outside Katip shows them as an ordinary folder", () => {
     const spaceFolder = loadedFolder("space", [loadedFolder("live", [chromeBookmark("stray")])])
 
     const tree = pinnedTreeFrom(spaceFolder, { liveFolders })
@@ -266,7 +266,7 @@ describe("ライブフォルダとして作ったフォルダ", () => {
     expect(tree).toStrictEqual(Option.some([pinFolder("live", [pin("stray")])]))
   })
 
-  it("フォルダの中にあるライブフォルダも、フォルダを親として見つかる", () => {
+  it("a live folder inside a folder is found with that folder as its parent", () => {
     const tree = Option.getOrThrow(
       pinnedTreeFrom(loadedFolder("space", [loadedFolder("f1", [loadedFolder("live", [])])]), {
         liveFolders,
@@ -280,7 +280,7 @@ describe("ライブフォルダとして作ったフォルダ", () => {
     ).toStrictEqual(Option.some(["PinnedLiveFolder", Option.some(bookmarkId("f1")), 2]))
   })
 
-  it("ツリーのすべての階層のライブフォルダを、上から順に集める", () => {
+  it("collects the live folders at every level of the tree, from the top down", () => {
     const tree = Option.getOrThrow(
       pinnedTreeFrom(
         loadedFolder("space", [
@@ -301,7 +301,7 @@ describe("ライブフォルダとして作ったフォルダ", () => {
   })
 })
 
-describe("フォルダの段数", () => {
+describe("folder height", () => {
   const bookmarkPin = (id: string): PinnedBookmark => ({
     _tag: "PinnedBookmark",
     id: bookmarkId(id),
@@ -309,11 +309,11 @@ describe("フォルダの段数", () => {
     url: `https://example.com/${id}`,
   })
 
-  it("中にフォルダの無いフォルダは 1 段", () => {
+  it("a folder with no folders inside is one level high", () => {
     expect(folderHeight(pinFolder("f1", [pin("b1")]))).toBe(1)
   })
 
-  it("いちばん深い枝の段数になる", () => {
+  it("is as high as its deepest branch", () => {
     const folder = pinFolder("f1", [
       pinFolder("f2", []),
       pinFolder("f3", [pinFolder("f4", [pin("b1")])]),
@@ -322,7 +322,7 @@ describe("フォルダの段数", () => {
     expect(folderHeight(folder)).toBe(3)
   })
 
-  it("分割ピンとライブフォルダは段に数えない", () => {
+  it("split pins and live folders don't count as levels", () => {
     const folder = pinFolder("f1", [
       {
         _tag: "PinnedSplit",
