@@ -2,7 +2,7 @@ import { Context, Effect, Layer } from "effect"
 
 export interface DownloadedFile {
   readonly name: string
-  /** MIME タイプ。 */
+  /** MIME type. */
   readonly type: string
   readonly content: string
 }
@@ -10,12 +10,12 @@ export interface DownloadedFile {
 export class FileDownloads extends Context.Service<
   FileDownloads,
   {
-    /** ファイルをダウンロードさせる。保存先はブラウザのダウンロードの設定に従う。 */
+    /** Downloads the file to wherever the browser's download settings say. */
     save(file: DownloadedFile): Effect.Effect<void>
   }
 >()("katip/options/FileDownloads") {
-  // chrome.downloads を使うと、そのためだけに downloads の権限を求めることになる。
-  // ページのリンクからのダウンロードなら権限は要らない
+  // Not chrome.downloads: it would need the downloads permission just for this, while a download
+  // from a link on the page needs none
   static readonly layer = Layer.succeed(
     FileDownloads,
     FileDownloads.of({
@@ -26,7 +26,7 @@ export class FileDownloads extends Context.Service<
           link.href = url
           link.download = file.name
           link.click()
-          // クリックの直後に解放すると、ダウンロードが読み始める前に Blob が消えて失敗することがある
+          // Not revoked right after the click: the Blob may be gone before the download reads it
           setTimeout(() => URL.revokeObjectURL(url), 60_000)
         }),
     }),

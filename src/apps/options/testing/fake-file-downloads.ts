@@ -2,13 +2,13 @@ import { Context, Effect, Layer, Ref } from "effect"
 import { type DownloadedFile, FileDownloads } from "../file-downloads"
 
 /**
- * テスト用。ダウンロードさせたファイルを記録する。
- * `FakeFileDownloads.layer` はこれと {@link FileDownloads} を、記録を共有させて提供する。
+ * For tests. Records the files downloaded. `FakeFileDownloads.layer` provides this and
+ * {@link FileDownloads} sharing one record.
  */
 export class FakeFileDownloads extends Context.Service<
   FakeFileDownloads,
   {
-    /** ダウンロードさせた順に、ダウンロードさせたファイル。 */
+    /** The files downloaded, in the order they were downloaded. */
     readonly saved: Effect.Effect<ReadonlyArray<DownloadedFile>>
   }
 >()("katip/options/testing/FakeFileDownloads") {

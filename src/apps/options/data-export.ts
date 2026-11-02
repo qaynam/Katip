@@ -4,7 +4,7 @@ import { Ports } from "#platform/browser"
 import { EXPORT_PORT_NAME, ExportClientMessage, ExportServerMessage } from "#protocol"
 import { FileDownloads } from "./file-downloads"
 
-/** background が書き出せなかったか、background から返事を受け取れなかった。 */
+/** The background couldn't export, or its answer never arrived. */
 export class ExportUnavailable extends Schema.TaggedError<ExportUnavailable>()(
   "ExportUnavailable",
   {},
@@ -22,12 +22,13 @@ const requestExportFile = Effect.gen(function* () {
     : yield* new ExportUnavailable()
 }).pipe(
   Effect.scoped,
-  // background が求めを読めずに捨てると、返事も切断も届かず待ち続けてしまう
+  // A request the background can't read is dropped with neither an answer nor a disconnect, so
+  // without a timeout this would wait forever
   Effect.timeout("30 seconds"),
   Effect.catch(() => Effect.fail(new ExportUnavailable())),
 )
 
-/** background に書き出しを頼み、届いた書き出しファイルをダウンロードさせる。 */
+/** Asks the background for an export and downloads the file it sends back. */
 export const downloadExportFile = Effect.gen(function* () {
   const content = yield* requestExportFile
   const now = yield* Clock.currentTimeMillis
