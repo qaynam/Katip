@@ -33,8 +33,8 @@ const connectAsSidebar = (sender: PortSender) =>
     return port
   })
 
-describe("拡張の外からの接続", () => {
-  it.live("他の拡張機能から接続されても、タブの一覧を送らずに切る", () =>
+describe("connections from outside the extension", () => {
+  it.live("a connection from another extension is closed without being sent the tabs", () =>
     inBackground(
       Effect.gen(function* () {
         const port = yield* connectAsSidebar(otherExtension)
@@ -47,32 +47,36 @@ describe("拡張の外からの接続", () => {
     ),
   )
 
-  it.live("開発ビルドの規則では、localhost の検証用ページにタブの一覧を送る", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const port = yield* connectAsSidebar(developmentPage)
+  it.live(
+    "under the development build's rule, the development page on localhost is sent the tabs",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const port = yield* connectAsSidebar(developmentPage)
 
-        const first = yield* port.messages.pipe(
-          Stream.take(1),
-          Stream.runCollect,
-          Effect.timeout("2 seconds"),
-        )
+          const first = yield* port.messages.pipe(
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.timeout("2 seconds"),
+          )
 
-        expect(first).toHaveLength(1)
-      }).pipe(Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage)),
-    ),
+          expect(first).toHaveLength(1)
+        }).pipe(Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage)),
+      ),
   )
 
-  it.live("開発ビルドの規則でも、他の拡張機能からの接続は切る", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const port = yield* connectAsSidebar(otherExtension)
+  it.live(
+    "under the development build's rule too, a connection from another extension is closed",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const port = yield* connectAsSidebar(otherExtension)
 
-        yield* port.disconnected.pipe(Effect.timeout("2 seconds"))
-        const received = yield* Stream.runCollect(port.messages)
+          yield* port.disconnected.pipe(Effect.timeout("2 seconds"))
+          const received = yield* Stream.runCollect(port.messages)
 
-        expect(received).toStrictEqual([])
-      }).pipe(Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage)),
-    ),
+          expect(received).toStrictEqual([])
+        }).pipe(Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage)),
+      ),
   )
 })

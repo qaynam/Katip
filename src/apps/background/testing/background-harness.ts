@@ -21,7 +21,7 @@ import { ExtensionInfo } from "../extension-info"
 import { applicationLayer, program } from "../program"
 import { BrowserLanguages } from "../translation"
 
-/** ブラウザの fake だけを `browser` に差し替えた、background のテスト用のレイヤー。 */
+/** The background's test layer, with `browser` as the fake browser. */
 export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
   Layer.mergeAll(
     browser,
@@ -31,17 +31,18 @@ export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
     FakeHistory.layer,
     FakeScripting.layer,
     KeyboardShortcuts.layerTest({}),
-    // 知らせや操作の名前を、テストを動かす環境の言語によらず日本語で期待できるようにする
-    Layer.succeed(BrowserLanguages, ["ja"]),
+    // Fixed, so the expected notices and names don't depend on the language of the machine
+    // running the tests
+    Layer.succeed(BrowserLanguages, ["en"]),
   )
 
 export const backgroundTestLayer = backgroundTestLayerWith(FakeBrowser.layer)
 
 /**
- * background を起動する。
+ * Starts the background.
  *
- * 保存値は起動時に読み込まれるので、storage への仕込みはこれより前に済ませる。
- * レイヤーをテストの外側で作ると、仕込む前の空の storage を読んでしまう。
+ * Saved values are read at startup, so seed storage before this. A layer built outside the test
+ * would read the storage while still empty, before the seeding.
  */
 export const startBackground = Effect.forkScoped(
   program.pipe(Effect.provide(applicationLayer.pipe(Layer.provideMerge(ExtensionInfo.layerTest)))),
@@ -49,7 +50,7 @@ export const startBackground = Effect.forkScoped(
 
 class NotYet extends Schema.TaggedError<NotYet>()("NotYet", {}) {}
 
-/** 条件を満たす値が得られるまで、短い間隔で数秒間問い合わせ続ける。 */
+/** Polls `probe` at short intervals for a few seconds, until it yields a value. */
 export const eventually = <A, E, R>(probe: Effect.Effect<Option.Option<A>, E, R>) =>
   probe.pipe(
     Effect.flatMap(
@@ -62,14 +63,16 @@ const encodeClientMessage = Schema.encodeEffect(ClientMessage)
 const decodeServerMessage = Schema.decodeUnknownEffect(ServerMessage)
 
 /**
- * サイドパネルとして background に接続し、届いたビューとコマンドの結果を受け取る。
+ * Connects to the background as a side panel, and receives the views and command outcomes it
+ * sends.
  */
 export const openSidebar = (windowId: WindowId) =>
   Effect.gen(function* () {
     const fake = yield* FakeBrowser
     const port = yield* fake.connect(SIDEBAR_PORT_NAME)
     const views = yield* Ref.make<ReadonlyArray<SidebarView>>([])
-    // 結果を受け取った時点で届いていたビューの数も覚え、それより後のビューだけを結果の反映とみなす
+    // Also remembers how many views had arrived with each outcome, so only later views count as
+    // showing the command's effect
     const outcomes = yield* Ref.make<
       ReadonlyMap<number, { readonly outcome: CommandOutcome; readonly viewsBefore: number }>
     >(new Map())

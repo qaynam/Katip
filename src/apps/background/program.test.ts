@@ -49,8 +49,8 @@ const activeSpaceName = (view: SidebarView) =>
     (space) => space.name,
   )
 
-describe("起動", () => {
-  it.live("Space が無ければ「ホーム」を作り、開いているタブをそこに入れる", () =>
+describe("startup", () => {
+  it.live("with no Spaces, creates Home and puts the open tabs in it", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -64,10 +64,10 @@ describe("起動", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(temporaryTitles(v, "ホーム"), (titles) => titles.length === 2),
+          Option.exists(temporaryTitles(v, "Home"), (titles) => titles.length === 2),
         )
 
-        expect(view.spaces.map((space) => space.name)).toStrictEqual(["ホーム"])
+        expect(view.spaces.map((space) => space.name)).toStrictEqual(["Home"])
       }),
     ),
   )
@@ -117,14 +117,14 @@ describe("起動", () => {
       ),
   )
 
-  it.live("ブラウザの再起動後は、記録した URL と一致するタブが元の Space に戻る", () =>
+  it.live("after a browser restart, tabs matching a recorded URL return to their Space", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         yield* fake.seedStorage("local", {
           "katip/spaces": [
-            { id: "home", name: "ホーム", color: "grey" },
-            { id: "work", name: "仕事", color: "blue" },
+            { id: "home", name: "Home", color: "grey" },
+            { id: "work", name: "Work", color: "blue" },
           ],
           "katip/restore-snapshot": [
             { url: "https://work.example/", spaceId: "work", pinned: null, titleOverride: null },
@@ -132,29 +132,29 @@ describe("起動", () => {
         })
         const { windowId } = yield* fake.seedWindow({
           tabs: [
-            { url: "https://home.example/", title: "家" },
-            { url: "https://work.example/", title: "職場" },
+            { url: "https://home.example/", title: "Home page" },
+            { url: "https://work.example/", title: "Work page" },
           ],
         })
 
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         const view = yield* sidebar.viewWhere((v) =>
-          Option.exists(temporaryTitles(v, "仕事"), (titles) => titles.length === 1),
+          Option.exists(temporaryTitles(v, "Work"), (titles) => titles.length === 1),
         )
 
-        expect([temporaryTitles(view, "ホーム"), temporaryTitles(view, "仕事")]).toStrictEqual([
-          Option.some(["家"]),
-          Option.some(["職場"]),
+        expect([temporaryTitles(view, "Home"), temporaryTitles(view, "Work")]).toStrictEqual([
+          Option.some(["Home page"]),
+          Option.some(["Work page"]),
         ])
       }),
     ),
   )
 })
 
-describe("ブラウザの終了と再起動", () => {
+describe("quitting and restarting the browser", () => {
   it.live(
-    "フォルダにピン留めしたタブは、終了して開き直しても同じピンとして開いている",
+    "a tab pinned in a folder is open as the same pin after quitting and reopening",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -162,11 +162,11 @@ describe("ブラウザの終了と再起動", () => {
           const storage = yield* Storage
           const first = yield* fake.seedWindow({
             tabs: [
-              { url: "https://mail.example/", title: "メール" },
-              { url: "https://other.example/", title: "その他" },
+              { url: "https://mail.example/", title: "Mail" },
+              { url: "https://other.example/", title: "Other" },
             ],
           })
-          // 1 回目のセッションの background は、スコープを閉じて確実に止める
+          // Closing the first session's scope makes sure its background has stopped
           yield* Effect.scoped(
             Effect.gen(function* () {
               yield* startBackground
@@ -183,7 +183,7 @@ describe("ブラウザの終了と再起動", () => {
                 tabId: first.tabIds[0],
                 placement: { spaceId: initial.activeSpaceId, parentId: folderId, index: 0 },
               })
-              // 再起動用の記録の保存は遅延して行われるので、保存されるまで待つ
+              // The restore snapshot is saved after a delay, so wait until it is
               yield* Effect.sleep("1500 millis")
 
               yield* fake.closeWindow(first.windowId)
@@ -194,20 +194,20 @@ describe("ブラウザの終了と再起動", () => {
           yield* storage.session.remove("katip/restore-queue")
           const restored = yield* fake.seedWindow({
             tabs: [
-              { url: "https://mail.example/", title: "メール" },
-              { url: "https://other.example/", title: "その他" },
+              { url: "https://mail.example/", title: "Mail" },
+              { url: "https://other.example/", title: "Other" },
             ],
           })
           yield* startBackground
-          // fake は 1 回目の起動と同じ接続口を使い回すので、2 回目の background が接続の購読を
-          // 始める前に繋ぐと、その接続は誰にも届かない。実機では起動のたびに接続口が作られ、
-          // 購読まで溜められるため起きない
+          // The fake reuses the first start's connection channel, so a connection made before the
+          // second background subscribes to it reaches no one. Real Chrome makes a channel on every
+          // start and holds connections until the subscription, so it doesn't happen there
           yield* Effect.sleep("300 millis")
           const reopened = yield* openSidebar(restored.windowId)
           const view = yield* reopened.viewWhere((v) =>
-            Option.exists(spaceNamed(v, "ホーム"), (space) => space.pinned._tag === "Available"),
+            Option.exists(spaceNamed(v, "Home"), (space) => space.pinned._tag === "Available"),
           )
-          const folderView = Option.getOrThrow(spaceNamed(view, "ホーム")).pinned
+          const folderView = Option.getOrThrow(spaceNamed(view, "Home")).pinned
           const pins =
             folderView._tag === "Available"
               ? folderView.nodes.flatMap((node) =>
@@ -219,15 +219,15 @@ describe("ブラウザの終了と再起動", () => {
             pins.map((pin) =>
               pin._tag === "PinnedItem" ? [pin.title, pin.openTab?.tab.tabId] : pin,
             ),
-          ).toStrictEqual([["メール", restored.tabIds[0]]])
+          ).toStrictEqual([["Mail", restored.tabIds[0]]])
         }),
       ),
     20_000,
   )
 })
 
-describe("Space の操作", () => {
-  it.live("新しい Space を作るとその Space に切り替わり、新しいタブがその Space に開く", () =>
+describe("Space commands", () => {
+  it.live("creating a Space switches to it and opens a new tab in it", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -248,55 +248,59 @@ describe("Space の操作", () => {
     ),
   )
 
-  it.live("Space を削除しても、その Space の一時タブは閉じずに残る Space へ移る", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.run({ _tag: "CreateSpace", windowId })
-        const created = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
-        const doomed = Option.getOrThrow(spaceNamed(created, "Space 2"))
+  it.live(
+    "deleting a Space moves its temporary tabs to a remaining Space instead of closing them",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.run({ _tag: "CreateSpace", windowId })
+          const created = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
+          const doomed = Option.getOrThrow(spaceNamed(created, "Space 2"))
 
-        yield* sidebar.run({ _tag: "DeleteSpace", spaceId: doomed.id })
-        const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+          yield* sidebar.run({ _tag: "DeleteSpace", spaceId: doomed.id })
+          const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        expect(
-          Option.map(spaceNamed(view, "ホーム"), (s) => temporaryTabsIn(s).length),
-        ).toStrictEqual(Option.some(2))
-      }),
-    ),
+          expect(
+            Option.map(spaceNamed(view, "Home"), (s) => temporaryTabsIn(s).length),
+          ).toStrictEqual(Option.some(2))
+        }),
+      ),
   )
 
-  it.live("テーマを変えるとビューに反映され、同期中のタブグループもテーマに近い色になる", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        yield* fake.seedStorage("sync", { "katip/settings": { syncTabGroups: true } })
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        const before = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        const pink = themeOf([{ hue: 350, chroma: 0.7 }])
+  it.live(
+    "changing the theme shows in the view, and a synced tab group takes the color closest to it",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          yield* fake.seedStorage("sync", { "katip/settings": { syncTabGroups: true } })
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          const before = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+          const pink = themeOf([{ hue: 350, chroma: 0.7 }])
 
-        yield* sidebar.run({ _tag: "SetSpaceTheme", spaceId: before.activeSpaceId, theme: pink })
-        const view = yield* sidebar.viewWhere((v) => v.spaces[0]?.theme.colors[0]?.hue === 350)
-        const groupColor = yield* eventually(
-          Effect.map(fake.snapshot, (snapshot) =>
-            Option.filter(
-              Option.fromNullishOr(snapshot.groups[0]?.color),
-              (color) => color === "pink",
+          yield* sidebar.run({ _tag: "SetSpaceTheme", spaceId: before.activeSpaceId, theme: pink })
+          const view = yield* sidebar.viewWhere((v) => v.spaces[0]?.theme.colors[0]?.hue === 350)
+          const groupColor = yield* eventually(
+            Effect.map(fake.snapshot, (snapshot) =>
+              Option.filter(
+                Option.fromNullishOr(snapshot.groups[0]?.color),
+                (color) => color === "pink",
+              ),
             ),
-          ),
-        )
+          )
 
-        expect([view.spaces[0]?.theme, groupColor]).toStrictEqual([pink, "pink"])
-      }),
-    ),
+          expect([view.spaces[0]?.theme, groupColor]).toStrictEqual([pink, "pink"])
+        }),
+      ),
   )
 
-  it.live("最後の Space は削除できない", () =>
+  it.live("the last Space can't be deleted", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -307,38 +311,40 @@ describe("Space の操作", () => {
 
         const outcome = yield* sidebar.run({ _tag: "DeleteSpace", spaceId: view.activeSpaceId })
 
-        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "最後の Space は削除できません" })
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "The last Space can't be deleted" })
       }),
     ),
   )
 })
 
-describe("表示の言語", () => {
-  it.live("英語に設定していれば、最初に作る Space の名前も、断る理由も英語になる", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        yield* fake.seedStorage("sync", { "katip/settings": { locale: "en" } })
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+describe("display language", () => {
+  it.live(
+    "with Spanish chosen, the first Space's name and the reason for a refusal are in Spanish",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          yield* fake.seedStorage("sync", { "katip/settings": { locale: "es" } })
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          const view = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        const outcome = yield* sidebar.run({ _tag: "DeleteSpace", spaceId: view.activeSpaceId })
+          const outcome = yield* sidebar.run({ _tag: "DeleteSpace", spaceId: view.activeSpaceId })
 
-        expect([view.spaces.map((space) => space.name), outcome]).toStrictEqual([
-          ["Home"],
-          { _tag: "Failed", reason: "The last Space can't be deleted" },
-        ])
-      }),
-    ),
+          expect([view.spaces.map((space) => space.name), outcome]).toStrictEqual([
+            ["Inicio"],
+            { _tag: "Failed", reason: "No se puede eliminar el último espacio" },
+          ])
+        }),
+      ),
   )
 
-  it.live("英語に設定していれば、新しいフォルダと新しい Space に英語の名前が付く", () =>
+  it.live("with Spanish chosen, a new folder and a new Space get Spanish names", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
-        yield* fake.seedStorage("sync", { "katip/settings": { locale: "en" } })
+        yield* fake.seedStorage("sync", { "katip/settings": { locale: "es" } })
         const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
@@ -347,23 +353,23 @@ describe("表示の言語", () => {
         yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null })
         yield* sidebar.run({ _tag: "CreateSpace", windowId })
         const view = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
-        const folders = Option.match(spaceNamed(view, "Home"), {
+        const folders = Option.match(spaceNamed(view, "Inicio"), {
           onNone: () => [],
           onSome: (space) =>
             space.pinned._tag === "Available" ? space.pinned.nodes.map((node) => node.title) : [],
         })
 
         expect([view.spaces.map((space) => space.name), folders]).toStrictEqual([
-          ["Home", "Space 2"],
-          ["New Folder"],
+          ["Inicio", "Espacio 2"],
+          ["Nueva carpeta"],
         ])
       }),
     ),
   )
 })
 
-describe("タブ", () => {
-  it.live("アクティブな Space で開いたタブは、その Space の一時タブになる", () =>
+describe("tabs", () => {
+  it.live("a tab opened while a Space is active becomes a temporary tab of that Space", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -424,37 +430,37 @@ describe("タブ", () => {
       ),
   )
 
-  it.live("ピン留めしたタブを閉じても、閉じたピンとして残る", () =>
+  it.live("closing a pinned tab leaves a closed pin", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://mail.example/", title: "メール" }, { url: "https://b.example/" }],
+          tabs: [{ url: "https://mail.example/", title: "Mail" }, { url: "https://b.example/" }],
         })
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
         yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
-        yield* sidebar.viewWhere((v) => pinnedItems(v, "ホーム").some((p) => p.openTab !== null))
+        yield* sidebar.viewWhere((v) => pinnedItems(v, "Home").some((p) => p.openTab !== null))
         yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[0] })
         const view = yield* sidebar.viewWhere((v) =>
-          pinnedItems(v, "ホーム").some((p) => p.openTab === null),
+          pinnedItems(v, "Home").some((p) => p.openTab === null),
         )
 
-        expect(pinnedItems(view, "ホーム").map((p) => [p.title, p.url, p.openTab])).toStrictEqual([
-          ["メール", "https://mail.example/", null],
+        expect(pinnedItems(view, "Home").map((p) => [p.title, p.url, p.openTab])).toStrictEqual([
+          ["Mail", "https://mail.example/", null],
         ])
       }),
     ),
   )
 
-  it.live("閉じたピンを開くと、そのピンに結びついたタブとして開く", () =>
+  it.live("opening a closed pin opens a tab bound to that pin", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://mail.example/", title: "メール" }, { url: "https://b.example/" }],
+          tabs: [{ url: "https://mail.example/", title: "Mail" }, { url: "https://b.example/" }],
         })
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
@@ -462,24 +468,24 @@ describe("タブ", () => {
         yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
         yield* sidebar.run({ _tag: "CloseTab", tabId: tabIds[0] })
         const closed = yield* sidebar.viewWhere((v) =>
-          pinnedItems(v, "ホーム").some((p) => p.openTab === null),
+          pinnedItems(v, "Home").some((p) => p.openTab === null),
         )
-        const pin = Option.getOrThrow(Array.head(pinnedItems(closed, "ホーム")))
+        const pin = Option.getOrThrow(Array.head(pinnedItems(closed, "Home")))
 
         yield* sidebar.run({ _tag: "OpenPinnedItem", windowId, bookmarkId: pin.bookmarkId })
         const view = yield* sidebar.viewWhere((v) =>
-          pinnedItems(v, "ホーム").some((p) => p.openTab !== null),
+          pinnedItems(v, "Home").some((p) => p.openTab !== null),
         )
 
         expect({
-          temporary: temporaryTitles(view, "ホーム").pipe(Option.map((titles) => titles.length)),
-          openedUrl: pinnedItems(view, "ホーム")[0]?.openTab?.tab.url,
+          temporary: temporaryTitles(view, "Home").pipe(Option.map((titles) => titles.length)),
+          openedUrl: pinnedItems(view, "Home")[0]?.openTab?.tab.url,
         }).toStrictEqual({ temporary: Option.some(1), openedUrl: "https://mail.example/" })
       }),
     ),
   )
 
-  it.live("ショートカットでピン留めを切り替えると、ブックマークが作られて消える", () =>
+  it.live("toggling the pin with the shortcut creates the bookmark, then removes it", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -521,9 +527,9 @@ describe("タブ", () => {
   )
 })
 
-describe("分割ビュー", () => {
+describe("split view", () => {
   const entriesShape = (view: SidebarView) =>
-    Option.match(spaceNamed(view, "ホーム"), {
+    Option.match(spaceNamed(view, "Home"), {
       onNone: () => [],
       onSome: (space) =>
         space.temporaryEntries.map((entry) =>
@@ -532,7 +538,7 @@ describe("分割ビュー", () => {
     })
 
   const pinnedSplits = (view: SidebarView) =>
-    Option.match(spaceNamed(view, "ホーム"), {
+    Option.match(spaceNamed(view, "Home"), {
       onNone: () => [],
       onSome: (space) =>
         space.pinned._tag === "Available"
@@ -542,7 +548,7 @@ describe("分割ビュー", () => {
 
   const splitIdIn = (view: SidebarView) =>
     Option.getOrThrow(
-      Array.findFirst(Option.getOrThrow(spaceNamed(view, "ホーム")).temporaryEntries, (entry) =>
+      Array.findFirst(Option.getOrThrow(spaceNamed(view, "Home")).temporaryEntries, (entry) =>
         entry._tag === "TemporarySplit" ? Option.some(entry.splitViewId) : Option.none(),
       ),
     )
@@ -558,51 +564,55 @@ describe("分割ビュー", () => {
     })
   })
 
-  it.live("タブを別のタブに重ねると分割ビューになり、左右の順を保ったまま 1 行にまとまる", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const { windowId, tabIds } = yield* seedThreeTabs
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+  it.live(
+    "dropping a tab onto another makes a split view, shown as one row in left-right order",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        const outcome = yield* sidebar.run({
-          _tag: "SplitTabs",
-          tabId: tabIds[2],
-          withTabId: tabIds[0],
-        })
-        const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+          const outcome = yield* sidebar.run({
+            _tag: "SplitTabs",
+            tabId: tabIds[2],
+            withTabId: tabIds[0],
+          })
+          const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
 
-        // 既定では新しいタブを上に表示するので、行の並びは Chrome の並びの逆になる
-        expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["A", "C"]]])
-      }),
-    ),
+          // New tabs are shown on top by default, so the rows are in the reverse of Chrome's order
+          expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["A", "C"]]])
+        }),
+      ),
   )
 
-  it.live("別のタブを表示したまま重ねても、ドラッグしたタブが前面に出て分割ビューが見える", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [
-            { url: "https://a.example/", title: "A" },
-            { url: "https://b.example/", title: "B", active: true },
-            { url: "https://c.example/", title: "C" },
-          ],
-        })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+  it.live(
+    "dropping while another tab is shown brings the dragged tab to the front, so the split view shows",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId, tabIds } = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://a.example/", title: "A" },
+              { url: "https://b.example/", title: "B", active: true },
+              { url: "https://c.example/", title: "C" },
+            ],
+          })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[2], withTabId: tabIds[0] })
-        const dragged = yield* (yield* Tabs).get(tabIds[2])
+          yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[2], withTabId: tabIds[0] })
+          const dragged = yield* (yield* Tabs).get(tabIds[2])
 
-        expect([dragged.active, Option.isSome(dragged.splitViewId)]).toStrictEqual([true, true])
-      }),
-    ),
+          expect([dragged.active, Option.isSome(dragged.splitViewId)]).toStrictEqual([true, true])
+        }),
+      ),
   )
 
-  it.live("分割を解除すると、2 つの単独の行に戻る", () =>
+  it.live("separating a split view turns it back into two single rows", () =>
     inBackground(
       Effect.gen(function* () {
         const { windowId, tabIds } = yield* seedThreeTabs
@@ -623,7 +633,7 @@ describe("分割ビュー", () => {
     ),
   )
 
-  it.live("分割をピン留めすると分割ピンになり、タブを閉じても分割ピンとして残る", () =>
+  it.live("pinning a split view makes a split pin, which stays when its tabs close", () =>
     inBackground(
       Effect.gen(function* () {
         const { windowId, tabIds } = yield* seedThreeTabs
@@ -653,7 +663,7 @@ describe("分割ビュー", () => {
   )
 
   it.live(
-    "分割しているタブを 1 つピン留めすると（ショートカットや Spotlight）、2 つそろった分割ピンになる",
+    "pinning one tab of a split view (from the shortcut or Spotlight) makes a split pin of both tabs",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -675,7 +685,7 @@ describe("分割ビュー", () => {
       ),
   )
 
-  it.live("閉じた分割ピンを開くと、2 つのタブが分割ビューで並んで開く", () =>
+  it.live("opening a closed split pin opens both tabs side by side in a split view", () =>
     inBackground(
       Effect.gen(function* () {
         const { windowId, tabIds } = yield* seedThreeTabs
@@ -709,7 +719,7 @@ describe("分割ビュー", () => {
   )
 })
 
-describe("フォルダの移動", () => {
+describe("moving folders", () => {
   const pinnedNodesOf = (view: SidebarView, spaceName: string): ReadonlyArray<PinnedNodeView> =>
     Option.match(spaceNamed(view, spaceName), {
       onNone: () => [],
@@ -719,99 +729,103 @@ describe("フォルダの移動", () => {
   const createdIdOf = (outcome: CommandOutcome) =>
     outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null
       ? Effect.succeed(outcome.createdBookmarkId)
-      : Effect.die(new Error("フォルダを作れなかった"))
+      : Effect.die(new Error("couldn't create the folder"))
 
-  it.live("別の Space のフォルダへ移すと、中で開いているピンのタブもその Space に移る", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId, tabIds } = yield* fake.seedWindow({
-          tabs: [{ url: "https://mail.example/", title: "メール" }, { url: "https://b.example/" }],
-        })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
-        const folderId = yield* createdIdOf(
-          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
-        )
-        yield* sidebar.run({
-          _tag: "PlaceTabInPinned",
-          tabId: tabIds[0],
-          placement: { spaceId: home, parentId: folderId, index: 0 },
-        })
-        yield* sidebar.run({ _tag: "CreateSpace", windowId })
-        const work = Option.getOrThrow(
-          spaceNamed(yield* sidebar.viewWhere((v) => v.spaces.length === 2), "Space 2"),
-        ).id
-        const targetId = yield* createdIdOf(
-          yield* sidebar.run({ _tag: "CreateFolder", spaceId: work, parentId: null }),
-        )
-
-        const outcome = yield* sidebar.run({
-          _tag: "MovePinnedItem",
-          bookmarkId: folderId,
-          placement: { spaceId: work, parentId: targetId, index: 0 },
-        })
-        const openPinsInMovedFolder = (view: SidebarView) =>
-          pinnedNodesOf(view, "Space 2").flatMap((target) =>
-            target._tag === "PinnedFolder"
-              ? target.children.flatMap((moved) =>
-                  moved._tag === "PinnedFolder"
-                    ? moved.children.flatMap((pin) =>
-                        pin._tag === "PinnedItem" && pin.openTab !== null
-                          ? [[pin.title, pin.openTab.tab.tabId] as const]
-                          : [],
-                      )
-                    : [],
-                )
-              : [],
+  it.live(
+    "moving a folder into a folder of another Space moves the open tabs of its pins to that Space too",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId, tabIds } = yield* fake.seedWindow({
+            tabs: [{ url: "https://mail.example/", title: "Mail" }, { url: "https://b.example/" }],
+          })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+          const folderId = yield* createdIdOf(
+            yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
           )
-        const view = yield* sidebar.viewWhere((v) => openPinsInMovedFolder(v).length > 0)
+          yield* sidebar.run({
+            _tag: "PlaceTabInPinned",
+            tabId: tabIds[0],
+            placement: { spaceId: home, parentId: folderId, index: 0 },
+          })
+          yield* sidebar.run({ _tag: "CreateSpace", windowId })
+          const work = Option.getOrThrow(
+            spaceNamed(yield* sidebar.viewWhere((v) => v.spaces.length === 2), "Space 2"),
+          ).id
+          const targetId = yield* createdIdOf(
+            yield* sidebar.run({ _tag: "CreateFolder", spaceId: work, parentId: null }),
+          )
 
-        expect({
-          outcome: outcome._tag,
-          moved: openPinsInMovedFolder(view),
-          leftInHome: pinnedNodesOf(view, "ホーム").length,
-        }).toStrictEqual({
-          outcome: "Succeeded",
-          moved: [["メール", tabIds[0]]],
-          leftInHome: 0,
-        })
-      }),
-    ),
+          const outcome = yield* sidebar.run({
+            _tag: "MovePinnedItem",
+            bookmarkId: folderId,
+            placement: { spaceId: work, parentId: targetId, index: 0 },
+          })
+          const openPinsInMovedFolder = (view: SidebarView) =>
+            pinnedNodesOf(view, "Space 2").flatMap((target) =>
+              target._tag === "PinnedFolder"
+                ? target.children.flatMap((moved) =>
+                    moved._tag === "PinnedFolder"
+                      ? moved.children.flatMap((pin) =>
+                          pin._tag === "PinnedItem" && pin.openTab !== null
+                            ? [[pin.title, pin.openTab.tab.tabId] as const]
+                            : [],
+                        )
+                      : [],
+                  )
+                : [],
+            )
+          const view = yield* sidebar.viewWhere((v) => openPinsInMovedFolder(v).length > 0)
+
+          expect({
+            outcome: outcome._tag,
+            moved: openPinsInMovedFolder(view),
+            leftInHome: pinnedNodesOf(view, "Home").length,
+          }).toStrictEqual({
+            outcome: "Succeeded",
+            moved: [["Mail", tabIds[0]]],
+            leftInHome: 0,
+          })
+        }),
+      ),
   )
 
-  it.live("配下にフォルダを持つフォルダを上限より深くへ移そうとすると、理由つきで断られる", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
-        const outer = yield* createdIdOf(
-          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
-        )
-        yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: outer })
-        const target = yield* createdIdOf(
-          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
-        )
+  it.live(
+    "moving a folder that holds folders beyond the depth limit is refused with a reason",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+          const outer = yield* createdIdOf(
+            yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+          )
+          yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: outer })
+          const target = yield* createdIdOf(
+            yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
+          )
 
-        const outcome = yield* sidebar.run({
-          _tag: "MovePinnedItem",
-          bookmarkId: outer,
-          placement: { spaceId: home, parentId: target, index: 0 },
-        })
+          const outcome = yield* sidebar.run({
+            _tag: "MovePinnedItem",
+            bookmarkId: outer,
+            placement: { spaceId: home, parentId: target, index: 0 },
+          })
 
-        expect(outcome).toStrictEqual({
-          _tag: "Failed",
-          reason: "これ以上深い階層には入れられません",
-        })
-      }),
-    ),
+          expect(outcome).toStrictEqual({
+            _tag: "Failed",
+            reason: "It can't be moved any deeper",
+          })
+        }),
+      ),
   )
 
-  it.live("フォルダを自分の中のフォルダへ移そうとすると、理由つきで断られる", () =>
+  it.live("moving a folder into a folder inside itself is refused with a reason", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -834,16 +848,16 @@ describe("フォルダの移動", () => {
 
         expect(outcome).toStrictEqual({
           _tag: "Failed",
-          reason: "フォルダをそのフォルダ自身の中へは移せません",
+          reason: "A folder can't be moved into itself",
         })
       }),
     ),
   )
 })
 
-describe("フォルダのアイコン", () => {
+describe("folder icons", () => {
   const homeFolders = (view: SidebarView) =>
-    Option.match(spaceNamed(view, "ホーム"), {
+    Option.match(spaceNamed(view, "Home"), {
       onNone: () => [],
       onSome: (space) =>
         space.pinned._tag === "Available"
@@ -857,10 +871,10 @@ describe("フォルダのアイコン", () => {
       const outcome = yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null })
       return outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null
         ? outcome.createdBookmarkId
-        : yield* Effect.die(new Error("フォルダを作れなかった"))
+        : yield* Effect.die(new Error("couldn't create the folder"))
     })
 
-  it.live("フォルダに選んだアイコンが、ビューのフォルダに載る", () =>
+  it.live("the icon chosen for a folder shows on the folder in the view", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -879,7 +893,7 @@ describe("フォルダのアイコン", () => {
     ),
   )
 
-  it.live("アイコンを外したフォルダは、ビューでアイコンを持たない", () =>
+  it.live("a folder whose icon was removed has no icon in the view", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -900,7 +914,7 @@ describe("フォルダのアイコン", () => {
     ),
   )
 
-  it.live("フォルダでないピンにアイコンを付けようとすると、理由つきで断られる", () =>
+  it.live("setting an icon on a pin that isn't a folder is refused with a reason", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -911,8 +925,8 @@ describe("フォルダのアイコン", () => {
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.viewWhere((v) => v.spaces.length === 1)
         yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
-        const pinned = yield* sidebar.viewWhere((v) => pinnedItems(v, "ホーム").length === 1)
-        const pin = Option.getOrThrow(Array.head(pinnedItems(pinned, "ホーム")))
+        const pinned = yield* sidebar.viewWhere((v) => pinnedItems(v, "Home").length === 1)
+        const pin = Option.getOrThrow(Array.head(pinnedItems(pinned, "Home")))
 
         const outcome = yield* sidebar.run({
           _tag: "SetFolderIcon",
@@ -920,14 +934,14 @@ describe("フォルダのアイコン", () => {
           icon: "star",
         })
 
-        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "フォルダが見つかりません" })
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "Folder not found" })
       }),
     ),
   )
 })
 
-describe("Chrome の API が応答しないとき", () => {
-  it.live("時間を超えた操作は打ち切られ、その後の操作は処理される", () =>
+describe("when a Chrome API doesn't respond", () => {
+  it.live("an operation past the time limit is cut off, and later operations still run", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -953,7 +967,7 @@ describe("Chrome の API が応答しないとき", () => {
         const activate = yield* sidebar.run({ _tag: "ActivateTab", tabId: tabIds[1] })
 
         expect([split, activate._tag]).toStrictEqual([
-          { _tag: "Failed", reason: "時間内に完了しませんでした" },
+          { _tag: "Failed", reason: "Didn't finish in time" },
           "Succeeded",
         ])
       }),
@@ -961,8 +975,8 @@ describe("Chrome の API が応答しないとき", () => {
   )
 })
 
-describe("分割ビューの API が無い Chrome", () => {
-  it.live("分割はできないと示され、分割しようとしても理由つきで断られる", () =>
+describe("Chrome without the split view API", () => {
+  it.live("the view says splitting isn't possible, and splitting is refused with a reason", () =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
       const { windowId, tabIds } = yield* fake.seedWindow({
@@ -980,7 +994,7 @@ describe("分割ビューの API が無い Chrome", () => {
 
       expect([view.canSplit, outcome]).toStrictEqual([
         false,
-        { _tag: "Failed", reason: "この Chrome では分割ビューを使えません" },
+        { _tag: "Failed", reason: "Split view isn't available in this version of Chrome" },
       ])
     }).pipe(
       Effect.scoped,
@@ -990,26 +1004,28 @@ describe("分割ビューの API が無い Chrome", () => {
 })
 
 describe("Spotlight", () => {
-  it.live("サイドパネルから開くと、呼び出し元のウィンドウとは別の popup ウィンドウで開く", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* startBackground
-        const sidebar = yield* openSidebar(windowId)
-        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+  it.live(
+    "opened from the side panel, it opens in a popup window apart from the calling window",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-        const outcome = yield* sidebar.run({ _tag: "OpenSpotlight", windowId })
-        const windows = (yield* fake.snapshot).windows
+          const outcome = yield* sidebar.run({ _tag: "OpenSpotlight", windowId })
+          const windows = (yield* fake.snapshot).windows
 
-        expect([
-          outcome._tag,
-          windows
-            .filter((window) => window.id !== windowId)
-            .map((window) => Option.getOrNull(window.type)),
-        ]).toStrictEqual(["Succeeded", ["popup"]])
-      }),
-    ),
+          expect([
+            outcome._tag,
+            windows
+              .filter((window) => window.id !== windowId)
+              .map((window) => Option.getOrNull(window.type)),
+          ]).toStrictEqual(["Succeeded", ["popup"]])
+        }),
+      ),
   )
 })
 
@@ -1074,7 +1090,7 @@ describe("copy shortcuts", () => {
 
           expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
             ["https://copy.example/page?q=1"],
-            ["URL をコピーしました"],
+            ["Copied URL"],
           ])
         }),
       ),
@@ -1094,7 +1110,7 @@ describe("copy shortcuts", () => {
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           ["[Release notes](https://copy.example/page)"],
-          ["Markdown のリンクをコピーしました"],
+          ["Copied Markdown link"],
         ])
       }),
     ),
@@ -1148,7 +1164,7 @@ describe("copy shortcuts", () => {
           yield* pressShortcut("copy-current-url", tab)
           const notice = yield* sidebar.noticeWhere(() => true)
 
-          expect([notice, yield* pageNoticesIn(tab.id)]).toStrictEqual(["URL をコピーしました", []])
+          expect([notice, yield* pageNoticesIn(tab.id)]).toStrictEqual(["Copied URL", []])
         }),
       ),
   )
@@ -1168,29 +1184,29 @@ describe("copy shortcuts", () => {
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           [],
-          ["コピーできませんでした"],
+          ["Couldn’t copy"],
         ])
       }),
     ),
   )
 })
 
-describe("自動アーカイブ", () => {
-  it.live("閾値より長く使われていない一時タブは、アーカイブされて閉じる", () =>
+describe("auto archive", () => {
+  it.live("a temporary tab unused for longer than the threshold is archived and closed", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const { windowId, tabIds } = yield* fake.seedWindow({
           tabs: [
             { url: "https://active.example/", active: true },
-            { url: "https://stale.example/", title: "古いタブ" },
+            { url: "https://stale.example/", title: "Stale tab" },
           ],
         })
         yield* fake.seedStorage("sync", {
           "katip/settings": { autoArchive: { enabled: true, idleMinutes: 1 } },
         })
         yield* fake.seedStorage("local", {
-          "katip/spaces": [{ id: "home", name: "ホーム", color: "grey" }],
+          "katip/spaces": [{ id: "home", name: "Home", color: "grey" }],
         })
         yield* fake.seedStorage("session", {
           "katip/workspace": {
@@ -1207,7 +1223,8 @@ describe("自動アーカイブ", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        // 最初のビューは起動時の整合を待たずに届くので、予約が済むのを別に待つ
+        // The first view arrives without waiting for startup reconciliation, so wait for the alarm
+        // to be scheduled separately
         yield* eventually(
           Effect.map(
             Alarms.use((alarms) => alarms.getAll),
@@ -1220,12 +1237,12 @@ describe("自動アーカイブ", () => {
 
         expect({
           archived: view.archive.map((entry) => entry.title),
-          open: temporaryTitles(view, "ホーム").pipe(Option.map((titles) => titles.length)),
+          open: temporaryTitles(view, "Home").pipe(Option.map((titles) => titles.length)),
           closedTabStillExists: (yield* fake.snapshot).tabs.some(
             (tab) => tab.id === TabId.make(tabIds[1]),
           ),
         }).toStrictEqual({
-          archived: ["古いタブ"],
+          archived: ["Stale tab"],
           open: Option.some(1),
           closedTabStillExists: false,
         })

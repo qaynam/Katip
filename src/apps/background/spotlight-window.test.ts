@@ -36,9 +36,9 @@ const focusedWindowId = Windows.use((windows) =>
 
 const bounds = { left: 100, top: 50, width: 1440, height: 900 }
 
-describe("Spotlight を開く", () => {
-  describe("まだ開いていないとき", () => {
-    it.effect("呼び出し元のウィンドウに重ねて、決まった位置と大きさのポップアップで開く", () =>
+describe("opening Spotlight", () => {
+  describe("when it isn't open yet", () => {
+    it.effect("opens as a popup at a set position and size over the calling window", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -52,7 +52,7 @@ describe("Spotlight を開く", () => {
       ),
     )
 
-    it.effect("開いたページは呼び出し元のウィンドウを知っている", () =>
+    it.effect("the opened page knows the calling window", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -68,7 +68,7 @@ describe("Spotlight を開く", () => {
       ),
     )
 
-    it.effect("Spotlight のウィンドウにフォーカスが移る", () =>
+    it.effect("focus moves to the Spotlight window", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -82,7 +82,7 @@ describe("Spotlight を開く", () => {
       ),
     )
 
-    it.effect("Space を持たないポップアップのウィンドウからは開かない", () =>
+    it.effect("doesn't open from a popup window, which has no Spaces", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -98,26 +98,28 @@ describe("Spotlight を開く", () => {
     )
   })
 
-  describe("既に開いているとき", () => {
-    it.effect("同じウィンドウから開き直すと、新しく開かずに前面へ出す", () =>
-      inBackground(
-        Effect.gen(function* () {
-          const fake = yield* FakeBrowser
-          const windows = yield* Windows
-          const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
-          yield* openSpotlight(windowId)
-          yield* windows.update(windowId, { focused: true })
+  describe("when it's already open", () => {
+    it.effect(
+      "opening it again from the same window brings it to the front instead of opening another",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            const windows = yield* Windows
+            const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+            yield* openSpotlight(windowId)
+            yield* windows.update(windowId, { focused: true })
 
-          yield* openSpotlight(windowId)
+            yield* openSpotlight(windowId)
 
-          const opened = yield* spotlightTabs
-          expect(opened).toHaveLength(1)
-          expect(yield* focusedWindowId).toBe(opened[0]?.windowId)
-        }),
-      ),
+            const opened = yield* spotlightTabs
+            expect(opened).toHaveLength(1)
+            expect(yield* focusedWindowId).toBe(opened[0]?.windowId)
+          }),
+        ),
     )
 
-    it.effect("Spotlight の中から開き直しても、新しくは開かない", () =>
+    it.effect("opening it again from inside Spotlight doesn't open another", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -132,25 +134,29 @@ describe("Spotlight を開く", () => {
       ),
     )
 
-    it.effect("別のウィンドウから開くと、そのウィンドウのための Spotlight 1 つに置き換わる", () =>
-      inBackground(
-        Effect.gen(function* () {
-          const fake = yield* FakeBrowser
-          const first = yield* fake.seedWindow({ tabs: [{}] })
-          const second = yield* fake.seedWindow({ tabs: [{}] })
-          yield* openSpotlight(first.windowId)
+    it.effect(
+      "opening it from another window replaces it with a single Spotlight for that window",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            const first = yield* fake.seedWindow({ tabs: [{}] })
+            const second = yield* fake.seedWindow({ tabs: [{}] })
+            yield* openSpotlight(first.windowId)
 
-          yield* openSpotlight(second.windowId)
+            yield* openSpotlight(second.windowId)
 
-          expect((yield* spotlightTabs).map(callerOf)).toStrictEqual([Option.some(second.windowId)])
-        }),
-      ),
+            expect((yield* spotlightTabs).map(callerOf)).toStrictEqual([
+              Option.some(second.windowId),
+            ])
+          }),
+        ),
     )
   })
 })
 
-describe("キーボードショートカット", () => {
-  it.effect("押したときにアクティブだったタブのウィンドウから Spotlight を開く", () =>
+describe("keyboard shortcut", () => {
+  it.effect("opens Spotlight from the window of the tab that was active when it was pressed", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -166,7 +172,7 @@ describe("キーボードショートカット", () => {
     ),
   )
 
-  it.effect("アクティブなタブが分からなければ、最後にフォーカスしたウィンドウから開く", () =>
+  it.effect("without a known active tab, opens it from the last focused window", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser

@@ -27,38 +27,36 @@ const inBackground = <A, E>(
 const exportRequest = Schema.encodeSync(ExportClientMessage)({ _tag: "Export" })
 const decodeServerMessage = Schema.decodeUnknownEffect(ExportServerMessage)
 
-/** 設定画面として接続し、書き出しを求めて、最初の返事を受け取る。 */
+/** Connects as the settings page, asks for an export, and receives the first answer. */
 const requestExport = (sender?: PortSender) =>
   Effect.gen(function* () {
     const port = yield* (yield* FakeBrowser).connect(EXPORT_PORT_NAME, sender)
     yield* port.post(exportRequest)
     const reply = yield* port.messages.pipe(Stream.runHead, Effect.timeout("5 seconds"))
     return yield* Option.match(reply, {
-      onNone: () => Effect.die(new Error("返事が届く前に切断された")),
+      onNone: () => Effect.die(new Error("disconnected before an answer arrived")),
       onSome: decodeServerMessage,
     })
   })
 
 const exportedContent = Effect.gen(function* () {
   const reply = yield* requestExport()
-  return reply._tag === "Exported"
-    ? reply.content
-    : yield* Effect.die(new Error("書き出せなかった"))
+  return reply._tag === "Exported" ? reply.content : yield* Effect.die(new Error("couldn't export"))
 })
 
 const createdIdOf = (outcome: CommandOutcome) =>
   outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null
     ? Effect.succeed(outcome.createdBookmarkId)
-    : Effect.die(new Error("ピンを作れなかった"))
+    : Effect.die(new Error("couldn't create the pin"))
 
 const splitViewIdIn = (view: SidebarView) =>
-  Array.findFirst(Option.getOrThrow(spaceNamed(view, "ホーム")).temporaryEntries, (entry) =>
+  Array.findFirst(Option.getOrThrow(spaceNamed(view, "Home")).temporaryEntries, (entry) =>
     entry._tag === "TemporarySplit" ? Option.some(entry.splitViewId) : Option.none(),
   )
 
-describe("データの書き出し", () => {
+describe("data export", () => {
   it.live(
-    "設定画面が求めると、Space・ピン留め・一時タブ・Favorites・設定を書いたファイルの中身を返す",
+    "asked by the settings page, returns a file with the Spaces, pinned tabs, temporary tabs, Favorites, and settings",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -66,12 +64,12 @@ describe("データの書き出し", () => {
           yield* fake.seedStorage("sync", { "katip/settings": { newTabsOnTop: false } })
           const { windowId, tabIds } = yield* fake.seedWindow({
             tabs: [
-              { url: "https://calendar.example.com/", title: "カレンダー", pinned: true },
-              { url: "https://mail.example.com/", title: "メール" },
-              { url: "https://docs.example.com/", title: "設計" },
-              { url: "https://tracker.example.com/", title: "課題" },
-              { url: "https://news.example.com/", title: "ニュース" },
-              { url: "https://blog.example.com/", title: "ブログ" },
+              { url: "https://calendar.example.com/", title: "Calendar", pinned: true },
+              { url: "https://mail.example.com/", title: "Mail" },
+              { url: "https://docs.example.com/", title: "Design" },
+              { url: "https://tracker.example.com/", title: "Issues" },
+              { url: "https://news.example.com/", title: "News" },
+              { url: "https://blog.example.com/", title: "Blog" },
             ],
           })
           yield* startBackground
@@ -89,7 +87,7 @@ describe("データの書き出し", () => {
           const folder = yield* createdIdOf(
             yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null }),
           )
-          yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: folder, title: "読みもの" })
+          yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: folder, title: "Reading" })
           yield* sidebar.run({ _tag: "SetFolderIcon", bookmarkId: folder, icon: "star" })
           const live = yield* createdIdOf(
             yield* sidebar.run({
@@ -99,14 +97,14 @@ describe("データの書き出し", () => {
               source: { _tag: "GitHub", query: "mentioned" },
             }),
           )
-          yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: live, title: "メンション" })
+          yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: live, title: "Mentions" })
           yield* sidebar.run({ _tag: "SetLiveFolderSort", bookmarkId: live, sort: "oldest" })
-          yield* sidebar.run({ _tag: "RenameTab", tabId: tabIds[5], title: "あとで読む" })
+          yield* sidebar.run({ _tag: "RenameTab", tabId: tabIds[5], title: "Read later" })
           const theme = themeOf([{ hue: 145, chroma: 0.6 }])
           yield* sidebar.run({
             _tag: "CreateSpace",
             windowId,
-            name: SpaceName.make("仕事"),
+            name: SpaceName.make("Work"),
             theme,
           })
           const view = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
@@ -123,47 +121,47 @@ describe("データの書き出し", () => {
             spaces: [
               {
                 id: home,
-                name: "ホーム",
-                theme: Option.getOrThrow(spaceNamed(view, "ホーム")).theme,
+                name: "Home",
+                theme: Option.getOrThrow(spaceNamed(view, "Home")).theme,
                 pinned: [
-                  { type: "pin", title: "メール", url: "https://mail.example.com/" },
+                  { type: "pin", title: "Mail", url: "https://mail.example.com/" },
                   {
                     type: "split",
                     items: [
-                      { type: "pin", title: "設計", url: "https://docs.example.com/" },
-                      { type: "pin", title: "課題", url: "https://tracker.example.com/" },
+                      { type: "pin", title: "Design", url: "https://docs.example.com/" },
+                      { type: "pin", title: "Issues", url: "https://tracker.example.com/" },
                     ],
                   },
-                  { type: "folder", title: "読みもの", icon: "star", children: [] },
+                  { type: "folder", title: "Reading", icon: "star", children: [] },
                   {
                     type: "liveFolder",
-                    title: "メンション",
+                    title: "Mentions",
                     source: { kind: "github", query: "mentioned" },
                     sort: "oldest",
                   },
                 ],
                 tabs: [
-                  { title: "ニュース", url: "https://news.example.com/" },
-                  { title: "あとで読む", url: "https://blog.example.com/" },
+                  { title: "News", url: "https://news.example.com/" },
+                  { title: "Read later", url: "https://blog.example.com/" },
                 ],
               },
               {
-                id: Option.getOrThrow(spaceNamed(view, "仕事")).id,
-                name: "仕事",
+                id: Option.getOrThrow(spaceNamed(view, "Work")).id,
+                name: "Work",
                 theme,
                 pinned: [],
-                // Space を作ると、その Space に新しいタブが開く
+                // Creating a Space opens a new tab in it
                 tabs: [{ title: "chrome://newtab/", url: "chrome://newtab/" }],
               },
             ],
-            favorites: [{ title: "カレンダー", url: "https://calendar.example.com/" }],
+            favorites: [{ title: "Calendar", url: "https://calendar.example.com/" }],
             newTabsOnTop: false,
           })
         }),
       ),
   )
 
-  it.live("GitHub のトークンは書き出さない", () =>
+  it.live("leaves out the GitHub token", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -180,7 +178,7 @@ describe("データの書き出し", () => {
     ),
   )
 
-  it.live("他の拡張機能から接続されても、書き出さずに切る", () =>
+  it.live("a connection from another extension is closed without exporting", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -203,7 +201,7 @@ describe("データの書き出し", () => {
   )
 })
 
-describe("書き出しの求めへの返事", () => {
+describe("answer to an export request", () => {
   const answerWith = (content: Effect.Effect<string, unknown>) =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
@@ -215,7 +213,7 @@ describe("書き出しの求めへの返事", () => {
       return yield* decodeServerMessage(Option.getOrThrow(reply))
     })
 
-  it.live("中身を作れれば、その中身を返す", () =>
+  it.live("when the content can be built, returns it", () =>
     inBackground(
       Effect.gen(function* () {
         expect(yield* answerWith(Effect.succeed("{}"))).toStrictEqual({
@@ -226,23 +224,25 @@ describe("書き出しの求めへの返事", () => {
     ),
   )
 
-  it.live("中身を作れなければ、書き出せなかったと返す", () =>
+  it.live("when the content can't be built, answers that the export failed", () =>
     inBackground(
       Effect.gen(function* () {
-        expect(yield* answerWith(Effect.fail("ピン留めを読めない"))).toStrictEqual({
+        expect(yield* answerWith(Effect.fail("can't read the pinned tabs"))).toStrictEqual({
           _tag: "Failed",
         })
       }),
     ),
   )
 
-  it.live("中身を作る途中で予期しない誤りが起きても、書き出せなかったと返す", () =>
-    inBackground(
-      Effect.gen(function* () {
-        expect(yield* answerWith(Effect.die(new Error("予期しない誤り")))).toStrictEqual({
-          _tag: "Failed",
-        })
-      }),
-    ),
+  it.live(
+    "when building the content hits an unexpected defect, still answers that the export failed",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          expect(yield* answerWith(Effect.die(new Error("unexpected defect")))).toStrictEqual({
+            _tag: "Failed",
+          })
+        }),
+      ),
   )
 })

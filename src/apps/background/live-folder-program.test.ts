@@ -25,7 +25,7 @@ const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const reviewRequests: LiveSource = { _tag: "GitHub", query: "review-requested" }
 
 const gmailEntry = (id: string, subject: string) =>
-  `<entry><title>${subject}</title><summary>本文の冒頭</summary><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=${id}&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:${id}</id><author><name>佐藤 花子</name><email>hanako.sato@example.co.jp</email></author></entry>`
+  `<entry><title>${subject}</title><summary>Start of the message</summary><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=${id}&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:${id}</id><author><name>Hanako Sato</name><email>hanako.sato@example.co.jp</email></author></entry>`
 
 const gmailFeed = (...entries: ReadonlyArray<string>) =>
   `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><tagline>New messages in your Gmail Inbox</tagline><fullcount>${entries.length}</fullcount><link rel="alternate" href="https://mail.google.com/mail" type="text/html" /><modified>2026-10-30T09:12:44Z</modified>${entries.join("")}</feed>`
@@ -85,7 +85,7 @@ const serveGmail = (xml: string) =>
 const grant = (origin: string) => FakePermissions.use((permissions) => permissions.grant([origin]))
 
 const homeNodes = (view: SidebarView): ReadonlyArray<PinnedNodeView> =>
-  Option.match(spaceNamed(view, "ホーム"), {
+  Option.match(spaceNamed(view, "Home"), {
     onNone: () => [],
     onSome: (space) => (space.pinned._tag === "Available" ? space.pinned.nodes : []),
   })
@@ -103,7 +103,7 @@ const isReady = hasLiveFolderWith((live) => live.status._tag === "Ready")
 const hasFailed = hasLiveFolderWith((live) => live.status._tag === "Failed")
 
 const temporaryUrls = (view: SidebarView): ReadonlyArray<string> =>
-  Option.match(spaceNamed(view, "ホーム"), {
+  Option.match(spaceNamed(view, "Home"), {
     onNone: () => [],
     onSome: (space) =>
       space.temporaryEntries.flatMap((entry) =>
@@ -140,12 +140,14 @@ const storedRecordIds = Effect.gen(function* () {
   })
 })
 
-describe("ライブフォルダの作成", () => {
-  it.live("Gmail のライブフォルダを作ると、未読のメールを取り込んで未読として並べる", () =>
+describe("creating a live folder", () => {
+  it.live("a Gmail live folder fetches the unread emails and lists them as unread", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付"), gmailEntry("2", "議事録")))
+        yield* serveGmail(
+          gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+        )
 
         const { sidebar, outcome } = yield* createLiveFolder(inbox)
         const view = yield* sidebar.viewWhere(isReady)
@@ -157,43 +159,45 @@ describe("ライブフォルダの作成", () => {
           items: live.items.map((item) => [item.title, item.subtitle, item.isUnseen]),
         }).toStrictEqual({
           created: live.bookmarkId,
-          title: "Gmail の受信トレイ",
+          title: "Gmail Inbox",
           items: [
-            ["請求書の送付", "佐藤 花子", true],
-            ["議事録", "佐藤 花子", true],
+            ["Invoice attached", "Hanako Sato", true],
+            ["Meeting notes", "Hanako Sato", true],
           ],
         })
       }),
     ),
   )
 
-  it.live("取得元へのアクセスが許可されていなければ、問い合わせずに許可を求めれば直ると示す", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const { sidebar } = yield* createLiveFolder(inbox)
-        const view = yield* sidebar.viewWhere(hasFailed)
+  it.live(
+    "without access to the source, makes no request and shows that allowing access fixes it",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { sidebar } = yield* createLiveFolder(inbox)
+          const view = yield* sidebar.viewWhere(hasFailed)
 
-        expect([
-          Option.map(liveFolderOf(view), (live) => live.status),
-          yield* (yield* FakeHttp).requests,
-        ]).toStrictEqual([
-          Option.some({
-            _tag: "Failed",
-            reason: "取得元へのアクセスが許可されていません",
-            needsPermission: true,
-            needsToken: false,
-            signInUrl: null,
-          }),
-          [],
-        ])
-      }),
-    ),
+          expect([
+            Option.map(liveFolderOf(view), (live) => live.status),
+            yield* (yield* FakeHttp).requests,
+          ]).toStrictEqual([
+            Option.some({
+              _tag: "Failed",
+              reason: "Access to the source isn't allowed",
+              needsPermission: true,
+              needsToken: false,
+              signInUrl: null,
+            }),
+            [],
+          ])
+        }),
+      ),
   )
 
-  it.live("アクセスが許可されると、すぐに取得し直して項目が並ぶ", () =>
+  it.live("once access is allowed, refreshes at once and lists the items", () =>
     inBackground(
       Effect.gen(function* () {
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
         const { sidebar } = yield* createLiveFolder(inbox)
         yield* sidebar.viewWhere(hasFailed)
 
@@ -202,18 +206,18 @@ describe("ライブフォルダの作成", () => {
 
         expect(
           Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
-        ).toStrictEqual(Option.some(["請求書の送付"]))
+        ).toStrictEqual(Option.some(["Invoice attached"]))
       }),
     ),
   )
 })
 
 describe("GitHub", () => {
-  it.live("ブラウザで GitHub にログインしていれば、トークン無しでレビュー依頼が並ぶ", () =>
+  it.live("signed in to GitHub in the browser, lists review requests without a token", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_ORIGIN)
-        yield* serveGitHubWeb(githubWebPage(["<em>ライブ</em>フォルダを追加する"]))
+        yield* serveGitHubWeb(githubWebPage(["Add <em>live</em> folders"]))
 
         const { sidebar } = yield* createLiveFolder(reviewRequests)
         const view = yield* sidebar.viewWhere(isReady)
@@ -225,7 +229,7 @@ describe("GitHub", () => {
         ).toStrictEqual(
           Option.some([
             [
-              "ライブフォルダを追加する",
+              "Add live folders",
               "katip-dev/katip#200",
               "https://github.com/katip-dev/katip/pull/200",
             ],
@@ -235,7 +239,7 @@ describe("GitHub", () => {
     ),
   )
 
-  it.live("GitHub にログインしていなければ、ログインページを開けば直ると示す", () =>
+  it.live("not signed in to GitHub, shows that opening the sign-in page fixes it", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_ORIGIN)
@@ -247,7 +251,7 @@ describe("GitHub", () => {
         expect(Option.map(liveFolderOf(view), (live) => live.status)).toStrictEqual(
           Option.some({
             _tag: "Failed",
-            reason: "GitHub にログインしていません",
+            reason: "You aren't signed in to GitHub",
             needsPermission: false,
             needsToken: false,
             signInUrl: "https://github.com/login",
@@ -257,7 +261,7 @@ describe("GitHub", () => {
     ),
   )
 
-  it.live("検索画面の応答の形が変わって読めなければ、読み取れないと示す", () =>
+  it.live("when the search page's response has changed shape, says it couldn't be read", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_ORIGIN)
@@ -270,26 +274,28 @@ describe("GitHub", () => {
           Option.map(liveFolderOf(view), (live) =>
             live.status._tag === "Failed" ? live.status.reason : live.status._tag,
           ),
-        ).toStrictEqual(Option.some("GitHub の応答を読み取れませんでした"))
+        ).toStrictEqual(Option.some("Couldn't read the response from GitHub"))
       }),
     ),
   )
 
-  it.live("トークンを設定すると、公式 API で取得し直す", () =>
+  it.live("setting a token refreshes through the official API", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_ORIGIN)
         yield* grant(GITHUB_API_ORIGIN)
-        yield* serveGitHubWeb(githubWebPage(["画面の検索の結果"]))
+        yield* serveGitHubWeb(githubWebPage(["Result from the search page"]))
         yield* (yield* FakeHttp).route("https://api.github.com/", () =>
-          Effect.succeed(httpResponse(200, githubSearchBody("公式 API の結果"))),
+          Effect.succeed(httpResponse(200, githubSearchBody("Result from the official API"))),
         )
         const { sidebar } = yield* createLiveFolder(reviewRequests)
         yield* sidebar.viewWhere(isReady)
 
         yield* sidebar.run({ _tag: "SetGitHubToken", token: "ghp_example" })
         const view = yield* sidebar.viewWhere(
-          hasLiveFolderWith((live) => live.items.some((item) => item.title === "公式 API の結果")),
+          hasLiveFolderWith((live) =>
+            live.items.some((item) => item.title === "Result from the official API"),
+          ),
         )
 
         const requests = yield* (yield* FakeHttp).requests
@@ -297,14 +303,14 @@ describe("GitHub", () => {
           titles: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.title)),
           authorization: requests.at(-1)?.headers?.["Authorization"],
         }).toStrictEqual({
-          titles: Option.some(["公式 API の結果"]),
+          titles: Option.some(["Result from the official API"]),
           authorization: "Bearer ghp_example",
         })
       }),
     ),
   )
 
-  it.live("設定したトークンを受け付けられなければ、トークンが無効なので入れ直せば直ると示す", () =>
+  it.live("when the token is rejected, says it's invalid and that entering it again fixes it", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GITHUB_API_ORIGIN)
@@ -325,7 +331,7 @@ describe("GitHub", () => {
         expect(Option.map(liveFolderOf(view), (live) => live.status)).toStrictEqual(
           Option.some({
             _tag: "Failed",
-            reason: "GitHub のアクセストークンが無効です",
+            reason: "The GitHub access token is invalid",
             needsPermission: false,
             needsToken: true,
             signInUrl: null,
@@ -336,8 +342,8 @@ describe("GitHub", () => {
   )
 })
 
-describe("Gmail にログインしていないとき", () => {
-  it.live("ログイン画面へリダイレクトされたら、そのアカウントの受信トレイを開けば直ると示す", () =>
+describe("when not signed in to Gmail", () => {
+  it.live("redirected to sign-in, shows that opening that account's inbox fixes it", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
@@ -358,8 +364,8 @@ describe("Gmail にログインしていないとき", () => {
   )
 })
 
-describe("URL を開く", () => {
-  it.live("ログインページなどの URL を、見ている Space の一時タブとして開く", () =>
+describe("opening URLs", () => {
+  it.live("opens a URL such as a sign-in page as a temporary tab of the Space being shown", () =>
     inBackground(
       Effect.gen(function* () {
         const { sidebar, windowId } = yield* startWithSidebar
@@ -381,7 +387,7 @@ describe("URL を開く", () => {
     ),
   )
 
-  it.live("http と https 以外の URL は開かない", () =>
+  it.live("doesn't open URLs other than http and https", () =>
     inBackground(
       Effect.gen(function* () {
         const { sidebar, windowId } = yield* startWithSidebar
@@ -396,7 +402,7 @@ describe("URL を開く", () => {
           outcomes,
           tabsAdded: (yield* (yield* FakeBrowser).snapshot).tabs.length - tabsBefore,
         }).toStrictEqual({
-          outcomes: Array.replicate({ _tag: "Failed", reason: "この URL は開けません" }, 4),
+          outcomes: Array.replicate({ _tag: "Failed", reason: "This URL can't be opened" }, 4),
           tabsAdded: 0,
         })
       }),
@@ -404,12 +410,12 @@ describe("URL を開く", () => {
   )
 })
 
-describe("並べ方", () => {
-  it.live("並べ方を変えるとその順で並び、取得し直しても保たれる", () =>
+describe("sorting", () => {
+  it.live("changing the sort reorders the items, and the order survives a refresh", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "新しいメール"), gmailEntry("2", "古いメール")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Newer email"), gmailEntry("2", "Older email")))
         const { sidebar } = yield* createLiveFolder(inbox)
         const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
 
@@ -426,12 +432,12 @@ describe("並べ方", () => {
 
         expect(
           Option.map(liveFolderOf(view), (live) => [live.sort, live.items.map((i) => i.title)]),
-        ).toStrictEqual(Option.some(["oldest", ["古いメール", "新しいメール"]]))
+        ).toStrictEqual(Option.some(["oldest", ["Older email", "Newer email"]]))
       }),
     ),
   )
 
-  it.live("ライブフォルダでないピンには並べ方を設定できない", () =>
+  it.live("a pin that isn't a live folder can't be sorted", () =>
     inBackground(
       Effect.gen(function* () {
         const { sidebar, spaceId } = yield* startWithSidebar
@@ -444,48 +450,54 @@ describe("並べ方", () => {
           sort: "title",
         })
 
-        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "ライブフォルダが見つかりません" })
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "Live folder not found" })
       }),
     ),
   )
 })
 
-describe("項目を開く・既読にする", () => {
-  it.live("項目を開くと、見ている Space の一時タブとして開き、その項目だけが既読になる", () =>
-    inBackground(
-      Effect.gen(function* () {
-        yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付"), gmailEntry("2", "議事録")))
-        const { sidebar, windowId } = yield* createLiveFolder(inbox)
-        const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
-        const [first] = ready.items
+describe("opening items and marking them read", () => {
+  it.live(
+    "opening an item opens it as a temporary tab of the Space being shown and marks only it read",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(
+            gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+          )
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          const [first] = ready.items
 
-        const outcome = yield* sidebar.run({
-          _tag: "OpenLiveItem",
-          windowId,
-          bookmarkId: ready.bookmarkId,
-          itemId: first?.id ?? "",
-        })
-        const view = yield* sidebar.viewWhere(
-          (v) =>
-            temporaryUrls(v).includes(first?.url ?? "") &&
-            hasLiveFolderWith((live) => live.items.some((item) => !item.isUnseen))(v),
-        )
+          const outcome = yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId: first?.id ?? "",
+          })
+          const view = yield* sidebar.viewWhere(
+            (v) =>
+              temporaryUrls(v).includes(first?.url ?? "") &&
+              hasLiveFolderWith((live) => live.items.some((item) => !item.isUnseen))(v),
+          )
 
-        expect({
-          outcome: outcome._tag,
-          unseen: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.isUnseen)),
-          opened: temporaryUrls(view).filter((url) => url === first?.url).length,
-        }).toStrictEqual({ outcome: "Succeeded", unseen: Option.some([false, true]), opened: 1 })
-      }),
-    ),
+          expect({
+            outcome: outcome._tag,
+            unseen: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.isUnseen)),
+            opened: temporaryUrls(view).filter((url) => url === first?.url).length,
+          }).toStrictEqual({ outcome: "Succeeded", unseen: Option.some([false, true]), opened: 1 })
+        }),
+      ),
   )
 
-  it.live("まとめて既読にすると、すべての項目が既読になる", () =>
+  it.live("marking all as read marks every item read", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付"), gmailEntry("2", "議事録")))
+        yield* serveGmail(
+          gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+        )
         const { sidebar } = yield* createLiveFolder(inbox)
         const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
 
@@ -501,7 +513,7 @@ describe("項目を開く・既読にする", () => {
     ),
   )
 
-  it.live("無くなった項目は開けない", () =>
+  it.live("an item that's gone can't be opened", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
@@ -516,35 +528,35 @@ describe("項目を開く・既読にする", () => {
           itemId: "tag:gmail.google.com,2004:missing",
         })
 
-        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "項目が見つかりません" })
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "Item not found" })
       }),
     ),
   )
 })
 
-describe("取得し直す", () => {
-  it.live("取得し直すと、取得元の今の中身に置き換わる", () =>
+describe("refreshing", () => {
+  it.live("refreshing replaces the items with what the source has now", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "古いメール")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Older email")))
         const { sidebar } = yield* createLiveFolder(inbox)
         const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
-        yield* serveGmail(gmailFeed(gmailEntry("2", "新しいメール")))
+        yield* serveGmail(gmailFeed(gmailEntry("2", "Newer email")))
 
         yield* sidebar.run({ _tag: "RefreshLiveFolder", bookmarkId: ready.bookmarkId })
         const view = yield* sidebar.viewWhere(
-          hasLiveFolderWith((live) => live.items.some((item) => item.title === "新しいメール")),
+          hasLiveFolderWith((live) => live.items.some((item) => item.title === "Newer email")),
         )
 
         expect(
           Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.title)),
-        ).toStrictEqual(Option.some(["新しいメール"]))
+        ).toStrictEqual(Option.some(["Newer email"]))
       }),
     ),
   )
 
-  it.live("ライブフォルダでないピンは取得し直せない", () =>
+  it.live("a pin that isn't a live folder can't be refreshed", () =>
     inBackground(
       Effect.gen(function* () {
         const { sidebar, spaceId } = yield* startWithSidebar
@@ -556,14 +568,14 @@ describe("取得し直す", () => {
           bookmarkId: folderId ?? BookmarkId.make("missing"),
         })
 
-        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "ライブフォルダが見つかりません" })
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "Live folder not found" })
       }),
     ),
   )
 })
 
-describe("ブックマークのフォルダとしての操作", () => {
-  it.live("ほかのフォルダの中へ移し、改名し、閉じられる", () =>
+describe("as a bookmark folder", () => {
+  it.live("can be moved into another folder, renamed, and collapsed", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
@@ -572,14 +584,14 @@ describe("ブックマークのフォルダとしての操作", () => {
         const liveId = outcome._tag === "Succeeded" ? outcome.createdBookmarkId : null
         const folder = yield* sidebar.run({ _tag: "CreateFolder", spaceId, parentId: null })
         const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
-        if (liveId === null || folderId === null) return yield* Effect.die("作れなかった")
+        if (liveId === null || folderId === null) return yield* Effect.die("couldn't create it")
 
         yield* sidebar.run({
           _tag: "MovePinnedItem",
           bookmarkId: liveId,
           placement: { spaceId, parentId: folderId, index: 0 },
         })
-        yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: liveId, title: "メール" })
+        yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: liveId, title: "Mail" })
         yield* sidebar.run({ _tag: "SetFolderExpanded", bookmarkId: liveId, isExpanded: false })
         const view = yield* sidebar.viewWhere((v) =>
           homeNodes(v).some(
@@ -596,16 +608,16 @@ describe("ブックマークのフォルダとしての操作", () => {
           moved.map((node) =>
             node._tag === "PinnedLiveFolder" ? [node.title, node.isExpanded] : node._tag,
           ),
-        ).toStrictEqual([["メール", false]])
+        ).toStrictEqual([["Mail", false]])
       }),
     ),
   )
 
-  it.live("削除すると、取得した中身のキャッシュと印も消える", () =>
+  it.live("deleting it also removes its cached items and its mark", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
         const { sidebar } = yield* createLiveFolder(inbox)
         const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
 
@@ -627,15 +639,15 @@ describe("ブックマークのフォルダとしての操作", () => {
     ),
   )
 
-  it.live("入っているフォルダごと削除しても、取得した中身のキャッシュが消える", () =>
+  it.live("deleting the folder it's in also removes its cached items", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
         const { sidebar, spaceId } = yield* startWithSidebar
         const folder = yield* sidebar.run({ _tag: "CreateFolder", spaceId, parentId: null })
         const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
-        if (folderId === null) return yield* Effect.die("作れなかった")
+        if (folderId === null) return yield* Effect.die("couldn't create it")
         yield* sidebar.run({ _tag: "CreateLiveFolder", spaceId, parentId: folderId, source: inbox })
         yield* eventually(
           Effect.map(
@@ -658,51 +670,53 @@ describe("ブックマークのフォルダとしての操作", () => {
   )
 })
 
-describe("定期的な取得", () => {
+describe("periodic refresh", () => {
   const findAlarm = Effect.map(
     Alarms.use((alarms) => alarms.getAll),
     (all) => all.find((alarm) => alarm.name === "katip/live-folders/refresh"),
   )
 
-  it.live("ライブフォルダを作ると定期的な取得が予約され、すべて消すと予約も消える", () =>
-    inBackground(
-      Effect.gen(function* () {
-        yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed())
-        const { sidebar, outcome } = yield* createLiveFolder(inbox)
-        const scheduled = yield* findAlarm
-        const liveId = outcome._tag === "Succeeded" ? outcome.createdBookmarkId : null
+  it.live(
+    "creating a live folder schedules periodic refreshes, and removing them all clears the schedule",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(gmailFeed())
+          const { sidebar, outcome } = yield* createLiveFolder(inbox)
+          const scheduled = yield* findAlarm
+          const liveId = outcome._tag === "Succeeded" ? outcome.createdBookmarkId : null
 
-        yield* sidebar.run({
-          _tag: "RemovePinnedItem",
-          bookmarkId: liveId ?? BookmarkId.make("missing"),
-        })
+          yield* sidebar.run({
+            _tag: "RemovePinnedItem",
+            bookmarkId: liveId ?? BookmarkId.make("missing"),
+          })
 
-        expect([
-          Option.getOrNull(Option.fromNullishOr(scheduled?.periodInMinutes).pipe(Option.flatten)),
-          yield* findAlarm,
-        ]).toStrictEqual([5, undefined])
-      }),
-    ),
+          expect([
+            Option.getOrNull(Option.fromNullishOr(scheduled?.periodInMinutes).pipe(Option.flatten)),
+            yield* findAlarm,
+          ]).toStrictEqual([5, undefined])
+        }),
+      ),
   )
 
-  // ブックマークに置いたライブフォルダと、前回の取得の記録を起動前に仕込む
+  // Seeds, before startup, a live folder in the bookmarks and the record of its last refresh
   const seedLiveFolder = (record: unknown | null) =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
       yield* fake.seedStorage("local", {
-        "katip/spaces": [{ id: "home", name: "ホーム", color: "grey" }],
+        "katip/spaces": [{ id: "home", name: "Home", color: "grey" }],
       })
       const [root] = yield* fake.seedBookmarks(BookmarkId.make("2"), [
         {
           title: "Katip",
-          children: [{ title: "ホーム", children: [{ title: "受信トレイ", children: [] }] }],
+          children: [{ title: "Home", children: [{ title: "Inbox", children: [] }] }],
         },
       ])
       const childrenOf = (node: BookmarkNode | undefined) =>
         node?._tag === "BookmarkFolder" ? Option.getOrElse(node.children, () => []) : []
       const live = childrenOf(childrenOf(root)[0])[0]
-      if (live === undefined) return yield* Effect.die("ライブフォルダを置けなかった")
+      if (live === undefined) return yield* Effect.die("couldn't place the live folder")
       yield* fake.seedStorage("local", {
         "katip/pinned/live-folders": { [live.id]: inbox },
         ...(record !== null && { "katip/live-folders/records": { [live.id]: record } }),
@@ -713,11 +727,11 @@ describe("定期的な取得", () => {
 
   const startSeeded = (windowId: WindowId) => Effect.andThen(startBackground, openSidebar(windowId))
 
-  it.live("サイドパネルを開くと、まだ取得していないライブフォルダを取得する", () =>
+  it.live("opening the side panel refreshes live folders not fetched yet", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("1", "請求書の送付")))
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
         const windowId = yield* seedLiveFolder(null)
 
         const sidebar = yield* startSeeded(windowId)
@@ -725,44 +739,47 @@ describe("定期的な取得", () => {
 
         expect(
           Option.map(liveFolderOf(view), (live) => [live.title, live.items.map((i) => i.title)]),
-        ).toStrictEqual(Option.some(["受信トレイ", ["請求書の送付"]]))
+        ).toStrictEqual(Option.some(["Inbox", ["Invoice attached"]]))
       }),
     ),
   )
 
-  it.live("予約した時刻になると、前回の取得から間が空いたライブフォルダを取得し直す", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        yield* grant(GMAIL_ORIGIN)
-        yield* serveGmail(gmailFeed(gmailEntry("2", "新しいメール")))
-        yield* seedLiveFolder({
-          items: [
-            {
-              id: "old",
-              title: "古いメール",
-              subtitle: "",
-              url: "https://mail.google.com/mail/u/0/",
-              updatedAt: 0,
-            },
-          ],
-          lastAttempt: { _tag: "Fetched", at: 0 },
-          seenVersions: {},
-        })
-        yield* startBackground
-        yield* eventually(Effect.map(findAlarm, Option.fromNullishOr))
+  it.live(
+    "at the scheduled time, refreshes live folders whose last refresh was long enough ago",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(gmailFeed(gmailEntry("2", "Newer email")))
+          yield* seedLiveFolder({
+            items: [
+              {
+                id: "old",
+                title: "Older email",
+                subtitle: "",
+                url: "https://mail.google.com/mail/u/0/",
+                updatedAt: 0,
+              },
+            ],
+            lastAttempt: { _tag: "Fetched", at: 0 },
+            seenVersions: {},
+          })
+          yield* startBackground
+          yield* eventually(Effect.map(findAlarm, Option.fromNullishOr))
 
-        yield* fake.fireAlarm("katip/live-folders/refresh")
-        const records = yield* eventually(
-          Effect.map((yield* Storage).local.get("katip/live-folders/records"), (stored) =>
-            Option.filter(stored, (value) => JSON.stringify(value).includes("新しいメール")),
-          ),
-        )
+          yield* fake.fireAlarm("katip/live-folders/refresh")
+          const records = yield* eventually(
+            Effect.map((yield* Storage).local.get("katip/live-folders/records"), (stored) =>
+              Option.filter(stored, (value) => JSON.stringify(value).includes("Newer email")),
+            ),
+          )
 
-        expect([(yield* (yield* FakeHttp).requests).length, JSON.stringify(records)]).toStrictEqual(
-          [1, expect.stringContaining("新しいメール")],
-        )
-      }),
-    ),
+          expect([
+            (yield* (yield* FakeHttp).requests).length,
+            JSON.stringify(records),
+          ]).toStrictEqual([1, expect.stringContaining("Newer email")])
+        }),
+      ),
   )
 })
