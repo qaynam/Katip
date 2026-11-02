@@ -6,23 +6,23 @@ import { detectSwipe, neighborSpaceId } from "./swipe"
 const longAgo = Number.POSITIVE_INFINITY
 
 describe("detectSwipe", () => {
-  it("左へ十分に強く払うと前の Space へ戻る", () => {
+  it("goes back to the previous Space on a strong enough swipe to the left", () => {
     expect(Option.getOrNull(detectSwipe({ deltaX: -26, deltaY: 0 }, longAgo))).toBe("previous")
   })
 
-  it("右へ十分に強く払うと次の Space へ進む", () => {
+  it("moves to the next Space on a strong enough swipe to the right", () => {
     expect(Option.getOrNull(detectSwipe({ deltaX: 26, deltaY: 3 }, longAgo))).toBe("next")
   })
 
-  it("横移動が 25px 以下の弱い動きは無視する", () => {
+  it("ignores weak movements of 25px or less horizontally", () => {
     expect(Option.isNone(detectSwipe({ deltaX: 25, deltaY: 0 }, longAgo))).toBe(true)
   })
 
-  it("縦の動きの方が大きければ、縦スクロールとして無視する", () => {
+  it("ignores movements that are more vertical than horizontal as vertical scrolling", () => {
     expect(Option.isNone(detectSwipe({ deltaX: 40, deltaY: -41 }, longAgo))).toBe(true)
   })
 
-  it("直前の切替から 400ms 経つまでは次の切替をしない", () => {
+  it("doesn't switch again until 400ms after the last switch", () => {
     expect(Option.isNone(detectSwipe({ deltaX: 80, deltaY: 0 }, 399))).toBe(true)
     expect(Option.isSome(detectSwipe({ deltaX: 80, deltaY: 0 }, 400))).toBe(true)
   })
@@ -33,23 +33,23 @@ describe("neighborSpaceId", () => {
   const neighbor = (activeId: string, direction: "previous" | "next") =>
     Option.getOrNull(neighborSpaceId(spaces, SpaceId.make(activeId), direction))
 
-  it("隣の Space を返す", () => {
+  it("returns the neighboring Space", () => {
     expect(neighbor("b", "next")).toBe("c")
     expect(neighbor("b", "previous")).toBe("a")
   })
 
-  it("端では反対側の端へ循環する", () => {
+  it("wraps around to the other end at either end", () => {
     expect(neighbor("c", "next")).toBe("a")
     expect(neighbor("a", "previous")).toBe("c")
   })
 
-  it("Space が 1 つだけなら切り替え先は無い", () => {
+  it("has nowhere to switch to with only one Space", () => {
     const only = [{ id: SpaceId.make("a") }]
 
     expect(Option.isNone(neighborSpaceId(only, SpaceId.make("a"), "next"))).toBe(true)
   })
 
-  it("アクティブな Space が一覧に無ければ切り替え先は無い", () => {
+  it("has nowhere to switch to when the active Space isn't in the list", () => {
     expect(neighbor("missing", "next")).toBeNull()
   })
 })

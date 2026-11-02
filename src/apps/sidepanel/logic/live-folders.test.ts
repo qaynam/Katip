@@ -3,7 +3,7 @@ import { liveItem, pinnedLiveFolder } from "../testing/view-builders"
 import { sourceOrigins, unseenBadgeText, unseenCount } from "./live-folders"
 
 describe("unseenCount", () => {
-  it("まだ開いていない項目だけを数える", () => {
+  it("counts only the items not opened yet", () => {
     const folder = pinnedLiveFolder("inbox", {
       items: [
         liveItem("a", { isUnseen: true }),
@@ -15,28 +15,28 @@ describe("unseenCount", () => {
     expect(unseenCount(folder)).toBe(2)
   })
 
-  it("項目が無ければ 0 件", () => {
+  it("is 0 when there are no items", () => {
     expect(unseenCount(pinnedLiveFolder("inbox", { items: [] }))).toBe(0)
   })
 })
 
 describe("unseenBadgeText", () => {
-  it("99 件までは件数をそのまま出す", () => {
+  it("shows counts up to 99 as they are", () => {
     expect(unseenBadgeText(1)).toBe("1")
     expect(unseenBadgeText(99)).toBe("99")
   })
 
-  it("100 件以上は「99+」にまとめる", () => {
+  it("caps counts of 100 or more at 99+", () => {
     expect(unseenBadgeText(100)).toBe("99+")
   })
 })
 
 describe("sourceOrigins", () => {
-  it("Gmail は mail.google.com へのアクセスを求める", () => {
+  it("asks for access to mail.google.com for Gmail", () => {
     expect(sourceOrigins("Gmail")).toStrictEqual(["https://mail.google.com/*"])
   })
 
-  it("GitHub はブラウザのログインを使うので github.com へのアクセスを求める", () => {
+  it("asks for access to github.com for GitHub, which uses the browser's sign-in", () => {
     expect(sourceOrigins("GitHub")).toStrictEqual(["https://github.com/*"])
   })
 })

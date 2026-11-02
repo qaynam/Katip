@@ -4,29 +4,29 @@ import { faviconCandidates, faviconLetter, noFaviconResolver } from "./favicon"
 const resolver = (pageUrl: string) => `chrome-extension://katip/_favicon/?pageUrl=${pageUrl}`
 
 describe("faviconCandidates", () => {
-  it("タブの favicon を先に、ページ URL から解決した favicon を次に試す", () => {
+  it("tries the tab's favicon first, then the one resolved from the page URL", () => {
     expect(faviconCandidates("https://a.test/", "https://a.test/icon.png", resolver)).toStrictEqual(
       ["https://a.test/icon.png", "chrome-extension://katip/_favicon/?pageUrl=https://a.test/"],
     )
   })
 
-  it("タブの favicon が無ければ、ページ URL から解決した favicon だけを試す", () => {
+  it("tries only the favicon resolved from the page URL when the tab has none", () => {
     expect(faviconCandidates("https://a.test/", null, resolver)).toStrictEqual([
       "chrome-extension://katip/_favicon/?pageUrl=https://a.test/",
     ])
   })
 
-  it("どちらも無ければ候補は無い", () => {
+  it("has no candidates when neither is available", () => {
     expect(faviconCandidates("https://a.test/", "", noFaviconResolver)).toStrictEqual([])
   })
 })
 
 describe("faviconLetter", () => {
-  it("画像が無いときは、ホスト名の頭文字を www. を除いて大文字で出す", () => {
+  it("shows the uppercased initial of the host name without www. when there is no image", () => {
     expect(faviconLetter("https://www.example.com/page", "Example")).toBe("E")
   })
 
-  it("ホスト名の無い URL ではタイトルの頭文字を出す", () => {
-    expect(faviconLetter("about:blank", "新しいタブ")).toBe("新")
+  it("shows the initial of the title for a URL without a host name", () => {
+    expect(faviconLetter("about:blank", "new tab")).toBe("N")
   })
 })

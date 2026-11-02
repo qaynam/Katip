@@ -90,8 +90,8 @@ const drop = (
 ) =>
   Option.getOrNull(commandForDrop(source, target, { spaceId, canSplit: options.canSplit ?? true }))
 
-describe("一時タブをドラッグしたとき", () => {
-  it("一時タブの間に落とすと、その位置へ並べ替える", () => {
+describe("Dragging a temporary tab", () => {
+  it("reorders it to where it is dropped among the temporary tabs", () => {
     expect(drop(temporaryTab(1), belowTab(2))).toStrictEqual({
       _tag: "PlaceTabInTemporary",
       tabId: tabId(1),
@@ -100,11 +100,11 @@ describe("一時タブをドラッグしたとき", () => {
     })
   })
 
-  it("自分自身の上下に落としても何も起きない", () => {
+  it("does nothing when dropped right above or below itself", () => {
     expect(drop(temporaryTab(1), belowTab(1))).toBeNull()
   })
 
-  it("ピン留めのフォルダ内に落とすと、その位置にピン留めする", () => {
+  it("pins it at the drop position inside a pinned folder", () => {
     expect(drop(temporaryTab(1), pinnedTarget("folder", 2))).toStrictEqual({
       _tag: "PlaceTabInPinned",
       tabId: tabId(1),
@@ -112,7 +112,7 @@ describe("一時タブをドラッグしたとき", () => {
     })
   })
 
-  it("Favorites に落とすと、その位置に Favorites として追加する", () => {
+  it("adds it to Favorites at the drop position", () => {
     expect(drop(temporaryTab(1), { _tag: "Favorites", slot: 3 })).toStrictEqual({
       _tag: "AddToFavorites",
       tabId: tabId(1),
@@ -120,13 +120,13 @@ describe("一時タブをドラッグしたとき", () => {
     })
   })
 
-  it("Space の印の並びには落とせない", () => {
+  it("can't be dropped on the Space marks", () => {
     expect(drop(temporaryTab(1), { _tag: "SpaceBar", slot: 0 })).toBeNull()
   })
 })
 
-describe("ピンをドラッグしたとき", () => {
-  it("同じ親の中で後ろへ動かすと、自分が抜けた分を詰めた位置へ移す", () => {
+describe("Dragging a pin", () => {
+  it("moves it to the drop position shifted back by one when moved later within the same parent", () => {
     const source = pinnedItem("a", { position: { parentId: null, index: 0 } })
 
     expect(drop(source, pinnedTarget(null, 3))).toStrictEqual({
@@ -136,7 +136,7 @@ describe("ピンをドラッグしたとき", () => {
     })
   })
 
-  it("同じ親の中で前へ動かすと、落とした位置へそのまま移す", () => {
+  it("moves it to the drop position as is when moved earlier within the same parent", () => {
     const source = pinnedItem("a", { position: { parentId: null, index: 3 } })
 
     expect(drop(source, pinnedTarget(null, 1))).toStrictEqual({
@@ -146,14 +146,14 @@ describe("ピンをドラッグしたとき", () => {
     })
   })
 
-  it("元の位置の前後の隙間に落としても何も起きない", () => {
+  it("does nothing when dropped in the gap right before or after its own place", () => {
     const source = pinnedItem("a", { position: { parentId: null, index: 2 } })
 
     expect(drop(source, pinnedTarget(null, 2))).toBeNull()
     expect(drop(source, pinnedTarget(null, 3))).toBeNull()
   })
 
-  it("別のフォルダへ落とすと、その隙間の位置へ移す", () => {
+  it("moves it to the gap it is dropped in within another folder", () => {
     const source = pinnedItem("a", { position: { parentId: null, index: 0 } })
 
     expect(drop(source, pinnedTarget("folder", 1))).toStrictEqual({
@@ -163,7 +163,7 @@ describe("ピンをドラッグしたとき", () => {
     })
   })
 
-  it("元の位置が分からないピンは、落とした隙間の位置へ移す", () => {
+  it("moves a pin with an unknown position to the gap it is dropped in", () => {
     const source = pinnedItem("a", { position: null })
 
     expect(drop(source, pinnedTarget("folder", 4))).toStrictEqual({
@@ -173,7 +173,7 @@ describe("ピンをドラッグしたとき", () => {
     })
   })
 
-  it("開いているピンを一時タブへ落とすと、ピンを外してその位置の一時タブにする", () => {
+  it("unpins an open pin dropped into temporary tabs and places it there as a temporary tab", () => {
     const source = pinnedItem("a", { openTabId: 7 })
 
     expect(drop(source, belowTab(2))).toStrictEqual({
@@ -184,14 +184,14 @@ describe("ピンをドラッグしたとき", () => {
     })
   })
 
-  it("閉じたピンは一時タブへも Favorites へも落とせない", () => {
+  it("can't drop a closed pin into temporary tabs or Favorites", () => {
     const source = pinnedItem("a")
 
     expect(drop(source, belowTab(2))).toBeNull()
     expect(drop(source, { _tag: "Favorites", slot: 0 })).toBeNull()
   })
 
-  it("開いているピンを Favorites へ落とすと、そのタブを Favorites に追加する", () => {
+  it("adds the tab of an open pin dropped on Favorites to Favorites", () => {
     const source = pinnedItem("a", { openTabId: 7 })
 
     expect(drop(source, { _tag: "Favorites", slot: 0 })).toStrictEqual({
@@ -202,8 +202,8 @@ describe("ピンをドラッグしたとき", () => {
   })
 })
 
-describe("フォルダをドラッグしたとき", () => {
-  it("別のフォルダの中に落とすと、そのフォルダの中の落とした位置へ移す", () => {
+describe("Dragging a folder", () => {
+  it("moves it to the drop position inside another folder", () => {
     const source = pinnedFolderSource("docs", { position: { parentId: null, index: 0 } })
 
     expect(drop(source, pinnedTarget("projects", 2))).toStrictEqual({
@@ -213,7 +213,7 @@ describe("フォルダをドラッグしたとき", () => {
     })
   })
 
-  it("同じ親の中で後ろへ動かすと、自分が抜けた分を詰めた位置へ移す", () => {
+  it("moves it to the drop position shifted back by one when moved later within the same parent", () => {
     const source = pinnedFolderSource("docs", { position: { parentId: null, index: 1 } })
 
     expect(drop(source, pinnedTarget(null, 4))).toStrictEqual({
@@ -223,18 +223,18 @@ describe("フォルダをドラッグしたとき", () => {
     })
   })
 
-  it("自分自身の中には落とせない", () => {
+  it("can't be dropped into itself", () => {
     expect(drop(pinnedFolderSource("docs"), pinnedTarget("docs", 0))).toBeNull()
   })
 
-  it("自分の中にあるフォルダの中には落とせない", () => {
+  it("can't be dropped into a folder inside itself", () => {
     const source = pinnedFolderSource("docs", { descendantIds: ["minutes", "inbox"] })
 
     expect(drop(source, pinnedTarget("minutes", 0))).toBeNull()
     expect(drop(source, pinnedTarget("inbox", 0))).toBeNull()
   })
 
-  it("一時タブ・Favorites・分割ビュー・Space の印には落とせない", () => {
+  it("can't be dropped on temporary tabs, Favorites, split views, or Space marks", () => {
     const source = pinnedFolderSource("docs")
 
     expect(drop(source, belowTab(2))).toBeNull()
@@ -244,8 +244,8 @@ describe("フォルダをドラッグしたとき", () => {
   })
 })
 
-describe("Favorite をドラッグしたとき", () => {
-  it("Favorites の中で後ろへ動かすと、詰めた位置へ並べ替える", () => {
+describe("Dragging a Favorite", () => {
+  it("reorders it to the drop position shifted back by one when moved later within Favorites", () => {
     expect(drop(favorite(5, 0), { _tag: "Favorites", slot: 2 })).toStrictEqual({
       _tag: "MoveFavorite",
       tabId: tabId(5),
@@ -253,11 +253,11 @@ describe("Favorite をドラッグしたとき", () => {
     })
   })
 
-  it("元の位置に落としても何も起きない", () => {
+  it("does nothing when dropped on its own place", () => {
     expect(drop(favorite(5, 1), { _tag: "Favorites", slot: 1 })).toBeNull()
   })
 
-  it("ピン留めへ落とすと、その位置にピン留めする", () => {
+  it("pins it at the drop position when dropped on pinned tabs", () => {
     expect(drop(favorite(5, 0), pinnedTarget(null, 0))).toStrictEqual({
       _tag: "PlaceTabInPinned",
       tabId: tabId(5),
@@ -265,7 +265,7 @@ describe("Favorite をドラッグしたとき", () => {
     })
   })
 
-  it("一時タブの末尾へ落とすと、表示中の Space の一時タブにする", () => {
+  it("makes it a temporary tab of the active Space when dropped at the end of temporary tabs", () => {
     const target: DropTarget = { _tag: "Temporary", placement: { _tag: "Bottom" } }
 
     expect(drop(favorite(5, 0), target)).toStrictEqual({
@@ -277,8 +277,8 @@ describe("Favorite をドラッグしたとき", () => {
   })
 })
 
-describe("タブを一時タブの行の中央に落としたとき", () => {
-  it("落とした先のタブの右に並べて分割ビューにする", () => {
+describe("Dropping a tab on the middle of a temporary tab row", () => {
+  it("creates a split view with the dropped tab to the right of the target tab", () => {
     expect(drop(temporaryTab(1), splitWith(2))).toStrictEqual({
       _tag: "SplitTabs",
       tabId: tabId(1),
@@ -286,7 +286,7 @@ describe("タブを一時タブの行の中央に落としたとき", () => {
     })
   })
 
-  it("開いているピンや Favorite も、そのタブを並べて分割ビューにする", () => {
+  it("creates a split view with the tab of an open pin or a Favorite too", () => {
     expect(drop(pinnedItem("a", { openTabId: 7 }), splitWith(2))).toStrictEqual({
       _tag: "SplitTabs",
       tabId: tabId(7),
@@ -299,38 +299,38 @@ describe("タブを一時タブの行の中央に落としたとき", () => {
     })
   })
 
-  it("自分自身の行の中央に落としても何も起きない", () => {
+  it("does nothing when dropped on the middle of its own row", () => {
     expect(drop(temporaryTab(2), splitWith(2))).toBeNull()
   })
 
-  it("閉じたピンは分割ビューにできない", () => {
+  it("can't create a split view from a closed pin", () => {
     expect(drop(pinnedItem("a"), splitWith(2))).toBeNull()
   })
 
-  it("分割ビューの行は、さらに別のタブと分割ビューにはできない", () => {
+  it("can't split a split view row with yet another tab", () => {
     expect(drop(temporarySplit(9, 3, 4), splitWith(2))).toBeNull()
     expect(drop(pinnedSplit("split", { openSplitViewId: 9 }), splitWith(2))).toBeNull()
   })
 
-  it("分割ビューを作れない環境では分割しない", () => {
+  it("doesn't split where split views aren't available", () => {
     expect(drop(temporaryTab(1), splitWith(2), { canSplit: false })).toBeNull()
   })
 })
 
-describe("分割ビューを作れない環境で、分割の位置に落としたとき", () => {
+describe("Dropping on the split zone where split views aren't available", () => {
   const outcomeOf = (source: DragSource, target: DropTarget) =>
     Option.getOrNull(dropOutcome(source, target, { spaceId, canSplit: false }))
 
-  it("分割できたはずのタブなら、並べ替えずに対応していないことを知らせる", () => {
+  it("reports the lack of support instead of reordering when the tab could have been split", () => {
     expect(outcomeOf(temporaryTab(1), splitWith(2))).toStrictEqual({ _tag: "SplitUnsupported" })
   })
 
-  it("対応していても分割にならないドロップは、知らせずに受け付けない", () => {
+  it("silently rejects drops that wouldn't split even with support", () => {
     expect(outcomeOf(temporaryTab(2), splitWith(2))).toBeNull()
     expect(outcomeOf(pinnedItem("a"), splitWith(2))).toBeNull()
   })
 
-  it("分割の位置以外へのドロップは、いつも通りのコマンドになる", () => {
+  it("gives the usual command for drops outside the split zone", () => {
     expect(outcomeOf(temporaryTab(1), belowTab(2))).toStrictEqual({
       _tag: "Run",
       command: {
@@ -343,8 +343,8 @@ describe("分割ビューを作れない環境で、分割の位置に落とし�
   })
 })
 
-describe("一時タブの分割ビューの行をドラッグしたとき", () => {
-  it("一時タブの別の位置に落とすと、2 つのタブを並べたまま行ごとその位置へ移す", () => {
+describe("Dragging a temporary split view row", () => {
+  it("moves the whole row, with both tabs still side by side, to another position among temporary tabs", () => {
     expect(drop(temporarySplit(9, 3, 4), belowTab(2))).toStrictEqual({
       _tag: "PlaceSplitInTemporary",
       splitViewId: splitViewId(9),
@@ -353,12 +353,12 @@ describe("一時タブの分割ビューの行をドラッグしたとき", () =
     })
   })
 
-  it("自分の行の上下に落としても何も起きない", () => {
+  it("does nothing when dropped right above or below its own row", () => {
     expect(drop(temporarySplit(9, 3, 4), aboveTab(3))).toBeNull()
     expect(drop(temporarySplit(9, 3, 4), belowTab(4))).toBeNull()
   })
 
-  it("ピン留めの任意の位置に落とすと、分割ビューのままその位置にピン留めする", () => {
+  it("pins it as a split view at any drop position in pinned tabs", () => {
     expect(drop(temporarySplit(9, 3, 4), pinnedTarget("folder", 2))).toStrictEqual({
       _tag: "PlaceSplitInPinned",
       splitViewId: splitViewId(9),
@@ -366,13 +366,13 @@ describe("一時タブの分割ビューの行をドラッグしたとき", () =
     })
   })
 
-  it("Favorites には落とせない", () => {
+  it("can't be dropped on Favorites", () => {
     expect(drop(temporarySplit(9, 3, 4), { _tag: "Favorites", slot: 0 })).toBeNull()
   })
 })
 
-describe("ピン留めした分割ビューをドラッグしたとき", () => {
-  it("同じ親の中で後ろへ動かすと、自分が抜けた分を詰めた位置へ移す", () => {
+describe("Dragging a pinned split view", () => {
+  it("moves it to the drop position shifted back by one when moved later within the same parent", () => {
     const source = pinnedSplit("split", { position: { parentId: null, index: 1 } })
 
     expect(drop(source, pinnedTarget(null, 4))).toStrictEqual({
@@ -382,14 +382,14 @@ describe("ピン留めした分割ビューをドラッグしたとき", () => {
     })
   })
 
-  it("元の位置の前後の隙間に落としても何も起きない", () => {
+  it("does nothing when dropped in the gap right before or after its own place", () => {
     const source = pinnedSplit("split", { position: { parentId: null, index: 1 } })
 
     expect(drop(source, pinnedTarget(null, 1))).toBeNull()
     expect(drop(source, pinnedTarget(null, 2))).toBeNull()
   })
 
-  it("別のフォルダへ落とすと、その隙間の位置へ移す", () => {
+  it("moves it to the gap it is dropped in within another folder", () => {
     const source = pinnedSplit("split", { position: { parentId: null, index: 1 } })
 
     expect(drop(source, pinnedTarget("folder", 0))).toStrictEqual({
@@ -399,7 +399,7 @@ describe("ピン留めした分割ビューをドラッグしたとき", () => {
     })
   })
 
-  it("開いていれば、一時タブへ落とすとピンを外して分割ビューのままその位置に置く", () => {
+  it("unpins it and places it there as a split view when it is open and dropped into temporary tabs", () => {
     expect(drop(pinnedSplit("split", { openSplitViewId: 9 }), belowTab(2))).toStrictEqual({
       _tag: "PlaceSplitInTemporary",
       splitViewId: splitViewId(9),
@@ -408,19 +408,19 @@ describe("ピン留めした分割ビューをドラッグしたとき", () => {
     })
   })
 
-  it("閉じていれば、一時タブへ落としても何も起きない", () => {
+  it("does nothing when it is closed and dropped into temporary tabs", () => {
     expect(drop(pinnedSplit("split"), belowTab(2))).toBeNull()
   })
 
-  it("Favorites には落とせない", () => {
+  it("can't be dropped on Favorites", () => {
     expect(
       drop(pinnedSplit("split", { openSplitViewId: 9 }), { _tag: "Favorites", slot: 0 }),
     ).toBeNull()
   })
 })
 
-describe("Space の印をドラッグしたとき", () => {
-  it("印の並びの中で前へ動かすと、その位置へ並べ替える", () => {
+describe("Dragging a Space mark", () => {
+  it("reorders it to the drop position when moved earlier among the marks", () => {
     expect(drop(spaceMark("c", 2), { _tag: "SpaceBar", slot: 0 })).toStrictEqual({
       _tag: "MoveSpace",
       spaceId: SpaceId.make("c"),
@@ -428,7 +428,7 @@ describe("Space の印をドラッグしたとき", () => {
     })
   })
 
-  it("末尾の隙間へ動かすと、最後の位置へ並べ替える", () => {
+  it("reorders it to the last position when moved to the gap at the end", () => {
     expect(drop(spaceMark("a", 0), { _tag: "SpaceBar", slot: 3 })).toStrictEqual({
       _tag: "MoveSpace",
       spaceId: SpaceId.make("a"),
@@ -436,70 +436,70 @@ describe("Space の印をドラッグしたとき", () => {
     })
   })
 
-  it("タブの並びには落とせない", () => {
+  it("can't be dropped among tabs", () => {
     expect(drop(spaceMark("a", 0), belowTab(1))).toBeNull()
     expect(drop(spaceMark("a", 0), pinnedTarget(null, 0))).toBeNull()
   })
 })
 
 describe("edgeAt", () => {
-  it("要素の上半分なら前、下半分なら後ろに入れる", () => {
+  it("inserts before in the element's top half and after in its bottom half", () => {
     expect(edgeAt(9, 20)).toBe("before")
     expect(edgeAt(10, 20)).toBe("after")
   })
 })
 
-describe("一時タブの行に重ねたとき", () => {
+describe("Hovering over a temporary tab row", () => {
   const row = { width: 200, height: 40 }
 
-  it("分割ビューにできる行では、右寄りの上下中央に重ねると分割ビューにする", () => {
+  it("splits when over the vertical middle toward the right of a row that can be split", () => {
     expect(rowZoneAt({ x: 190, y: 20 }, row, true)).toBe("split")
     expect(rowZoneAt({ x: 70, y: 8 }, row, true)).toBe("split")
     expect(rowZoneAt({ x: 70, y: 32 }, row, true)).toBe("split")
   })
 
-  it("分割ビューにできる行でも、左端に重ねると上下の半分で並べ替える", () => {
+  it("reorders by the top or bottom half when over the left part, even on a row that can be split", () => {
     expect(rowZoneAt({ x: 69, y: 19 }, row, true)).toBe("before")
     expect(rowZoneAt({ x: 69, y: 21 }, row, true)).toBe("after")
   })
 
-  it("分割ビューにできる行でも、上下の端に重ねると前後に並べ替える", () => {
+  it("reorders before or after when over the top or bottom edge, even on a row that can be split", () => {
     expect(rowZoneAt({ x: 190, y: 7.9 }, row, true)).toBe("before")
     expect(rowZoneAt({ x: 190, y: 32.1 }, row, true)).toBe("after")
   })
 
-  it("分割ビューにできない行では、上半分なら前、下半分なら後ろに並べ替える", () => {
+  it("reorders before in the top half and after in the bottom half of a row that can't be split", () => {
     expect(rowZoneAt({ x: 190, y: 19.9 }, row, false)).toBe("before")
     expect(rowZoneAt({ x: 190, y: 20 }, row, false)).toBe("after")
   })
 })
 
-describe("フォルダの見出しに重ねたとき", () => {
+describe("Hovering over a folder header", () => {
   const folder = {
     bookmarkId: bookmarkId("folder"),
     position: { parentId: null, index: 2 },
     childCount: 3,
   }
 
-  it("上端に重ねるとフォルダの前に入れる", () => {
+  it("inserts before the folder when over its top edge", () => {
     expect(folderDropTarget(folder, folderZoneAt(2, 32, false))).toStrictEqual(
       pinnedTarget(null, 2),
     )
   })
 
-  it("中央に重ねるとフォルダの中の末尾に入れる", () => {
+  it("inserts at the end inside the folder when over its middle", () => {
     expect(folderDropTarget(folder, folderZoneAt(16, 32, false))).toStrictEqual(
       pinnedTarget("folder", 3),
     )
   })
 
-  it("閉じたフォルダの下端に重ねるとフォルダの後ろに入れる", () => {
+  it("inserts after a collapsed folder when over its bottom edge", () => {
     expect(folderDropTarget(folder, folderZoneAt(30, 32, false))).toStrictEqual(
       pinnedTarget(null, 3),
     )
   })
 
-  it("開いたフォルダの下端に重ねるとフォルダの中の先頭に入れる", () => {
+  it("inserts at the start inside an expanded folder when over its bottom edge", () => {
     expect(folderDropTarget(folder, folderZoneAt(30, 32, true))).toStrictEqual(
       pinnedTarget("folder", 0),
     )

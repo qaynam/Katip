@@ -11,7 +11,7 @@ const setup = () => {
   return { sent, sender }
 }
 
-describe("間引いて送る", () => {
+describe("Throttled sending", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
   })
@@ -20,7 +20,7 @@ describe("間引いて送る", () => {
     vi.useRealTimers()
   })
 
-  it("最初の値は待たずに送る", () => {
+  it("sends the first value without waiting", () => {
     const { sent, sender } = setup()
 
     sender.push(1)
@@ -28,7 +28,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1])
   })
 
-  it("間隔内に届いた値はまとめ、間隔の終わりに最新の値だけを送る", () => {
+  it("coalesces values pushed within the interval and sends only the latest at its end", () => {
     const { sent, sender } = setup()
     sender.push(1)
     sender.push(2)
@@ -39,7 +39,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1, 3])
   })
 
-  it("変わり続けている間も、間隔ごとに 1 回は送る", () => {
+  it("sends at least once per interval while values keep changing", () => {
     const { sent, sender } = setup()
 
     for (const value of [1, 2, 3, 4, 5]) {
@@ -50,7 +50,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1, 2, 3, 5])
   })
 
-  it("確定すると、間隔を待たずに最新の値を送る", () => {
+  it("sends the latest value without waiting for the interval on flush", () => {
     const { sent, sender } = setup()
     sender.push(1)
     sender.push(2)
@@ -60,7 +60,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1, 2])
   })
 
-  it("確定したあと、待っていた分を間隔の終わりに重ねて送らない", () => {
+  it("doesn't send the flushed value again when the interval ends", () => {
     const { sent, sender } = setup()
     sender.push(1)
     sender.push(2)
@@ -71,7 +71,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1, 2])
   })
 
-  it("直前に送った値と同じ値は送らない", () => {
+  it("doesn't send a value equal to the last one sent", () => {
     const { sent, sender } = setup()
     sender.push(1)
     vi.advanceTimersByTime(150)
@@ -82,7 +82,7 @@ describe("間引いて送る", () => {
     expect(sent).toStrictEqual([1])
   })
 
-  it("送る値が無いときに確定しても何も送らない", () => {
+  it("sends nothing on flush when there is nothing to send", () => {
     const { sent, sender } = setup()
 
     sender.flush()

@@ -12,44 +12,44 @@ import {
 const field = { width: 300, height: 248 }
 const radius = field.height / 2 - FIELD_EDGE_INSET_PX
 
-describe("色フィールドの位置", () => {
-  it("フィールドの中央は円の中心になる", () => {
+describe("Positions in the color field", () => {
+  it("maps the field's center to the circle's center", () => {
     expect(pickerPointAt({ x: 150, y: 124 }, field)).toStrictEqual({ x: 0, y: 0 })
   })
 
-  it("短い辺の半分から縁の余白を除いた距離が円の半径になる", () => {
+  it("uses half the shorter side minus the edge inset as the circle's radius", () => {
     expect(pickerPointAt({ x: 150 + radius, y: 124 }, field)).toStrictEqual({ x: 1, y: 0 })
   })
 
-  it("画面の上方向が円の上方向になる", () => {
+  it("maps up on screen to up on the circle", () => {
     expect(pickerPointAt({ x: 150, y: 124 - radius / 2 }, field)).toStrictEqual({ x: 0, y: 0.5 })
   })
 
-  it("大きさの無いフィールドでも位置が有限の値になる", () => {
+  it("gives finite positions even for a field with no size", () => {
     const point = pickerPointAt({ x: 10, y: 10 }, { width: 0, height: 0 })
 
     expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true)
   })
 })
 
-describe("強さのスライダー", () => {
+describe("Intensity slider", () => {
   const track = { length: 216, thumbLength: 16 }
 
-  it("つまみの中心が左端にあるとき 0、右端にあるとき 1 になる", () => {
+  it("is 0 with the thumb centered at the left end and 1 at the right end", () => {
     expect([sliderValueAt(8, track), sliderValueAt(208, track)]).toStrictEqual([0, 1])
   })
 
-  it("中央では 0.5 になる", () => {
+  it("is 0.5 in the middle", () => {
     expect(sliderValueAt(108, track)).toBe(0.5)
   })
 
-  it("トラックの外を指しても 0〜1 に収まる", () => {
+  it("stays within 0 to 1 when pointing outside the track", () => {
     expect([sliderValueAt(-40, track), sliderValueAt(400, track)]).toStrictEqual([0, 1])
   })
 })
 
-describe("グレインのダイヤル", () => {
-  it("真上が 0 で、時計回りに回すほど大きくなる", () => {
+describe("Grain dial", () => {
+  it("is 0 straight up and grows clockwise", () => {
     const values = [
       dialValueAt({ x: 0, y: -10 }, 0),
       dialValueAt({ x: 10, y: 0 }, 0.2),
@@ -60,17 +60,17 @@ describe("グレインのダイヤル", () => {
     expect(values).toStrictEqual([0, 0.25, 0.5, 0.75])
   })
 
-  it("最大の手前から真上を越えて回しても、0 に戻らず最大で止まる", () => {
+  it("stops at the maximum instead of wrapping to 0 when turned past the top from near the maximum", () => {
     expect(dialValueAt({ x: 1, y: -10 }, 0.97)).toBe(1)
   })
 
-  it("最小から反時計回りに真上を越えて回しても、最大へ飛ばず 0 で止まる", () => {
+  it("stops at 0 instead of jumping to the maximum when turned counterclockwise past the top from the minimum", () => {
     expect(dialValueAt({ x: -1, y: -10 }, 0.03)).toBe(0)
   })
 })
 
-describe("キーボードでの調整", () => {
-  it("右と上の矢印で少し増え、左と下の矢印で少し減る", () => {
+describe("Keyboard adjustment", () => {
+  it("increases a little with the right and up arrows and decreases with the left and down arrows", () => {
     const after = (key: string) => Option.getOrNull(valueAfterKey(0.5, key))
 
     expect([after("ArrowRight"), after("ArrowUp"), after("ArrowLeft"), after("ArrowDown")]).toEqual(
@@ -78,7 +78,7 @@ describe("キーボードでの調整", () => {
     )
   })
 
-  it("Home と End で端まで動き、0〜1 を越えない", () => {
+  it("moves to the ends with Home and End and never goes beyond 0 to 1", () => {
     const values = [
       valueAfterKey(0.5, "Home"),
       valueAfterKey(0.5, "End"),
@@ -88,11 +88,11 @@ describe("キーボードでの調整", () => {
     expect(values).toStrictEqual([0, 1, 1])
   })
 
-  it("調整に使わないキーは扱わない", () => {
+  it("ignores keys that don't adjust the value", () => {
     expect(Option.isNone(valueAfterKey(0.5, "Enter"))).toBe(true)
   })
 
-  it("矢印キーで色の点を画面上のその向きへ動かす", () => {
+  it("moves the color dot in the arrow key's direction on screen", () => {
     const after = (key: string) => Option.getOrNull(pointAfterKey({ x: 0, y: 0 }, key))
 
     expect([after("ArrowUp"), after("ArrowRight")]).toStrictEqual([

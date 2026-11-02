@@ -13,13 +13,13 @@ describe("gmailSourceFrom", () => {
     return Result.isFailure(parsed) ? parsed.failure : null
   }
 
-  it("番号とラベルから、そのアカウントのそのラベルを取得元にする", () => {
+  it("uses the given label of the given account as the source", () => {
     expect(
-      Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2", label: "仕事" }))),
-    ).toStrictEqual({ _tag: "Gmail", accountIndex: 2, label: "仕事" })
+      Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2", label: "Work" }))),
+    ).toStrictEqual({ _tag: "Gmail", accountIndex: 2, label: "Work" })
   })
 
-  it("ラベルが空なら受信トレイを取得元にする", () => {
+  it("uses the inbox as the source when the label is empty", () => {
     expect(Result.getOrNull(gmailSourceFrom(draft({ label: "   " })))).toStrictEqual({
       _tag: "Gmail",
       accountIndex: 0,
@@ -27,19 +27,19 @@ describe("gmailSourceFrom", () => {
     })
   })
 
-  it("番号が空なら、最初にログインしたアカウント（0）とみなす", () => {
+  it("treats an empty account number as the first signed-in account (0)", () => {
     expect(Result.getOrNull(gmailSourceFrom(draft({ accountIndex: " " })))).toMatchObject({
       accountIndex: 0,
     })
   })
 
-  it("全角の数字や前後の空白があっても番号として読む", () => {
+  it("reads full-width digits and surrounding whitespace as an account number", () => {
     expect(Result.getOrNull(gmailSourceFrom(draft({ accountIndex: " １ " })))).toMatchObject({
       accountIndex: 1,
     })
   })
 
-  it("負の数・小数・数字以外の番号は受け付けない", () => {
+  it("rejects negative, fractional, and non-numeric account numbers", () => {
     expect(failureOf(draft({ accountIndex: "-1" }))).toBe("InvalidAccountIndex")
     expect(failureOf(draft({ accountIndex: "1.5" }))).toBe("InvalidAccountIndex")
     expect(failureOf(draft({ accountIndex: "abc" }))).toBe("InvalidAccountIndex")
@@ -53,15 +53,15 @@ describe("gitHubTokenFrom", () => {
     return Result.isFailure(parsed) ? parsed.failure : null
   }
 
-  it("前後の空白を除いたトークンを送る", () => {
+  it("trims surrounding whitespace from the token", () => {
     expect(Result.getOrNull(gitHubTokenFrom("  ghp_abc  "))).toBe("ghp_abc")
   })
 
-  it("空ならトークンの入力を求める", () => {
+  it("asks for a token when empty", () => {
     expect(failureOf("  ")).toBe("TokenRequired")
   })
 
-  it("途中に空白を含むトークンは受け付けない", () => {
+  it("rejects a token with whitespace inside", () => {
     expect(failureOf("ghp_abc def")).toBe("TokenHasWhitespace")
   })
 })

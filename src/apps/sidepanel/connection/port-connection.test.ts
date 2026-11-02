@@ -51,7 +51,7 @@ let connection: PortConnection
 
 const latestPort = () => {
   const port = ports.at(-1)
-  if (port === undefined) throw new Error("ポートがまだ開かれていない")
+  if (port === undefined) throw new Error("No port has been opened yet")
   return port
 }
 
@@ -70,7 +70,7 @@ const connect = (options: { readonly openPort?: () => SidebarPort } = {}) => {
 
 const runRequestIdOf = (port: FakePort, index: number) => {
   const message = port.sent.filter((sent) => sent._tag === "Run")[index]
-  if (message?._tag !== "Run") throw new Error(`${index} 番目の Run が送られていない`)
+  if (message?._tag !== "Run") throw new Error(`Run #${index} has not been sent`)
   return message.requestId
 }
 
@@ -84,14 +84,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe("接続したとき", () => {
-  it("自分のウィンドウのビューを購読する", () => {
+describe("When connected", () => {
+  it("subscribes to the view of its own window", () => {
     connect()
 
     expect(latestPort().sent).toStrictEqual([{ _tag: "Subscribe", windowId }])
   })
 
-  it("届いたビューを購読者へ渡す", () => {
+  it("passes received views to listeners", () => {
     connect()
     const events: Array<SidebarEvent> = []
     connection.listen((event) => events.push(event))
@@ -102,7 +102,7 @@ describe("接続したとき", () => {
     expect(events).toStrictEqual([{ _tag: "ViewUpdated", view }])
   })
 
-  it("後から購読しても、最後に届いたビューを受け取れる", () => {
+  it("gives a late listener the last received view", () => {
     connect()
     const view = sidebarView()
     latestPort().deliver({ _tag: "ViewUpdated", view })
@@ -113,7 +113,7 @@ describe("接続したとき", () => {
     expect(events).toStrictEqual([{ _tag: "ViewUpdated", view }])
   })
 
-  it("形式の合わないメッセージは無視する", () => {
+  it("ignores malformed messages", () => {
     connect()
     const events: Array<SidebarEvent> = []
     connection.listen((event) => events.push(event))
@@ -124,7 +124,7 @@ describe("接続したとき", () => {
     expect(events).toStrictEqual([])
   })
 
-  it("開いている間は 20 秒ごとに KeepAlive を送る", () => {
+  it("sends KeepAlive every 20 seconds while open", () => {
     connect()
 
     vi.advanceTimersByTime(40_000)
@@ -133,8 +133,8 @@ describe("接続したとき", () => {
   })
 })
 
-describe("コマンドを実行したとき", () => {
-  it("応答が前後しても、requestId が一致する結果で解決する", async () => {
+describe("When running a command", () => {
+  it("resolves with the outcome whose requestId matches, even when responses arrive out of order", async () => {
     connect()
     const port = latestPort()
     const closing = connection.run(closeTab)
@@ -143,7 +143,7 @@ describe("コマンドを実行したとき", () => {
     port.deliver({
       _tag: "CommandSettled",
       requestId: runRequestIdOf(port, 1),
-      outcome: { _tag: "Failed", reason: "Space が見つかりません" },
+      outcome: { _tag: "Failed", reason: "Space not found" },
     })
     port.deliver({
       _tag: "CommandSettled",
@@ -152,10 +152,10 @@ describe("コマンドを実行したとき", () => {
     })
 
     expect(await closing).toStrictEqual({ _tag: "Succeeded", createdBookmarkId: null })
-    expect(await switching).toStrictEqual({ _tag: "Failed", reason: "Space が見つかりません" })
+    expect(await switching).toStrictEqual({ _tag: "Failed", reason: "Space not found" })
   })
 
-  it("リクエストごとに異なる requestId を付ける", () => {
+  it("gives each request a different requestId", () => {
     connect()
 
     void connection.run(closeTab)
@@ -164,7 +164,7 @@ describe("コマンドを実行したとき", () => {
     expect(runRequestIdOf(latestPort(), 0)).not.toBe(runRequestIdOf(latestPort(), 1))
   })
 
-  it("結果が届く前に切断されたら、届いたか分からないこととして解決する", async () => {
+  it("resolves as possibly undelivered when disconnected before the outcome arrives", async () => {
     connect()
     const closing = connection.run(closeTab)
 
@@ -173,7 +173,7 @@ describe("コマンドを実行したとき", () => {
     expect(await closing).toStrictEqual({ _tag: "Undelivered", reason: "Disconnected" })
   })
 
-  it("再接続を待っている間に実行すると、すぐに届けられなかったこととして解決する", async () => {
+  it("resolves as not delivered right away when run while waiting to reconnect", async () => {
     connect()
     latestPort().dropFromServer()
 
@@ -183,8 +183,8 @@ describe("コマンドを実行したとき", () => {
   })
 })
 
-describe("切断されたとき", () => {
-  it("再接続して購読し直す", () => {
+describe("When disconnected", () => {
+  it("reconnects and subscribes again", () => {
     connect()
 
     latestPort().dropFromServer()
@@ -194,7 +194,7 @@ describe("切断されたとき", () => {
     expect(latestPort().sent).toStrictEqual([{ _tag: "Subscribe", windowId }])
   })
 
-  it("接続に失敗し続けても、間隔を空けながら再試行を続ける", () => {
+  it("keeps retrying with delays even when connecting keeps failing", () => {
     let attempts = 0
     connect({
       openPort: () => {
@@ -209,7 +209,7 @@ describe("切断されたとき", () => {
     expect(attempts).toBeLessThan(10)
   })
 
-  it("古いポートに遅れて届いたメッセージは無視する", () => {
+  it("ignores messages that arrive late on an old port", () => {
     connect()
     const oldPort = latestPort()
     const events: Array<SidebarEvent> = []
@@ -217,14 +217,14 @@ describe("切断されたとき", () => {
     oldPort.dropFromServer()
     vi.advanceTimersByTime(0)
 
-    oldPort.deliver({ _tag: "Notice", message: "古い通知" })
+    oldPort.deliver({ _tag: "Notice", message: "Stale notice" })
 
     expect(events).toStrictEqual([])
   })
 })
 
-describe("close したとき", () => {
-  it("それ以降は再接続しない", () => {
+describe("When closed", () => {
+  it("never reconnects afterwards", () => {
     connect()
 
     connection.close()

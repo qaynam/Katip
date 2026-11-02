@@ -29,13 +29,13 @@ describe("archiveEntriesFor", () => {
     archiveEntry("new", { spaceId: work, archivedAt: 200 }),
   ]
 
-  it("現在の Space のアーカイブだけを新しい順に並べる", () => {
+  it("lists only the current Space's archive, newest first", () => {
     const ids = archiveEntriesFor(entries, "currentSpace", work).map((entry) => entry.id)
 
     expect(ids).toStrictEqual([ArchiveEntryId.make("new"), ArchiveEntryId.make("old")])
   })
 
-  it("すべての Space を選ぶと、他の Space のアーカイブも新しい順に混ぜて並べる", () => {
+  it("mixes in other Spaces' archives, newest first, when all Spaces are chosen", () => {
     const ids = archiveEntriesFor(entries, "allSpaces", work).map((entry) => entry.id)
 
     expect(ids).toStrictEqual(["hobby", "new", "old"].map((id) => ArchiveEntryId.make(id)))
@@ -43,46 +43,46 @@ describe("archiveEntriesFor", () => {
 })
 
 describe("pinnedItemDisplay", () => {
-  it("閉じたピンはピンの名前で表示する", () => {
-    const item = pinnedItem("a", { title: "設計書", openTab: null })
+  it("shows a closed pin by the pin's name", () => {
+    const item = pinnedItem("a", { title: "Design doc", openTab: null })
 
-    expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "Closed", title: "設計書" })
+    expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "Closed", title: "Design doc" })
   })
 
-  it("名前の無い閉じたピンは URL のホスト名で表示する", () => {
+  it("shows a closed pin without a name by the URL's host name", () => {
     const item = pinnedItem("a", { title: "", url: "https://example.com/docs", openTab: null })
 
     expect(pinnedItemDisplay(item).title).toBe("example.com")
   })
 
-  it("ピンした URL にいる間は、ページの名前ではなくピンの名前で表示する", () => {
+  it("shows the pin's name rather than the page title while at the pinned URL", () => {
     const tab = tabView(1, { title: "Untitled document - Docs" })
-    const item = pinnedItem("a", { title: "議事録", openTab: openPinnedTab(tab) })
+    const item = pinnedItem("a", { title: "Meeting notes", openTab: openPinnedTab(tab) })
 
-    expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "AtPinnedUrl", title: "議事録" })
+    expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "AtPinnedUrl", title: "Meeting notes" })
   })
 
-  it("別のページへ移ってもピンの名前で表示し、今のページの名前も添える", () => {
-    const tab = tabView(1, { title: "検索結果" })
+  it("keeps showing the pin's name after navigating away and adds the current page title", () => {
+    const tab = tabView(1, { title: "Search results" })
     const item = pinnedItem("a", {
-      title: "議事録",
+      title: "Meeting notes",
       openTab: openPinnedTab(tab, { hasNavigatedAway: true }),
     })
 
     expect(pinnedItemDisplay(item)).toStrictEqual({
       _tag: "NavigatedAway",
-      title: "議事録",
-      pageTitle: "検索結果",
+      title: "Meeting notes",
+      pageTitle: "Search results",
     })
   })
 })
 
 describe("hostOf", () => {
-  it("URL として読めない文字列にはホスト名が無い", () => {
+  it("has no host name for a string that isn't a URL", () => {
     expect(Option.isNone(hostOf("not a url"))).toBe(true)
   })
 
-  it("ホストを持たない URL にはホスト名が無い", () => {
+  it("has no host name for a URL without a host", () => {
     expect(Option.isNone(hostOf("about:blank"))).toBe(true)
   })
 })
@@ -97,19 +97,19 @@ describe("openSplitViewOf", () => {
       ),
     })
 
-  it("2 つのピンが同じ分割ビューで開いていれば、その分割ビューを返す", () => {
+  it("returns the split view when both pins are open in the same split view", () => {
     const split = pinnedSplit("split", [openItem("a", 1, 9), openItem("b", 2, 9)])
 
     expect(openSplitViewOf(split)).toBe(SplitViewId.make(9))
   })
 
-  it("片方でも閉じていれば、分割ビューとして開いていない", () => {
+  it("isn't open as a split view when either pin is closed", () => {
     const split = pinnedSplit("split", [openItem("a", 1, 9), pinnedItem("b")])
 
     expect(openSplitViewOf(split)).toBeNull()
   })
 
-  it("両方開いていても、並べて表示していなければ分割ビューとして開いていない", () => {
+  it("isn't open as a split view when both are open but not side by side", () => {
     const apart = pinnedSplit("split", [openItem("a", 1, null), openItem("b", 2, null)])
     const elsewhere = pinnedSplit("split", [openItem("a", 1, 9), openItem("b", 2, 10)])
 
@@ -119,7 +119,7 @@ describe("openSplitViewOf", () => {
 })
 
 describe("selfAndDescendantFolderIds", () => {
-  it("フォルダ自身と、入れ子になったフォルダやライブフォルダをすべて含む", () => {
+  it("includes the folder itself and every nested folder and live folder", () => {
     const folder = pinnedFolder("docs", {
       children: [
         pinnedItem("spec"),
@@ -130,7 +130,7 @@ describe("selfAndDescendantFolderIds", () => {
     expect(selfAndDescendantFolderIds(folder)).toStrictEqual(["docs", "minutes", "inbox"])
   })
 
-  it("ライブフォルダは自分だけ", () => {
+  it("is just itself for a live folder", () => {
     expect(selfAndDescendantFolderIds(pinnedLiveFolder("inbox"))).toStrictEqual(["inbox"])
   })
 })

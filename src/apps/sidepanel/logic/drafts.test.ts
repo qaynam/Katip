@@ -3,35 +3,35 @@ import { describe, expect, it } from "vitest"
 import { bookmarkTitleChange, spaceNameChange, tabTitleChange } from "./drafts"
 
 describe("spaceNameChange", () => {
-  it("前後の空白を除いた新しい名前に改名する", () => {
-    expect(Option.getOrNull(spaceNameChange("  読書 ", "仕事"))).toBe("読書")
+  it("renames to the new name with surrounding whitespace trimmed", () => {
+    expect(Option.getOrNull(spaceNameChange("  Reading ", "Work"))).toBe("Reading")
   })
 
-  it("空白だけの名前には改名しない", () => {
-    expect(Option.isNone(spaceNameChange("   ", "仕事"))).toBe(true)
+  it("doesn't rename to a whitespace-only name", () => {
+    expect(Option.isNone(spaceNameChange("   ", "Work"))).toBe(true)
   })
 
-  it("元と同じ名前なら改名しない", () => {
-    expect(Option.isNone(spaceNameChange("仕事 ", "仕事"))).toBe(true)
+  it("doesn't rename when the name is unchanged", () => {
+    expect(Option.isNone(spaceNameChange("Work ", "Work"))).toBe(true)
   })
 })
 
 describe("tabTitleChange", () => {
-  it("空にするとタブ名の上書きを解除する", () => {
-    expect(Option.getOrNull(tabTitleChange("  ", "受信トレイ"))).toBe("")
+  it("clears the custom tab title when emptied", () => {
+    expect(Option.getOrNull(tabTitleChange("  ", "Inbox"))).toBe("")
   })
 
-  it("表示中の名前から変えていなければ何もしない", () => {
-    expect(Option.isNone(tabTitleChange("受信トレイ", "受信トレイ"))).toBe(true)
+  it("does nothing when the shown name is unchanged", () => {
+    expect(Option.isNone(tabTitleChange("Inbox", "Inbox"))).toBe(true)
   })
 })
 
 describe("bookmarkTitleChange", () => {
-  it("空の名前には改名しない", () => {
-    expect(Option.isNone(bookmarkTitleChange("", "資料"))).toBe(true)
+  it("doesn't rename to an empty name", () => {
+    expect(Option.isNone(bookmarkTitleChange("", "Docs"))).toBe(true)
   })
 
-  it("新しい名前に改名する", () => {
-    expect(Option.getOrNull(bookmarkTitleChange("設計資料", "資料"))).toBe("設計資料")
+  it("renames to the new name", () => {
+    expect(Option.getOrNull(bookmarkTitleChange("Design docs", "Docs"))).toBe("Design docs")
   })
 })
