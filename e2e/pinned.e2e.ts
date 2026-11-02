@@ -128,3 +128,12 @@ test("別のピンや一時タブと同じ名前にも変えられる", async ({
   await expect(pinned.getByRole("button", { name: "One" })).toHaveCount(2)
   await expect(temporary.getByRole("button", { name: "Page /a" })).toHaveCount(2)
 })
+
+test.fixme("フォルダを押すと開閉し、サイドパネルを開き直しても開閉の状態が保たれる", () => {})
+test.fixme("閉じたフォルダの中の開いているタブは、閉じたフォルダのすぐ下に覗かせる", () => {})
+test.fixme("フォルダのメニューで Change Icon を選ぶと、選んだアイコンがフォルダに付く", () => {})
+test.fixme("フォルダのメニューで Delete Folder を選んで確かめると、中身ごとブックマークが消える", () => {})
+test.fixme("フォルダ内検索で名前を入れると、フォルダの中のピンだけが絞り込まれる", () => {})
+test.fixme("フォルダを自分の中のフォルダへは落とせず、理由が知らされる", () => {})
+test.fixme("閉じたピンを一時タブの領域へ落としても、何も起きない", () => {})
+test.fixme("ピンのブックマークを Chrome のブックマークの画面で変えると、サイドバーのピンも変わる", () => {})
