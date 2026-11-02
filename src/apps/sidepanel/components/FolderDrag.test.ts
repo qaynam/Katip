@@ -29,19 +29,19 @@ const dragOnto = async (source: HTMLElement, target: HTMLElement, verticalRatio:
 }
 
 const docs = (overrides: Parameters<typeof pinnedFolder>[1] = {}) =>
-  pinnedFolder("docs", { title: "資料", isExpanded: false, ...overrides })
+  pinnedFolder("docs", { title: "Docs", isExpanded: false, ...overrides })
 
 const projects = pinnedFolder("projects", {
-  title: "プロジェクト",
+  title: "Projects",
   isExpanded: false,
   children: [pinnedItem("plan"), pinnedItem("budget")],
 })
 
-describe("フォルダのドラッグ", () => {
-  it("フォルダを別のフォルダの見出しの中央に落とすと、そのフォルダの中の末尾へ移す", async () => {
+describe("Dragging folders", () => {
+  it("moves a folder to the end of another folder when dropped on the middle of its header", async () => {
     const { connection } = await renderSidebar(viewWith([docs(), projects]))
 
-    await dragOnto(folderHeader("資料"), folderHeader("プロジェクト"), 0.5)
+    await dragOnto(folderHeader("Docs"), folderHeader("Projects"), 0.5)
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -52,10 +52,10 @@ describe("フォルダのドラッグ", () => {
     ])
   })
 
-  it("フォルダを別のフォルダの見出しの上端に落とすと、その前へ並べ替える", async () => {
+  it("reorders a folder before another folder when dropped on the top edge of its header", async () => {
     const { connection } = await renderSidebar(viewWith([projects, docs()]))
 
-    await dragOnto(folderHeader("資料"), folderHeader("プロジェクト"), 0.1)
+    await dragOnto(folderHeader("Docs"), folderHeader("Projects"), 0.1)
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -66,30 +66,30 @@ describe("フォルダのドラッグ", () => {
     ])
   })
 
-  it("フォルダを自分の中にあるフォルダに落としても受け付けない", async () => {
-    const minutes = pinnedFolder("minutes", { title: "議事録", isExpanded: false })
+  it("rejects dropping a folder into a folder inside itself", async () => {
+    const minutes = pinnedFolder("minutes", { title: "Meeting notes", isExpanded: false })
     const { connection } = await renderSidebar(
       viewWith([docs({ isExpanded: true, children: [minutes] })]),
     )
 
-    await dragOnto(folderHeader("資料"), folderHeader("議事録"), 0.5)
+    await dragOnto(folderHeader("Docs"), folderHeader("Meeting notes"), 0.5)
 
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("フォルダを自分の見出しの中央に落としても何も起きない", async () => {
+  it("does nothing when a folder is dropped on the middle of its own header", async () => {
     const { connection } = await renderSidebar(viewWith([docs()]))
 
-    await dragOnto(folderHeader("資料"), folderHeader("資料"), 0.5)
+    await dragOnto(folderHeader("Docs"), folderHeader("Docs"), 0.5)
 
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("ライブフォルダの見出しに落としても中には入れず、その前後に並べる", async () => {
-    const inbox = pinnedLiveFolder("inbox", { title: "受信トレイ" })
+  it("places a folder before or after a live folder rather than inside it when dropped on its header", async () => {
+    const inbox = pinnedLiveFolder("inbox", { title: "Inbox" })
     const { connection } = await renderSidebar(viewWith([docs(), inbox]))
 
-    await dragOnto(folderHeader("資料"), folderHeader("受信トレイ"), 0.6)
+    await dragOnto(folderHeader("Docs"), folderHeader("Inbox"), 0.6)
 
     expect(commandsOf(connection.sentCommands, "MovePinnedItem")).toStrictEqual([
       {
@@ -100,11 +100,11 @@ describe("フォルダのドラッグ", () => {
     ])
   })
 
-  it("ライブフォルダもドラッグして、別のフォルダの中へ移せる", async () => {
-    const inbox = pinnedLiveFolder("inbox", { title: "受信トレイ" })
+  it("moves a live folder into another folder by dragging", async () => {
+    const inbox = pinnedLiveFolder("inbox", { title: "Inbox" })
     const { connection } = await renderSidebar(viewWith([inbox, projects]))
 
-    await dragOnto(folderHeader("受信トレイ"), folderHeader("プロジェクト"), 0.5)
+    await dragOnto(folderHeader("Inbox"), folderHeader("Projects"), 0.5)
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -115,15 +115,15 @@ describe("フォルダのドラッグ", () => {
     ])
   })
 
-  it("分割ビューのピンもドラッグして、フォルダの中へ移せる", async () => {
+  it("moves a pinned split view into a folder by dragging", async () => {
     const pair = pinnedSplit("pair", [
-      pinnedItem("left", { title: "設計書" }),
-      pinnedItem("right", { title: "プレビュー" }),
+      pinnedItem("left", { title: "Design doc" }),
+      pinnedItem("right", { title: "Preview" }),
     ])
     const { connection } = await renderSidebar(viewWith([pair, projects]))
-    const pairRow = screen.getByRole("button", { name: "設計書" }).closest("li") as HTMLElement
+    const pairRow = screen.getByRole("button", { name: "Design doc" }).closest("li") as HTMLElement
 
-    await dragOnto(pairRow, folderHeader("プロジェクト"), 0.5)
+    await dragOnto(pairRow, folderHeader("Projects"), 0.5)
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -134,42 +134,42 @@ describe("フォルダのドラッグ", () => {
     ])
   })
 
-  it("フォルダを一時タブの行に落としても何も起きない", async () => {
+  it("does nothing when a folder is dropped on a temporary tab row", async () => {
     const { connection } = await renderSidebar(viewWith([docs()], [tabView(1)]))
-    const tabRow = screen.getByRole("button", { name: "タブ 1" }).closest("li") as HTMLElement
+    const tabRow = screen.getByRole("button", { name: "Tab 1" }).closest("li") as HTMLElement
 
-    await dragOnto(folderHeader("資料"), tabRow, 0.9)
+    await dragOnto(folderHeader("Docs"), tabRow, 0.9)
 
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("background が移動を断ったら、その理由を知らせる", async () => {
+  it("shows the reason when the background refuses the move", async () => {
     await renderSidebar(viewWith([docs(), projects]), {
       respond: () => ({
-        outcome: { _tag: "Failed", reason: "フォルダは 2 階層までしか入れられません" },
+        outcome: { _tag: "Failed", reason: "Folders can only be nested two levels deep" },
       }),
     })
 
-    await dragOnto(folderHeader("資料"), folderHeader("プロジェクト"), 0.5)
+    await dragOnto(folderHeader("Docs"), folderHeader("Projects"), 0.5)
     await tick()
 
     expect(screen.getByRole("status").textContent).toContain(
-      "フォルダは 2 階層までしか入れられません",
+      "Folders can only be nested two levels deep",
     )
   })
 })
 
-describe("フォルダをドラッグしている間", () => {
+describe("While dragging a folder", () => {
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it("別の閉じたフォルダの見出しに 250ms 留まると、そのフォルダを開く", async () => {
+  it("expands another collapsed folder after hovering over its header for 250ms", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     const { connection } = await renderSidebar(viewWith([docs(), projects]))
 
-    await fireEvent.dragStart(folderHeader("資料"))
-    await dragOverAt(folderHeader("プロジェクト"), 0.5)
+    await fireEvent.dragStart(folderHeader("Docs"))
+    await dragOverAt(folderHeader("Projects"), 0.5)
     vi.advanceTimersByTime(250)
 
     expect(commandsOf(connection.sentCommands, "SetFolderExpanded")).toStrictEqual([
@@ -177,12 +177,12 @@ describe("フォルダをドラッグしている間", () => {
     ])
   })
 
-  it("自分の見出しに留まっても、自分は開かない", async () => {
+  it("doesn't expand itself when hovering over its own header", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     const { connection } = await renderSidebar(viewWith([docs()]))
 
-    await fireEvent.dragStart(folderHeader("資料"))
-    await dragOverAt(folderHeader("資料"), 0.5)
+    await fireEvent.dragStart(folderHeader("Docs"))
+    await dragOverAt(folderHeader("Docs"), 0.5)
     vi.advanceTimersByTime(1_000)
 
     expect(commandsOf(connection.sentCommands, "SetFolderExpanded")).toStrictEqual([])

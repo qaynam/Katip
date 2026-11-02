@@ -7,29 +7,31 @@ import { favoriteView, sidebarView } from "../testing/view-builders"
 const favoritesRegion = () => screen.getByRole("region", { name: "Favorites" })
 
 describe("Favorites", () => {
-  it("押したタブをアクティブにする", async () => {
+  it("activates the clicked tab", async () => {
     const { connection } = await renderSidebar(
-      sidebarView({ favorites: [favoriteView(1, { title: "メール" }), favoriteView(2)] }),
+      sidebarView({ favorites: [favoriteView(1, { title: "Mail" }), favoriteView(2)] }),
     )
 
-    await fireEvent.click(within(favoritesRegion()).getByRole("button", { name: "メール" }))
+    await fireEvent.click(within(favoritesRegion()).getByRole("button", { name: "Mail" }))
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "ActivateTab", tabId: TabId.make(1) }])
   })
 
-  it("アクティブなタブのタイルが選ばれた状態になる", async () => {
+  it("marks the active tab's tile as current", async () => {
     await renderSidebar(
-      sidebarView({ favorites: [favoriteView(1, { title: "メール", isActive: true })] }),
+      sidebarView({ favorites: [favoriteView(1, { title: "Mail", isActive: true })] }),
     )
 
-    const tile = within(favoritesRegion()).getByRole("button", { name: "メール" })
+    const tile = within(favoritesRegion()).getByRole("button", { name: "Mail" })
 
     expect(tile.getAttribute("aria-current")).toBe("true")
   })
 
-  it("空のときは、ドラッグで追加できることを控えめに示す", async () => {
+  it("quietly hints that tabs can be dragged in when empty", async () => {
     await renderSidebar(sidebarView({ favorites: [] }))
 
-    expect(within(favoritesRegion()).getByText(/ドラッグして Favorites に追加/)).toBeTruthy()
+    expect(
+      within(favoritesRegion()).getByText(/Drag tabs here to add them to Favorites/),
+    ).toBeTruthy()
   })
 })

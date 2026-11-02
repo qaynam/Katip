@@ -26,11 +26,11 @@ const tunedTheme: SpaceTheme = {
 
 const openPicker = async (theme: SpaceTheme) => {
   const rendered = await renderSidebar(
-    sidebarView({ spaces: [spaceView("work", { name: SpaceName.make("仕事"), theme })] }),
+    sidebarView({ spaces: [spaceView("work", { name: SpaceName.make("Work"), theme })] }),
   )
-  await fireEvent.click(screen.getByRole("button", { name: "Space のメニュー" }))
-  await fireEvent.click(screen.getByRole("menuitem", { name: "テーマを編集" }))
-  return { ...rendered, picker: screen.getByRole("dialog", { name: "テーマ" }) }
+  await fireEvent.click(screen.getByRole("button", { name: "Space menu" }))
+  await fireEvent.click(screen.getByRole("menuitem", { name: "Edit Theme" }))
+  return { ...rendered, picker: screen.getByRole("dialog", { name: "Theme" }) }
 }
 
 const sentThemes = (commands: ReadonlyArray<SidebarCommand>) =>
@@ -38,9 +38,9 @@ const sentThemes = (commands: ReadonlyArray<SidebarCommand>) =>
     command._tag === "SetSpaceTheme" ? command.theme : null,
   )
 
-// jsdom はレイアウトを持たないため、色フィールドの大きさを与える
+// jsdom has no layout, so the color field is given a size
 const fieldOf = (picker: HTMLElement) => {
-  const field = within(picker).getByRole("group", { name: "色" })
+  const field = within(picker).getByRole("group", { name: "Colors" })
   vi.spyOn(field, "getBoundingClientRect").mockReturnValue(
     DOMRect.fromRect({ x: 0, y: 0, width: 300, height: 268 }),
   )
@@ -49,27 +49,29 @@ const fieldOf = (picker: HTMLElement) => {
 const fieldCenter = { x: 150, y: 134 }
 const fieldRadius = Math.min(fieldCenter.x, fieldCenter.y) - FIELD_EDGE_INSET_PX
 
-describe("色を選ぶ前のピッカー", () => {
-  it("色の選び方を案内し、強さのつまみとグレインの目盛りを出さない", async () => {
+describe("The picker before a color is chosen", () => {
+  it("explains how to choose a color and hides the intensity thumb and the grain ticks", async () => {
     const { picker } = await openPicker(neutralTheme)
 
-    expect(within(picker).getByText("クリックしてこの Space の色を選ぶ")).toBeTruthy()
+    expect(within(picker).getByText("Click to choose a color for this Space")).toBeTruthy()
     expect(picker.querySelector("[data-thumb]")).toBeNull()
     expect(picker.querySelector("[data-tick]")).toBeNull()
-    expect(within(picker).getByRole("slider", { name: "色の強さ" }).ariaDisabled).toBe("true")
+    expect(within(picker).getByRole("slider", { name: "Color intensity" }).ariaDisabled).toBe(
+      "true",
+    )
   })
 
-  it("色の数を増やしも減らしもできない", async () => {
+  it("can neither add nor remove colors", async () => {
     const { picker } = await openPicker(neutralTheme)
 
-    const buttons = ["色を減らす", "色を増やす"].map(
+    const buttons = ["Remove a color", "Add a color"].map(
       (name) => within(picker).getByRole<HTMLButtonElement>("button", { name }).disabled,
     )
 
     expect(buttons).toStrictEqual([true, true])
   })
 
-  it("フィールドを押すと、押した位置の色を主色にしてテーマを送る", async () => {
+  it("sends a theme whose primary color is the one at the pressed position in the field", async () => {
     const { connection, picker } = await openPicker(neutralTheme)
     const field = fieldOf(picker)
     const at = { clientX: fieldCenter.x + fieldRadius, clientY: fieldCenter.y, pointerId: 1 }
@@ -84,19 +86,19 @@ describe("色を選ぶ前のピッカー", () => {
   })
 })
 
-describe("色を選んだあとのピッカー", () => {
+describe("The picker after a color is chosen", () => {
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it("強さのつまみとグレインの目盛りを出す", async () => {
+  it("shows the intensity thumb and the grain ticks", async () => {
     const { picker } = await openPicker(tunedTheme)
 
     expect(picker.querySelector("[data-thumb]")).not.toBeNull()
     expect(picker.querySelector("[data-tick]")).not.toBeNull()
   })
 
-  it("ドラッグ中は送る回数を間引き、離したときに最後の位置の色を必ず送る", async () => {
+  it("throttles sending while dragging and always sends the color at the final position on release", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     const { connection, picker } = await openPicker(tunedTheme)
     const field = fieldOf(picker)
@@ -117,7 +119,7 @@ describe("色を選んだあとのピッカー", () => {
     ])
   })
 
-  it("ドラッグ中は background の応答を待たずに、サイドバー全体をその色で塗る", async () => {
+  it("paints the whole sidebar in the dragged color without waiting for the background", async () => {
     const { container, picker } = await openPicker(tunedTheme)
     const field = fieldOf(picker)
 
@@ -131,12 +133,12 @@ describe("色を選んだあとのピッカー", () => {
     expect(shownAppearance(container).background).toBe(appearanceOf(dragged, "light").background)
   })
 
-  it("色の点を矢印キーで動かせる", async () => {
+  it("moves the color dot with the arrow keys", async () => {
     const { connection, picker } = await openPicker({
       ...tunedTheme,
       colors: [{ hue: 0, chroma: 0 }],
     })
-    const primary = within(picker).getByRole("button", { name: "主色" })
+    const primary = within(picker).getByRole("button", { name: "Primary color" })
 
     await fireEvent.keyDown(primary, { key: "ArrowUp" })
     await fireEvent.keyUp(primary, { key: "ArrowUp" })
@@ -146,21 +148,21 @@ describe("色を選んだあとのピッカー", () => {
     ])
   })
 
-  it("＋ で色を足してグラデーションにし、− で最後に足した色を外す", async () => {
+  it("adds a color for a gradient with + and removes the last added one with −", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
 
-    await fireEvent.click(within(picker).getByRole("button", { name: "色を増やす" }))
-    await fireEvent.click(within(picker).getByRole("button", { name: "色を減らす" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Add a color" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Remove a color" }))
 
     expect(sentThemes(connection.sentCommands).map((theme) => theme?.colors.length)).toStrictEqual([
       2, 1,
     ])
   })
 
-  it("主色だけのときは減らせず、上限の色数では増やせない", async () => {
+  it("can't remove the only color or add beyond the color limit", async () => {
     const { picker: single, unmount } = await openPicker(tunedTheme)
     const canRemoveFromSingle = !within(single).getByRole<HTMLButtonElement>("button", {
-      name: "色を減らす",
+      name: "Remove a color",
     }).disabled
     unmount()
 
@@ -169,15 +171,15 @@ describe("色を選んだあとのピッカー", () => {
       colors: [yellow, red, { hue: 140, chroma: 0.7 }].slice(0, MAX_THEME_COLORS),
     })
     const canAddToFull = !within(full).getByRole<HTMLButtonElement>("button", {
-      name: "色を増やす",
+      name: "Add a color",
     }).disabled
 
     expect([canRemoveFromSingle, canAddToFull]).toStrictEqual([false, false])
   })
 
-  it("強さはキーボードで調整でき、キーを離すと送る", async () => {
+  it("adjusts the intensity with the keyboard and sends it when the key is released", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
-    const slider = within(picker).getByRole("slider", { name: "色の強さ" })
+    const slider = within(picker).getByRole("slider", { name: "Color intensity" })
 
     await fireEvent.keyDown(slider, { key: "ArrowRight" })
     await fireEvent.keyUp(slider, { key: "ArrowRight" })
@@ -188,9 +190,9 @@ describe("色を選んだあとのピッカー", () => {
     })
   })
 
-  it("グレインはダイヤルで調整できる", async () => {
+  it("adjusts the grain with the dial", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
-    const dial = within(picker).getByRole("slider", { name: "グレイン" })
+    const dial = within(picker).getByRole("slider", { name: "Grain" })
 
     await fireEvent.keyDown(dial, { key: "End" })
     await fireEvent.keyUp(dial, { key: "End" })
@@ -198,75 +200,75 @@ describe("色を選んだあとのピッカー", () => {
     expect(sentThemes(connection.sentCommands).at(-1)).toStrictEqual({ ...tunedTheme, grain: 1 })
   })
 
-  it("モードを選ぶとそのモードのテーマを送る", async () => {
+  it("sends the theme in the chosen mode", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
 
-    await fireEvent.click(within(picker).getByRole("radio", { name: "ライト" }))
+    await fireEvent.click(within(picker).getByRole("radio", { name: "Light" }))
 
     expect(sentThemes(connection.sentCommands)).toStrictEqual([{ ...tunedTheme, mode: "light" }])
   })
 })
 
-describe("プリセット", () => {
-  it("選ぶと色だけが変わり、モード・強さ・グレインはそのまま保つ", async () => {
+describe("Presets", () => {
+  it("changes only the colors when chosen, keeping the mode, intensity, and grain", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
 
-    await fireEvent.click(within(picker).getByRole("button", { name: "単色 2" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Solid 2" }))
 
     expect(sentThemes(connection.sentCommands)).toStrictEqual([
       { ...tunedTheme, colors: presetPages[0]?.[1] },
     ])
   })
 
-  it("次のページにはグラデーションのプリセットが並ぶ", async () => {
+  it("lists gradient presets on the next page", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
 
-    await fireEvent.click(within(picker).getByRole("button", { name: "次のプリセット" }))
-    await fireEvent.click(within(picker).getByRole("button", { name: "グラデーション 1" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Next presets" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Gradient 1" }))
 
     expect(sentThemes(connection.sentCommands).at(-1)?.colors).toStrictEqual(presetPages[1]?.[0])
   })
 
-  it("最初のページでは前へ、最後のページでは次へ進めない", async () => {
+  it("can't go back from the first page or forward from the last", async () => {
     const { picker } = await openPicker(tunedTheme)
     const button = (name: string) => within(picker).getByRole<HTMLButtonElement>("button", { name })
-    const canGoBackOnFirst = !button("前のプリセット").disabled
+    const canGoBackOnFirst = !button("Previous presets").disabled
 
-    await fireEvent.click(button("次のプリセット"))
+    await fireEvent.click(button("Next presets"))
 
-    expect([canGoBackOnFirst, button("次のプリセット").disabled]).toStrictEqual([false, true])
+    expect([canGoBackOnFirst, button("Next presets").disabled]).toStrictEqual([false, true])
   })
 })
 
-describe("ピッカーを閉じる", () => {
-  it("Escape で閉じる", async () => {
+describe("Closing the picker", () => {
+  it("closes with Escape", async () => {
     await openPicker(tunedTheme)
 
     await fireEvent.keyDown(window, { key: "Escape" })
 
-    expect(screen.queryByRole("dialog", { name: "テーマ" })).toBeNull()
+    expect(screen.queryByRole("dialog", { name: "Theme" })).toBeNull()
   })
 
-  it("ピッカーの外側を押すと閉じる", async () => {
+  it("closes when pressing outside the picker", async () => {
     await openPicker(tunedTheme)
 
     await fireEvent.pointerDown(screen.getByRole("main"))
 
-    expect(screen.queryByRole("dialog", { name: "テーマ" })).toBeNull()
+    expect(screen.queryByRole("dialog", { name: "Theme" })).toBeNull()
   })
 
-  it("閉じたあとも、新しいテーマがビューに届くまでは選んだテーマで塗り続ける", async () => {
+  it("keeps painting the chosen theme after closing until the new theme reaches the view", async () => {
     const { container, picker } = await openPicker(tunedTheme)
-    await fireEvent.click(within(picker).getByRole("radio", { name: "ライト" }))
+    await fireEvent.click(within(picker).getByRole("radio", { name: "Light" }))
 
     await fireEvent.keyDown(window, { key: "Escape" })
 
     expect(shownAppearance(container).scheme).toBe("light")
   })
 
-  it("新しいテーマがビューに届いたあとは、ビューのテーマで塗る", async () => {
+  it("paints the view's theme once the new theme has reached the view", async () => {
     const { container, picker, pushView } = await openPicker(tunedTheme)
-    await fireEvent.click(within(picker).getByRole("radio", { name: "ライト" }))
+    await fireEvent.click(within(picker).getByRole("radio", { name: "Light" }))
     await fireEvent.keyDown(window, { key: "Escape" })
     const saved = { ...tunedTheme, mode: "light" as const }
     await pushView(sidebarView({ spaces: [spaceView("work", { theme: saved })] }))

@@ -8,60 +8,64 @@ import { archiveEntry, sidebarView, spaceView } from "../testing/view-builders"
 const work = spaceView("work")
 const hobby = spaceView("hobby")
 const archived = [
-  archiveEntry("older", { title: "古い記事", spaceId: work.id, archivedAt: 1_000 }),
-  archiveEntry("newer", { title: "新しい記事", spaceId: work.id, archivedAt: 2_000 }),
-  archiveEntry("hobby", { title: "趣味の記事", spaceId: SpaceId.make("hobby"), archivedAt: 3_000 }),
+  archiveEntry("older", { title: "Older article", spaceId: work.id, archivedAt: 1_000 }),
+  archiveEntry("newer", { title: "Newer article", spaceId: work.id, archivedAt: 2_000 }),
+  archiveEntry("hobby", {
+    title: "Hobby article",
+    spaceId: SpaceId.make("hobby"),
+    archivedAt: 3_000,
+  }),
 ]
 
 const renderArchive = async (overrides: Parameters<typeof sidebarView>[0] = {}) => {
   const rendered = await renderSidebar(
     sidebarView({ spaces: [work, hobby], archive: archived, ...overrides }),
   )
-  await fireEvent.click(screen.getByRole("button", { name: "アーカイブ" }))
+  await fireEvent.click(screen.getByRole("button", { name: "Archive" }))
   return rendered
 }
 
-const archiveRegion = () => screen.getByRole("region", { name: "アーカイブ" })
+const archiveRegion = () => screen.getByRole("region", { name: "Archive" })
 const entryTitles = () =>
   within(archiveRegion())
     .getAllByRole("listitem")
     .map((item) => within(item).getAllByRole("button")[0]?.textContent ?? "")
 
-describe("アーカイブパネル", () => {
-  it("開くと、表示中の Space のアーカイブを新しい順に並べる", async () => {
+describe("Archive panel", () => {
+  it("lists the active Space's archive, newest first, when opened", async () => {
     await renderArchive()
 
     const titles = entryTitles()
 
     expect(titles).toHaveLength(2)
-    expect(titles[0]).toContain("新しい記事")
-    expect(titles[1]).toContain("古い記事")
+    expect(titles[0]).toContain("Newer article")
+    expect(titles[1]).toContain("Older article")
   })
 
-  it("「すべての Space」を選ぶと、他の Space のアーカイブも並べる", async () => {
+  it("also lists other Spaces' archives when All Spaces is chosen", async () => {
     await renderArchive()
 
-    await fireEvent.click(screen.getByRole("radio", { name: "すべての Space" }))
+    await fireEvent.click(screen.getByRole("radio", { name: "All Spaces" }))
 
-    expect(entryTitles()[0]).toContain("趣味の記事")
+    expect(entryTitles()[0]).toContain("Hobby article")
   })
 
-  it("項目を押すとこのウィンドウに復元する", async () => {
+  it("restores an entry into this window when clicked", async () => {
     const { connection } = await renderArchive()
 
-    await fireEvent.click(within(archiveRegion()).getByRole("button", { name: /新しい記事/ }))
+    await fireEvent.click(within(archiveRegion()).getByRole("button", { name: /Newer article/ }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "RestoreArchiveEntry", windowId: 1, entryId: "newer" },
     ])
   })
 
-  it("× を押すとアーカイブから消す", async () => {
+  it("removes an entry from the archive with ×", async () => {
     const { connection } = await renderArchive()
     const [newest] = within(archiveRegion()).getAllByRole("listitem")
 
     await fireEvent.click(
-      within(newest as HTMLElement).getByRole("button", { name: "アーカイブから削除" }),
+      within(newest as HTMLElement).getByRole("button", { name: "Remove from Archive" }),
     )
 
     expect(connection.sentCommands).toStrictEqual([
@@ -69,27 +73,27 @@ describe("アーカイブパネル", () => {
     ])
   })
 
-  it("アーカイブが無ければそう示す", async () => {
+  it("says so when the archive is empty", async () => {
     await renderArchive({ archive: [] })
 
-    expect(within(archiveRegion()).getByText("アーカイブしたタブはありません")).toBeTruthy()
+    expect(within(archiveRegion()).getByText("No archived tabs")).toBeTruthy()
   })
 })
 
-describe("自動アーカイブの設定", () => {
+describe("Auto-archive settings", () => {
   const durationSelect = () =>
-    screen.getByRole<HTMLSelectElement>("combobox", { name: "自動でアーカイブするまでの時間" })
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "Time before archiving" })
   const optionTexts = () =>
     [...durationSelect().options].map((option) => option.textContent?.trim())
   const selectedText = () => durationSelect().selectedOptions[0]?.textContent?.trim()
 
-  it("オンにすると、今の時間設定のまま有効にする", async () => {
+  it("turns on with the current time setting", async () => {
     const { connection } = await renderArchive({
       autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) },
     })
 
     await fireEvent.click(
-      screen.getByRole("checkbox", { name: "使っていないタブを自動でアーカイブ" }),
+      screen.getByRole("checkbox", { name: "Archive inactive tabs automatically" }),
     )
 
     expect(connection.sentCommands).toStrictEqual([
@@ -97,28 +101,28 @@ describe("自動アーカイブの設定", () => {
     ])
   })
 
-  it("時間は、割り切れる最も大きい単位で選択肢に並べる", async () => {
+  it("lists each time option in the largest unit that divides it evenly", async () => {
     await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(360) } })
 
     expect(optionTexts()).toStrictEqual([
-      "30 分",
-      "1 時間",
-      "3 時間",
-      "6 時間",
-      "12 時間",
-      "1 日",
-      "3 日",
-      "1 週間",
+      "30 minutes",
+      "1 hour",
+      "3 hours",
+      "6 hours",
+      "12 hours",
+      "1 day",
+      "3 days",
+      "1 week",
     ])
   })
 
-  it("今の設定の時間が選択中になる", async () => {
+  it("selects the currently configured time", async () => {
     await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(3 * 1440) } })
 
-    expect(selectedText()).toBe("3 日")
+    expect(selectedText()).toBe("3 days")
   })
 
-  it("時間を選ぶと、選んだ分数に変える", async () => {
+  it("changes to the chosen number of minutes", async () => {
     const { connection } = await renderArchive({
       autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(360) },
     })
@@ -130,14 +134,14 @@ describe("自動アーカイブの設定", () => {
     ])
   })
 
-  it("選択肢に無い保存値も、選択中として表示する", async () => {
+  it("shows a saved value that isn't among the options as selected", async () => {
     await renderArchive({ autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) } })
 
-    expect(selectedText()).toBe("90 分")
-    expect(optionTexts().slice(0, 3)).toStrictEqual(["30 分", "1 時間", "90 分"])
+    expect(selectedText()).toBe("90 minutes")
+    expect(optionTexts().slice(0, 3)).toStrictEqual(["30 minutes", "1 hour", "90 minutes"])
   })
 
-  it("オフの間は時間を変えられない", async () => {
+  it("can't change the time while turned off", async () => {
     await renderArchive({ autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) } })
 
     expect(durationSelect().disabled).toBe(true)

@@ -21,7 +21,7 @@ import type {
 
 export const tabView = (id: number, overrides: Partial<Omit<TabView, "tabId">> = {}): TabView => ({
   tabId: TabId.make(id),
-  title: `タブ ${id}`,
+  title: `Tab ${id}`,
   url: `https://example.com/${id}`,
   favIconUrl: null,
   isActive: false,
@@ -35,7 +35,7 @@ export const tabView = (id: number, overrides: Partial<Omit<TabView, "tabId">> =
 
 export const temporaryTab = (tab: TabView): TemporaryEntry => ({ _tag: "TemporaryTab", tab })
 
-/** 2 つのタブに同じ splitViewId を付けて、1 つの分割ビューの行にする */
+/** Gives both tabs the same splitViewId so they form a single split view row. */
 export const temporarySplit = (id: number, left: TabView, right: TabView): TemporaryEntry => {
   const splitViewId = SplitViewId.make(id)
   return {
@@ -59,7 +59,7 @@ export const pinnedItem = (
 ): PinnedItemView => ({
   _tag: "PinnedItem",
   bookmarkId: BookmarkId.make(id),
-  title: `ピン ${id}`,
+  title: `Pin ${id}`,
   url: `https://example.com/pinned/${id}`,
   openTab: null,
   ...overrides,
@@ -83,7 +83,7 @@ export const pinnedFolder = (
 ): PinnedFolderView => ({
   _tag: "PinnedFolder",
   bookmarkId: BookmarkId.make(id),
-  title: `フォルダ ${id}`,
+  title: `Folder ${id}`,
   icon: null,
   isExpanded: true,
   canCreateSubfolder: true,
@@ -94,7 +94,7 @@ export const pinnedFolder = (
 
 export const liveItem = (id: string, overrides: Partial<LiveItemView> = {}): LiveItemView => ({
   id,
-  title: `項目 ${id}`,
+  title: `Item ${id}`,
   subtitle: "",
   url: `https://mail.google.com/mail/u/0/#inbox/${id}`,
   updatedAt: 0,
@@ -110,7 +110,7 @@ export const pinnedLiveFolder = (
 ): PinnedLiveFolderView => ({
   _tag: "PinnedLiveFolder",
   bookmarkId: BookmarkId.make(id),
-  title: `ライブフォルダ ${id}`,
+  title: `Live folder ${id}`,
   source: inbox,
   isExpanded: true,
   status: { _tag: "Ready", refreshedAt: 0 },
@@ -119,7 +119,7 @@ export const pinnedLiveFolder = (
   ...overrides,
 })
 
-/** 一時タブが分割ビューを含まないなら temporaryTabs でタブだけを並べてよい */
+/** When the temporary tabs include no split views, temporaryTabs can list just the tabs. */
 export const spaceView = (
   id: string,
   overrides: Partial<Omit<SpaceView, "id" | "pinned">> & {
@@ -144,7 +144,7 @@ export const favoriteView = (
   overrides: Partial<Omit<FavoriteView, "tabId">> = {},
 ): FavoriteView => ({
   tabId: TabId.make(id),
-  title: `お気に入り ${id}`,
+  title: `Favorite ${id}`,
   url: `https://example.com/favorite/${id}`,
   favIconUrl: null,
   isActive: false,
@@ -157,7 +157,7 @@ export const archiveEntry = (
 ): ArchiveEntry => ({
   id: ArchiveEntryId.make(id),
   url: `https://example.com/archived/${id}`,
-  title: `アーカイブ ${id}`,
+  title: `Archived ${id}`,
   spaceId: SpaceId.make("work"),
   archivedAt: 0,
   ...overrides,

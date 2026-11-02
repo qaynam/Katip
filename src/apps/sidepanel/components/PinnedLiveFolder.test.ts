@@ -10,11 +10,11 @@ const viewWithPins = (...nodes: ReadonlyArray<PinnedNodeView>) =>
 
 const inbox = (overrides: Partial<Omit<PinnedLiveFolderView, "_tag" | "bookmarkId">> = {}) =>
   pinnedLiveFolder("inbox", {
-    title: "受信トレイ",
+    title: "Inbox",
     items: [
-      liveItem("quote", { title: "見積もりの件", subtitle: "山田 太郎", isUnseen: true }),
-      liveItem("lunch", { title: "ランチのお誘い", isUnseen: true }),
-      liveItem("report", { title: "週報", isUnseen: false }),
+      liveItem("quote", { title: "Re: Quote", subtitle: "Jane Doe", isUnseen: true }),
+      liveItem("lunch", { title: "Lunch invite", isUnseen: true }),
+      liveItem("report", { title: "Weekly report", isUnseen: false }),
     ],
     ...overrides,
   })
@@ -25,7 +25,7 @@ const failed = (
   failure: Partial<Pick<Failure, "needsPermission" | "needsToken" | "signInUrl">>,
 ): Failure => ({
   _tag: "Failed",
-  reason: "取得できませんでした",
+  reason: "Request timed out",
   needsPermission: false,
   needsToken: false,
   signInUrl: null,
@@ -33,78 +33,80 @@ const failed = (
 })
 
 const header = (title: string) => screen.getByRole("button", { name: new RegExp(`^${title}`) })
-const pinnedRegion = () => screen.getByRole("region", { name: "ピン留め" })
+const pinnedRegion = () => screen.getByRole("region", { name: "Pinned" })
 
 const openHeaderMenu = async (title: string) => {
   await fireEvent.contextMenu(header(title))
 }
 
-describe("ライブフォルダの表示", () => {
-  it("閉じたライブフォルダには未読の件数だけが出て、項目は隠れる", async () => {
+describe("Showing a live folder", () => {
+  it("shows only the unread count on a collapsed live folder and hides the items", async () => {
     await renderSidebar(viewWithPins(inbox({ isExpanded: false })))
 
-    expect(header("受信トレイ").textContent).toContain("未読 2 件")
-    expect(within(pinnedRegion()).queryByText("見積もりの件")).toBeNull()
+    expect(header("Inbox").textContent).toContain("2 unread items")
+    expect(within(pinnedRegion()).queryByText("Re: Quote")).toBeNull()
   })
 
-  it("開いたライブフォルダには項目が並び、未読の項目はそれと分かる", async () => {
+  it("lists the items of an expanded live folder and marks unread ones", async () => {
     await renderSidebar(viewWithPins(inbox()))
 
-    expect(screen.getByRole("button", { name: /見積もりの件/ }).textContent).toContain("未読")
-    expect(screen.getByRole("button", { name: /週報/ }).textContent).not.toContain("未読")
+    expect(screen.getByRole("button", { name: /Re: Quote/ }).textContent).toContain("Unread")
+    expect(screen.getByRole("button", { name: /Weekly report/ }).textContent).not.toContain(
+      "Unread",
+    )
   })
 
-  it("項目の補足をタイトルの下に添える", async () => {
+  it("shows an item's subtitle below its title", async () => {
     await renderSidebar(viewWithPins(inbox()))
 
-    expect(screen.getByRole("button", { name: /見積もりの件/ }).textContent).toContain("山田 太郎")
+    expect(screen.getByRole("button", { name: /Re: Quote/ }).textContent).toContain("Jane Doe")
   })
 
-  it("未読が無ければ件数を出さない", async () => {
+  it("shows no count when nothing is unread", async () => {
     await renderSidebar(viewWithPins(inbox({ items: [liveItem("read")], isExpanded: false })))
 
-    expect(header("受信トレイ").textContent).not.toContain("未読")
+    expect(header("Inbox").textContent).not.toContain("unread")
   })
 
-  it("取得中であることを示す", async () => {
+  it("shows that it is refreshing", async () => {
     await renderSidebar(viewWithPins(inbox({ status: { _tag: "Refreshing" } })))
 
-    expect(header("受信トレイ").textContent).toContain("更新中")
+    expect(header("Inbox").textContent).toContain("Refreshing")
   })
 
-  it("項目は並べ替えずに、届いた順のまま並べる", async () => {
+  it("lists the items in the order received, without sorting them", async () => {
     await renderSidebar(
       viewWithPins(
         inbox({
           sort: "newest",
           items: [
-            liveItem("older", { title: "古いメール", updatedAt: 1 }),
-            liveItem("newer", { title: "新しいメール", updatedAt: 2 }),
+            liveItem("older", { title: "Older mail", updatedAt: 1 }),
+            liveItem("newer", { title: "Newer mail", updatedAt: 2 }),
           ],
         }),
       ),
     )
 
-    const rows = within(pinnedRegion()).getAllByRole("button", { name: /メール$/ })
+    const rows = within(pinnedRegion()).getAllByRole("button", { name: /mail$/ })
 
     expect(rows.map((row) => row.textContent)).toStrictEqual([
-      expect.stringContaining("古いメール"),
-      expect.stringContaining("新しいメール"),
+      expect.stringContaining("Older mail"),
+      expect.stringContaining("Newer mail"),
     ])
   })
 
-  it("項目が無ければ、新しい項目が無いことを示す", async () => {
+  it("says there are no new items when empty", async () => {
     await renderSidebar(viewWithPins(inbox({ items: [] })))
 
-    expect(within(pinnedRegion()).getByText("新しい項目はありません")).toBeTruthy()
+    expect(within(pinnedRegion()).getByText("No new items")).toBeTruthy()
   })
 })
 
-describe("ライブフォルダの操作", () => {
-  it("項目をクリックすると、その項目を開く", async () => {
+describe("Live folder actions", () => {
+  it("opens an item when clicked", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await fireEvent.click(screen.getByRole("button", { name: /見積もりの件/ }))
+    await fireEvent.click(screen.getByRole("button", { name: /Re: Quote/ }))
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -116,133 +118,133 @@ describe("ライブフォルダの操作", () => {
     ])
   })
 
-  it("見出しをクリックすると、今と逆の開閉状態にする", async () => {
+  it("toggles expansion when the header is clicked", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox({ isExpanded: true })))
 
-    await fireEvent.click(header("受信トレイ"))
+    await fireEvent.click(header("Inbox"))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "SetFolderExpanded", bookmarkId: BookmarkId.make("inbox"), isExpanded: false },
     ])
   })
 
-  it("右クリックの「今すぐ更新」で取得し直す", async () => {
+  it("refreshes with Refresh Now in the context menu", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "今すぐ更新" }))
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Refresh Now" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "RefreshLiveFolder", bookmarkId: BookmarkId.make("inbox") },
     ])
   })
 
-  it("右クリックの「すべて既読にする」で、すべての項目を見たことにする", async () => {
+  it("marks every item as seen with Mark All as Read in the context menu", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "すべて既読にする" }))
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Mark All as Read" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "MarkLiveFolderSeen", bookmarkId: BookmarkId.make("inbox") },
     ])
   })
 
-  it("未読が無ければ「すべて既読にする」は押せない", async () => {
+  it("disables Mark All as Read when nothing is unread", async () => {
     await renderSidebar(viewWithPins(inbox({ items: [liveItem("read")] })))
 
-    await openHeaderMenu("受信トレイ")
+    await openHeaderMenu("Inbox")
 
     expect(
-      screen.getByRole<HTMLButtonElement>("menuitem", { name: "すべて既読にする" }).disabled,
+      screen.getByRole<HTMLButtonElement>("menuitem", { name: "Mark All as Read" }).disabled,
     ).toBe(true)
   })
 
-  it("右クリックの「名前を変更」で、新しい名前を付ける", async () => {
+  it("renames with Rename in the context menu", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }))
-    const input = screen.getByRole("textbox", { name: "ライブフォルダの名前" })
-    await fireEvent.input(input, { target: { value: "メール" } })
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }))
+    const input = screen.getByRole("textbox", { name: "Live folder name" })
+    await fireEvent.input(input, { target: { value: "Mail" } })
     await fireEvent.keyDown(input, { key: "Enter" })
 
     expect(commandsOf(connection.sentCommands, "RenamePinnedItem")).toStrictEqual([
-      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("inbox"), title: "メール" },
+      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("inbox"), title: "Mail" },
     ])
   })
 
-  it("削除を確認ダイアログで承認すると、ライブフォルダを削除する", async () => {
+  it("deletes the live folder once deletion is confirmed in the dialog", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "ライブフォルダを削除" }))
-    await fireEvent.click(await screen.findByRole("button", { name: "削除" }))
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Live Folder" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete" }))
 
     expect(commandsOf(connection.sentCommands, "DeleteFolder")).toStrictEqual([
       { _tag: "DeleteFolder", bookmarkId: BookmarkId.make("inbox") },
     ])
   })
 
-  it("削除を確認ダイアログで取り消すと、何も削除しない", async () => {
+  it("deletes nothing when deletion is canceled in the dialog", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "ライブフォルダを削除" }))
-    await fireEvent.click(await screen.findByRole("button", { name: "キャンセル" }))
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Live Folder" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     expect(commandsOf(connection.sentCommands, "DeleteFolder")).toStrictEqual([])
   })
 })
 
-describe("ライブフォルダの並べ替え", () => {
+describe("Sorting a live folder", () => {
   const chooseSort = async (title: string, label: string) => {
     await openHeaderMenu(title)
-    await fireEvent.click(screen.getByRole("menuitem", { name: "並べ替え" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Sort By" }))
     await fireEvent.click(screen.getByRole("menuitemradio", { name: label }))
   }
 
-  it("右クリックの「並べ替え」で「古い順」を選ぶと、その並べ方にする", async () => {
+  it("sorts oldest first when Oldest First is chosen under Sort By in the context menu", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox({ sort: "newest" })))
 
-    await chooseSort("受信トレイ", "古い順")
+    await chooseSort("Inbox", "Oldest First")
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "SetLiveFolderSort", bookmarkId: BookmarkId.make("inbox"), sort: "oldest" },
     ])
   })
 
-  it("今の並べ方に印が付く", async () => {
+  it("checks the current sort order", async () => {
     await renderSidebar(viewWithPins(inbox({ sort: "title" })))
 
-    await openHeaderMenu("受信トレイ")
-    await fireEvent.click(screen.getByRole("menuitem", { name: "並べ替え" }))
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Sort By" }))
 
     const checked = screen
       .getAllByRole("menuitemradio")
       .filter((item) => item.getAttribute("aria-checked") === "true")
       .map((item) => item.textContent?.trim())
-    expect(checked).toStrictEqual(["タイトル順"])
+    expect(checked).toStrictEqual(["Title"])
   })
 
-  it("Gmail では取得元ごとの並べ方を「差出人順」と呼ぶ", async () => {
+  it("calls the per-source sort Sender for Gmail", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox()))
 
-    await chooseSort("受信トレイ", "差出人順")
+    await chooseSort("Inbox", "Sender")
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "SetLiveFolderSort", bookmarkId: BookmarkId.make("inbox"), sort: "source" },
     ])
   })
 
-  it("GitHub では取得元ごとの並べ方を「リポジトリ順」と呼ぶ", async () => {
+  it("calls the per-source sort Repository for GitHub", async () => {
     const reviews = pinnedLiveFolder("reviews", {
-      title: "レビュー依頼",
+      title: "Reviews",
       source: { _tag: "GitHub", query: "review-requested" },
     })
     const { connection } = await renderSidebar(viewWithPins(reviews))
 
-    await chooseSort("レビュー依頼", "リポジトリ順")
+    await chooseSort("Reviews", "Repository")
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "SetLiveFolderSort", bookmarkId: BookmarkId.make("reviews"), sort: "source" },
@@ -250,19 +252,19 @@ describe("ライブフォルダの並べ替え", () => {
   })
 })
 
-describe("取得に失敗したライブフォルダ", () => {
-  it("失敗した理由を示す", async () => {
+describe("A live folder that failed to refresh", () => {
+  it("shows why it failed", async () => {
     await renderSidebar(viewWithPins(inbox({ status: failed({}) })))
 
-    expect(within(pinnedRegion()).getByText("取得できませんでした")).toBeTruthy()
+    expect(within(pinnedRegion()).getByText("Request timed out")).toBeTruthy()
   })
 
-  it("アクセスが許可されていなければ「アクセスを許可」で取得元へのアクセスを求め、許可されたら取得し直す", async () => {
+  it("asks for access to the source with Allow Access when not permitted, and refreshes once granted", async () => {
     const { connection, originAccess } = await renderSidebar(
       viewWithPins(inbox({ status: failed({ needsPermission: true }) })),
     )
 
-    await fireEvent.click(screen.getByRole("button", { name: "アクセスを許可" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Allow Access" }))
 
     expect(originAccess.requestedOrigins).toStrictEqual([["https://mail.google.com/*"]])
     await vi.waitFor(() =>
@@ -272,35 +274,33 @@ describe("取得に失敗したライブフォルダ", () => {
     )
   })
 
-  it("アクセスを拒否されたら取得し直さず、許可が無いことを知らせる", async () => {
+  it("doesn't refresh when access is denied and reports the missing permission", async () => {
     const { connection } = await renderSidebar(
       viewWithPins(inbox({ status: failed({ needsPermission: true }) })),
       { grantsAccess: false },
     )
 
-    await fireEvent.click(screen.getByRole("button", { name: "アクセスを許可" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Allow Access" }))
 
     await vi.waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain(
-        "Gmail へのアクセスが許可されなかった",
-      ),
+      expect(screen.getByRole("status").textContent).toContain("access to Gmail wasn’t allowed"),
     )
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("トークンが無ければ「トークンを設定」で入れたトークンを保存し、取得し直す", async () => {
+  it("saves the token entered with Set Token when the token is missing, then refreshes", async () => {
     const reviews = pinnedLiveFolder("reviews", {
-      title: "レビュー依頼",
+      title: "Reviews",
       source: { _tag: "GitHub", query: "review-requested" },
       status: failed({ needsToken: true }),
     })
     const { connection } = await renderSidebar(viewWithPins(reviews))
 
-    await fireEvent.click(screen.getByRole("button", { name: "トークンを設定" }))
-    await fireEvent.input(screen.getByLabelText("アクセストークン"), {
+    await fireEvent.click(screen.getByRole("button", { name: "Set Token" }))
+    await fireEvent.input(screen.getByLabelText("Access token"), {
       target: { value: " ghp_secret " },
     })
-    await fireEvent.click(screen.getByRole("button", { name: "保存" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
     await vi.waitFor(() =>
       expect(connection.sentCommands).toStrictEqual([
@@ -311,45 +311,45 @@ describe("取得に失敗したライブフォルダ", () => {
     await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
   })
 
-  it("トークンを空のまま保存しようとすると、入力を求めて何も送らない", async () => {
+  it("asks for a token and sends nothing when saving an empty token", async () => {
     const reviews = pinnedLiveFolder("reviews", {
       source: { _tag: "GitHub", query: "review-requested" },
       status: failed({ needsToken: true }),
     })
     const { connection } = await renderSidebar(viewWithPins(reviews))
 
-    await fireEvent.click(screen.getByRole("button", { name: "トークンを設定" }))
-    await fireEvent.click(screen.getByRole("button", { name: "保存" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Set Token" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
-    expect(screen.getByRole("alert").textContent).toBe("トークンを入力してください")
+    expect(screen.getByRole("alert").textContent).toBe("Enter a token")
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("取得元にログインしていなければ「ログインする」で、このウィンドウにログインページを開く", async () => {
+  it("opens the sign-in page in this window with Sign In when not signed in to the source", async () => {
     const reviews = pinnedLiveFolder("reviews", {
-      title: "レビュー依頼",
+      title: "Reviews",
       source: { _tag: "GitHub", query: "review-requested" },
       status: failed({ signInUrl: "https://github.com/login" }),
     })
     const { connection } = await renderSidebar(viewWithPins(reviews))
 
-    await fireEvent.click(screen.getByRole("button", { name: "ログインする" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Sign In" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "OpenUrl", windowId: 1, url: "https://github.com/login" },
     ])
   })
 
-  it("ログインページが分からない失敗には「ログインする」を出さない", async () => {
+  it("hides Sign In for failures without a known sign-in page", async () => {
     await renderSidebar(viewWithPins(inbox({ status: failed({}) })))
 
-    expect(screen.queryByRole("button", { name: "ログインする" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Sign In" })).toBeNull()
   })
 
-  it("許可やトークンで直らない失敗は「再試行」で取得し直す", async () => {
+  it("refreshes with Try Again for failures that permission or a token can't fix", async () => {
     const { connection } = await renderSidebar(viewWithPins(inbox({ status: failed({}) })))
 
-    await fireEvent.click(screen.getByRole("button", { name: "再試行" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "RefreshLiveFolder", bookmarkId: BookmarkId.make("inbox") },

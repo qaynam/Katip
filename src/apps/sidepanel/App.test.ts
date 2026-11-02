@@ -19,59 +19,59 @@ const emulateSystemScheme = (scheme: "light" | "dark") =>
     removeEventListener: () => {},
   }))
 
-describe("サイドバー全体", () => {
-  it("ビューが届くまでは読み込み中であることを示す", async () => {
+describe("The sidebar", () => {
+  it("shows that it is loading until the view arrives", async () => {
     await renderSidebar(null)
 
-    expect(screen.getByText("サイドバーを読み込んでいます…")).toBeTruthy()
+    expect(screen.getByText("Loading the sidebar…")).toBeTruthy()
   })
 
-  it("background からの通知をトーストで表示する", async () => {
+  it("shows notices from the background as toasts", async () => {
     const { connection } = await renderSidebar(sidebarView())
 
-    connection.pushNotice("タブをアーカイブしました")
+    connection.pushNotice("Archived the tab")
     await tick()
 
-    expect(screen.getByRole("status").textContent).toContain("タブをアーカイブしました")
+    expect(screen.getByRole("status").textContent).toContain("Archived the tab")
   })
 
-  it("コマンドが失敗したら、その理由をトーストで表示する", async () => {
+  it("shows the reason in a toast when a command fails", async () => {
     await renderSidebar(
       sidebarView({ spaces: [spaceView("work", { temporaryTabs: [tabView(1)] })] }),
       {
-        respond: () => ({ outcome: { _tag: "Failed", reason: "タブが見つかりません" } }),
+        respond: () => ({ outcome: { _tag: "Failed", reason: "Tab not found" } }),
       },
     )
 
-    await fireEvent.click(screen.getByRole("button", { name: "タブ 1" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Tab 1" }))
     await tick()
 
-    expect(screen.getByRole("status").textContent).toContain("タブが見つかりません")
+    expect(screen.getByRole("status").textContent).toContain("Tab not found")
   })
 
-  it("「新しいタブ」でこのウィンドウに新しいタブを開く", async () => {
+  it("opens a new tab in this window from the New Tab button", async () => {
     const { connection } = await renderSidebar(sidebarView())
 
-    await fireEvent.click(screen.getByRole("button", { name: "新しいタブ" }))
+    await fireEvent.click(screen.getByRole("button", { name: "New Tab" }))
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenNewTab", windowId: 1 }])
   })
 
-  it("上部の「検索」で、このウィンドウに Spotlight を開く", async () => {
+  it("opens Spotlight in this window from the Search button at the top", async () => {
     const { connection } = await renderSidebar(sidebarView())
 
-    await fireEvent.click(screen.getByRole("button", { name: "検索" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Search" }))
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenSpotlight", windowId: 1 }])
   })
 })
 
-describe("Space のテーマ", () => {
+describe("Space themes", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it("明るい背景のテーマでは、濃い文字色で塗る", async () => {
+  it("paints dark text for a theme with a light background", async () => {
     const { container } = await renderSidebar(viewWithTheme(lightYellow))
 
     const shown = shownAppearance(container)
@@ -80,13 +80,13 @@ describe("Space のテーマ", () => {
     expect(shown.text).toMatch(/^rgb\(28 28 31/)
   })
 
-  it("暗い背景のテーマでは、白い文字色で塗る", async () => {
+  it("paints white text for a theme with a dark background", async () => {
     const { container } = await renderSidebar(viewWithTheme(darkYellow))
 
     expect(shownAppearance(container).text).toMatch(/^rgb\(255 255 255/)
   })
 
-  it("表示中の Space のテーマの背景で全体を塗る", async () => {
+  it("paints the whole sidebar with the background of the active Space's theme", async () => {
     const { container } = await renderSidebar(viewWithTheme(lightYellow))
 
     expect(shownAppearance(container).background).toBe(
@@ -94,7 +94,7 @@ describe("Space のテーマ", () => {
     )
   })
 
-  it("2 色以上のテーマでは背景がグラデーションになる", async () => {
+  it("uses a gradient background for a theme with two or more colors", async () => {
     const gradient = themeOf([
       { hue: 90, chroma: 0.8 },
       { hue: 25, chroma: 0.8 },
@@ -105,7 +105,7 @@ describe("Space のテーマ", () => {
     expect(shownAppearance(container).background).toMatch(/^linear-gradient\(/)
   })
 
-  it("モードが自動のテーマは、OS がダークならダークで塗る", async () => {
+  it("paints a theme in auto mode dark when the OS is dark", async () => {
     emulateSystemScheme("dark")
 
     const { container } = await renderSidebar(viewWithTheme(yellow))
@@ -113,7 +113,7 @@ describe("Space のテーマ", () => {
     expect(shownAppearance(container).scheme).toBe("dark")
   })
 
-  it("Space を切り替えると、切り替え先の Space のテーマで塗る", async () => {
+  it("paints with the new Space's theme after switching Spaces", async () => {
     const { container, pushView } = await renderSidebar(viewWithTheme(lightYellow))
     const view = viewWithTheme(lightYellow)
 

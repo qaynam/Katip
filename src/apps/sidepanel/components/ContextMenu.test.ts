@@ -7,20 +7,20 @@ import { sidebarView, spaceView, tabView } from "../testing/view-builders"
 
 const workWithTab = spaceView("work", { temporaryTabs: [tabView(1)] })
 
-const openTabMenu = () => fireEvent.contextMenu(screen.getByRole("button", { name: "タブ 1" }))
+const openTabMenu = () => fireEvent.contextMenu(screen.getByRole("button", { name: "Tab 1" }))
 
-describe("タブのコンテキストメニュー", () => {
-  it("右クリックで開き、Escape で閉じる", async () => {
+describe("Tab context menu", () => {
+  it("opens on right-click and closes with Escape", async () => {
     await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
-    expect(screen.getByRole("menu", { name: "タブのメニュー" })).toBeTruthy()
+    expect(screen.getByRole("menu", { name: "Tab menu" })).toBeTruthy()
 
     await fireEvent.keyDown(window, { key: "Escape" })
 
     expect(screen.queryByRole("menu")).toBeNull()
   })
 
-  it("メニューの外側を押すと閉じる", async () => {
+  it("closes when pressing outside the menu", async () => {
     await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
 
@@ -29,46 +29,46 @@ describe("タブのコンテキストメニュー", () => {
     expect(screen.queryByRole("menu")).toBeNull()
   })
 
-  it("項目を選ぶとそのコマンドを送り、メニューを閉じる", async () => {
+  it("sends the entry's command and closes the menu when an entry is chosen", async () => {
     const { connection } = await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
 
-    await fireEvent.click(screen.getByRole("menuitem", { name: "ピン留め" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Pin" }))
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "PinTab", tabId: TabId.make(1) }])
     expect(screen.queryByRole("menu")).toBeNull()
   })
 
-  it("「Space へ移動」から選んだ Space へタブを移す", async () => {
-    const hobby = spaceView("hobby", { name: SpaceName.make("趣味") })
+  it("moves the tab to the Space chosen under Move to Space", async () => {
+    const hobby = spaceView("hobby", { name: SpaceName.make("Hobby") })
     const { connection } = await renderSidebar(sidebarView({ spaces: [workWithTab, hobby] }))
     await openTabMenu()
 
-    await fireEvent.click(screen.getByRole("menuitem", { name: "Space へ移動" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "趣味" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move to Space" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Hobby" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "MoveTabToSpace", tabId: TabId.make(1), spaceId: "hobby" },
     ])
   })
 
-  it("移動先の Space が無ければ「Space へ移動」を出さない", async () => {
+  it("hides Move to Space when there is no other Space", async () => {
     await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
 
-    expect(screen.queryByRole("menuitem", { name: "Space へ移動" })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: "Move to Space" })).toBeNull()
   })
 
-  it("一時タブのメニューにはブックマークの URL を置き換える項目を出さない", async () => {
+  it("doesn't offer replacing the bookmark URL for a temporary tab", async () => {
     await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
 
     expect(
-      screen.queryByRole("menuitem", { name: "ブックマークの URL を現在の URL に置き換え" }),
+      screen.queryByRole("menuitem", { name: "Replace Pinned URL with Current URL" }),
     ).toBeNull()
   })
 
-  it("矢印キーで項目間を移動できる", async () => {
+  it("moves between entries with the arrow keys", async () => {
     await renderSidebar(sidebarView({ spaces: [workWithTab] }))
     await openTabMenu()
     const menu = screen.getByRole("menu")

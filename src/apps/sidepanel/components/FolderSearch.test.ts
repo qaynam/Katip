@@ -19,18 +19,18 @@ const viewWithPins = (...nodes: ReadonlyArray<PinnedNodeView>) =>
 
 const closedDocs = () =>
   pinnedFolder("docs", {
-    title: "資料",
+    title: "Docs",
     isExpanded: false,
     children: [
-      pinnedItem("api", { title: "API 設計書" }),
-      pinnedItem("flow", { title: "画面遷移図" }),
-      pinnedItem("minutes", { title: "定例の議事録" }),
+      pinnedItem("api", { title: "API reference" }),
+      pinnedItem("flow", { title: "Screen flow" }),
+      pinnedItem("minutes", { title: "Weekly sync notes" }),
     ],
   })
 
 const openSearch = async () => {
-  await fireEvent.click(screen.getByRole("button", { name: "フォルダ内を検索" }))
-  return screen.getByRole("combobox", { name: "フォルダ内を検索" })
+  await fireEvent.click(screen.getByRole("button", { name: "Search in Folder" }))
+  return screen.getByRole("combobox", { name: "Search in Folder" })
 }
 
 const shownOptions = () =>
@@ -41,29 +41,31 @@ const shownOptions = () =>
 const optionsTitled = (...titles: ReadonlyArray<string>) =>
   titles.map((title) => expect.stringContaining(title))
 
-describe("閉じたフォルダの中の検索", () => {
-  it("虫眼鏡を押すと、フォルダの中身を並べた検索の小窓が開く", async () => {
+describe("Searching inside a collapsed folder", () => {
+  it("opens a search popover listing the folder's contents when the magnifier is clicked", async () => {
     await renderSidebar(viewWithPins(closedDocs()))
 
     await openSearch()
 
-    expect(shownOptions()).toStrictEqual(optionsTitled("API 設計書", "画面遷移図", "定例の議事録"))
+    expect(shownOptions()).toStrictEqual(
+      optionsTitled("API reference", "Screen flow", "Weekly sync notes"),
+    )
   })
 
-  it("入力した語を含む項目だけに絞り込む", async () => {
+  it("narrows the list to entries containing the typed words", async () => {
     await renderSidebar(viewWithPins(closedDocs()))
     const input = await openSearch()
 
-    await fireEvent.input(input, { target: { value: "設計" } })
+    await fireEvent.input(input, { target: { value: "reference" } })
 
-    expect(shownOptions()).toStrictEqual(optionsTitled("API 設計書"))
+    expect(shownOptions()).toStrictEqual(optionsTitled("API reference"))
   })
 
-  it("Enter で、先頭の項目を開いて小窓を閉じる", async () => {
+  it("opens the first entry and closes the popover on Enter", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedDocs()))
     const input = await openSearch()
 
-    await fireEvent.input(input, { target: { value: "議事録" } })
+    await fireEvent.input(input, { target: { value: "notes" } })
     await fireEvent.keyDown(input, { key: "Enter" })
 
     expect(connection.sentCommands).toStrictEqual([
@@ -72,7 +74,7 @@ describe("閉じたフォルダの中の検索", () => {
     expect(screen.queryByRole("combobox")).toBeNull()
   })
 
-  it("↓ と ↑ で選ぶ項目を動かし、Enter でその項目を開く", async () => {
+  it("moves the selection with ↓ and ↑ and opens the selected entry on Enter", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedDocs()))
     const input = await openSearch()
 
@@ -86,16 +88,16 @@ describe("閉じたフォルダの中の検索", () => {
     ])
   })
 
-  it("一致する項目が無ければ、そのことを示す", async () => {
+  it("says so when nothing matches", async () => {
     await renderSidebar(viewWithPins(closedDocs()))
     const input = await openSearch()
 
-    await fireEvent.input(input, { target: { value: "見つからない語" } })
+    await fireEvent.input(input, { target: { value: "nonexistent" } })
 
-    expect(screen.getByText("一致する項目はありません")).toBeTruthy()
+    expect(screen.getByText("No matches")).toBeTruthy()
   })
 
-  it("Escape で、何も開かずに小窓を閉じる", async () => {
+  it("closes the popover without opening anything on Escape", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedDocs()))
     const input = await openSearch()
 
@@ -105,42 +107,42 @@ describe("閉じたフォルダの中の検索", () => {
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("開いているフォルダには虫眼鏡を出さない", async () => {
+  it("shows no magnifier on an expanded folder", async () => {
     await renderSidebar(viewWithPins({ ...closedDocs(), isExpanded: true }))
 
-    expect(screen.queryByRole("button", { name: "フォルダ内を検索" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Search in Folder" })).toBeNull()
   })
 })
 
-describe("閉じたライブフォルダの中の検索", () => {
+describe("Searching inside a collapsed live folder", () => {
   const closedInbox = () =>
     pinnedLiveFolder("inbox", {
-      title: "受信トレイ",
+      title: "Inbox",
       isExpanded: false,
       items: [
         liveItem("quote", {
-          title: "見積もりの件",
-          subtitle: "山田 太郎",
+          title: "Re: Quote",
+          subtitle: "Jane Doe",
           updatedAt: Date.now() - 2 * HOUR_MS,
         }),
       ],
     })
 
-  it("項目に、取得元で更新されてからの時間と補足を添える", async () => {
+  it("shows the time since the source updated each item, along with its subtitle", async () => {
     await renderSidebar(viewWithPins(closedInbox()))
 
     await openSearch()
 
-    expect(screen.getByRole("option", { name: /見積もりの件/ }).textContent).toContain(
-      "2 時間前 · 山田 太郎",
+    expect(screen.getByRole("option", { name: /Re: Quote/ }).textContent).toContain(
+      "2 hours ago · Jane Doe",
     )
   })
 
-  it("選ぶとその項目を開く", async () => {
+  it("opens the item when chosen", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedInbox()))
     await openSearch()
 
-    await fireEvent.click(screen.getByRole("option", { name: /見積もりの件/ }))
+    await fireEvent.click(screen.getByRole("option", { name: /Re: Quote/ }))
 
     expect(connection.sentCommands).toStrictEqual([
       {

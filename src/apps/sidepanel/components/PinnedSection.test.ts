@@ -17,41 +17,41 @@ import {
 const viewWithPins = (...nodes: ReadonlyArray<PinnedNodeView>) =>
   sidebarView({ spaces: [spaceView("work", { pinnedNodes: nodes })] })
 
-const pinnedRegion = () => screen.getByRole("region", { name: "ピン留め" })
+const pinnedRegion = () => screen.getByRole("region", { name: "Pinned" })
 
-describe("フォルダ", () => {
-  it("閉じたフォルダでは中身が隠れ、覗かせるアイテムだけが見出しの下に見える", async () => {
+describe("Folders", () => {
+  it("hides the contents of a collapsed folder and shows only the peeked items below its header", async () => {
     const active = pinnedItem("active", {
-      title: "開いている資料",
+      title: "Open doc",
       openTab: openPinnedTab(tabView(1, { isActive: true })),
     })
     await renderSidebar(
       viewWithPins(
         pinnedFolder("folder", {
-          title: "資料",
+          title: "Docs",
           isExpanded: false,
-          children: [pinnedItem("hidden", { title: "隠れた資料" }), active],
+          children: [pinnedItem("hidden", { title: "Hidden doc" }), active],
           peekedItems: [active],
         }),
       ),
     )
 
-    expect(within(pinnedRegion()).queryByText("隠れた資料")).toBeNull()
-    expect(within(pinnedRegion()).getByText("開いている資料")).toBeTruthy()
+    expect(within(pinnedRegion()).queryByText("Hidden doc")).toBeNull()
+    expect(within(pinnedRegion()).getByText("Open doc")).toBeTruthy()
   })
 
-  it("閉じたフォルダの下に、分割ピンが開いたときと同じ横並びの 1 行で出る", async () => {
+  it("shows a peeked split pin below a collapsed folder as the same single side-by-side row as when open", async () => {
     const pair = pinnedSplit("pair", [
       pinnedItem("left", {
-        title: "設計書",
+        title: "Design doc",
         openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(3) })),
       }),
-      pinnedItem("right", { title: "プレビュー" }),
+      pinnedItem("right", { title: "Preview" }),
     ])
     await renderSidebar(
       viewWithPins(
         pinnedFolder("folder", {
-          title: "資料",
+          title: "Docs",
           isExpanded: false,
           children: [pair],
           peekedItems: [pair],
@@ -61,35 +61,35 @@ describe("フォルダ", () => {
 
     const rowOf = (title: string) => screen.getByRole("button", { name: title }).closest("li")
 
-    expect(rowOf("設計書")).not.toBeNull()
-    expect(rowOf("設計書")).toBe(rowOf("プレビュー"))
+    expect(rowOf("Design doc")).not.toBeNull()
+    expect(rowOf("Design doc")).toBe(rowOf("Preview"))
   })
 
-  it("覗かせている分割ピンも、ドラッグしてフォルダの外へ移せる", async () => {
+  it("moves a peeked split pin out of the folder by dragging", async () => {
     const pair = pinnedSplit("pair", [
       pinnedItem("left", {
-        title: "設計書",
+        title: "Design doc",
         openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(3) })),
       }),
-      pinnedItem("right", { title: "プレビュー" }),
+      pinnedItem("right", { title: "Preview" }),
     ])
     const { connection } = await renderSidebar(
       viewWithPins(
         pinnedFolder("folder", {
-          title: "資料",
+          title: "Docs",
           isExpanded: false,
           children: [pair],
           peekedItems: [pair],
         }),
-        pinnedItem("after", { title: "後ろのピン" }),
+        pinnedItem("after", { title: "Next pin" }),
       ),
     )
     const rowOf = (title: string) =>
       screen.getByRole("button", { name: title }).closest("li") as HTMLElement
 
-    await fireEvent.dragStart(rowOf("設計書"))
-    await dragOverAt(rowOf("後ろのピン"), 0.9)
-    await fireEvent.drop(rowOf("後ろのピン"))
+    await fireEvent.dragStart(rowOf("Design doc"))
+    await dragOverAt(rowOf("Next pin"), 0.9)
+    await fireEvent.drop(rowOf("Next pin"))
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -100,34 +100,34 @@ describe("フォルダ", () => {
     ])
   })
 
-  it("開いたフォルダでは中身がすべて見える", async () => {
+  it("shows all the contents of an expanded folder", async () => {
     await renderSidebar(
       viewWithPins(
         pinnedFolder("folder", {
           isExpanded: true,
-          children: [pinnedItem("a", { title: "資料 A" }), pinnedItem("b", { title: "資料 B" })],
+          children: [pinnedItem("a", { title: "Doc A" }), pinnedItem("b", { title: "Doc B" })],
         }),
       ),
     )
 
-    expect(within(pinnedRegion()).getByText("資料 A")).toBeTruthy()
-    expect(within(pinnedRegion()).getByText("資料 B")).toBeTruthy()
+    expect(within(pinnedRegion()).getByText("Doc A")).toBeTruthy()
+    expect(within(pinnedRegion()).getByText("Doc B")).toBeTruthy()
   })
 
-  it("見出しをクリックすると、今と逆の開閉状態にする", async () => {
+  it("toggles expansion when the header is clicked", async () => {
     const { connection } = await renderSidebar(
-      viewWithPins(pinnedFolder("folder", { title: "資料", isExpanded: false })),
+      viewWithPins(pinnedFolder("folder", { title: "Docs", isExpanded: false })),
     )
 
-    await fireEvent.click(screen.getByRole("button", { name: "資料" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Docs" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "SetFolderExpanded", bookmarkId: BookmarkId.make("folder"), isExpanded: true },
     ])
   })
 
-  it("作成したフォルダは、すぐに名前を編集できる状態で現れる", async () => {
-    const created = pinnedFolder("created", { title: "無題のフォルダ" })
+  it("shows a created folder with its name ready to edit", async () => {
+    const created = pinnedFolder("created", { title: "Untitled" })
     const { connection } = await renderSidebar(viewWithPins(), {
       respond: (command) => ({
         outcome: {
@@ -138,8 +138,8 @@ describe("フォルダ", () => {
       }),
     })
 
-    await fireEvent.click(screen.getByRole("button", { name: "Space のメニュー" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "新しいフォルダ" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Space menu" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "New Folder" }))
     await tick()
 
     expect(connection.sentCommands).toContainEqual({
@@ -147,30 +147,30 @@ describe("フォルダ", () => {
       spaceId: "work",
       parentId: null,
     })
-    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "フォルダの名前" }).value).toBe(
-      "無題のフォルダ",
+    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Folder name" }).value).toBe(
+      "Untitled",
     )
   })
 
-  it("サブフォルダを作れないフォルダのメニューには「新しいフォルダ」を出さない", async () => {
+  it("hides New Folder in the menu of a folder that can't have subfolders", async () => {
     await renderSidebar(
-      viewWithPins(pinnedFolder("folder", { title: "資料", canCreateSubfolder: false })),
+      viewWithPins(pinnedFolder("folder", { title: "Docs", canCreateSubfolder: false })),
     )
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "資料" }))
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Docs" }))
 
-    expect(screen.queryByRole("menuitem", { name: "新しいフォルダ" })).toBeNull()
-    expect(screen.getByRole("menuitem", { name: "フォルダを削除" })).toBeTruthy()
+    expect(screen.queryByRole("menuitem", { name: "New Folder" })).toBeNull()
+    expect(screen.getByRole("menuitem", { name: "Delete Folder" })).toBeTruthy()
   })
 
-  it("削除は確認ダイアログで承認したときだけ行う", async () => {
+  it("deletes only once deletion is confirmed in the dialog", async () => {
     const { connection } = await renderSidebar(
-      viewWithPins(pinnedFolder("folder", { title: "資料" })),
+      viewWithPins(pinnedFolder("folder", { title: "Docs" })),
     )
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "資料" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "フォルダを削除" }))
-    await fireEvent.click(await screen.findByRole("button", { name: "削除" }))
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Docs" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Folder" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete" }))
 
     expect(commandsOf(connection.sentCommands, "DeleteFolder")).toStrictEqual([
       { _tag: "DeleteFolder", bookmarkId: BookmarkId.make("folder") },
@@ -178,66 +178,74 @@ describe("フォルダ", () => {
   })
 })
 
-describe("閉じたピン", () => {
-  it("クリックすると、そのピンをこのウィンドウで開く", async () => {
-    const { connection } = await renderSidebar(viewWithPins(pinnedItem("pin", { title: "設計書" })))
+describe("Closed pins", () => {
+  it("opens the pin in this window when clicked", async () => {
+    const { connection } = await renderSidebar(
+      viewWithPins(pinnedItem("pin", { title: "Design doc" })),
+    )
 
-    await fireEvent.click(screen.getByRole("button", { name: "設計書" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Design doc" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "OpenPinnedItem", windowId: 1, bookmarkId: BookmarkId.make("pin") },
     ])
   })
 
-  it("閉じるボタンを持たず、中クリックでも削除されない", async () => {
-    const { connection } = await renderSidebar(viewWithPins(pinnedItem("pin", { title: "設計書" })))
-    const row = screen.getByRole("button", { name: "設計書" }).closest("li")
+  it("has no close button and isn't deleted by a middle click", async () => {
+    const { connection } = await renderSidebar(
+      viewWithPins(pinnedItem("pin", { title: "Design doc" })),
+    )
+    const row = screen.getByRole("button", { name: "Design doc" }).closest("li")
 
     await fireEvent(row as HTMLElement, new MouseEvent("auxclick", { button: 1, bubbles: true }))
 
-    expect(within(row as HTMLElement).queryByRole("button", { name: "タブを閉じる" })).toBeNull()
+    expect(within(row as HTMLElement).queryByRole("button", { name: "Close Tab" })).toBeNull()
     expect(connection.sentCommands).toStrictEqual([])
   })
 
-  it("右クリックから削除するときは確認を取り、取り消せば削除しない", async () => {
-    const { connection } = await renderSidebar(viewWithPins(pinnedItem("pin", { title: "設計書" })))
+  it("asks for confirmation before deleting from the context menu and keeps the pin when canceled", async () => {
+    const { connection } = await renderSidebar(
+      viewWithPins(pinnedItem("pin", { title: "Design doc" })),
+    )
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "設計書" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "ピンを削除" }))
-    await fireEvent.click(await screen.findByRole("button", { name: "キャンセル" }))
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Design doc" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Pinned Tab" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     expect(commandsOf(connection.sentCommands, "RemovePinnedItem")).toStrictEqual([])
     expect(screen.queryByRole("alertdialog")).toBeNull()
   })
 
-  it("ダブルクリックで名前を変えると、ピンの名前を変える", async () => {
-    const { connection } = await renderSidebar(viewWithPins(pinnedItem("pin", { title: "設計書" })))
+  it("renames the pin when renamed by double-clicking", async () => {
+    const { connection } = await renderSidebar(
+      viewWithPins(pinnedItem("pin", { title: "Design doc" })),
+    )
 
-    await fireEvent.dblClick(screen.getByRole("button", { name: "設計書" }))
-    const input = screen.getByRole("textbox", { name: "名前" })
-    await fireEvent.input(input, { target: { value: "設計書 v2" } })
+    await fireEvent.dblClick(screen.getByRole("button", { name: "Design doc" }))
+    const input = screen.getByRole("textbox", { name: "Name" })
+    await fireEvent.input(input, { target: { value: "Design doc v2" } })
     await fireEvent.keyDown(input, { key: "Enter" })
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("pin"), title: "設計書 v2" },
+      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("pin"), title: "Design doc v2" },
     ])
   })
 })
 
-describe("開いているピン", () => {
-  it("ピンした URL から移動していれば、favicon で元の URL に戻れ、名前の前に「/」が付く", async () => {
-    const tab = tabView(5, { title: "検索結果" })
+describe("Open pins", () => {
+  it("prefixes the name with / and turns the favicon into a way back after navigating away from the pinned URL", async () => {
+    const tab = tabView(5, { title: "Search results" })
     const { connection } = await renderSidebar(
       viewWithPins(
         pinnedItem("pin", {
-          title: "ドキュメント",
+          title: "Documentation",
           openTab: openPinnedTab(tab, { hasNavigatedAway: true }),
         }),
       ),
     )
-    const row = screen.getByRole("button", { name: "ドキュメント" }).closest("li") as HTMLElement
+    const row = screen.getByRole("button", { name: "Documentation" }).closest("li") as HTMLElement
 
-    await fireEvent.click(within(row).getByRole("button", { name: "ピンした URL に戻る" }))
+    await fireEvent.click(within(row).getByRole("button", { name: "Go back to the pinned URL" }))
 
     expect(within(row).getByText("/")).toBeTruthy()
     expect(connection.sentCommands).toStrictEqual<ReadonlyArray<SidebarCommand>>([
@@ -245,47 +253,47 @@ describe("開いているピン", () => {
     ])
   })
 
-  it("ピンした URL から移動しても行にはピンの名前を出し、マウスを乗せると今のページの名前を出す", async () => {
+  it("keeps the pin's name on the row after navigating away and shows the page title on hover", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
-    const tab = tabView(5, { title: "検索結果" })
+    const tab = tabView(5, { title: "Search results" })
     await renderSidebar(
       viewWithPins(
         pinnedItem("pin", {
-          title: "ドキュメント",
+          title: "Documentation",
           openTab: openPinnedTab(tab, { hasNavigatedAway: true }),
         }),
       ),
     )
-    const row = screen.getByRole("button", { name: "ドキュメント" }).closest("li") as HTMLElement
+    const row = screen.getByRole("button", { name: "Documentation" }).closest("li") as HTMLElement
 
     await fireEvent.pointerEnter(row, { clientX: 40, clientY: 60, pointerId: 1 })
     vi.advanceTimersByTime(1_000)
     await tick()
     vi.useRealTimers()
 
-    expect(screen.getByRole("tooltip").textContent).toContain("検索結果")
+    expect(screen.getByRole("tooltip").textContent).toContain("Search results")
   })
 
-  it("ピンした URL にいる間は、元に戻すボタンを出さない", async () => {
+  it("shows no go-back button while at the pinned URL", async () => {
     await renderSidebar(
       viewWithPins(
-        pinnedItem("pin", { title: "ドキュメント", openTab: openPinnedTab(tabView(5)) }),
+        pinnedItem("pin", { title: "Documentation", openTab: openPinnedTab(tabView(5)) }),
       ),
     )
 
-    expect(screen.queryByRole("button", { name: "ピンした URL に戻る" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Go back to the pinned URL" })).toBeNull()
   })
 
-  it("メニューから、ブックマークの URL を今のページの URL に置き換えられる", async () => {
+  it("replaces the bookmark URL with the current page's URL from the menu", async () => {
     const { connection } = await renderSidebar(
       viewWithPins(
-        pinnedItem("pin", { title: "ドキュメント", openTab: openPinnedTab(tabView(5)) }),
+        pinnedItem("pin", { title: "Documentation", openTab: openPinnedTab(tabView(5)) }),
       ),
     )
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "ドキュメント" }))
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Documentation" }))
     await fireEvent.click(
-      screen.getByRole("menuitem", { name: "ブックマークの URL を現在の URL に置き換え" }),
+      screen.getByRole("menuitem", { name: "Replace Pinned URL with Current URL" }),
     )
 
     expect(connection.sentCommands).toStrictEqual([
@@ -294,91 +302,91 @@ describe("開いているピン", () => {
   })
 })
 
-describe("分割ビューのピン", () => {
+describe("Pinned split views", () => {
   const openSplit = (splitViewId: number) =>
     pinnedSplit("split", [
       pinnedItem("left", {
-        title: "設計書",
+        title: "Design doc",
         openTab: openPinnedTab(tabView(5, { splitViewId: SplitViewId.make(splitViewId) })),
       }),
       pinnedItem("right", {
-        title: "プレビュー",
+        title: "Preview",
         openTab: openPinnedTab(tabView(6, { splitViewId: SplitViewId.make(splitViewId) })),
       }),
     ])
   const closedSplit = pinnedSplit("split", [
-    pinnedItem("left", { title: "設計書" }),
-    pinnedItem("right", { title: "プレビュー" }),
+    pinnedItem("left", { title: "Design doc" }),
+    pinnedItem("right", { title: "Preview" }),
   ])
   const rowOf = (title: string) =>
     screen.getByRole("button", { name: title }).closest("li") as HTMLElement
 
-  it("フォルダの中でも、2 つのピンを左右に並べて 1 つの行に表示する", async () => {
+  it("shows the two pins side by side in a single row, even inside a folder", async () => {
     await renderSidebar(viewWithPins(pinnedFolder("folder", { children: [closedSplit] })))
 
-    expect(rowOf("設計書")).toBe(rowOf("プレビュー"))
+    expect(rowOf("Design doc")).toBe(rowOf("Preview"))
   })
 
-  it("開いている側をクリックすると、そのタブをアクティブにする", async () => {
+  it("activates the tab of the open half when clicked", async () => {
     const { connection } = await renderSidebar(viewWithPins(openSplit(9)))
 
-    await fireEvent.click(screen.getByRole("button", { name: "プレビュー" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Preview" }))
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "ActivateTab", tabId: TabId.make(6) }])
   })
 
-  it("閉じていれば、どちらの側をクリックしても 2 つを分割ビューで開く", async () => {
+  it("opens both as a split view when closed, whichever half is clicked", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedSplit))
 
-    await fireEvent.click(screen.getByRole("button", { name: "プレビュー" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Preview" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "OpenPinnedItem", windowId: 1, bookmarkId: BookmarkId.make("split") },
     ])
   })
 
-  it("閉じている側には閉じるボタンを出さない", async () => {
+  it("shows no close button on a closed half", async () => {
     await renderSidebar(viewWithPins(closedSplit))
 
-    expect(screen.queryByRole("button", { name: "タブを閉じる" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Close Tab" })).toBeNull()
   })
 
-  it("「名前を変更」は、右クリックした側のピンの名前を変える", async () => {
+  it("renames the pin on the right-clicked half with Rename", async () => {
     const { connection } = await renderSidebar(viewWithPins(closedSplit))
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "プレビュー" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }))
-    const input = screen.getByRole("textbox", { name: "名前" })
-    await fireEvent.input(input, { target: { value: "ステージング" } })
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Preview" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }))
+    const input = screen.getByRole("textbox", { name: "Name" })
+    await fireEvent.input(input, { target: { value: "Staging" } })
     await fireEvent.keyDown(input, { key: "Enter" })
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("right"), title: "ステージング" },
+      { _tag: "RenamePinnedItem", bookmarkId: BookmarkId.make("right"), title: "Staging" },
     ])
   })
 
-  it("「ピンを削除」は確認で承認したときだけ、分割ビューのピンごと削除する", async () => {
+  it("deletes the whole pinned split view with Delete Pinned Tab, only once confirmed", async () => {
     const { connection } = await renderSidebar(viewWithPins(openSplit(9)))
 
-    await fireEvent.contextMenu(screen.getByRole("button", { name: "設計書" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "ピンを削除" }))
-    await fireEvent.click(await screen.findByRole("button", { name: "削除" }))
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Design doc" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Pinned Tab" }))
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete" }))
 
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "RemovePinnedItem", bookmarkId: BookmarkId.make("split") },
     ])
   })
 
-  it("開いていれば、一時タブの行へ落とすとピンを外して分割ビューのままその位置に置く", async () => {
+  it("unpins it and places it there as a split view when open and dropped on a temporary tab row", async () => {
     const { connection } = await renderSidebar(
       sidebarView({
         spaces: [spaceView("work", { pinnedNodes: [openSplit(9)], temporaryTabs: [tabView(1)] })],
       }),
     )
 
-    await fireEvent.dragStart(rowOf("設計書"))
-    await dragOverAt(rowOf("タブ 1"), 0.9)
-    await fireEvent.drop(rowOf("タブ 1"))
+    await fireEvent.dragStart(rowOf("Design doc"))
+    await dragOverAt(rowOf("Tab 1"), 0.9)
+    await fireEvent.drop(rowOf("Tab 1"))
 
     expect(connection.sentCommands).toStrictEqual([
       {
@@ -390,52 +398,52 @@ describe("分割ビューのピン", () => {
     ])
   })
 
-  it("閉じていれば、一時タブの行へ落としても何も起きない", async () => {
+  it("does nothing when closed and dropped on a temporary tab row", async () => {
     const { connection } = await renderSidebar(
       sidebarView({
         spaces: [spaceView("work", { pinnedNodes: [closedSplit], temporaryTabs: [tabView(1)] })],
       }),
     )
 
-    await fireEvent.dragStart(rowOf("設計書"))
-    await dragOverAt(rowOf("タブ 1"), 0.9)
-    await fireEvent.drop(rowOf("タブ 1"))
+    await fireEvent.dragStart(rowOf("Design doc"))
+    await dragOverAt(rowOf("Tab 1"), 0.9)
+    await fireEvent.drop(rowOf("Tab 1"))
 
     expect(connection.sentCommands).toStrictEqual([])
   })
 })
 
-describe("ピン留めを読み込めないとき", () => {
-  it("空とは区別し、再読み込みを案内する", async () => {
+describe("When pinned tabs can't be loaded", () => {
+  it("offers a reload instead of looking empty", async () => {
     const { onReload } = await renderSidebar(
       sidebarView({ spaces: [spaceView("work", { pinned: { _tag: "Unavailable" } })] }),
     )
 
-    await fireEvent.click(screen.getByRole("button", { name: "再読み込み" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Reload" }))
 
-    expect(screen.queryByText("タブをここにドラッグしてピン留め")).toBeNull()
+    expect(screen.queryByText("Drag tabs here to pin them")).toBeNull()
     expect(onReload).toHaveBeenCalledOnce()
   })
 
-  it("ピン留めが空なら、ドラッグで追加できることを案内する", async () => {
+  it("hints that tabs can be dragged in when nothing is pinned", async () => {
     await renderSidebar(viewWithPins())
 
-    expect(screen.getByText("タブをここにドラッグしてピン留め")).toBeTruthy()
+    expect(screen.getByText("Drag tabs here to pin them")).toBeTruthy()
   })
 })
 
-describe("ドラッグ中", () => {
+describe("While dragging", () => {
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it("閉じたフォルダの見出しに 250ms 留まると、そのフォルダを開く", async () => {
+  it("expands a collapsed folder after hovering over its header for 250ms", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     const { connection } = await renderSidebar(
       sidebarView({
         spaces: [
           spaceView("work", {
-            pinnedNodes: [pinnedFolder("folder", { title: "資料", isExpanded: false })],
+            pinnedNodes: [pinnedFolder("folder", { title: "Docs", isExpanded: false })],
             temporaryTabs: [tabView(1)],
           }),
         ],
@@ -443,9 +451,9 @@ describe("ドラッグ中", () => {
     )
     const expandCommands = () => commandsOf(connection.sentCommands, "SetFolderExpanded")
     await fireEvent.dragStart(
-      screen.getByRole("button", { name: "タブ 1" }).closest("li") as HTMLElement,
+      screen.getByRole("button", { name: "Tab 1" }).closest("li") as HTMLElement,
     )
-    await fireEvent.dragOver(screen.getByRole("button", { name: "資料" }))
+    await fireEvent.dragOver(screen.getByRole("button", { name: "Docs" }))
 
     vi.advanceTimersByTime(249)
     expect(expandCommands()).toStrictEqual([])

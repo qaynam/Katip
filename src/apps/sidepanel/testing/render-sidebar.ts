@@ -12,7 +12,7 @@ import {
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 
-// jsdom はレイアウトを持たず scrollIntoView も実装していない
+// jsdom has no layout and doesn't implement scrollIntoView
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
@@ -20,17 +20,17 @@ beforeEach(() => {
 export const renderSidebar = async (
   view: SidebarView | null,
   options: Pick<MemoryConnectionOptions, "respond"> & {
-    /** 取得元へのアクセスを求められたときに許可するか。既定は許可する */
+    /** Whether to grant access when a live folder source asks for it. Granted by default. */
     readonly grantsAccess?: boolean
-    /** 設定で選んだ言語。既定は日本語 */
+    /** The language chosen in the settings. English by default. */
     readonly locale?: LocalePreference
-    /** 言語の設定が自動のときに使うブラウザの言語 */
+    /** The browser languages used when the language setting is auto. */
     readonly browserLanguages?: ReadonlyArray<string>
   } = {},
 ) => {
   const {
     grantsAccess = true,
-    locale = "ja",
+    locale = "en",
     browserLanguages = [],
     ...connectionOptions
   } = options
@@ -50,7 +50,7 @@ export const renderSidebar = async (
     connection,
     originAccess,
     onReload,
-    /** 開いたまま設定の言語を変えたことにする */
+    /** Simulates changing the language setting while the panel stays open. */
     changeLocale: async (preference: LocalePreference) => {
       localePreferences.set(preference)
       await tick()
@@ -67,7 +67,10 @@ export const commandsOf = (
   tag: SidebarCommand["_tag"],
 ): ReadonlyArray<SidebarCommand> => commands.filter((command) => command._tag === tag)
 
-/** サイドバー全体に今塗られている色。背景は Space 切り替えのフェードで重なった層の一番上 */
+/**
+ * The colors currently painted over the whole sidebar. The background is read from the top
+ * layer, since switching Spaces stacks layers while fading.
+ */
 export const shownAppearance = (container: HTMLElement) => {
   const root = container.querySelector<HTMLElement>("[data-scheme]")
   const layers = container.querySelectorAll<HTMLElement>("[data-backdrop-layer]")
@@ -79,11 +82,11 @@ export const shownAppearance = (container: HTMLElement) => {
 }
 
 /**
- * 要素の上から ratio（0〜1）の高さの位置にドラッグ中のポインタを重ねる。
- * jsdom はレイアウトを持たず DragEvent も無いので、要素の矩形と座標付きのマウスイベントで代用する
- */
-/**
- * 要素の上に重ねたことにする。位置は要素の大きさに対する割合で、横の既定は右寄り。
+ * Simulates dragging over the element at a position given as ratios (0 to 1) of its size.
+ * Horizontally it defaults to the right side.
+ *
+ * jsdom has no layout or DragEvent, so this stubs the element's bounds and dispatches a mouse
+ * event with coordinates.
  */
 export const dragOverAt = async (
   element: HTMLElement,

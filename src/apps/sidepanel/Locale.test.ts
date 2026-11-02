@@ -17,32 +17,32 @@ import {
 
 const view = sidebarView({ spaces: [spaceView("work", { temporaryTabs: [tabView(1)] })] })
 
-describe("表示する言語", () => {
-  it("設定で英語を選ぶと、サイドパネルの文言が英語になる", async () => {
-    await renderSidebar(view, { locale: "en" })
+describe("Display language", () => {
+  it("shows the side panel in Japanese when Japanese is chosen in the settings", async () => {
+    await renderSidebar(view, { locale: "ja" })
 
-    expect(screen.getByRole("button", { name: "Search" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "New Tab" })).toBeTruthy()
-    expect(screen.getByRole("region", { name: "Pinned" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "検索" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "新しいタブ" })).toBeTruthy()
+    expect(screen.getByRole("region", { name: "ピン留め" })).toBeTruthy()
   })
 
-  it("言語の設定が自動なら、ブラウザの言語に合わせる", async () => {
+  it("follows the browser language when the language setting is auto", async () => {
     await renderSidebar(view, { locale: "auto", browserLanguages: ["es-ES", "en"] })
 
     expect(screen.getByRole("button", { name: "Buscar" })).toBeTruthy()
   })
 
-  it("開いたまま設定の言語を変えると、表示がその言語に切り替わる", async () => {
-    const { changeLocale } = await renderSidebar(view, { locale: "ja" })
+  it("switches to the new language when the setting changes while open", async () => {
+    const { changeLocale } = await renderSidebar(view)
 
     await changeLocale("zh")
 
     expect(screen.getByRole("button", { name: "新标签页" })).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "新しいタブ" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "New Tab" })).toBeNull()
   })
 
-  it("ページの言語の指定を、表示する言語に合わせる", async () => {
-    const { changeLocale } = await renderSidebar(view, { locale: "ja" })
+  it("sets the page's lang attribute to the display language", async () => {
+    const { changeLocale } = await renderSidebar(view)
 
     await changeLocale("zh")
 
@@ -50,7 +50,7 @@ describe("表示する言語", () => {
   })
 })
 
-describe("件数の表示", () => {
+describe("Counts", () => {
   const viewWithUnseen = (count: number) =>
     sidebarView({
       spaces: [
@@ -70,7 +70,7 @@ describe("件数の表示", () => {
 
   const inboxHeader = () => screen.getByRole("button", { name: /^Inbox/ })
 
-  it("英語では 1 件なら単数形、2 件以上なら複数形で書く", async () => {
+  it("uses the singular for 1 and the plural for 2 or more in English", async () => {
     const { pushView } = await renderSidebar(viewWithUnseen(1), { locale: "en" })
     const single = inboxHeader().textContent
 
@@ -82,15 +82,15 @@ describe("件数の表示", () => {
     ])
   })
 
-  it("語形の変わらない日本語では、件数だけが変わる", async () => {
+  it("changes only the number in Japanese, which has no plural forms", async () => {
     await renderSidebar(viewWithUnseen(1), { locale: "ja" })
 
     expect(inboxHeader().textContent).toContain("未読 1 件")
   })
 })
 
-describe("background に届かなかったコマンド", () => {
-  it("届かなかった理由を、表示する言語で知らせる", async () => {
+describe("Commands that never reach the background", () => {
+  it("reports why in the display language", async () => {
     const connection: SidebarConnection = {
       listen: (listener) => {
         listener({ _tag: "ViewUpdated", view })
