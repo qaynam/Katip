@@ -1,4 +1,4 @@
-import type { Worker } from "@playwright/test"
+import type { BrowserContext, Worker } from "@playwright/test"
 import { expect, test } from "./fixtures"
 import {
   isSplitViewAvailable,
@@ -28,6 +28,34 @@ const pressShortcutOn = (background: Worker, url: string, command: string) =>
     },
     { url, command },
   )
+
+/** Saves the copy shortcut settings the way the options page does. */
+const turnOnCopyShortcuts = (
+  background: Worker,
+  pageShortcuts: { readonly copyUrl?: true; readonly copyMarkdownLink?: true },
+) =>
+  background.evaluate(
+    (pageShortcuts) => chrome.storage.sync.set({ "katip/settings": { pageShortcuts } }),
+    pageShortcuts,
+  )
+
+/** The clipboard as seen from the page at `url`, which is brought to the front to use it. */
+const clipboardOn = async (context: BrowserContext, url: string) => {
+  const page = context.pages().find((each) => each.url() === url)
+  if (page === undefined) throw new Error(`no page open at ${url}`)
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(url).origin,
+  })
+  const focused = async () => {
+    await page.bringToFront()
+    return page
+  }
+  return {
+    read: async () => (await focused()).evaluate(() => navigator.clipboard.readText()),
+    write: async (text: string) =>
+      (await focused()).evaluate((text) => navigator.clipboard.writeText(text), text),
+  }
+}
 
 test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
@@ -142,6 +170,58 @@ test("open-spotlight opens Spotlight in a separate popup window", async ({
     .toStrictEqual(["popup"])
 })
 
-test.fixme("copy-current-url copies the active tab's URL and shows a notice on the page", () => {})
-test.fixme("copy-current-url-as-markdown copies it as [title](URL)", () => {})
-test.fixme("_execute_action (Alt+S) opens the side panel", () => {})
+test("copy-current-url, once turned on in the settings, copies the active tab's URL", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  await turnOnCopyShortcuts(background, { copyUrl: true })
+
+  const clipboard = await clipboardOn(context, `${site}/a`)
+
+  await pressShortcutOn(background, `${site}/a`, "copy-current-url")
+
+  await expect.poll(clipboard.read).toBe(`${site}/a`)
+})
+
+test("copy-current-url-as-markdown, once turned on in the settings, copies [title](URL)", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  await turnOnCopyShortcuts(background, { copyMarkdownLink: true })
+
+  const clipboard = await clipboardOn(context, `${site}/a`)
+
+  await pressShortcutOn(background, `${site}/a`, "copy-current-url-as-markdown")
+
+  await expect.poll(clipboard.read).toBe(`[Page /a](${site}/a)`)
+})
+
+test("a copy shortcut left off in the settings leaves the clipboard as it was", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  await turnOnCopyShortcuts(background, { copyMarkdownLink: true })
+  const clipboard = await clipboardOn(context, `${site}/a`)
+  await clipboard.write("copied earlier")
+
+  await pressShortcutOn(background, `${site}/a`, "copy-current-url")
+  // Shortcuts run one at a time in the order pressed, so this one finishing means the first did too
+  await pressShortcutOn(background, `${site}/a`, "quick-pin-toggle")
+  await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page /a"])
+
+  expect(await clipboard.read()).toBe("copied earlier")
+})
+
+test.fixme("_execute_action opens the side panel", () => {})
