@@ -2,10 +2,10 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte"
 import { Effect, Layer, ManagedRuntime, Option, Queue, Schema, Stream } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
-import type { KeyboardPlatform } from "#modules/page-shortcuts"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
 import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
 import App from "./App.svelte"
 import { FakeFileDownloads } from "./testing/fake-file-downloads"
@@ -14,10 +14,19 @@ import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 const VERSION = "1.2.3"
 const REPOSITORY_URL = "https://git.example/katip"
 
+/** Keys as macOS reports the defaults the manifest suggests. */
+const DEFAULT_KEYS: Readonly<Record<string, string>> = {
+  _execute_action: "⌃⌘S",
+  "open-spotlight": "⌥T",
+  "copy-current-url": "⇧⌘C",
+  "copy-current-url-as-markdown": "⌃⇧⌘C",
+}
+
 const runtimes: Array<{ dispose: () => Promise<void> }> = []
 
 afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()))
+  history.replaceState(null, "", location.pathname)
 })
 
 const unavailable = (api: string) =>
@@ -36,7 +45,23 @@ const storageRejecting = (operation: "get" | "set") =>
     }),
   )
 
-/** background の代わりに、書き出しの求めに返す答え。`Disconnect` は答えずに接続を切る。 */
+/** What the browser reports as assigned keys; `Unavailable` makes reading them fail. */
+type AssignedKeys = Readonly<Record<string, string>> | "Unavailable"
+
+const keyboardShortcutsReporting = (browserKeys: { current: AssignedKeys }) =>
+  Layer.succeed(
+    KeyboardShortcuts,
+    KeyboardShortcuts.of({
+      assigned: Effect.suspend(() =>
+        browserKeys.current === "Unavailable"
+          ? Effect.fail(new BrowserApiError({ api: "commands.getAll", cause: new Error("gone") }))
+          : Effect.succeed(new Map(Object.entries(browserKeys.current))),
+      ),
+      isMac: Effect.succeed(true),
+    }),
+  )
+
+/** The background's answer to an export request. `Disconnect` hangs up without answering. */
 type ExportAnswer = ExportServerMessage | { readonly _tag: "Disconnect" }
 
 const encodeExportAnswer = Schema.encodeSync(ExportServerMessage)
@@ -65,7 +90,7 @@ interface RenderOptions {
   readonly browserLanguages?: ReadonlyArray<string>
   readonly rejectedStorageOperation?: "get" | "set"
   readonly supportsSplitView?: boolean
-  readonly keyboardPlatform?: KeyboardPlatform
+  readonly assignedKeys?: AssignedKeys
 }
 
 const makeRuntime = (
@@ -73,6 +98,7 @@ const makeRuntime = (
     rejectedStorageOperation,
     supportsSplitView = true,
   }: Pick<RenderOptions, "rejectedStorageOperation" | "supportsSplitView">,
+  browserKeys: { current: AssignedKeys },
   exportAnswers: Queue.Queue<ExportAnswer>,
 ) => {
   const browser = FakeBrowser.layerWith({ supportsSplitView })
@@ -86,6 +112,7 @@ const makeRuntime = (
       browser,
       FakeOptionalPermissions.layer,
       FakeFileDownloads.layer,
+      keyboardShortcutsReporting(browserKeys),
       exportServerAnswering(exportAnswers).pipe(Layer.provide(browser)),
     ),
   )
@@ -96,22 +123,17 @@ const makeRuntime = (
 const renderOptions = async ({
   saved = {},
   browserLanguages = ["ja-JP"],
-  keyboardPlatform = "mac",
+  assignedKeys = DEFAULT_KEYS,
   ...runtimeOptions
 }: RenderOptions = {}) => {
   const exportAnswers = Effect.runSync(Queue.unbounded<ExportAnswer>())
-  const runtime = makeRuntime(runtimeOptions, exportAnswers)
+  const browserKeys = { current: assignedKeys }
+  const runtime = makeRuntime(runtimeOptions, browserKeys, exportAnswers)
   const update = (patch: SettingsPatch) =>
     runtime.runPromise(SettingsRepository.use((repository) => repository.update(patch)))
   if (runtimeOptions.rejectedStorageOperation === undefined) await update(saved)
   render(App, {
-    props: {
-      runtime,
-      version: VERSION,
-      repositoryUrl: REPOSITORY_URL,
-      browserLanguages,
-      keyboardPlatform,
-    },
+    props: { runtime, version: VERSION, repositoryUrl: REPOSITORY_URL, browserLanguages },
   })
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
@@ -121,16 +143,24 @@ const renderOptions = async ({
     permissions: <A>(
       use: (permissions: FakeOptionalPermissions["Service"]) => Effect.Effect<A, unknown>,
     ) => runtime.runPromise(FakeOptionalPermissions.use(use)),
+    reassignKeysInBrowser: (keys: AssignedKeys) => {
+      browserKeys.current = keys
+    },
     answerExport: (answer: ExportAnswer) => Effect.runSync(Queue.offer(exportAnswers, answer)),
     downloaded: () => runtime.runPromise(FakeFileDownloads.use((downloads) => downloads.saved)),
   }
 }
 
+/** Renders the page and waits for the saved settings to show in the General category. */
 const renderLoaded = async (options: RenderOptions = {}) => {
   const rendered = await renderOptions(options)
-  await screen.findAllByRole("switch")
+  await screen.findByRole("combobox")
   return rendered
 }
+
+const categoryTab = (name: string) => screen.getByRole<HTMLButtonElement>("tab", { name })
+const openCategory = (name: string) => fireEvent.click(categoryTab(name))
+const selectedCategory = () => screen.getByRole("tab", { selected: true }).textContent?.trim()
 
 const switchNamed = (name: string) => screen.getByRole<HTMLInputElement>("switch", { name })
 const popUpNamed = (name: string) => screen.getByRole<HTMLSelectElement>("combobox", { name })
@@ -150,8 +180,117 @@ const chooseIdleMinutes = (minutes: number) =>
 
 const heading = () => screen.getByRole("heading", { level: 1 }).textContent
 
-describe("表示", () => {
-  it("保存されている設定が各項目に表示される", async () => {
+/** The keys shown next to a command, as one string. */
+const keysShownFor = (command: string) =>
+  screen.getByRole("definition", { name: command }).textContent?.trim()
+
+describe("categories", () => {
+  it("opens on General, which holds the language setting", async () => {
+    await renderLoaded()
+
+    expect(selectedCategory()).toBe("一般")
+    expect(languagePopUp()).toBeTruthy()
+  })
+
+  it("lists every category in order", async () => {
+    await renderLoaded()
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.trim())).toStrictEqual([
+      "一般",
+      "タブ",
+      "アーカイブ",
+      "Spotlight",
+      "ショートカット",
+      "データ",
+    ])
+  })
+
+  it("choosing a category shows its settings in place of the previous category's", async () => {
+    await renderLoaded()
+
+    await openCategory("タブ")
+
+    expect(selectedCategory()).toBe("タブ")
+    expect(switchNamed("新しいタブを一番上に表示")).toBeTruthy()
+    expect(screen.queryByRole("combobox", { name: "言語" })).toBeNull()
+  })
+
+  it("names the shown settings after the chosen category", async () => {
+    await renderLoaded()
+
+    await openCategory("アーカイブ")
+
+    expect(screen.getByRole("tabpanel", { name: "アーカイブ" })).toBeTruthy()
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("アーカイブ")
+  })
+
+  it("arrow keys move to the next or previous category and focus it, wrapping past the ends", async () => {
+    await renderLoaded()
+    categoryTab("一般").focus()
+
+    await fireEvent.keyDown(document.activeElement ?? document.body, { key: "ArrowDown" })
+    const afterDown = selectedCategory()
+    await fireEvent.keyDown(document.activeElement ?? document.body, { key: "ArrowUp" })
+    await fireEvent.keyDown(document.activeElement ?? document.body, { key: "ArrowUp" })
+
+    expect([afterDown, selectedCategory(), document.activeElement?.textContent?.trim()]).toEqual([
+      "タブ",
+      "データ",
+      "データ",
+    ])
+  })
+
+  it("Home and End move to the first and last category", async () => {
+    await renderLoaded()
+    categoryTab("一般").focus()
+
+    await fireEvent.keyDown(document.activeElement ?? document.body, { key: "End" })
+    const afterEnd = selectedCategory()
+    await fireEvent.keyDown(document.activeElement ?? document.body, { key: "Home" })
+
+    expect([afterEnd, selectedCategory()]).toEqual(["データ", "一般"])
+  })
+
+  it("only the chosen category is reachable with Tab; the others are reached with arrow keys", async () => {
+    await renderLoaded()
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.tabIndex)).toStrictEqual([
+      0, -1, -1, -1, -1, -1,
+    ])
+  })
+
+  it("puts the chosen category in the URL fragment, without adding a history entry", async () => {
+    await renderLoaded()
+    const entriesBefore = history.length
+
+    await openCategory("ショートカット")
+
+    expect([location.hash, history.length]).toStrictEqual(["#shortcuts", entriesBefore])
+  })
+
+  it("changing the URL fragment opens the category it names", async () => {
+    await renderLoaded()
+
+    location.hash = "#data"
+
+    expect(await screen.findByRole("button", { name: "書き出す" })).toBeTruthy()
+    expect(selectedCategory()).toBe("データ")
+  })
+
+  it("opens on the category the URL fragment names", async () => {
+    history.replaceState(null, "", "#archive")
+
+    await renderOptions()
+
+    expect(
+      await screen.findByRole("switch", { name: "使っていないタブを自動でアーカイブ" }),
+    ).toBeTruthy()
+    expect(selectedCategory()).toBe("アーカイブ")
+  })
+})
+
+describe("display", () => {
+  it("shows the saved settings in each control", async () => {
     await renderLoaded({
       saved: {
         newTabsOnTop: false,
@@ -160,15 +299,24 @@ describe("表示", () => {
       },
     })
 
-    expect(switchNamed("新しいタブを一番上に表示").checked).toBe(false)
-    expect(switchNamed("閉じたフォルダでも開いているタブをすべて表示").checked).toBe(false)
-    expect(switchNamed("Space を Chrome のタブグループと同期").checked).toBe(true)
-    expect(switchNamed("使っていないタブを自動でアーカイブ").checked).toBe(true)
-    expect(selectedLabelOf(idleTimePopUp())).toBe("12 時間")
+    await openCategory("タブ")
+    const tabs = [
+      switchNamed("新しいタブを一番上に表示").checked,
+      switchNamed("閉じたフォルダでも開いているタブをすべて表示").checked,
+      switchNamed("Space を Chrome のタブグループと同期").checked,
+    ]
+    await openCategory("アーカイブ")
+    const archive = [
+      switchNamed("使っていないタブを自動でアーカイブ").checked,
+      selectedLabelOf(idleTimePopUp()),
+    ]
+
+    expect([...tabs, ...archive]).toStrictEqual([false, false, true, true, "12 時間"])
   })
 
-  it("他の画面で設定が変わると、表示もその値に変わる", async () => {
+  it("when the settings change on another page, the controls follow", async () => {
     const { saveElsewhere } = await renderLoaded()
+    await openCategory("タブ")
 
     await saveElsewhere({ syncTabGroups: true })
 
@@ -177,13 +325,13 @@ describe("表示", () => {
     })
   })
 
-  it("拡張機能のバージョンが表示される", async () => {
+  it("shows the extension's version", async () => {
     await renderLoaded()
 
     expect(screen.getByText(VERSION)).toBeTruthy()
   })
 
-  it("ソースコードのリポジトリを、新しいタブで開けるリンクで示す", async () => {
+  it("links to the source code repository, opening it in a new tab", async () => {
     await renderLoaded()
 
     const link = screen.getByRole("link", { name: "git.example/katip" })
@@ -194,32 +342,32 @@ describe("表示", () => {
   })
 })
 
-describe("言語", () => {
-  it("自動のときは、ブラウザが優先する言語で表示される", async () => {
+describe("language", () => {
+  it("when automatic, shows the page in the browser's preferred supported language", async () => {
     await renderLoaded({ browserLanguages: ["fr-FR", "es-MX"] })
 
     expect(heading()).toBe("Ajustes")
   })
 
-  it("言語を指定していれば、ブラウザの言語によらずその言語で表示される", async () => {
+  it("with a language chosen, shows the page in it whatever the browser's language", async () => {
     await renderLoaded({ saved: { locale: "zh" }, browserLanguages: ["ja-JP"] })
 
     expect(heading()).toBe("设置")
   })
 
-  it("対応している言語がブラウザに無ければ英語で表示される", async () => {
+  it("falls back to English when the browser has no supported language", async () => {
     await renderLoaded({ browserLanguages: ["fr-FR"] })
 
     expect(heading()).toBe("Settings")
   })
 
-  it("自動の選択肢には、自動で選ばれる言語の名前が表示される", async () => {
+  it("the automatic option names the language it picks", async () => {
     await renderLoaded({ saved: { locale: "ja" }, browserLanguages: ["es-MX"] })
 
     expect(optionLabelsOf(languagePopUp())).toContain("自動（スペイン語）")
   })
 
-  it("各言語の選択肢は、その言語自身の名前で表示される", async () => {
+  it("names each language in that language itself", async () => {
     await renderLoaded()
 
     expect(optionLabelsOf(languagePopUp())).toStrictEqual([
@@ -231,16 +379,16 @@ describe("言語", () => {
     ])
   })
 
-  it("言語を選ぶと、画面の文言がすぐにその言語に変わる", async () => {
+  it("choosing a language switches the page's text to it at once", async () => {
     await renderLoaded()
 
     await chooseLanguage("en")
 
     expect(heading()).toBe("Settings")
-    expect(switchNamed("Show new tabs at the top")).toBeTruthy()
+    expect(categoryTab("Tabs")).toBeTruthy()
   })
 
-  it("選んだ言語が保存される", async () => {
+  it("saves the chosen language", async () => {
     const { readSaved } = await renderLoaded()
 
     await chooseLanguage("es")
@@ -250,7 +398,7 @@ describe("言語", () => {
     })
   })
 
-  it("自動に戻すと、ブラウザの言語で表示され、自動が保存される", async () => {
+  it("going back to automatic shows the browser's language and saves automatic", async () => {
     const { readSaved } = await renderLoaded({
       saved: { locale: "en" },
       browserLanguages: ["ja-JP"],
@@ -264,7 +412,7 @@ describe("言語", () => {
     })
   })
 
-  it("文書の言語が、表示している言語になる", async () => {
+  it("sets the document's language to the language shown", async () => {
     await renderLoaded()
 
     await chooseLanguage("zh")
@@ -273,8 +421,8 @@ describe("言語", () => {
   })
 })
 
-describe("読み込みの失敗", () => {
-  it("設定を読み込めないと、ブラウザの言語で再読み込みを促す", async () => {
+describe("loading failure", () => {
+  it("when the settings can't be loaded, asks for a reload in the browser's language", async () => {
     await renderOptions({ rejectedStorageOperation: "get" })
 
     expect(
@@ -283,9 +431,10 @@ describe("読み込みの失敗", () => {
   })
 })
 
-describe("スイッチ", () => {
-  it("切り替えるとすぐに保存される", async () => {
+describe("switches", () => {
+  it("saves as soon as it's flipped", async () => {
     const { readSaved } = await renderLoaded()
+    await openCategory("タブ")
 
     await fireEvent.click(switchNamed("閉じたフォルダでも開いているタブをすべて表示"))
 
@@ -294,16 +443,18 @@ describe("スイッチ", () => {
     })
   })
 
-  it("保存すると「保存しました」と知らせる", async () => {
+  it("says it saved", async () => {
     await renderLoaded()
+    await openCategory("タブ")
 
     await fireEvent.click(switchNamed("Space を Chrome のタブグループと同期"))
 
     expect(await screen.findByText("保存しました")).toBeTruthy()
   })
 
-  it("保存に失敗すると、スイッチが元の状態に戻り、失敗を知らせる", async () => {
+  it("when saving fails, flips back and says so", async () => {
     await renderOptions({ rejectedStorageOperation: "set" })
+    await openCategory("タブ")
     const sync = await screen.findByRole<HTMLInputElement>("switch", {
       name: "Space を Chrome のタブグループと同期",
     })
@@ -317,46 +468,55 @@ describe("スイッチ", () => {
   })
 })
 
-describe("分割ビュー", () => {
-  it("分割ビューに対応しているブラウザでは、使えると表示される", async () => {
+describe("split view", () => {
+  it("in a browser with split view, says it's available", async () => {
     await renderLoaded({ supportsSplitView: true })
+
+    await openCategory("タブ")
 
     expect(screen.getByText("使えます")).toBeTruthy()
   })
 
-  it("分割ビューに対応していないブラウザでは、使えないことと必要な Chrome の版が表示される", async () => {
+  it("in a browser without split view, says it isn't available and which Chrome it needs", async () => {
     await renderLoaded({ supportsSplitView: false })
+
+    await openCategory("タブ")
 
     expect(screen.getByText("このブラウザでは使えません（Chrome 155 以降が必要）")).toBeTruthy()
     expect(screen.queryByText("使えます")).toBeNull()
   })
 })
 
-describe("自動アーカイブ", () => {
-  it("OFF の間は時間を選べない", async () => {
+describe("auto archive", () => {
+  it("while off, the time can't be chosen", async () => {
     await renderLoaded({ saved: { autoArchive: { enabled: false } } })
+
+    await openCategory("アーカイブ")
 
     expect(idleTimePopUp().disabled).toBe(true)
   })
 
-  it("OFF にすると時間を選べなくなる", async () => {
+  it("turning it off makes the time unavailable", async () => {
     await renderLoaded({ saved: { autoArchive: { enabled: true } } })
+    await openCategory("アーカイブ")
 
     await fireEvent.click(switchNamed("使っていないタブを自動でアーカイブ"))
 
     expect(idleTimePopUp().disabled).toBe(true)
   })
 
-  it("ON にすると時間を選べるようになる", async () => {
+  it("turning it on makes the time available", async () => {
     await renderLoaded({ saved: { autoArchive: { enabled: false } } })
+    await openCategory("アーカイブ")
 
     await fireEvent.click(switchNamed("使っていないタブを自動でアーカイブ"))
 
     expect(idleTimePopUp().disabled).toBe(false)
   })
 
-  it("時間を選ぶと、選んだ分数で保存される", async () => {
+  it("choosing a time saves it in minutes", async () => {
     const { readSaved } = await renderLoaded({ saved: { autoArchive: { enabled: true } } })
+    await openCategory("アーカイブ")
 
     await chooseIdleMinutes(3 * 24 * 60)
 
@@ -366,8 +526,10 @@ describe("自動アーカイブ", () => {
     expect(selectedLabelOf(idleTimePopUp())).toBe("3 日")
   })
 
-  it("時間の選択肢は、短い順に、割り切れる最も大きい単位で表示される", async () => {
+  it("lists the times shortest first, each in the largest unit that divides it", async () => {
     await renderLoaded({ saved: { autoArchive: { enabled: true } } })
+
+    await openCategory("アーカイブ")
 
     expect(optionLabelsOf(idleTimePopUp())).toStrictEqual([
       "30 分",
@@ -381,112 +543,52 @@ describe("自動アーカイブ", () => {
     ])
   })
 
-  it("選択肢に無い保存値も、選択中として表示される", async () => {
+  it("shows a saved time that isn't among the choices as the chosen one", async () => {
     await renderLoaded({
       saved: { autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(90) } },
     })
+
+    await openCategory("アーカイブ")
 
     expect(selectedLabelOf(idleTimePopUp())).toBe("90 分")
     expect(optionLabelsOf(idleTimePopUp())).toContain("90 分")
   })
 
   it.each([
-    ["en-US", "Archive after", ["30 minutes", "1 hour", "6 hours", "1 day", "1 week"]],
-    ["zh-CN", "闲置多久后归档", ["30 分钟", "1 小时", "6 小时", "1 天", "1 周"]],
-    ["es-ES", "Archivar tras", ["30 minutos", "1 hora", "6 horas", "1 día", "1 semana"]],
+    ["en-US", "Archive", "Archive after", ["30 minutes", "1 hour", "6 hours", "1 day", "1 week"]],
+    ["zh-CN", "归档", "闲置多久后归档", ["30 分钟", "1 小时", "6 小时", "1 天", "1 周"]],
+    ["es-ES", "Archivo", "Archivar tras", ["30 minutos", "1 hora", "6 horas", "1 día", "1 semana"]],
   ])(
-    "%s では、時間がその言語の単位と語形で表示される",
-    async (browserLanguage, popUpName, expected) => {
+    "in %s, writes the times with that language's units and word forms",
+    async (browserLanguage, category, popUpName, expected) => {
       await renderLoaded({
         saved: { autoArchive: { enabled: true } },
         browserLanguages: [browserLanguage],
       })
+
+      await openCategory(category)
 
       expect(optionLabelsOf(popUpNamed(popUpName))).toEqual(expect.arrayContaining(expected))
     },
   )
 })
 
-describe("ページ上のショートカット", () => {
-  it("URL のコピーを ON にすると、すべてのサイトへの許可を求め、許可されたら有効として保存される", async () => {
-    const { readSaved, permissions } = await renderLoaded()
-
-    await fireEvent.click(switchNamed("URL をコピー"))
-
-    await waitFor(async () => {
-      expect((await readSaved()).pageShortcuts).toStrictEqual({
-        copyUrl: true,
-        copyMarkdownLink: false,
-      })
-    })
-    expect(await permissions((fake) => fake.requested)).toStrictEqual(["AllSites"])
-    expect(switchNamed("URL をコピー").checked).toBe(true)
-  })
-
-  it("Markdown のリンクとしてのコピーも、許可されたら有効として保存される", async () => {
-    const { readSaved } = await renderLoaded()
-
-    await fireEvent.click(switchNamed("URL を Markdown のリンクとしてコピー"))
-
-    await waitFor(async () => {
-      expect((await readSaved()).pageShortcuts.copyMarkdownLink).toBe(true)
-    })
-  })
-
-  it("許可を断られたら OFF のまま保存せず、そのことを知らせる", async () => {
-    const { readSaved, permissions } = await renderLoaded()
-    await permissions((fake) => fake.answerRequestsWith("Deny"))
-
-    await fireEvent.click(switchNamed("URL をコピー"))
-
-    expect(
-      await screen.findByText(
-        "すべてのサイトへのアクセスが許可されなかったため、オフのままにしました",
-      ),
-    ).toBeTruthy()
-    expect(switchNamed("URL をコピー").checked).toBe(false)
-    expect((await readSaved()).pageShortcuts.copyUrl).toBe(false)
-  })
-
-  it("OFF にすると保存され、すべてのサイトへの許可は外さない", async () => {
-    const { readSaved, permissions } = await renderLoaded({
-      saved: { pageShortcuts: { copyUrl: true } },
-    })
-    await permissions((fake) => fake.grantElsewhere("AllSites"))
-
-    await fireEvent.click(switchNamed("URL をコピー"))
-
-    await waitFor(async () => {
-      expect((await readSaved()).pageShortcuts.copyUrl).toBe(false)
-    })
-    expect(await permissions((fake) => fake.removed)).toStrictEqual([])
-  })
-
-  it.each([
-    ["mac", "⇧⌘C", "⌥⇧⌘C"],
-    ["other", "Ctrl+Shift+C", "Ctrl+Shift+Alt+C"],
-  ] as const)(
-    "%s のキーボードでは、URL のコピーを %s、Markdown のリンクのコピーを %s と表示する",
-    async (keyboardPlatform, copyUrlKeys, copyMarkdownLinkKeys) => {
-      await renderLoaded({ keyboardPlatform })
-
-      expect(screen.getByText(copyUrlKeys)).toBeTruthy()
-      expect(screen.getByText(copyMarkdownLinkKeys)).toBeTruthy()
-    },
-  )
-})
-
-describe("閲覧履歴の検索", () => {
+describe("browsing history search", () => {
   const historySwitch = () => switchNamed("閲覧履歴も検索する")
+  const renderSpotlight = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("Spotlight")
+    return rendered
+  }
 
-  it("閲覧履歴の許可が無ければ OFF と表示される", async () => {
-    await renderLoaded()
+  it("is off without the history permission", async () => {
+    await renderSpotlight()
 
     expect(historySwitch().checked).toBe(false)
   })
 
-  it("ON にすると閲覧履歴の許可を求め、許可されたら ON になる", async () => {
-    const { permissions } = await renderLoaded()
+  it("turning it on asks for the history permission, and is on once granted", async () => {
+    const { permissions } = await renderSpotlight()
 
     await fireEvent.click(historySwitch())
 
@@ -496,8 +598,8 @@ describe("閲覧履歴の検索", () => {
     expect(await permissions((fake) => fake.requested)).toStrictEqual(["History"])
   })
 
-  it("許可を断られたら OFF に戻り、そのことを知らせる", async () => {
-    const { permissions } = await renderLoaded()
+  it("when the permission is denied, turns back off and says so", async () => {
+    const { permissions } = await renderSpotlight()
     await permissions((fake) => fake.answerRequestsWith("Deny"))
 
     await fireEvent.click(historySwitch())
@@ -506,8 +608,8 @@ describe("閲覧履歴の検索", () => {
     expect(historySwitch().checked).toBe(false)
   })
 
-  it("OFF にすると閲覧履歴の許可を外す", async () => {
-    const { permissions } = await renderLoaded()
+  it("turning it off removes the history permission", async () => {
+    const { permissions } = await renderSpotlight()
     await permissions((fake) => fake.grantElsewhere("History"))
     await waitFor(() => {
       expect(historySwitch().checked).toBe(true)
@@ -521,8 +623,8 @@ describe("閲覧履歴の検索", () => {
     expect(historySwitch().checked).toBe(false)
   })
 
-  it("別の画面で許可が変わると、表示が追従する", async () => {
-    const { permissions } = await renderLoaded()
+  it("follows the permission when it changes on another page", async () => {
+    const { permissions } = await renderSpotlight()
 
     await permissions((fake) => fake.grantElsewhere("History"))
     await waitFor(() => {
@@ -536,9 +638,115 @@ describe("閲覧履歴の検索", () => {
   })
 })
 
-describe("キーボードショートカット", () => {
-  it("変更ボタンを押すと、Chrome のショートカット設定が新しいタブで開く", async () => {
-    const { browser } = await renderLoaded()
+describe("shortcuts", () => {
+  const renderShortcuts = async (options: RenderOptions = {}) => {
+    const rendered = await renderLoaded(options)
+    await openCategory("ショートカット")
+    return rendered
+  }
+
+  it("shows each command with the key the browser assigned to it", async () => {
+    await renderShortcuts()
+
+    await waitFor(() => {
+      expect(
+        [
+          "サイドパネルを開く",
+          "Spotlight を開く",
+          "URL をコピー",
+          "URL を Markdown のリンクとしてコピー",
+        ].map(keysShownFor),
+      ).toStrictEqual(["⌃⌘S", "⌥T", "⇧⌘C", "⌃⇧⌘C"])
+    })
+  })
+
+  it("says a command has no key when the browser assigned none", async () => {
+    await renderShortcuts()
+
+    await waitFor(() => {
+      expect(
+        ["Space の次のタブへ移る", "Space の前のタブへ移る", "タブをピン留め／ピン留めを外す"].map(
+          keysShownFor,
+        ),
+      ).toStrictEqual(["未設定", "未設定", "未設定"])
+    })
+  })
+
+  it("shows keys the browser writes with plus signs just as it writes them", async () => {
+    await renderShortcuts({ assignedKeys: { "open-spotlight": "Alt+T" } })
+
+    await waitFor(() => {
+      expect(keysShownFor("Spotlight を開く")).toBe("Alt+T")
+    })
+  })
+
+  it("reads the keys again when the page comes back into view, as they're changed in another tab", async () => {
+    const { reassignKeysInBrowser } = await renderShortcuts()
+    await waitFor(() => {
+      expect(keysShownFor("Space の次のタブへ移る")).toBe("未設定")
+    })
+
+    reassignKeysInBrowser({ ...DEFAULT_KEYS, "next-tab-in-space": "⌥↓" })
+    document.dispatchEvent(new Event("visibilitychange"))
+
+    await waitFor(() => {
+      expect(keysShownFor("Space の次のタブへ移る")).toBe("⌥↓")
+    })
+  })
+
+  it("when the browser can't report the keys, doesn't claim any command has no key", async () => {
+    await renderShortcuts({ assignedKeys: "Unavailable" })
+
+    expect(keysShownFor("Spotlight を開く")).toBe("")
+    expect(screen.queryByText("未設定")).toBeNull()
+  })
+
+  it("describes each copy switch with its key", async () => {
+    await renderShortcuts()
+
+    await waitFor(() => {
+      const description = switchNamed("URL をコピー").getAttribute("aria-describedby")
+      expect(document.getElementById(description ?? "")?.textContent).toBe("⇧⌘C")
+    })
+  })
+
+  it("turning on copy URL saves it as on, without asking for any permission", async () => {
+    const { readSaved, permissions } = await renderShortcuts()
+
+    await fireEvent.click(switchNamed("URL をコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts).toStrictEqual({
+        copyUrl: true,
+        copyMarkdownLink: false,
+      })
+    })
+    expect(await permissions((fake) => fake.requested)).toStrictEqual([])
+    expect(switchNamed("URL をコピー").checked).toBe(true)
+  })
+
+  it("turning on copy as a Markdown link saves it as on", async () => {
+    const { readSaved } = await renderShortcuts()
+
+    await fireEvent.click(switchNamed("URL を Markdown のリンクとしてコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts.copyMarkdownLink).toBe(true)
+    })
+  })
+
+  it("turning a copy shortcut off saves it as off", async () => {
+    const { readSaved } = await renderShortcuts({ saved: { pageShortcuts: { copyUrl: true } } })
+
+    await fireEvent.click(switchNamed("URL をコピー"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).pageShortcuts.copyUrl).toBe(false)
+    })
+  })
+
+  it("the edit button opens Chrome's shortcuts page in a new tab", async () => {
+    const { browser } = await renderShortcuts()
     await browser((fake) => fake.seedWindow({ tabs: [{}] }))
 
     await fireEvent.click(screen.getByRole("button", { name: "Chrome で変更" }))
@@ -551,8 +759,8 @@ describe("キーボードショートカット", () => {
     })
   })
 
-  it("ショートカット設定を開けなければ、そのことを知らせる", async () => {
-    const { browser } = await renderLoaded()
+  it("when the shortcuts page can't be opened, says so", async () => {
+    const { browser } = await renderShortcuts()
     await browser((fake) => fake.seedWindow({ tabs: [{}] }))
     await browser((fake) => fake.failNext("tabs.create"))
 
@@ -562,13 +770,18 @@ describe("キーボードショートカット", () => {
   })
 })
 
-describe("データの書き出し", () => {
+describe("data export", () => {
   const exportButton = () => screen.getByRole<HTMLButtonElement>("button", { name: "書き出す" })
   const content = '{"format":"katip.export","version":1}'
   const failureNote = "書き出せませんでした。少し待ってから、もう一度お試しください。"
+  const renderData = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("データ")
+    return rendered
+  }
 
-  it("書き出すと、background から届いた中身を、日付入りの名前の JSON ファイルとしてダウンロードさせる", async () => {
-    const { answerExport, downloaded } = await renderLoaded()
+  it("downloads what the background sent as a JSON file named with the date", async () => {
+    const { answerExport, downloaded } = await renderData()
     answerExport({ _tag: "Exported", content })
 
     await fireEvent.click(exportButton())
@@ -584,8 +797,8 @@ describe("データの書き出し", () => {
     })
   })
 
-  it("書き出すと「書き出しました」と知らせる", async () => {
-    const { answerExport } = await renderLoaded()
+  it("says it exported", async () => {
+    const { answerExport } = await renderData()
     answerExport({ _tag: "Exported", content })
 
     await fireEvent.click(exportButton())
@@ -593,8 +806,8 @@ describe("データの書き出し", () => {
     expect(await screen.findByText("書き出しました")).toBeTruthy()
   })
 
-  it("background が書き出せなかったと返すと、ダウンロードさせずに失敗を知らせる", async () => {
-    const { answerExport, downloaded } = await renderLoaded()
+  it("when the background reports a failure, downloads nothing and says so", async () => {
+    const { answerExport, downloaded } = await renderData()
     answerExport({ _tag: "Failed" })
 
     await fireEvent.click(exportButton())
@@ -603,8 +816,8 @@ describe("データの書き出し", () => {
     expect(await downloaded()).toStrictEqual([])
   })
 
-  it("返事の前に background との接続が切れると、ダウンロードさせずに失敗を知らせる", async () => {
-    const { answerExport, downloaded } = await renderLoaded()
+  it("when the background hangs up before answering, downloads nothing and says so", async () => {
+    const { answerExport, downloaded } = await renderData()
     answerExport({ _tag: "Disconnect" })
 
     await fireEvent.click(exportButton())
@@ -613,8 +826,8 @@ describe("データの書き出し", () => {
     expect(await downloaded()).toStrictEqual([])
   })
 
-  it("書き出している間はボタンを押せず、書き出し終えると押せるようになる", async () => {
-    const { answerExport } = await renderLoaded()
+  it("the button can't be pressed while exporting, and can again once done", async () => {
+    const { answerExport } = await renderData()
 
     await fireEvent.click(exportButton())
     const disabledWhileExporting = exportButton().disabled

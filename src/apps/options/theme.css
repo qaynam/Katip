@@ -1,8 +1,8 @@
-/* サイドパネルと同じ質感にそろえる。アプリ間で CSS を共有する仕組みが無いため、値はサイドパネルの
-   theme.css と合わせて持つ */
+/* Matches the side panel's look. Apps have no way to share CSS, so these values are kept in step with
+   the side panel's theme.css by hand */
 :root {
-  /* system-ui を先頭に置くと、Chrome は日本語の字形を言語設定に応じた明朝体で補うことがある。
-     日本語のゴシック体を system-ui より先に名指しする */
+  /* With system-ui first, Chrome may fill Japanese glyphs from a Mincho face chosen by the language
+     settings. Name the Japanese Gothic faces ahead of system-ui */
   --font-ui:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
     "PingFang SC", "Segoe UI", "Yu Gothic UI", "Meiryo UI", "Noto Sans JP", "Noto Sans CJK JP",
@@ -12,14 +12,14 @@
   --row-height: 36px;
 }
 
-/* 簡体字を日本語のフォントで組むと、漢字が日本の字形になる */
+/* Setting Simplified Chinese in a Japanese font draws the Han characters in their Japanese forms */
 :lang(zh) {
   --font-ui:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Segoe UI",
     "Microsoft YaHei UI", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
 }
 
-/* フォームの部品は font-family を継承しないため、要素を問わずに指定する */
+/* Form controls don't inherit font-family, so set it on every element */
 * {
   font-family: var(--font-ui);
 }
@@ -60,6 +60,13 @@ select {
   --glass-hover: rgb(0 0 0 / 0.06);
   --glass-border: rgb(0 0 0 / 0.1);
   --glass-shadow: 0 14px 36px rgb(0 0 0 / 0.16), 0 2px 6px rgb(0 0 0 / 0.08);
+  --sheet: rgb(255 255 255 / 0.76);
+  --sheet-edge: rgb(0 0 0 / 0.07);
+  --sheet-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 18px 40px -20px rgb(0 0 0 / 0.18);
+  --control-face: rgb(255 255 255);
+  --control-edge: rgb(0 0 0 / 0.13);
+  --control-depth: 0 1px 1px rgb(0 0 0 / 0.08);
+  --switch-off: rgb(0 0 0 / 0.13);
   --switch-knob: #ffffff;
   --switch-knob-on: #ffffff;
   --danger: #d0362c;
@@ -74,6 +81,13 @@ select {
   --glass-hover: rgb(255 255 255 / 0.09);
   --glass-border: rgb(255 255 255 / 0.12);
   --glass-shadow: 0 16px 40px rgb(0 0 0 / 0.42), 0 2px 6px rgb(0 0 0 / 0.24);
+  --sheet: rgb(12 12 16 / 0.46);
+  --sheet-edge: rgb(255 255 255 / 0.07);
+  --sheet-shadow: 0 1px 2px rgb(0 0 0 / 0.24), 0 18px 40px -20px rgb(0 0 0 / 0.5);
+  --control-face: rgb(255 255 255 / 0.1);
+  --control-edge: rgb(255 255 255 / 0.1);
+  --control-depth: 0 1px 1px rgb(0 0 0 / 0.4);
+  --switch-off: rgb(255 255 255 / 0.16);
   --switch-knob: rgb(255 255 255 / 0.88);
   --switch-knob-on: rgb(32 32 38);
   --danger: #ff7a70;

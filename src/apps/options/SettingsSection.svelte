@@ -4,10 +4,13 @@
   let {
     heading,
     footnote,
+    listsTerms = false,
     children,
   }: {
     heading?: string
     footnote?: string
+    /** Wraps the rows in a description list, for rows that pair a term with its value. */
+    listsTerms?: boolean
     children: Snippet
   } = $props()
 
@@ -17,23 +20,19 @@
 
 <section aria-labelledby={heading === undefined ? undefined : headingId}>
   {#if heading !== undefined}
-    <h2 id={headingId}>{heading}</h2>
+    <h3 id={headingId}>{heading}</h3>
   {/if}
-  <div class="rows">
+  <svelte:element this={listsTerms ? "dl" : "div"} class="rows">
     {@render children()}
-  </div>
+  </svelte:element>
   {#if footnote !== undefined}
     <p class="footnote">{footnote}</p>
   {/if}
 </section>
 
 <style>
-  h2 {
-    display: flex;
-    align-items: center;
-    height: 28px;
-    margin: 0;
-    padding: 0 12px;
+  h3 {
+    margin: 0 0 2px;
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 600;
@@ -43,15 +42,16 @@
   .rows {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    margin: 0;
   }
 
   .footnote {
-    margin: 6px 12px 0;
+    max-width: 60ch;
+    margin: 6px 0 0;
     color: var(--text-muted);
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.55;
     text-wrap: pretty;
   }
 </style>

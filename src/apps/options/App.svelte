@@ -11,12 +11,6 @@
     resolveLocale,
   } from "#modules/i18n"
   import {
-    type KeyboardPlatform,
-    PAGE_SHORTCUTS,
-    type PageShortcut,
-    pageShortcutLabel,
-  } from "#modules/page-shortcuts"
-  import {
     applySettingsPatch,
     idleDurationOf,
     idleMinutesChoicesWith,
@@ -24,15 +18,22 @@
     type Settings,
     type SettingsPatch,
   } from "#modules/settings"
-  import { appearanceOf, type ColorScheme, neutralTheme } from "#modules/theme"
+  import { appearanceOf, type ColorScheme } from "#modules/theme"
   import { Tabs } from "#platform/browser"
+  import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+  import { CATEGORIES, type Category, categoryLooks, categoryOfFragment } from "./categories"
+  import CategoryTabs from "./CategoryTabs.svelte"
   import { downloadExportFile } from "./data-export"
+  import FrameBackdrop from "./FrameBackdrop.svelte"
+  import Glyph from "./Glyph.svelte"
   import { OptionalPermissions } from "./optional-permissions"
   import type { OptionsRuntime } from "./options-runtime"
   import PopUpButton, { type PopUpOption } from "./PopUpButton.svelte"
   import PushButton from "./PushButton.svelte"
   import SettingRow from "./SettingRow.svelte"
   import SettingsSection from "./SettingsSection.svelte"
+  import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
+  import ShortcutRow from "./ShortcutRow.svelte"
   import { openChromeShortcutSettings } from "./shortcut-settings"
   import StatusNote, { type Note } from "./StatusNote.svelte"
   import Switch from "./Switch.svelte"
@@ -43,61 +44,37 @@
     version,
     repositoryUrl,
     browserLanguages,
-    keyboardPlatform,
   }: {
     runtime: OptionsRuntime
     version: string
     repositoryUrl: string | null
-    /** `navigator.languages` と同じく、優先する順に並んだ BCP 47 の言語タグ。 */
+    /** BCP 47 language tags in order of preference, like `navigator.languages`. */
     browserLanguages: ReadonlyArray<string>
-    keyboardPlatform: KeyboardPlatform
   } = $props()
 
   type Outcome =
-    | "Saved"
-    | "SaveFailed"
-    | "ShortcutsUnavailable"
-    | "AllSitesDenied"
-    | "HistoryDenied"
-    | "Exported"
-    | "ExportFailed"
+    "Saved" | "SaveFailed" | "ShortcutsUnavailable" | "HistoryDenied" | "Exported" | "ExportFailed"
 
   const outcomeNotes = {
     Saved: { message: "options.saved", tone: "Done" },
     SaveFailed: { message: "options.saveFailed", tone: "Alert" },
     ShortcutsUnavailable: { message: "options.shortcuts.openFailed", tone: "Alert" },
-    AllSitesDenied: { message: "options.pageShortcuts.denied", tone: "Info" },
     HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
     Exported: { message: "options.data.exported", tone: "Done" },
     ExportFailed: { message: "options.data.exportFailed", tone: "Alert" },
   } as const satisfies Record<Outcome, { message: MessageKey; tone: Note["tone"] }>
 
-  const pageShortcutSettings = {
-    CopyUrl: {
-      label: "actions.copyUrl",
-      isEnabled: (current: Settings) => current.pageShortcuts.copyUrl,
-      patch: (enabled: boolean): SettingsPatch => ({ pageShortcuts: { copyUrl: enabled } }),
-    },
-    CopyMarkdownLink: {
-      label: "actions.copyMarkdownLink",
-      isEnabled: (current: Settings) => current.pageShortcuts.copyMarkdownLink,
-      patch: (enabled: boolean): SettingsPatch => ({
-        pageShortcuts: { copyMarkdownLink: enabled },
-      }),
-    },
-  } as const satisfies Record<
-    PageShortcut,
-    {
-      readonly label: MessageKey
-      readonly isEnabled: (current: Settings) => boolean
-      readonly patch: (enabled: boolean) => SettingsPatch
-    }
-  >
+  const id = $props.id()
+  const titleId = `${id}-title`
+  const panelId = `${id}-panel`
+  const tabIdOf = (category: Category) => `${id}-tab-${categoryLooks[category].slug}`
 
+  let selected = $state<Category>(categoryOfFragment(location.hash) ?? CATEGORIES[0])
   let settings = $state<Settings | null>(null)
   let loadFailed = $state(false)
   let supportsSplitView = $state<boolean | null>(null)
   let searchesHistory = $state<boolean | null>(null)
+  let assignedKeys = $state<ReadonlyMap<string, string> | null>(null)
   let systemScheme = $state<ColorScheme>(currentSystemScheme())
   let outcome = $state<Outcome | null>(null)
   let isExporting = $state(false)
@@ -128,11 +105,15 @@
     })),
   ])
 
-  const appearance = $derived(appearanceOf(neutralTheme, systemScheme))
+  const appearance = $derived(appearanceOf(categoryLooks[selected].theme, systemScheme))
+
+  /** `null` when no key is assigned, `undefined` while the assigned keys aren't known. */
+  const keyOf = (command: string): string | null | undefined =>
+    assignedKeys === null ? undefined : (assignedKeys.get(command) ?? null)
 
   $effect(() => watchSystemScheme((scheme) => (systemScheme = scheme)))
 
-  // スクロールの行き過ぎで見える余白まで同じ色にするため、ページの背景は文書全体に塗る
+  // Paint the whole document so the overscroll area past the page's edges has the same color
   $effect(() => {
     const root = document.documentElement
     root.lang = translator.languageTag
@@ -167,6 +148,32 @@
     ),
   )
 
+  const readAssignedKeys = () =>
+    runtime.runCallback(
+      KeyboardShortcuts.use((shortcuts) => shortcuts.assigned).pipe(
+        Effect.tap((keys) =>
+          Effect.sync(() => {
+            assignedKeys = keys
+          }),
+        ),
+        Effect.ignore,
+      ),
+    )
+
+  // The browser reports no event when keys are changed on its shortcuts page, which opens in
+  // another tab. Read them again whenever this page comes back into view
+  $effect(() => {
+    const cancel = readAssignedKeys()
+    const readWhenVisible = () => {
+      if (document.visibilityState === "visible") readAssignedKeys()
+    }
+    document.addEventListener("visibilitychange", readWhenVisible)
+    return () => {
+      cancel()
+      document.removeEventListener("visibilitychange", readWhenVisible)
+    }
+  })
+
   $effect(() => {
     const cancel = runtime.runCallback(
       SettingsRepository.use((repository) =>
@@ -189,6 +196,23 @@
     }
   })
 
+  $effect(() => {
+    const openFragmentCategory = () => {
+      const category = categoryOfFragment(location.hash)
+      if (category !== null) selected = category
+    }
+    window.addEventListener("hashchange", openFragmentCategory)
+    return () => window.removeEventListener("hashchange", openFragmentCategory)
+  })
+
+  // Not by assigning location.hash: that adds a history entry per category, so Back would step
+  // through categories instead of leaving the page
+  const select = (category: Category) => {
+    selected = category
+    history.replaceState(null, "", `#${categoryLooks[category].slug}`)
+    document.documentElement.scrollTop = 0
+  }
+
   const announce = (next: Outcome) => {
     clearTimeout(hideDoneNoteTimer)
     outcome = next
@@ -197,8 +221,8 @@
     }
   }
 
-  // チェックボックスはクリックした時点で DOM 上は切り替わっている。保存を待ってから状態を
-  // 変える方式だと、失敗して元の値に戻すときに状態が変化しないので、表示が戻らない
+  // A checkbox has already flipped in the DOM by the time it's clicked. Changing the state only
+  // after saving would leave nothing to change back on failure, so the checkbox would stay flipped
   const saveOver = async (beforeSave: Settings, patch: SettingsPatch) => {
     settings = applySettingsPatch(beforeSave, patch)
     const saved = await runtime.runPromiseExit(
@@ -214,23 +238,6 @@
   }
 
   const save = (patch: SettingsPatch) => (settings === null ? undefined : saveOver(settings, patch))
-
-  // オフにするときにすべてのサイトへの許可を外さない。ライブフォルダの取得元へのアクセスが
-  // この許可で賄われていることがあり、外すとそちらまで読めなくなる。もう一方のショートカットも
-  // 同じ許可を使っている
-  const setPageShortcut = async (shortcut: PageShortcut, enabled: boolean) => {
-    const patch = pageShortcutSettings[shortcut].patch(enabled)
-    if (settings === null) return
-    if (!enabled) return saveOver(settings, patch)
-    const beforeRequest = settings
-    settings = applySettingsPatch(beforeRequest, patch)
-    const granted = await runtime.runPromiseExit(
-      OptionalPermissions.use((permissions) => permissions.request("AllSites")),
-    )
-    if (Exit.isSuccess(granted) && granted.value) return saveOver(beforeRequest, patch)
-    settings = beforeRequest
-    announce(Exit.isSuccess(granted) ? "AllSitesDenied" : "SaveFailed")
-  }
 
   const setHistorySearch = async (enabled: boolean) => {
     searchesHistory = enabled
@@ -278,279 +285,311 @@
   style:--surface-raised={appearance.raisedSurface}
   style:--surface-active={appearance.activeSurface}
   style:--divider={appearance.divider}
-  style:--page-background={appearance.background}
-  style:--grain-opacity={appearance.grainOpacity}
+  style:--accent={appearance.accent}
 >
-  <div class="grain" aria-hidden="true"></div>
+  <FrameBackdrop
+    background={appearance.background}
+    transitionKey={selected}
+    grainOpacity={appearance.grainOpacity}
+  />
 
-  <header class="toolbar">
-    <div class="column">
-      <h1>{t("options.title")}</h1>
-      <StatusNote {note} />
-    </div>
+  <header class="side">
+    <h1 id={titleId}>{t("options.title")}</h1>
+    <CategoryTabs
+      {selected}
+      labelOf={(category) => t(categoryLooks[category].heading)}
+      labelledBy={titleId}
+      {tabIdOf}
+      {panelId}
+      onselect={select}
+    />
+    <div class="status-slot"><StatusNote {note} /></div>
   </header>
 
-  <main class="column">
-    {#if settings !== null}
-      {@const current = settings}
-      {@const idleTimeOptions = idleMinutesChoicesWith(current.autoArchive.idleMinutes).map(
-        (minutes) => ({ value: minutes, label: translator.duration(idleDurationOf(minutes)) }),
-      )}
-
-      <SettingsSection footnote={t("options.language.footnote")}>
-        <SettingRow label={t("options.language.label")}>
-          {#snippet children(control)}
-            <PopUpButton
-              {...control}
-              value={current.locale}
-              options={languageOptions}
-              onchange={(locale) => save({ locale })}
-            />
-          {/snippet}
-        </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection heading={t("options.tabs.heading")}>
-        <SettingRow
-          label={t("options.newTabsOnTop.label")}
-          description={t("options.newTabsOnTop.description")}
-        >
-          {#snippet children(control)}
-            <Switch
-              {...control}
-              checked={current.newTabsOnTop}
-              onchange={(checked) => save({ newTabsOnTop: checked })}
-            />
-          {/snippet}
-        </SettingRow>
-        <SettingRow
-          label={t("options.collapsedFolders.label")}
-          description={t("options.collapsedFolders.description")}
-        >
-          {#snippet children(control)}
-            <Switch
-              {...control}
-              checked={current.showAllOpenTabsInCollapsedFolders}
-              onchange={(checked) => save({ showAllOpenTabsInCollapsedFolders: checked })}
-            />
-          {/snippet}
-        </SettingRow>
-        <SettingRow
-          label={t("options.syncTabGroups.label")}
-          description={t("options.syncTabGroups.description")}
-        >
-          {#snippet children(control)}
-            <Switch
-              {...control}
-              checked={current.syncTabGroups}
-              onchange={(checked) => save({ syncTabGroups: checked })}
-            />
-          {/snippet}
-        </SettingRow>
-        {#if supportsSplitView !== null}
-          <SettingRow label={t("options.splitView.label")} labelsControl={false}>
-            {#snippet children(control)}
-              <span {...control} class="value">
-                {supportsSplitView
-                  ? t("options.splitView.available")
-                  : t("options.splitView.unavailable")}
-              </span>
-            {/snippet}
-          </SettingRow>
+  <main class="sheet">
+    <div id={panelId} class="pane" role="tabpanel" aria-labelledby={tabIdOf(selected)} tabindex="0">
+      <div class="pane-header">
+        <h2>{t(categoryLooks[selected].heading)}</h2>
+        {#if selected === "Shortcuts"}
+          <PushButton onclick={openShortcutSettings}>
+            {t("options.shortcuts.open")}
+            <Glyph name="external" size={13} />
+          </PushButton>
         {/if}
-      </SettingsSection>
+      </div>
 
-      <SettingsSection
-        heading={t("options.autoArchive.heading")}
-        footnote={t("options.autoArchive.footnote")}
-      >
-        <SettingRow label={t("options.autoArchive.label")}>
-          {#snippet children(control)}
-            <Switch
-              {...control}
-              checked={current.autoArchive.enabled}
-              onchange={(enabled) => save({ autoArchive: { enabled } })}
-            />
-          {/snippet}
-        </SettingRow>
-        <SettingRow
-          label={t("options.autoArchive.idleTime.label")}
-          disabled={!current.autoArchive.enabled}
-        >
-          {#snippet children(control)}
-            <PopUpButton
-              {...control}
-              value={current.autoArchive.idleMinutes}
-              options={idleTimeOptions}
+      {#if settings !== null}
+        {@const current = settings}
+        {#if selected === "General"}
+          <SettingsSection footnote={t("options.language.footnote")}>
+            <SettingRow label={t("options.language.label")}>
+              {#snippet children(control)}
+                <PopUpButton
+                  {...control}
+                  value={current.locale}
+                  options={languageOptions}
+                  onchange={(locale) => save({ locale })}
+                />
+              {/snippet}
+            </SettingRow>
+          </SettingsSection>
+
+          <SettingsSection heading={t("options.about.heading")}>
+            <SettingRow label={t("options.version.label")} labelsControl={false}>
+              {#snippet children(control)}
+                <span {...control} class="value">{version}</span>
+              {/snippet}
+            </SettingRow>
+            {#if repositoryUrl !== null}
+              <SettingRow label={t("options.sourceCode.label")} labelsControl={false}>
+                {#snippet children(control)}
+                  <a
+                    {...control}
+                    class="value link"
+                    href={repositoryUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {repositoryUrl.replace(/^https?:\/\//, "")}
+                    <Glyph name="external" size={12} />
+                  </a>
+                {/snippet}
+              </SettingRow>
+            {/if}
+          </SettingsSection>
+        {:else if selected === "Tabs"}
+          <SettingsSection>
+            <SettingRow
+              label={t("options.newTabsOnTop.label")}
+              description={t("options.newTabsOnTop.description")}
+            >
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.newTabsOnTop}
+                  onchange={(checked) => save({ newTabsOnTop: checked })}
+                />
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.collapsedFolders.label")}
+              description={t("options.collapsedFolders.description")}
+            >
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.showAllOpenTabsInCollapsedFolders}
+                  onchange={(checked) => save({ showAllOpenTabsInCollapsedFolders: checked })}
+                />
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.syncTabGroups.label")}
+              description={t("options.syncTabGroups.description")}
+            >
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.syncTabGroups}
+                  onchange={(checked) => save({ syncTabGroups: checked })}
+                />
+              {/snippet}
+            </SettingRow>
+            {#if supportsSplitView !== null}
+              <SettingRow label={t("options.splitView.label")} labelsControl={false}>
+                {#snippet children(control)}
+                  <span {...control} class="value">
+                    {supportsSplitView
+                      ? t("options.splitView.available")
+                      : t("options.splitView.unavailable")}
+                  </span>
+                {/snippet}
+              </SettingRow>
+            {/if}
+          </SettingsSection>
+        {:else if selected === "Archive"}
+          <SettingsSection footnote={t("options.autoArchive.footnote")}>
+            <SettingRow label={t("options.autoArchive.label")}>
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.autoArchive.enabled}
+                  onchange={(enabled) => save({ autoArchive: { enabled } })}
+                />
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.autoArchive.idleTime.label")}
               disabled={!current.autoArchive.enabled}
-              onchange={(idleMinutes) => save({ autoArchive: { idleMinutes } })}
-            />
-          {/snippet}
-        </SettingRow>
-      </SettingsSection>
-
-      {#if searchesHistory !== null}
-        <SettingsSection
-          heading={t("options.spotlight.heading")}
-          footnote={t("options.spotlight.history.footnote")}
-        >
-          <SettingRow label={t("options.spotlight.history.label")}>
-            {#snippet children(control)}
-              <Switch {...control} checked={searchesHistory === true} onchange={setHistorySearch} />
-            {/snippet}
-          </SettingRow>
-        </SettingsSection>
-      {/if}
-
-      <SettingsSection
-        heading={t("options.pageShortcuts.heading")}
-        footnote={t("options.pageShortcuts.footnote")}
-      >
-        {#each PAGE_SHORTCUTS as shortcut (shortcut)}
-          <SettingRow label={t(pageShortcutSettings[shortcut].label)}>
-            {#snippet children(control)}
-              <kbd class="keys">{pageShortcutLabel(shortcut, keyboardPlatform)}</kbd>
-              <Switch
-                {...control}
-                checked={pageShortcutSettings[shortcut].isEnabled(current)}
-                onchange={(enabled) => setPageShortcut(shortcut, enabled)}
+            >
+              {#snippet children(control)}
+                <PopUpButton
+                  {...control}
+                  value={current.autoArchive.idleMinutes}
+                  options={idleMinutesChoicesWith(current.autoArchive.idleMinutes).map(
+                    (minutes) => ({
+                      value: minutes,
+                      label: translator.duration(idleDurationOf(minutes)),
+                    }),
+                  )}
+                  disabled={!current.autoArchive.enabled}
+                  onchange={(idleMinutes) => save({ autoArchive: { idleMinutes } })}
+                />
+              {/snippet}
+            </SettingRow>
+          </SettingsSection>
+        {:else if selected === "Spotlight"}
+          {#if searchesHistory !== null}
+            <SettingsSection footnote={t("options.spotlight.history.footnote")}>
+              <SettingRow label={t("options.spotlight.history.label")}>
+                {#snippet children(control)}
+                  <Switch
+                    {...control}
+                    checked={searchesHistory === true}
+                    onchange={setHistorySearch}
+                  />
+                {/snippet}
+              </SettingRow>
+            </SettingsSection>
+          {/if}
+        {:else if selected === "Shortcuts"}
+          <p class="lede">{t("options.shortcuts.intro")}</p>
+          <SettingsSection heading={t("options.shortcuts.openAndMove.heading")} listsTerms>
+            {#each OPEN_AND_MOVE_COMMANDS as command (command.name)}
+              <ShortcutRow
+                label={t(command.label)}
+                shortcut={keyOf(command.name)}
+                notSetLabel={t("options.shortcuts.notSet")}
               />
-            {/snippet}
-          </SettingRow>
-        {/each}
-      </SettingsSection>
-
-      <SettingsSection footnote={t("options.shortcuts.footnote")}>
-        <SettingRow label={t("options.shortcuts.label")} labelsControl={false}>
-          {#snippet children(control)}
-            <PushButton {...control} onclick={openShortcutSettings}>
-              {t("options.shortcuts.open")}
-            </PushButton>
-          {/snippet}
-        </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection
-        heading={t("options.data.heading")}
-        footnote={t("options.data.export.footnote")}
-      >
-        <SettingRow label={t("options.data.export.label")} labelsControl={false}>
-          {#snippet children(control)}
-            <PushButton {...control} disabled={isExporting} onclick={exportData}>
-              {t("options.data.export.button")}
-            </PushButton>
-          {/snippet}
-        </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection>
-        <SettingRow label={t("options.version.label")} labelsControl={false}>
-          {#snippet children(control)}
-            <span {...control} class="value">{version}</span>
-          {/snippet}
-        </SettingRow>
-        {#if repositoryUrl !== null}
-          <SettingRow label={t("options.sourceCode.label")} labelsControl={false}>
-            {#snippet children(control)}
-              <a
-                {...control}
-                class="value link"
-                href={repositoryUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {repositoryUrl.replace(/^https?:\/\//, "")}
-              </a>
-            {/snippet}
-          </SettingRow>
+            {/each}
+          </SettingsSection>
+          <SettingsSection
+            heading={t("options.shortcuts.currentTab.heading")}
+            footnote={t("options.shortcuts.copy.footnote")}
+            listsTerms
+          >
+            {#each CURRENT_TAB_COMMANDS as command (command.name)}
+              {@const toggle = command.toggle}
+              <ShortcutRow
+                label={t(command.label)}
+                shortcut={keyOf(command.name)}
+                notSetLabel={t("options.shortcuts.notSet")}
+                toggle={toggle === undefined
+                  ? undefined
+                  : {
+                      checked: toggle.isEnabled(current),
+                      onchange: (enabled) => save(toggle.patch(enabled)),
+                    }}
+              />
+            {/each}
+          </SettingsSection>
+        {:else if selected === "Data"}
+          <SettingsSection footnote={t("options.data.export.footnote")}>
+            <SettingRow label={t("options.data.export.label")} labelsControl={false}>
+              {#snippet children(control)}
+                <PushButton {...control} disabled={isExporting} onclick={exportData}>
+                  {t("options.data.export.button")}
+                </PushButton>
+              {/snippet}
+            </SettingRow>
+          </SettingsSection>
         {/if}
-      </SettingsSection>
-    {:else if loadFailed}
-      <p class="load-problem" role="alert">{t("options.loadFailed")}</p>
-    {/if}
+      {:else if loadFailed}
+        <p class="load-problem" role="alert">{t("options.loadFailed")}</p>
+      {/if}
+    </div>
   </main>
 </div>
 
 <style>
   .katip-options {
     isolation: isolate;
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;
   }
 
-  .grain {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background-image: var(--grain-image);
-    background-size: 200px 200px;
-    opacity: var(--grain-opacity);
-    pointer-events: none;
-  }
-
-  .column {
-    box-sizing: border-box;
-    max-width: 600px;
-    margin-inline: auto;
-    padding-inline: 16px;
-  }
-
-  /* 下を流れる行を隠すため不透明に塗る。粒も背景と同じ位置に描いて、継ぎ目を見せない */
-  .toolbar {
+  .side {
     position: sticky;
     top: 0;
-    z-index: 1;
-    border-bottom: 1px solid transparent;
-    background: var(--page-background);
-    animation: reveal-edge linear both;
-    animation-timeline: scroll();
-    animation-range: 0 16px;
-  }
-
-  .toolbar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: var(--grain-image);
-    background-size: 200px 200px;
-    background-attachment: fixed;
-    opacity: var(--grain-opacity);
-    pointer-events: none;
-  }
-
-  @keyframes reveal-edge {
-    to {
-      border-bottom-color: var(--divider);
-    }
-  }
-
-  .toolbar .column {
-    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 2px 16px;
-    padding-top: 28px;
-    padding-bottom: 12px;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100vh;
+    padding: 8px;
   }
 
   h1 {
-    margin: 0 0 0 12px;
-    font-size: 20px;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    margin: 6px 0 8px;
+    padding: 0 10px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
 
-  main {
+  .status-slot {
+    margin-top: auto;
+    padding: 8px 2px 4px;
+  }
+
+  .sheet {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: calc(100vh - 16px);
+    margin: 8px 8px 8px 0;
+    border-radius: 12px;
+    background: var(--sheet);
+    box-shadow:
+      0 0 0 0.5px var(--sheet-edge),
+      var(--sheet-shadow);
+  }
+
+  .pane {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding-top: 6px;
-    padding-bottom: 56px;
+    gap: 28px;
+    box-sizing: border-box;
+    min-height: 100%;
+    /* Centers a 720px column with padding rather than a max-width, so the panel and its focus ring
+       still span the whole sheet */
+    padding: 36px max(48px, calc((100% - 720px) / 2)) 64px;
+    border-radius: inherit;
+  }
+
+  .pane:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .pane-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    min-height: 32px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .lede {
+    max-width: 60ch;
+    margin: -16px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
   }
 
   .value {
-    padding-right: 4px;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
     text-align: end;
@@ -558,6 +597,9 @@
   }
 
   .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     text-decoration: underline;
     text-decoration-color: var(--divider);
     text-underline-offset: 3px;
@@ -568,24 +610,51 @@
     text-decoration-color: currentColor;
   }
 
-  .keys {
-    margin-right: 10px;
-    padding: 1px 6px;
-    border-radius: 5px;
-    background: var(--surface-hover);
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-  }
-
   .load-problem {
     margin: 0;
-    padding: 10px 12px;
-    border-radius: var(--radius-row);
-    background: var(--surface-raised);
     color: var(--danger);
+  }
+
+  @media (max-width: 720px) {
+    .katip-options {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+    }
+
+    .side {
+      position: static;
+      height: auto;
+      padding: 8px 8px 10px;
+    }
+
+    h1 {
+      margin: 4px 0 6px;
+    }
+
+    .status-slot {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      left: 16px;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      pointer-events: none;
+    }
+
+    .sheet {
+      min-height: 0;
+      margin: 0 8px 8px;
+    }
+
+    .pane {
+      gap: 24px;
+      padding: 24px 18px 48px;
+    }
+
+    h2 {
+      font-size: 21px;
+    }
   }
 </style>

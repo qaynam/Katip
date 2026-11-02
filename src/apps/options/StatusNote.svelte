@@ -1,7 +1,7 @@
 <script lang="ts" module>
   export interface Note {
     readonly text: string
-    /** Done は済んだことを、Info は操作の結果を控えめに、Alert は失敗を知らせる。 */
+    /** Done reports something finished, Info quietly reports how an action went, Alert a failure. */
     readonly tone: "Done" | "Info" | "Alert"
   }
 </script>
@@ -10,7 +10,7 @@
   let { note }: { note: Note | null } = $props()
 </script>
 
-<!-- 読み上げ領域は中身より先に DOM に置いておかないと、変化が読み上げられない -->
+<!-- The live region has to be in the DOM before its content, or the change isn't announced -->
 <div class="status" role="status">
   {#if note !== null}
     <p class="note" class:alert={note.tone === "Alert"}>
@@ -29,13 +29,23 @@
 
   .note {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    align-items: flex-start;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
     margin: 0;
-    color: var(--text-muted);
+    padding: 8px 12px;
+    border: 0.5px solid var(--glass-border);
+    border-radius: 11px;
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+    color: var(--glass-text);
     font-size: 12px;
-    line-height: 1.4;
-    animation: appear 200ms ease-out;
+    line-height: 1.45;
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    backdrop-filter: blur(28px) saturate(1.6);
+    animation: appear 180ms ease-out;
   }
 
   .note.alert {
@@ -46,6 +56,7 @@
     flex: none;
     width: 12px;
     height: 12px;
+    margin-top: 2px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.5;
@@ -56,6 +67,7 @@
   @keyframes appear {
     from {
       opacity: 0;
+      transform: translateY(4px);
     }
   }
 

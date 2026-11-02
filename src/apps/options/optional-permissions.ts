@@ -1,13 +1,12 @@
 import { Context, Effect, Layer, Queue, Stream } from "effect"
 import { BrowserApiError } from "#platform/browser"
 
-/** 設定画面から求めたり外したりする、マニフェストで任意にしている権限。 */
-export type OptionalAccess = "AllSites" | "History"
+/** Permissions the manifest marks optional, which the settings page asks for and removes. */
+export type OptionalAccess = "History"
 
 export type PermissionChange = "Added" | "Removed"
 
 const permissionsOf: Readonly<Record<OptionalAccess, chrome.permissions.Permissions>> = {
-  AllSites: { origins: ["*://*/*"] },
   History: { permissions: ["history"] },
 }
 
@@ -31,20 +30,21 @@ export class OptionalPermissions extends Context.Service<
   {
     contains(access: OptionalAccess): Effect.Effect<boolean, BrowserApiError>
     /**
-     * 許可を求め、許可されたかを返す。許可済みなら尋ねずに true を返す。
+     * Asks for the permission and returns whether it was granted. Returns true without asking when
+     * it's already granted.
      *
      * @remarks
-     * Chrome はクリックなどの操作を処理している間しか尋ねない。操作のハンドラの中で、
-     * 先に別の非同期の処理を待たずに実行すること。
+     * Chrome asks only while it's handling a user gesture such as a click. Run this inside the
+     * gesture's handler without awaiting anything else first.
      */
     request(access: OptionalAccess): Effect.Effect<boolean, BrowserApiError>
-    /** 外せたかを返す。 */
+    /** Returns whether the permission was removed. */
     remove(access: OptionalAccess): Effect.Effect<boolean, BrowserApiError>
-    /** 購読している間に、いずれかの権限の許可が増減するたびに流れる。他の画面での変化も流れる。 */
+    /** Emits whenever any permission is granted or removed while subscribed, from any page. */
     readonly changes: Stream.Stream<PermissionChange>
   }
 >()("katip/options/OptionalPermissions") {
-  // Layer.succeed だと import した時点で chrome.permissions を読み、chrome の無いテストが落ちる
+  // Not Layer.succeed: it would read chrome.permissions on import and break tests that have no chrome
   static readonly layer = Layer.sync(OptionalPermissions, () =>
     OptionalPermissions.of({
       contains: (access) =>

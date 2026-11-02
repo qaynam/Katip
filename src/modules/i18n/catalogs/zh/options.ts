@@ -7,9 +7,13 @@ export const options: CatalogSection<"options"> = {
   "options.saved": "已保存",
   "options.saveFailed": "无法保存更改。请稍候片刻，然后重试。",
 
+  "options.general.heading": "通用",
   "options.language.label": "语言",
   "options.language.automatic": "自动（{language}）",
   "options.language.footnote": "选择“自动”时，将跟随浏览器的语言。",
+  "options.about.heading": "关于 Katip",
+  "options.version.label": "版本",
+  "options.sourceCode.label": "源代码",
 
   "options.tabs.heading": "标签页",
   "options.newTabsOnTop.label": "在顶部显示新标签页",
@@ -31,21 +35,27 @@ export const options: CatalogSection<"options"> = {
   "options.autoArchive.footnote":
     "超过这段时间未查看的临时标签页会被关闭并保存到归档中，之后可以从归档重新打开。已固定的标签页、收藏的标签页、正在播放音频的标签页以及当前查看的标签页不会被关闭。",
 
-  "options.shortcuts.label": "键盘快捷键",
-  "options.shortcuts.open": "在 Chrome 中更改",
-  "options.shortcuts.openFailed": "无法打开 Chrome 的快捷键页面。",
-  "options.shortcuts.footnote":
-    "打开侧边栏、Spotlight 等操作所用的按键，可以在 Chrome 的扩展程序快捷键页面中设置。",
-
-  "options.pageShortcuts.heading": "快捷键",
-  "options.pageShortcuts.footnote":
-    "在浏览网页时可用。开启时会请求访问所有网站的权限（仅用于接收这些按键）。在 chrome:// 页面、新标签页和 Chrome 应用商店中无法使用。",
-  "options.pageShortcuts.denied": "未获得访问所有网站的权限，因此保持关闭。",
-
   "options.spotlight.heading": "Spotlight",
   "options.spotlight.history.label": "同时搜索浏览历史记录",
   "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
   "options.spotlight.history.denied": "未获得访问浏览历史记录的权限。",
+
+  "options.shortcuts.heading": "快捷键",
+  "options.shortcuts.intro": "按键在 Chrome 的扩展程序快捷键页面中设置。",
+  "options.shortcuts.open": "在 Chrome 中更改",
+  "options.shortcuts.openFailed": "无法打开 Chrome 的快捷键页面。",
+  "options.shortcuts.notSet": "未设置",
+  "options.shortcuts.openAndMove.heading": "打开与切换",
+  "options.shortcuts.currentTab.heading": "当前标签页",
+  "options.shortcuts.copy.footnote":
+    "复制快捷键关闭时，按下按键不会有任何反应。若要将该按键用于其他用途，请在 Chrome 的快捷键页面中移除它。",
+  "options.commands.openSidePanel": "打开侧边栏",
+  "options.commands.openSpotlight": "打开 Spotlight",
+  "options.commands.nextTabInSpace": "切换到空间中的下一个标签页",
+  "options.commands.previousTabInSpace": "切换到空间中的上一个标签页",
+  "options.commands.togglePin": "固定或取消固定标签页",
+  "options.commands.copyUrl": "复制网址",
+  "options.commands.copyMarkdownLink": "以 Markdown 链接复制网址",
 
   "options.data.heading": "数据",
   "options.data.export.label": "导出数据",
@@ -54,7 +64,4 @@ export const options: CatalogSection<"options"> = {
     "将空间、已固定的标签页、打开的标签页、收藏和设置保存为 JSON 文件。不包含 GitHub 令牌和归档。",
   "options.data.exported": "已导出",
   "options.data.exportFailed": "无法导出数据。请稍候片刻，然后重试。",
-
-  "options.version.label": "版本",
-  "options.sourceCode.label": "源代码",
 }

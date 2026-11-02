@@ -8,9 +8,13 @@ export const options: CatalogSection<"options"> = {
   "options.saveFailed":
     "No se ha podido guardar el cambio. Espera un momento y vuelve a intentarlo.",
 
+  "options.general.heading": "General",
   "options.language.label": "Idioma",
   "options.language.automatic": "Automático ({language})",
   "options.language.footnote": "En automático, se usa el idioma del navegador.",
+  "options.about.heading": "Acerca de Katip",
+  "options.version.label": "Versión",
+  "options.sourceCode.label": "Código fuente",
 
   "options.tabs.heading": "Pestañas",
   "options.newTabsOnTop.label": "Mostrar las pestañas nuevas arriba",
@@ -34,24 +38,30 @@ export const options: CatalogSection<"options"> = {
   "options.autoArchive.footnote":
     "Las pestañas temporales que no hayas visto durante este tiempo se cierran y se guardan en el archivo, desde donde puedes volver a abrirlas. Las pestañas fijadas, los Favoritos, las pestañas que reproducen audio y la pestaña que estás viendo nunca se cierran.",
 
-  "options.shortcuts.label": "Combinaciones de teclas",
-  "options.shortcuts.open": "Cambiar en Chrome",
-  "options.shortcuts.openFailed":
-    "No se ha podido abrir la página de combinaciones de teclas de Chrome.",
-  "options.shortcuts.footnote":
-    "Asigna teclas para abrir el panel lateral, Spotlight y otras acciones en la página de combinaciones de teclas de extensiones de Chrome.",
-
-  "options.pageShortcuts.heading": "Atajos",
-  "options.pageShortcuts.footnote":
-    "Disponibles mientras ves una página web. Al activar uno, se solicita acceso a todos los sitios, que solo se usa para recibir estas teclas. No funcionan en las páginas chrome://, en la página Nueva pestaña ni en Chrome Web Store.",
-  "options.pageShortcuts.denied":
-    "No se permitió el acceso a todos los sitios, así que el atajo sigue desactivado.",
-
   "options.spotlight.heading": "Spotlight",
   "options.spotlight.history.label": "Buscar también en el historial",
   "options.spotlight.history.footnote":
     "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",
   "options.spotlight.history.denied": "No se permitió el acceso al historial de navegación.",
+
+  "options.shortcuts.heading": "Atajos",
+  "options.shortcuts.intro":
+    "Las teclas se asignan en la página de combinaciones de teclas de extensiones de Chrome.",
+  "options.shortcuts.open": "Cambiar en Chrome",
+  "options.shortcuts.openFailed":
+    "No se ha podido abrir la página de combinaciones de teclas de Chrome.",
+  "options.shortcuts.notSet": "Sin asignar",
+  "options.shortcuts.openAndMove.heading": "Abrir y moverse",
+  "options.shortcuts.currentTab.heading": "Pestaña actual",
+  "options.shortcuts.copy.footnote":
+    "Un atajo de copia no hace nada mientras está desactivado. Para usar su tecla en otra cosa, quítala en la página de combinaciones de teclas de Chrome.",
+  "options.commands.openSidePanel": "Abrir el panel lateral",
+  "options.commands.openSpotlight": "Abrir Spotlight",
+  "options.commands.nextTabInSpace": "Siguiente pestaña del espacio",
+  "options.commands.previousTabInSpace": "Pestaña anterior del espacio",
+  "options.commands.togglePin": "Fijar o dejar de fijar la pestaña",
+  "options.commands.copyUrl": "Copiar URL",
+  "options.commands.copyMarkdownLink": "Copiar URL como enlace Markdown",
 
   "options.data.heading": "Datos",
   "options.data.export.label": "Exportar tus datos",
@@ -61,7 +71,4 @@ export const options: CatalogSection<"options"> = {
   "options.data.exported": "Exportado",
   "options.data.exportFailed":
     "No se han podido exportar los datos. Espera un momento y vuelve a intentarlo.",
-
-  "options.version.label": "Versión",
-  "options.sourceCode.label": "Código fuente",
 }

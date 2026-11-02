@@ -8,9 +8,9 @@ import {
 export type PermissionAnswer = "Grant" | "Deny"
 
 /**
- * テスト用。許可を求められたときのユーザーの答えを決め、他の画面で許可が増減する操作を起こす。
- * `FakeOptionalPermissions.layer` はこれと {@link OptionalPermissions} を、状態を共有させて提供する。
- * 最初はどの権限も許可されておらず、求められたら許可する。
+ * For tests. Decides how the user answers permission requests, and grants or removes permissions as
+ * if from another page. `FakeOptionalPermissions.layer` provides this and {@link OptionalPermissions}
+ * sharing one state. No permission is granted at first, and requests are granted.
  */
 export class FakeOptionalPermissions extends Context.Service<
   FakeOptionalPermissions,
@@ -18,9 +18,9 @@ export class FakeOptionalPermissions extends Context.Service<
     answerRequestsWith(answer: PermissionAnswer): Effect.Effect<void>
     grantElsewhere(access: OptionalAccess): Effect.Effect<void>
     revokeElsewhere(access: OptionalAccess): Effect.Effect<void>
-    /** 求められた順に、求められた権限。 */
+    /** The permissions asked for, in the order they were asked for. */
     readonly requested: Effect.Effect<ReadonlyArray<OptionalAccess>>
-    /** 外された順に、外された権限。 */
+    /** The permissions removed, in the order they were removed. */
     readonly removed: Effect.Effect<ReadonlyArray<OptionalAccess>>
   }
 >()("katip/options/testing/FakeOptionalPermissions") {

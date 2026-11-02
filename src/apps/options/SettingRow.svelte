@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  /** 行のコントロールに付ける属性。ラベルと説明文をコントロールに結びつける。 */
+  /** Attributes for a row's control that tie the row's label and description to it. */
   export interface RowControlAttributes {
     readonly id: string
     readonly "aria-describedby": string | undefined
@@ -20,8 +20,8 @@
     description?: string
     disabled?: boolean
     /**
-     * `false` ならラベルをコントロールの名前にしない。ボタンのように中の文字が名前になる
-     * コントロールや、コントロールの無い表示だけの行に使う。
+     * When `false`, the label doesn't name the control. For controls named by their own text,
+     * like buttons, and for rows that only show a value.
      */
     labelsControl?: boolean
     children: Snippet<[RowControlAttributes]>
@@ -56,12 +56,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 24px;
     box-sizing: border-box;
-    min-height: var(--row-height);
-    padding: 7px 8px 7px 12px;
-    border-radius: var(--radius-row);
-    background: var(--surface-raised);
+    min-height: 48px;
+    padding: 11px 0;
+  }
+
+  .row:not(:first-child) {
+    border-top: 0.5px solid var(--divider);
   }
 
   .text {
@@ -71,7 +73,7 @@
 
   .label {
     display: block;
-    font-size: 13.5px;
+    font-size: 14px;
     letter-spacing: -0.003em;
     transition: color 120ms ease;
   }
@@ -81,11 +83,12 @@
   }
 
   .description {
-    margin: 2px 0 0;
+    max-width: 60ch;
+    margin: 3px 0 0;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 400;
-    line-height: 1.45;
+    line-height: 1.5;
     text-wrap: pretty;
   }
 

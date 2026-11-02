@@ -6,24 +6,27 @@
     onclick,
     disabled = false,
     children,
-    ...control
-  }: RowControlAttributes & {
+    ...attributes
+  }: Partial<RowControlAttributes> & {
     onclick: () => void
     disabled?: boolean
     children: Snippet
   } = $props()
 </script>
 
-<button {...control} type="button" {disabled} {onclick}>{@render children()}</button>
+<button {...attributes} type="button" {disabled} {onclick}>{@render children()}</button>
 
 <style>
   button {
-    height: 26px;
-    padding: 0 11px;
-    border: none;
-    border-radius: 7px;
-    background: var(--surface-active);
-    box-shadow: var(--shadow-active);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border: 0.5px solid var(--control-edge);
+    border-radius: 8px;
+    background: var(--control-face);
+    box-shadow: var(--control-depth);
     white-space: nowrap;
     transition: opacity 120ms ease;
   }

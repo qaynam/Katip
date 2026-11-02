@@ -28,7 +28,7 @@
     height: 18px;
     margin: 0 2px;
     border-radius: 9px;
-    background: var(--divider);
+    background: var(--switch-off);
     transition: background-color 160ms ease;
   }
 

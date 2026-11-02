@@ -2,7 +2,7 @@
   export interface PopUpOption<Value extends string | number> {
     readonly value: Value
     readonly label: string
-    /** 表示中の言語と違う言語で書いた選択肢に付ける。 */
+    /** For an option written in a language other than the page's. */
     readonly lang?: string
   }
 </script>
@@ -29,8 +29,8 @@
   }
 </script>
 
-<!-- 独自のメニューを組まずに select を使い、キー操作や読み上げはブラウザに任せる。
-     一覧の見た目は、選択肢を装飾できるブラウザでだけサイドバーのメニューにそろえる -->
+<!-- A native select rather than a custom menu, so the browser handles keys and screen readers. The
+     list matches the side panel's menus only in browsers that let options be styled -->
 <span class="pop-up">
   <select {...control} {value} {disabled} onchange={(event) => choose(event.currentTarget.value)}>
     {#each options as option (option.value)}
@@ -55,13 +55,13 @@
     align-items: center;
     min-width: 0;
     max-width: 100%;
-    height: 26px;
+    height: 28px;
     padding: 0 26px 0 10px;
     overflow: hidden;
-    border: none;
-    border-radius: 7px;
-    background: var(--surface-active);
-    box-shadow: var(--shadow-active);
+    border: 0.5px solid var(--control-edge);
+    border-radius: 8px;
+    background: var(--control-face);
+    box-shadow: var(--control-depth);
     white-space: nowrap;
     text-overflow: ellipsis;
   }

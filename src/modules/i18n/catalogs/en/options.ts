@@ -7,9 +7,13 @@ export const options = {
   "options.saved": "Saved",
   "options.saveFailed": "Couldn’t save the change. Wait a moment, then try again.",
 
+  "options.general.heading": "General",
   "options.language.label": "Language",
   "options.language.automatic": "Automatic ({language})",
   "options.language.footnote": "Automatic matches your browser’s language.",
+  "options.about.heading": "About Katip",
+  "options.version.label": "Version",
+  "options.sourceCode.label": "Source code",
 
   "options.tabs.heading": "Tabs",
   "options.newTabsOnTop.label": "Show new tabs at the top",
@@ -31,22 +35,28 @@ export const options = {
   "options.autoArchive.footnote":
     "Temporary tabs you haven’t viewed for this long are closed and saved to the archive, where you can reopen them later. Pinned tabs, Favorites, tabs playing audio, and the tab you’re viewing are never closed.",
 
-  "options.shortcuts.label": "Keyboard shortcuts",
-  "options.shortcuts.open": "Edit in Chrome",
-  "options.shortcuts.openFailed": "Couldn’t open Chrome’s shortcuts page.",
-  "options.shortcuts.footnote":
-    "Assign keys for opening the side panel, Spotlight, and more on Chrome’s extension shortcuts page.",
-
-  "options.pageShortcuts.heading": "Shortcuts",
-  "options.pageShortcuts.footnote":
-    "Available while you’re viewing a web page. Turning one on asks for access to all sites, which is used only to receive these keys. They don’t work on chrome:// pages, the New Tab page, or the Chrome Web Store.",
-  "options.pageShortcuts.denied": "Access to all sites wasn’t allowed, so the shortcut stays off.",
-
   "options.spotlight.heading": "Spotlight",
   "options.spotlight.history.label": "Search browsing history too",
   "options.spotlight.history.footnote":
     "Turning this on asks for permission to read your browsing history. Turning it off removes the permission.",
   "options.spotlight.history.denied": "Access to browsing history wasn’t allowed.",
+
+  "options.shortcuts.heading": "Shortcuts",
+  "options.shortcuts.intro": "Keys are assigned on Chrome’s extension shortcuts page.",
+  "options.shortcuts.open": "Edit in Chrome",
+  "options.shortcuts.openFailed": "Couldn’t open Chrome’s shortcuts page.",
+  "options.shortcuts.notSet": "Not set",
+  "options.shortcuts.openAndMove.heading": "Open and move",
+  "options.shortcuts.currentTab.heading": "Current tab",
+  "options.shortcuts.copy.footnote":
+    "A copy shortcut does nothing while it’s off. To use its key for something else, remove the key on Chrome’s shortcuts page.",
+  "options.commands.openSidePanel": "Open the side panel",
+  "options.commands.openSpotlight": "Open Spotlight",
+  "options.commands.nextTabInSpace": "Next tab in the Space",
+  "options.commands.previousTabInSpace": "Previous tab in the Space",
+  "options.commands.togglePin": "Pin or unpin the tab",
+  "options.commands.copyUrl": "Copy URL",
+  "options.commands.copyMarkdownLink": "Copy URL as a Markdown link",
 
   "options.data.heading": "Data",
   "options.data.export.label": "Export your data",
@@ -55,7 +65,4 @@ export const options = {
     "Saves your Spaces, pinned tabs, open tabs, Favorites, and settings as a JSON file. Your GitHub token and archived tabs aren’t included.",
   "options.data.exported": "Exported",
   "options.data.exportFailed": "Couldn’t export your data. Wait a moment, then try again.",
-
-  "options.version.label": "Version",
-  "options.sourceCode.label": "Source code",
 } as const satisfies Readonly<Record<`options.${string}`, Message>>
