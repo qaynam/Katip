@@ -47,13 +47,12 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
   ],
   // Spotlight で閲覧履歴も探すとき。設定で有効にしたときにだけ許可を求める
   optional_permissions: ["history"],
-  // 使う機能を有効にしたときにだけ許可を求め、使わない人には要求しない。ライブフォルダの
-  // 取得元と、ページ上のショートカットのためにスクリプトを注入するすべてのサイト
+  // Live folder sources. Asked for only when a live folder needs one, so people who don't use
+  // live folders are never asked
   optional_host_permissions: [
     "https://mail.google.com/*",
     "https://github.com/*",
     "https://api.github.com/*",
-    "*://*/*",
   ],
   side_panel: { default_path: "sidepanel/index.html" },
   action: { default_title: "Katip" },

@@ -1,14 +1,12 @@
 import { Array, Clock, Effect, Match, Option, pipe } from "effect"
 import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
 import { makeTranslator } from "#modules/i18n"
-import { type KeyboardPlatform, pageShortcutLabel } from "#modules/page-shortcuts"
 import {
   PinnedBookmarks,
   type PinnedBookmark,
   type PinnedSplit,
   type PinnedTree,
 } from "#modules/pinned"
-import { type PageShortcutSettings, SettingsRepository } from "#modules/settings"
 import type { Space, SpaceId } from "#modules/space"
 import { type SearchCandidate, searchSpotlight, type SpotlightEntry } from "#modules/spotlight"
 import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
@@ -263,25 +261,15 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
 })
 
 interface ShortcutEnvironment {
-  readonly pageShortcuts: PageShortcutSettings
   /** 拡張のコマンドの名前ごとに割り当てられたキー。 */
   readonly assigned: ReadonlyMap<string, string>
-  readonly platform: KeyboardPlatform
 }
 
-// ページ上のショートカットを有効にしていれば、Chrome に割り当てたキーよりそちらを示す。
-// ページを見ている間はページ上のショートカットが先に受け取るため
 const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | null => {
   const assigned = (command: string) => environment.assigned.get(command) ?? null
   return Match.valueTags(action, {
-    CopyUrl: () =>
-      environment.pageShortcuts.copyUrl
-        ? pageShortcutLabel("CopyUrl", environment.platform)
-        : assigned(KeyboardCommand.copyCurrentUrl),
-    CopyMarkdownLink: () =>
-      environment.pageShortcuts.copyMarkdownLink
-        ? pageShortcutLabel("CopyMarkdownLink", environment.platform)
-        : assigned(KeyboardCommand.copyCurrentUrlAsMarkdown),
+    CopyUrl: () => assigned(KeyboardCommand.copyCurrentUrl),
+    CopyMarkdownLink: () => assigned(KeyboardCommand.copyCurrentUrlAsMarkdown),
     TogglePin: () => assigned(KeyboardCommand.quickPinToggle),
     DuplicateTab: () => null,
     CloseTab: () => null,
@@ -293,9 +281,7 @@ const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | 
 }
 
 const shortcutEnvironment = Effect.gen(function* () {
-  const settings = yield* (yield* SettingsRepository).get
-  const shortcuts = yield* KeyboardShortcuts
-  const assigned = yield* shortcuts.assigned.pipe(
+  const assigned = yield* (yield* KeyboardShortcuts).assigned.pipe(
     Effect.catch((error) =>
       Effect.as(
         Effect.logWarning("キーの割り当てを読めなかった", error),
@@ -303,12 +289,7 @@ const shortcutEnvironment = Effect.gen(function* () {
       ),
     ),
   )
-  const isMac = yield* shortcuts.isMac.pipe(Effect.orElseSucceed(() => false))
-  return {
-    pageShortcuts: settings.pageShortcuts,
-    assigned,
-    platform: isMac ? "mac" : "other",
-  } satisfies ShortcutEnvironment
+  return { assigned } satisfies ShortcutEnvironment
 })
 
 const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {

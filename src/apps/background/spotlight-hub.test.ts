@@ -1,7 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option, Queue, Ref, Schema, type Scope, Stream } from "effect"
 import type { Action } from "#modules/actions"
-import { SettingsRepository } from "#modules/settings"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BookmarkId, type PortSender, Tabs, type WindowId, Windows } from "#platform/browser"
@@ -706,29 +705,6 @@ describe("Spotlight の操作の候補", () => {
       }),
       KeyboardShortcuts.layerTest({
         assigned: { "copy-current-url": "⇧⌘C", "quick-pin-toggle": "⌥D" },
-        isMac: true,
-      }),
-    ),
-  )
-
-  it.effect("ページ上のショートカットを有効にした操作には、そのショートカットのキーを添える", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
-        yield* initialize
-        yield* (yield* SettingsRepository).update({ pageShortcuts: { copyMarkdownLink: true } })
-        const spotlight = yield* connectSpotlight(windowId)
-
-        const { results } = yield* spotlight.search("", "Actions")
-
-        expect(
-          actionsOfKind("CopyMarkdownLink")(results).map(({ shortcut }) => shortcut),
-        ).toStrictEqual(["⌥⇧⌘C"])
-      }),
-      KeyboardShortcuts.layerTest({
-        assigned: { "copy-current-url-as-markdown": "⇧⌘M" },
-        isMac: true,
       }),
     ),
   )

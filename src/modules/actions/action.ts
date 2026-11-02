@@ -2,8 +2,7 @@ import { Schema } from "effect"
 import { SpaceId } from "#modules/space"
 
 /**
- * Spotlight のコマンドや、ページ上のショートカットから実行する操作。
- * 対象は、実行したウィンドウでアクティブなタブ。
+ * An operation run from Spotlight's commands, on the active tab of the window it was run from.
  */
 export const Action = Schema.TaggedUnion({
   CopyUrl: {},

@@ -1,15 +1,15 @@
 /**
- * ページの下中央に、短い知らせをしばらく出す。前の知らせが残っていれば置き換える。
+ * Shows a short notice at the bottom center of the page for a moment, replacing any notice still
+ * on screen. `text` is shown as plain text, never parsed as HTML.
  *
  * @remarks
- * ページのスクリプトから呼ぶほか、background から `chrome.scripting.executeScript` の `func` として
- * 注入する。注入する関数は文字列にして送られ、外の変数や import を参照できないので、使う値は
- * 定数も含めてすべてこの関数の中に書く。
+ * Injected into a tab as the `func` of `chrome.scripting.executeScript`. Chrome sends the function
+ * as source text, so it cannot reach outer variables or imports: every value it uses, constants
+ * included, is written inside it.
  *
- * ページの CSS に崩されず、ページの要素の CSS も崩さないよう、Shadow DOM の中に描く。
- * 文字は `textContent` で入れ、HTML として解釈しない。
+ * Drawn inside a Shadow DOM so that the page's CSS and the notice's CSS cannot affect each other.
  */
-export const showPageToast = (text: string, target: Document = document): void => {
+export const showPageToast = (text: string): void => {
   const durationMs = 1_500
   const style = `
 :host {
@@ -65,20 +65,21 @@ export const showPageToast = (text: string, target: Document = document): void =
 }
 `
 
-  // ページのスクリプトと background の注入は別々に動くので、残っている知らせは DOM から探して消す
-  target.querySelectorAll("katip-toast").forEach((previous) => previous.remove())
+  // Each injection is a fresh copy of this function with no reference to the previous notice,
+  // so the previous one is found in the DOM
+  document.querySelectorAll("katip-toast").forEach((previous) => previous.remove())
 
-  const host = target.createElement("katip-toast")
+  const host = document.createElement("katip-toast")
   const root = host.attachShadow({ mode: "open" })
-  const styleElement = target.createElement("style")
+  const styleElement = document.createElement("style")
   styleElement.textContent = style
-  const toast = target.createElement("div")
+  const toast = document.createElement("div")
   toast.className = "toast"
   toast.setAttribute("role", "status")
   toast.textContent = text
   root.append(styleElement, toast)
-  // body に transform が掛かったページでも、fixed の位置が画面を基準にするよう html の直下に置く
-  target.documentElement.append(host)
+  // Not under body: a transform on body would make the fixed position relative to body
+  document.documentElement.append(host)
 
   setTimeout(() => host.remove(), durationMs)
 }
