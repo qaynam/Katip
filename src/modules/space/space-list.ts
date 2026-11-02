@@ -13,23 +13,27 @@ export class LastSpaceRemoval extends Schema.TaggedError<LastSpaceRemoval>()("La
   spaceId: SpaceId,
 }) {}
 
-/** 名前を付けずに作る Space の、番号を使った名前の付け方。番号は 1 から数える。 */
+/** Names a Space created without a name after a number. Numbers start at 1. */
 export type NumberedSpaceName = (number: number) => string
 
-/** 既存の Space の名前と重ならない、番号を使った名前。番号は Space の数の次から探す。 */
+/**
+ * A numbered name no existing Space has. The search starts at the number after the count of Spaces.
+ */
 export const nextSpaceName = (spaces: SpaceList, numbered: NumberedSpaceName): SpaceName => {
   const taken = new Set<string>(spaces.map((space) => space.name))
   const candidates = Array.makeBy(spaces.length + 1, (offset) =>
     SpaceName.make(numbered(spaces.length + 1 + offset)),
   )
-  // 候補は既存の数より 1 つ多いので空きは必ずあり、フォールバックには到達しない
+  // There is one more candidate than there are Spaces, so one is always free and the fallback is
+  // never reached
   return pipe(
     Array.findFirst(candidates, (name) => !taken.has(name)),
     Option.getOrElse(() => Array.headNonEmpty(candidates)),
   )
 }
 
-// 1 ページ目の先頭は無彩色なので、自動で割り当てる候補からは外す
+// The first preset on the first page is neutral, so it isn't one of the themes handed out
+// automatically
 const colorfulPresets = (presetPages[0] ?? []).slice(1).map(themeOf)
 
 const defaultTheme = (spaces: SpaceList): SpaceTheme => {

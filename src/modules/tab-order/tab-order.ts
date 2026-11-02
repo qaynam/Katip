@@ -7,9 +7,7 @@ export type DisplayPlacement =
   | { readonly _tag: "Top" }
   | { readonly _tag: "Bottom" }
 
-/**
- * Chrome のタブ index 順に並んだ Space のタブを、サイドパネルの表示順に並べ替える。
- */
+/** Reorders a Space's tabs from Chrome's tab index order into the order the side panel shows. */
 export const displayOrder = <A>(
   tabsInIndexOrder: ReadonlyArray<A>,
   options: { readonly newestOnTop: boolean },
@@ -30,7 +28,7 @@ const toIndexAnchor = (
     Match.tagsExhaustive({
       Above: ({ tabId }) => Option.some(orient({ side: "before", tabId })),
       Below: ({ tabId }) => Option.some(orient({ side: "after", tabId })),
-      // 表示の先頭は、上下反転していなければ index の最小、反転していれば最大のタブ
+      // The top of the display is the lowest-index tab, or the highest when the order is flipped
       Top: () =>
         Option.map(newestOnTop ? Array.last(others) : Array.head(others), (tabId) => ({
           side: newestOnTop ? ("after" as const) : ("before" as const),
@@ -45,8 +43,9 @@ const toIndexAnchor = (
   )
 }
 
-// 分割ビューの 2 つのタブの間に割り込むと分割が解けてしまう。基準が分割の片方なら、
-// 前に置くときは左のタブ、後ろに置くときは右のタブを基準にして、2 つの外側に置く
+// Landing between the two tabs of a split view would break the split up. When the anchor is one
+// half of a split, anchor on its left tab when placing before and its right tab when placing after,
+// so the tab lands outside the pair
 const outerEdgeOf = (
   anchor: IndexAnchor,
   windowTabs: ReadonlyArray<TabId>,
@@ -58,13 +57,16 @@ const outerEdgeOf = (
 }
 
 /**
- * 表示順で指定された置き場所を、`chrome.tabs.move` に渡す index に換算する。
+ * Converts a placement given in display order into the index to pass to `chrome.tabs.move`.
  *
- * @param windowTabs - ウィンドウの全タブを index 順に並べたもの（固定タブや他 Space のタブも含む）。
- * @param spaceTabs - 移動先 Space の一時タブを index 順に並べたもの。
- * @param moving - 動かすタブ。分割ビューなら 2 つを index 順に渡す。
- * @param unitOf - そのタブと一緒に動く（同じ分割ビューの）タブ。省略時はそのタブだけ。
- * @returns 移動後に先頭のタブが占める index。基準のタブが無いなど、動かす必要が無いときは none。
+ * @param windowTabs - Every tab in the window in index order, including Chrome-pinned tabs and tabs
+ *   of other Spaces.
+ * @param spaceTabs - The temporary tabs of the destination Space in index order.
+ * @param moving - The tabs to move. For a split view, both tabs in index order.
+ * @param unitOf - The tabs that move together with the given tab (those of the same split view).
+ *   Defaults to just that tab.
+ * @returns The index the first moved tab occupies after the move, or none when nothing needs to
+ *   move, such as when the anchor tab isn't there.
  */
 export const moveIndexFor = (params: {
   readonly windowTabs: ReadonlyArray<TabId>

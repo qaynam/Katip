@@ -41,7 +41,7 @@ const browserTab = (id: number, overrides: Partial<BrowserTab> = {}): BrowserTab
   index: id,
   url: Option.some(`https://example.com/${id}`),
   pendingUrl: Option.none(),
-  title: Option.some(`タブ ${id}`),
+  title: Option.some(`Tab ${id}`),
   favIconUrl: Option.none(),
   status: Option.some("complete"),
   active: false,
@@ -83,7 +83,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   folderExpansion: {},
   folderIcons: new Map(),
   liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map() },
-  translator: makeTranslator("ja"),
+  translator: makeTranslator("en"),
   preferences: {
     newTabsOnTop: false,
     showAllOpenTabsInCollapsedFolders: false,
@@ -122,35 +122,35 @@ const homeWithPin = (tree: PinnedTree): SidebarSources["pinnedTrees"] =>
     [spaceId("work"), []],
   ])
 
-describe("アクティブな Space", () => {
-  it("ウィンドウに記録されたアクティブ Space を表示する", () => {
+describe("active Space", () => {
+  it("shows the active Space recorded for the window", () => {
     const view = project({ workspace: switchSpace(emptyWorkspace, WINDOW, spaceId("work")) })
 
     expect(view.activeSpaceId).toBe("work")
   })
 
-  it("記録が無ければ先頭の Space を表示する", () => {
+  it("shows the first Space when none is recorded", () => {
     const view = project({ workspace: emptyWorkspace })
 
     expect(view.activeSpaceId).toBe("home")
   })
 
-  it("Space が 1 つも無ければビューを作らない", () => {
+  it("builds no view when there are no Spaces", () => {
     expect(projectSidebarView(sources({ spaces: [] }))).toStrictEqual(Option.none())
   })
 })
 
-describe("一時タブ", () => {
+describe("temporary tabs", () => {
   const workspace = inHome(switchSpace(emptyWorkspace, WINDOW, spaceId("home")), 1, 2, 3)
   const windowTabs = [browserTab(3), browserTab(1), browserTab(2)]
 
-  it("Chrome のタブの並び順で表示する", () => {
+  it("are shown in Chrome's tab order", () => {
     const view = project({ workspace, windowTabs })
 
     expect(temporaryTabIds(homeOf(view))).toStrictEqual([1, 2, 3])
   })
 
-  it("新しいタブを上に表示する設定では、並び順を逆にする", () => {
+  it("are shown in reverse with newest tabs on top", () => {
     const view = project({
       workspace,
       windowTabs,
@@ -160,15 +160,15 @@ describe("一時タブ", () => {
     expect(temporaryTabIds(homeOf(view))).toStrictEqual([3, 2, 1])
   })
 
-  it("タブ名が上書きされていれば、その名前で表示する", () => {
-    const renamed = setTitleOverride(workspace, tabId(1), Option.some("受信箱"))
+  it("a renamed tab is shown under its new name", () => {
+    const renamed = setTitleOverride(workspace, tabId(1), Option.some("Inbox"))
 
     const view = project({ workspace: renamed, windowTabs })
 
-    expect(temporaryTabsOf(homeOf(view))[0]?.title).toBe("受信箱")
+    expect(temporaryTabsOf(homeOf(view))[0]?.title).toBe("Inbox")
   })
 
-  it("タイトルがまだ無いタブは URL を表示名にする", () => {
+  it("a tab without a title yet is named after its URL", () => {
     const view = project({
       workspace,
       windowTabs: [browserTab(1, { title: Option.none() })],
@@ -177,7 +177,7 @@ describe("一時タブ", () => {
     expect(temporaryTabsOf(homeOf(view))[0]?.title).toBe("https://example.com/1")
   })
 
-  it("別の Space のタブはその Space の一覧に入る", () => {
+  it("a tab of another Space is listed under that Space", () => {
     const mixed = assignTab(workspace, tabId(4), spaceId("work"), 0)
 
     const view = project({ workspace: mixed, windowTabs: [...windowTabs, browserTab(4)] })
@@ -190,7 +190,7 @@ describe("一時タブ", () => {
 })
 
 describe("Favorites", () => {
-  it("Chrome で固定されたタブを index 順に並べ、どの Space にも表示しない", () => {
+  it("lists the tabs pinned in Chrome in index order, and shows them in no Space", () => {
     const view = project({
       workspace: inHome(emptyWorkspace, 3),
       windowTabs: [
@@ -213,26 +213,26 @@ describe("Favorites", () => {
   })
 })
 
-describe("ピン留め", () => {
+describe("pins", () => {
   const pinnedUrl = "https://mail.example/inbox"
   const boundWorkspace = bindPinned(inHome(emptyWorkspace, 1), tabId(1), {
     bookmarkId: bookmarkId("mail"),
     pinnedUrl,
   })
 
-  it("開いていないピンは、タブを持たないピンとして表示する", () => {
-    const view = project({ pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "メール")]) })
+  it("a pin that isn't open is shown without a tab", () => {
+    const view = project({ pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "Mail")]) })
 
     expect(pinnedNodesOf(view)).toStrictEqual([
-      { _tag: "PinnedItem", bookmarkId: "mail", title: "メール", url: pinnedUrl, openTab: null },
+      { _tag: "PinnedItem", bookmarkId: "mail", title: "Mail", url: pinnedUrl, openTab: null },
     ])
   })
 
-  it("ピンにバインドされたタブは一時タブに出ず、ピンの開いているタブとして表示する", () => {
+  it("a tab bound to a pin is shown as the pin's open tab, not among the temporary tabs", () => {
     const view = project({
       workspace: boundWorkspace,
       windowTabs: [browserTab(1, { url: Option.some(pinnedUrl) })],
-      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "メール")]),
+      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "Mail")]),
     })
 
     expect({
@@ -241,38 +241,38 @@ describe("ピン留め", () => {
     }).toStrictEqual({ temporary: 0, openTab: 1 })
   })
 
-  it("ピンから移動していなければブックマークの名前で表示する", () => {
+  it("a pin that hasn't navigated away is shown under the bookmark's name", () => {
     const view = project({
       workspace: boundWorkspace,
       windowTabs: [browserTab(1, { url: Option.some(`${pinnedUrl}?page=2`) })],
-      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "メール")]),
+      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "Mail")]),
     })
     const item = pinnedNodesOf(view)[0] as PinnedItemView
 
-    expect([item.title, item.openTab?.hasNavigatedAway]).toStrictEqual(["メール", false])
+    expect([item.title, item.openTab?.hasNavigatedAway]).toStrictEqual(["Mail", false])
   })
 
-  it("ピンから別のページへ移動しても名前はピンのままで、移動済みと今のページのタイトルを示す", () => {
+  it("a pin that navigated to another page keeps the pin's name, and shows it navigated away and the current page's title", () => {
     const view = project({
       workspace: boundWorkspace,
       windowTabs: [
         browserTab(1, {
           url: Option.some("https://mail.example/settings"),
-          title: Option.some("設定"),
+          title: Option.some("Settings"),
         }),
       ],
-      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "メール")]),
+      pinnedTrees: homeWithPin([bookmark("mail", pinnedUrl, "Mail")]),
     })
     const item = pinnedNodesOf(view)[0] as PinnedItemView
 
     expect([item.title, item.openTab?.hasNavigatedAway, item.openTab?.tab.title]).toStrictEqual([
-      "メール",
+      "Mail",
       true,
-      "設定",
+      "Settings",
     ])
   })
 
-  it("バインド先のブックマークが無くなったタブは一時タブとして表示する", () => {
+  it("a tab whose bound bookmark is gone is shown as a temporary tab", () => {
     const view = project({
       workspace: boundWorkspace,
       windowTabs: [browserTab(1)],
@@ -282,28 +282,28 @@ describe("ピン留め", () => {
     expect(temporaryTabIds(homeOf(view))).toStrictEqual([1])
   })
 
-  it("ピン留めツリーを読めなかった Space は、読めないことを示す", () => {
+  it("a Space whose pinned tree couldn't be read is shown as unavailable", () => {
     const view = project({ pinnedTrees: new Map([[spaceId("work"), []]]) })
 
     expect(homeOf(view).pinned._tag).toBe("Unavailable")
   })
 })
 
-describe("閉じたフォルダに覗かせる分割ピン", () => {
-  const leftUrl = "https://spec.example/ja"
-  const rightUrl = "https://spec.example/en"
+describe("a pinned split peeking out of a collapsed folder", () => {
+  const leftUrl = "https://spec.example/draft"
+  const rightUrl = "https://spec.example/review"
   const splitPin: PinnedTree[number] = {
     _tag: "PinnedSplit",
     id: bookmarkId("pair"),
-    title: "仕様書 | Spec",
+    title: "Draft | Review",
     items: [
-      { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "仕様書", url: leftUrl },
-      { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "Spec", url: rightUrl },
+      { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "Draft", url: leftUrl },
+      { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "Review", url: rightUrl },
     ],
   }
   const collapsedFolderWith = (...children: PinnedTree) => homeWithPin([folder("f", children)])
 
-  /** 分割ピンの右側だけをタブで開いておく */
+  /** Opens only the right side of the pinned split in a tab. */
   const rightSideOpen = (tab: Partial<BrowserTab> = {}) => ({
     workspace: bindPinned(inHome(emptyWorkspace, 7), tabId(7), {
       bookmarkId: bookmarkId("right"),
@@ -326,7 +326,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
       : []
   }
 
-  it("設定がオンなら、片方だけ開いていても、2 つそろった 1 行として覗かせる", () => {
+  it("with the setting on, peeks out as one row with both sides, even when only one side is open", () => {
     const view = project({
       ...rightSideOpen(),
       ...showingAllOpenTabs(true),
@@ -336,7 +336,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
     expect(peekedOf(view)).toStrictEqual([["left", "right"]])
   })
 
-  it("どちらの側も開いていなければ覗かせない", () => {
+  it("doesn't peek out when neither side is open", () => {
     const view = project({
       ...showingAllOpenTabs(true),
       pinnedTrees: collapsedFolderWith(splitPin),
@@ -345,7 +345,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
     expect(peekedOf(view)).toStrictEqual([])
   })
 
-  it("設定がオフでも、アクティブなタブを含む分割ピンは 1 行で覗かせる", () => {
+  it("with the setting off, still peeks out as one row when it holds the active tab", () => {
     const view = project({
       ...rightSideOpen({ active: true }),
       ...showingAllOpenTabs(false),
@@ -355,7 +355,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
     expect(peekedOf(view)).toStrictEqual([["left", "right"]])
   })
 
-  it("設定がオフなら、開いていてもアクティブでない分割ピンは覗かせない", () => {
+  it("with the setting off, doesn't peek out when open but not active", () => {
     const view = project({
       ...rightSideOpen({ active: false }),
       ...showingAllOpenTabs(false),
@@ -365,7 +365,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
     expect(peekedOf(view)).toStrictEqual([])
   })
 
-  it("入れ子のフォルダの中の分割ピンも、1 行で覗かせる", () => {
+  it("peeks out as one row from a nested folder too", () => {
     const view = project({
       ...rightSideOpen(),
       ...showingAllOpenTabs(true),
@@ -376,7 +376,7 @@ describe("閉じたフォルダに覗かせる分割ピン", () => {
   })
 })
 
-describe("フォルダ", () => {
+describe("folders", () => {
   const workspace = bindPinned(
     bindPinned(inHome(emptyWorkspace, 1, 2), tabId(1), {
       bookmarkId: bookmarkId("a"),
@@ -399,13 +399,13 @@ describe("フォルダ", () => {
   const folderOf = (view: SidebarView) => pinnedNodesOf(view)[0] as PinnedFolderView
   const peekedIds = (view: SidebarView) => folderOf(view).peekedItems.map((i) => i.bookmarkId)
 
-  it("閉じたフォルダは、アクティブなタブを開いているピンだけを見出しの下に覗かせる", () => {
+  it("a collapsed folder peeks out only the pin open in the active tab under its heading", () => {
     const view = project({ workspace, windowTabs, pinnedTrees: homeWithPin(tree) })
 
     expect(peekedIds(view)).toStrictEqual(["a"])
   })
 
-  it("すべて表示する設定では、閉じたフォルダ内の開いているピンをすべて覗かせる", () => {
+  it("with the show-all setting, a collapsed folder peeks out every open pin in it", () => {
     const view = project({
       workspace,
       windowTabs,
@@ -416,7 +416,7 @@ describe("フォルダ", () => {
     expect(peekedIds(view)).toStrictEqual(["a", "b"])
   })
 
-  it("開いたフォルダは何も覗かせない", () => {
+  it("an expanded folder peeks out nothing", () => {
     const view = project({
       workspace,
       windowTabs,
@@ -427,7 +427,7 @@ describe("フォルダ", () => {
     expect([folderOf(view).isExpanded, peekedIds(view)]).toStrictEqual([true, []])
   })
 
-  it("タブグループ同期が ON のときは、Space 直下のフォルダの中にフォルダを作れない", () => {
+  it("with tab group sync on, no folder can be created inside a top-level folder of a Space", () => {
     const view = project({
       pinnedTrees: homeWithPin(tree),
       preferences: { ...sources().preferences, syncTabGroups: true },
@@ -436,7 +436,7 @@ describe("フォルダ", () => {
     expect(folderOf(view).canCreateSubfolder).toBe(false)
   })
 
-  it("アイコンを選んだフォルダは、そのアイコンを載せる", () => {
+  it("a folder with a chosen icon carries that icon", () => {
     const view = project({
       pinnedTrees: homeWithPin(tree),
       folderIcons: new Map([[bookmarkId("f"), "star"]]),
@@ -445,14 +445,14 @@ describe("フォルダ", () => {
     expect(folderOf(view).icon).toBe("star")
   })
 
-  it("アイコンを選んでいないフォルダは、アイコンを持たない", () => {
+  it("a folder without a chosen icon has no icon", () => {
     const view = project({ pinnedTrees: homeWithPin(tree) })
 
     expect(folderOf(view).icon).toBeNull()
   })
 })
 
-describe("分割ビュー", () => {
+describe("split view", () => {
   const split = SplitViewId.make(7)
   const workspace = inHome(switchSpace(emptyWorkspace, WINDOW, spaceId("home")), 1, 2, 3)
   const windowTabs = [
@@ -465,13 +465,13 @@ describe("分割ビュー", () => {
       entry._tag === "TemporaryTab" ? entry.tab.tabId : entry.tabs.map((tab) => tab.tabId),
     )
 
-  it("同じ分割ビューの 2 つの一時タブは、左右の順で 1 行にまとまる", () => {
+  it("two temporary tabs of the same split view merge into one row, left then right", () => {
     const view = project({ workspace, windowTabs })
 
     expect(shape(view)).toStrictEqual([1, [2, 3]])
   })
 
-  it("新しいタブを上に表示する設定でも、分割の左右は入れ替わらない", () => {
+  it("with newest tabs on top, the sides of a split still don't swap", () => {
     const view = project({
       workspace,
       windowTabs,
@@ -481,7 +481,7 @@ describe("分割ビュー", () => {
     expect(shape(view)).toStrictEqual([[2, 3], 1])
   })
 
-  it("分割の片方がピンに結びついていれば、もう片方は単独の一時タブとして表示する", () => {
+  it("when one side of a split is bound to a pin, the other is shown as a temporary tab of its own", () => {
     const pinnedUrl = "https://example.com/2"
     const bound = bindPinned(workspace, tabId(2), { bookmarkId: bookmarkId("p"), pinnedUrl })
 
@@ -494,7 +494,7 @@ describe("分割ビュー", () => {
     expect(shape(view)).toStrictEqual([1, 3])
   })
 
-  it("分割ピンは、それぞれの側に開いているタブを載せた 1 つのノードになる", () => {
+  it("a pinned split is one node carrying each side's open tab", () => {
     const left = "https://mail.example/"
     const right = "https://calendar.example/"
     const bound = bindPinned(inHome(emptyWorkspace, 5), tabId(5), {
@@ -509,10 +509,10 @@ describe("分割ビュー", () => {
         {
           _tag: "PinnedSplit",
           id: bookmarkId("split"),
-          title: "メール | 予定",
+          title: "Mail | Calendar",
           items: [
-            { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "メール", url: left },
-            { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "予定", url: right },
+            { _tag: "PinnedBookmark", id: bookmarkId("left"), title: "Mail", url: left },
+            { _tag: "PinnedBookmark", id: bookmarkId("right"), title: "Calendar", url: right },
           ],
         },
       ]),
@@ -524,16 +524,16 @@ describe("分割ビュー", () => {
     ).toStrictEqual([null, 5])
   })
 
-  it("分割ビューを作れるかどうかをそのままビューに載せる", () => {
+  it("carries whether split views can be created", () => {
     expect(project({ canSplit: false }).canSplit).toBe(false)
   })
 })
 
-describe("ライブフォルダ", () => {
+describe("live folders", () => {
   const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
   const LIVE = bookmarkId("live")
   const liveTree: PinnedTree = [
-    { _tag: "PinnedLiveFolder", id: LIVE, title: "レビュー依頼", source: reviews },
+    { _tag: "PinnedLiveFolder", id: LIVE, title: "Review Requests", source: reviews },
   ]
   const liveItem = (id: string, updatedAt: number): LiveItem => ({
     id,
@@ -550,7 +550,7 @@ describe("ライブフォルダ", () => {
     pinnedNodesOf(project({ pinnedTrees: homeWithPin(liveTree), ...overrides }))[0] as
       PinnedLiveFolderView | undefined
 
-  it("並べ方を設定していなければ、新しい順として取得元の順で並べる", () => {
+  it("without a chosen sort, sorts newest first, keeping the order the source returned", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
@@ -562,7 +562,7 @@ describe("ライブフォルダ", () => {
     expect([node?.sort, node?.items.map((item) => item.id)]).toStrictEqual(["newest", ["2", "1"]])
   })
 
-  it("設定した並べ方で並べて送る", () => {
+  it("sorts by the chosen sort", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
@@ -574,7 +574,7 @@ describe("ライブフォルダ", () => {
     expect([node?.sort, node?.items.map((item) => item.id)]).toStrictEqual(["oldest", ["1", "2"]])
   })
 
-  it("ログインしていなくて失敗していれば、ログインのために開くページを示す", () => {
+  it("when it failed for not being signed in, gives the page to open to sign in", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([
@@ -593,14 +593,14 @@ describe("ライブフォルダ", () => {
 
     expect(node?.status).toStrictEqual({
       _tag: "Failed",
-      reason: "GitHub にログインしていません",
+      reason: "You aren't signed in to GitHub",
       needsPermission: false,
       needsToken: false,
       signInUrl: "https://github.com/login",
     })
   })
 
-  it("取得した項目を、未読かどうかと一緒に取得元の順で並べる", () => {
+  it("lists the fetched items with whether each is unread, in the order the source returned", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("1", 50), liveItem("2", 80)], { "2": 80 })]]),
@@ -615,7 +615,7 @@ describe("ライブフォルダ", () => {
     ])
   })
 
-  it("取得を終えていれば、取得した時刻とともに準備できたと示す", () => {
+  it("once fetched, shows it is ready along with when it was fetched", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([])]]),
@@ -625,13 +625,13 @@ describe("ライブフォルダ", () => {
     })
 
     expect([node?.title, node?.source, node?.status]).toStrictEqual([
-      "レビュー依頼",
+      "Review Requests",
       reviews,
       { _tag: "Ready", refreshedAt: 1000 },
     ])
   })
 
-  it("取得している間は、前回の項目を並べたまま取得中と示す", () => {
+  it("while fetching, shows it is refreshing and keeps listing the previous items", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
@@ -643,13 +643,13 @@ describe("ライブフォルダ", () => {
     expect([node?.status, node?.items.length]).toStrictEqual([{ _tag: "Refreshing" }, 1])
   })
 
-  it("まだ一度も取得を終えていなければ、空のまま取得中と示す", () => {
+  it("before any fetch has finished, shows it is refreshing with no items", () => {
     const node = liveFolderOf({})
 
     expect([node?.status, node?.items]).toStrictEqual([{ _tag: "Refreshing" }, []])
   })
 
-  it("失敗していれば、理由と直し方を示す", () => {
+  it("when it failed, gives the reason and the way to fix it", () => {
     const node = liveFolderOf({
       liveFolders: {
         records: new Map([
@@ -668,21 +668,21 @@ describe("ライブフォルダ", () => {
 
     expect(node?.status).toStrictEqual({
       _tag: "Failed",
-      reason: "GitHub のアクセストークンが無効です",
+      reason: "The GitHub access token is invalid",
       needsPermission: false,
       needsToken: true,
       signInUrl: null,
     })
   })
 
-  it("開閉状態はフォルダと同じく保存値に従う", () => {
+  it("is expanded or collapsed by the stored state, like a folder", () => {
     expect([
       liveFolderOf({})?.isExpanded,
       liveFolderOf({ folderExpansion: { [LIVE]: true } })?.isExpanded,
     ]).toStrictEqual([false, true])
   })
 
-  it("閉じたフォルダの中のライブフォルダは、見出しの下に覗かせない", () => {
+  it("doesn't peek out from a collapsed folder", () => {
     const view = project({
       pinnedTrees: homeWithPin([folder("f", liveTree)]),
       liveFolders: {
@@ -700,10 +700,10 @@ describe("ライブフォルダ", () => {
   })
 })
 
-describe("表示の言語", () => {
+describe("display language", () => {
   const untitledTab = browserTab(1, { url: Option.none(), title: Option.none() })
 
-  it("タイトルも URL も無いタブは、新しいタブとして表示の言語で示す", () => {
+  it("names a tab with neither a title nor a URL as a new tab, in the display language", () => {
     const workspace = inHome(switchSpace(emptyWorkspace, WINDOW, spaceId("home")), 1)
 
     const titles = (["ja", "en"] as const).map((locale) =>
@@ -717,7 +717,7 @@ describe("表示の言語", () => {
     expect(titles).toStrictEqual([["新しいタブ"], ["New Tab"]])
   })
 
-  it("件名の無いメールは、表示の言語で件名なしと示す", () => {
+  it("marks an email without a subject as having none, in the display language", () => {
     const live = bookmarkId("live")
     const node = pinnedNodesOf(
       project({
@@ -725,7 +725,7 @@ describe("表示の言語", () => {
           {
             _tag: "PinnedLiveFolder",
             id: live,
-            title: "受信トレイ",
+            title: "Inbox",
             source: { _tag: "Gmail", accountIndex: 0, label: null },
           },
         ]),
@@ -751,10 +751,10 @@ describe("表示の言語", () => {
           refreshing: new Set(),
           sorts: new Map(),
         },
-        translator: makeTranslator("en"),
+        translator: makeTranslator("es"),
       }),
     )[0] as PinnedLiveFolderView | undefined
 
-    expect(node?.items.map((item) => item.title)).toStrictEqual(["(no subject)"])
+    expect(node?.items.map((item) => item.title)).toStrictEqual(["(sin asunto)"])
   })
 })

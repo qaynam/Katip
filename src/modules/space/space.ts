@@ -13,7 +13,7 @@ export type SpaceName = typeof SpaceName.Type
 export const Space = Schema.Struct({
   id: SpaceId,
   name: SpaceName,
-  // テーマを持つ前の版で保存された Space は、無彩色のテーマとして読む
+  // Spaces saved by versions before themes existed are read as having the neutral theme
   theme: SpaceTheme.pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(Schema.encodeSync(SpaceTheme)(neutralTheme))),
   ),

@@ -8,7 +8,7 @@ const ids = (...values: ReadonlyArray<number>) => values.map((value) => TabId.ma
 const above = (tabId: number): DisplayPlacement => ({ _tag: "Above", tabId: TabId.make(tabId) })
 const below = (tabId: number): DisplayPlacement => ({ _tag: "Below", tabId: TabId.make(tabId) })
 
-// Chrome の index 順に [固定タブ 1][一時 2, 3, 4][別 Space の 5][移動するタブ 6]
+// In Chrome's index order: [Chrome-pinned 1][temporary 2, 3, 4][other Space's 5][moving tab 6]
 const windowTabs = ids(1, 2, 3, 4, 5, 6)
 const spaceTabs = ids(2, 3, 4, 6)
 
@@ -18,17 +18,17 @@ const finalOrderAfterMove = (target: number) => {
 }
 
 describe("displayOrder", () => {
-  it("新しいタブを上に表示する設定では、Chrome の並びを逆順にして表示する", () => {
+  it("with newest tabs on top, shows Chrome's order reversed", () => {
     expect(displayOrder(spaceTabs, { newestOnTop: true })).toStrictEqual(ids(6, 4, 3, 2))
   })
 
-  it("通常の設定では、Chrome の並びのまま表示する", () => {
+  it("otherwise, shows Chrome's order as is", () => {
     expect(displayOrder(spaceTabs, { newestOnTop: false })).toStrictEqual(ids(2, 3, 4, 6))
   })
 })
 
 describe("moveIndexFor", () => {
-  describe("Chrome の並びのまま表示しているとき", () => {
+  describe("when shown in Chrome's order", () => {
     const move = (placement: DisplayPlacement) =>
       Option.map(
         moveIndexFor({
@@ -41,24 +41,24 @@ describe("moveIndexFor", () => {
         finalOrderAfterMove,
       )
 
-    it("指定したタブの上に置くと、Chrome でもそのタブの直前に並ぶ", () => {
+    it("placing a tab above another puts it right before that tab in Chrome too", () => {
       expect(move(above(3))).toStrictEqual(Option.some(ids(1, 2, 6, 3, 4, 5)))
     })
 
-    it("指定したタブの下に置くと、Chrome でもそのタブの直後に並ぶ", () => {
+    it("placing a tab below another puts it right after that tab in Chrome too", () => {
       expect(move(below(3))).toStrictEqual(Option.some(ids(1, 2, 3, 6, 4, 5)))
     })
 
-    it("一覧の先頭に置くと、その Space の最初のタブの直前に並ぶ", () => {
+    it("placing a tab at the top puts it right before the Space's first tab", () => {
       expect(move({ _tag: "Top" })).toStrictEqual(Option.some(ids(1, 6, 2, 3, 4, 5)))
     })
 
-    it("一覧の末尾に置くと、その Space の最後のタブの直後に並ぶ", () => {
+    it("placing a tab at the bottom puts it right after the Space's last tab", () => {
       expect(move({ _tag: "Bottom" })).toStrictEqual(Option.some(ids(1, 2, 3, 4, 6, 5)))
     })
   })
 
-  describe("新しいタブを上に表示しているとき", () => {
+  describe("when shown with newest tabs on top", () => {
     const move = (placement: DisplayPlacement) =>
       Option.map(
         moveIndexFor({
@@ -71,24 +71,24 @@ describe("moveIndexFor", () => {
         finalOrderAfterMove,
       )
 
-    it("画面上で指定したタブの上に置くと、Chrome ではそのタブの直後に並ぶ", () => {
+    it("placing a tab above another on screen puts it right after that tab in Chrome", () => {
       expect(move(above(3))).toStrictEqual(Option.some(ids(1, 2, 3, 6, 4, 5)))
     })
 
-    it("画面上で指定したタブの下に置くと、Chrome ではそのタブの直前に並ぶ", () => {
+    it("placing a tab below another on screen puts it right before that tab in Chrome", () => {
       expect(move(below(3))).toStrictEqual(Option.some(ids(1, 2, 6, 3, 4, 5)))
     })
 
-    it("画面上の先頭に置くと、Chrome ではその Space の最後のタブの直後に並ぶ", () => {
+    it("placing a tab at the top on screen puts it right after the Space's last tab in Chrome", () => {
       expect(move({ _tag: "Top" })).toStrictEqual(Option.some(ids(1, 2, 3, 4, 6, 5)))
     })
 
-    it("画面上の末尾に置くと、Chrome ではその Space の最初のタブの直前に並ぶ", () => {
+    it("placing a tab at the bottom on screen puts it right before the Space's first tab in Chrome", () => {
       expect(move({ _tag: "Bottom" })).toStrictEqual(Option.some(ids(1, 6, 2, 3, 4, 5)))
     })
   })
 
-  it("基準のタブが見つからなければ移動しない", () => {
+  it("doesn't move when the anchor tab isn't found", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs,
@@ -100,7 +100,7 @@ describe("moveIndexFor", () => {
     expect(index).toStrictEqual(Option.none())
   })
 
-  it("自分自身を基準にしたときは移動しない", () => {
+  it("doesn't move when the tab is its own anchor", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs,
@@ -112,7 +112,7 @@ describe("moveIndexFor", () => {
     expect(index).toStrictEqual(Option.none())
   })
 
-  it("Space に他のタブが無いときは移動しない", () => {
+  it("doesn't move when the Space has no other tabs", () => {
     const index = moveIndexFor({
       windowTabs,
       spaceTabs: ids(6),
@@ -125,8 +125,8 @@ describe("moveIndexFor", () => {
   })
 })
 
-describe("分割ビューのタブ", () => {
-  // Chrome の index 順に [固定 1][一時 2][分割 3, 4][一時 5]
+describe("split view tabs", () => {
+  // In Chrome's index order: [Chrome-pinned 1][temporary 2][split 3, 4][temporary 5]
   const windowWithSplit = ids(1, 2, 3, 4, 5)
   const spaceWithSplit = ids(2, 3, 4, 5)
   const splitPair = ids(3, 4)
@@ -137,7 +137,7 @@ describe("分割ビューのタブ", () => {
     return [...rest.slice(0, target), ...moving, ...rest.slice(target)]
   }
 
-  it("分割の右のタブの上に置いても、分割の 2 つの間には割り込まない", () => {
+  it("placing a tab above the right half of a split doesn't put it between the two", () => {
     const index = moveIndexFor({
       windowTabs: windowWithSplit,
       spaceTabs: spaceWithSplit,
@@ -152,7 +152,7 @@ describe("分割ビューのタブ", () => {
     )
   })
 
-  it("分割の左のタブの下に置いても、分割の 2 つの後ろに並ぶ", () => {
+  it("placing a tab below the left half of a split puts it after both", () => {
     const index = moveIndexFor({
       windowTabs: windowWithSplit,
       spaceTabs: spaceWithSplit,
@@ -167,7 +167,7 @@ describe("分割ビューのタブ", () => {
     )
   })
 
-  it("分割の 2 つを一緒に動かすと、並びを保ったまま指定した位置に入る", () => {
+  it("moving both tabs of a split together keeps them in order at the given position", () => {
     const index = moveIndexFor({
       windowTabs: windowWithSplit,
       spaceTabs: spaceWithSplit,

@@ -27,35 +27,35 @@ const idsOf = (spaces: SpaceList) => spaces.map((s) => s.id)
 describe("SpaceName", () => {
   const decode = Schema.decodeUnknownOption(SpaceName)
 
-  it("前後の空白を取り除いた名前として受け付ける", () => {
-    expect(decode("  仕事  ")).toStrictEqual(decode("仕事"))
+  it("accepts a name with the surrounding whitespace trimmed", () => {
+    expect(decode("  Work  ")).toStrictEqual(decode("Work"))
   })
 
-  it("空白だけの名前は受け付けない", () => {
+  it("rejects a name that is only whitespace", () => {
     expect(decode("   ")._tag).toBe("None")
   })
 })
 
-describe("名前を付けずに作る Space の名前", () => {
+describe("the name of a Space created without one", () => {
   const numbered = (number: number) => `Space ${number}`
 
-  it("Space の数の次の番号で名前を付ける", () => {
+  it("is numbered one past the count of Spaces", () => {
     expect(nextSpaceName([space("a"), space("b")], numbered)).toBe("Space 3")
   })
 
-  it("その番号の名前が使われていれば、使われていない次の番号にする", () => {
+  it("when that numbered name is taken, takes the next number that is free", () => {
     const spaces = [space("a", { name: spaceName("Space 2") })]
 
     expect(nextSpaceName(spaces, numbered)).toBe("Space 3")
   })
 
-  it("Space が無ければ 1 から数える", () => {
+  it("starts at 1 when there are no Spaces", () => {
     expect(nextSpaceName([], numbered)).toBe("Space 1")
   })
 })
 
 describe("addSpace", () => {
-  it("一覧の末尾に追加される", () => {
+  it("appends the Space to the end of the list", () => {
     const spaces = [space("a"), space("b")]
 
     const added = addSpace(spaces, { id: spaceId("c"), name: spaceName("c") })
@@ -63,7 +63,7 @@ describe("addSpace", () => {
     expect(idsOf(added)).toStrictEqual(["a", "b", "c"])
   })
 
-  it("テーマを省略すると、既存の Space と色の系統が重ならないプリセットが付く", () => {
+  it("without a theme, gives a preset whose color family no existing Space uses", () => {
     const redPreset = Option.getOrThrow(
       Array.findFirst(presetPages[0] ?? [], (colors) => groupColorOf(themeOf(colors)) === "red"),
     )
@@ -75,25 +75,25 @@ describe("addSpace", () => {
     expect(new Set(added.map((s) => groupColorOf(s.theme))).size).toBe(2)
   })
 
-  it("名前とテーマを指定するとその値で作られる", () => {
+  it("with a name and a theme, creates the Space with them", () => {
     const theme = themeOf([{ hue: 350, chroma: 0.6 }])
 
-    const added = addSpace([], { id: spaceId("a"), name: spaceName("趣味"), theme })
+    const added = addSpace([], { id: spaceId("a"), name: spaceName("Hobbies"), theme })
 
-    expect(added).toStrictEqual([{ id: "a", name: "趣味", theme }])
+    expect(added).toStrictEqual([{ id: "a", name: "Hobbies", theme }])
   })
 })
 
 describe("renameSpace", () => {
-  it("指定した Space の名前だけが変わる", () => {
+  it("changes only the named Space's name", () => {
     const spaces = [space("a"), space("b")]
 
-    const renamed = renameSpace(spaces, spaceId("b"), spaceName("読書"))
+    const renamed = renameSpace(spaces, spaceId("b"), spaceName("Reading"))
 
-    expect(Result.getOrThrow(renamed).map((s) => s.name)).toStrictEqual(["a", "読書"])
+    expect(Result.getOrThrow(renamed).map((s) => s.name)).toStrictEqual(["a", "Reading"])
   })
 
-  it("存在しない Space を指定すると SpaceNotFound になる", () => {
+  it("fails with SpaceNotFound for a Space that doesn't exist", () => {
     const renamed = renameSpace([space("a")], spaceId("missing"), spaceName("x"))
 
     expect(Result.isFailure(renamed) && renamed.failure._tag).toBe("SpaceNotFound")
@@ -103,7 +103,7 @@ describe("renameSpace", () => {
 describe("setSpaceTheme", () => {
   const green = themeOf([{ hue: 145, chroma: 0.7 }])
 
-  it("指定した Space のテーマだけが変わる", () => {
+  it("changes only the named Space's theme", () => {
     const spaces = [space("a"), space("b")]
 
     const updated = setSpaceTheme(spaces, spaceId("a"), green)
@@ -111,23 +111,23 @@ describe("setSpaceTheme", () => {
     expect(Result.getOrThrow(updated).map((s) => s.theme)).toStrictEqual([green, neutralTheme])
   })
 
-  it("存在しない Space を指定すると SpaceNotFound になる", () => {
+  it("fails with SpaceNotFound for a Space that doesn't exist", () => {
     const updated = setSpaceTheme([space("a")], spaceId("missing"), green)
 
     expect(Result.isFailure(updated) && updated.failure._tag).toBe("SpaceNotFound")
   })
 })
 
-describe("Space の保存値", () => {
-  it("テーマを持つ前の版で保存された Space は、無彩色のテーマとして読める", () => {
-    const decoded = Schema.decodeUnknownSync(Space)({ id: "a", name: "仕事", color: "blue" })
+describe("stored Space", () => {
+  it("a Space saved before themes existed reads as having the neutral theme", () => {
+    const decoded = Schema.decodeUnknownSync(Space)({ id: "a", name: "Work", color: "blue" })
 
-    expect(decoded).toStrictEqual({ id: "a", name: "仕事", theme: neutralTheme })
+    expect(decoded).toStrictEqual({ id: "a", name: "Work", theme: neutralTheme })
   })
 })
 
 describe("removeSpace", () => {
-  it("指定した Space が一覧から消え、残りの順序は保たれる", () => {
+  it("removes the named Space and keeps the rest in order", () => {
     const spaces = [space("a"), space("b"), space("c")]
 
     const removed = removeSpace(spaces, spaceId("b"))
@@ -135,13 +135,13 @@ describe("removeSpace", () => {
     expect(idsOf(Result.getOrThrow(removed))).toStrictEqual(["a", "c"])
   })
 
-  it("最後の 1 つは削除できない", () => {
+  it("refuses to remove the last Space", () => {
     const removed = removeSpace([space("a")], spaceId("a"))
 
     expect(Result.isFailure(removed) && removed.failure._tag).toBe("LastSpaceRemoval")
   })
 
-  it("存在しない Space を指定すると SpaceNotFound になる", () => {
+  it("fails with SpaceNotFound for a Space that doesn't exist", () => {
     const removed = removeSpace([space("a"), space("b")], spaceId("missing"))
 
     expect(Result.isFailure(removed) && removed.failure._tag).toBe("SpaceNotFound")
@@ -149,7 +149,7 @@ describe("removeSpace", () => {
 })
 
 describe("moveSpace", () => {
-  it("指定した位置へ移動し、他の Space の相対順序は保たれる", () => {
+  it("moves the Space to the given position, keeping the others in their relative order", () => {
     const spaces = [space("a"), space("b"), space("c"), space("d")]
 
     const moved = moveSpace(spaces, spaceId("a"), 2)
@@ -157,7 +157,7 @@ describe("moveSpace", () => {
     expect(idsOf(Result.getOrThrow(moved))).toStrictEqual(["b", "c", "a", "d"])
   })
 
-  it("範囲外の位置を指定すると末尾へ移動する", () => {
+  it("moves the Space to the end when the position is past the end", () => {
     const spaces = [space("a"), space("b"), space("c")]
 
     const moved = moveSpace(spaces, spaceId("a"), 99)
@@ -165,7 +165,7 @@ describe("moveSpace", () => {
     expect(idsOf(Result.getOrThrow(moved))).toStrictEqual(["b", "c", "a"])
   })
 
-  it("負の位置を指定すると先頭へ移動する", () => {
+  it("moves the Space to the start when the position is negative", () => {
     const spaces = [space("a"), space("b"), space("c")]
 
     const moved = moveSpace(spaces, spaceId("c"), -1)
@@ -173,7 +173,7 @@ describe("moveSpace", () => {
     expect(idsOf(Result.getOrThrow(moved))).toStrictEqual(["c", "a", "b"])
   })
 
-  it("存在しない Space を指定すると SpaceNotFound になる", () => {
+  it("fails with SpaceNotFound for a Space that doesn't exist", () => {
     const moved = moveSpace([space("a")], spaceId("missing"), 0)
 
     expect(Result.isFailure(moved) && moved.failure._tag).toBe("SpaceNotFound")

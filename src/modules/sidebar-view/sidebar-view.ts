@@ -43,15 +43,18 @@ export interface SidebarSources {
   readonly windowId: WindowId
   readonly spaces: SpaceList
   readonly workspace: Workspace
-  /** ビューを作るウィンドウのタブ。並び順は問わない。 */
+  /** The tabs of the window the view is for, in any order. */
   readonly windowTabs: ReadonlyArray<BrowserTab>
-  /** 読めた Space のピン留めツリー。含まれない Space は読めなかったものとして表示する。 */
+  /** The pinned trees that could be read. A Space missing here is shown as unreadable. */
   readonly pinnedTrees: ReadonlyMap<SpaceId, PinnedTree>
   readonly folderExpansion: FolderExpansion
-  /** 含まれないフォルダはアイコンを選んでいない。 */
+  /** A folder missing here has no icon chosen. */
   readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
   readonly liveFolders: LiveFolderSnapshot
-  /** ビューに載せる文言（失敗の理由や名前の無いタブの名前など）の言語。 */
+  /**
+   * The language of the text the view carries, such as failure reasons and the name of an untitled
+   * tab.
+   */
   readonly translator: Translator
   readonly preferences: {
     readonly newTabsOnTop: boolean
@@ -72,7 +75,7 @@ const urlOf = (tab: BrowserTab) =>
     Option.getOrElse(() => ""),
   )
 
-/** タイトルも URL も無いタブ（開いたばかりの新しいタブ）は `untitled` にする。 */
+/** A tab with neither a title nor a URL (a freshly opened new tab) is named `untitled`. */
 const pageTitleOf = (tab: BrowserTab, untitled: string) =>
   pipe(
     tab.title,
@@ -120,8 +123,9 @@ const collectBookmarkIds = (tree: PinnedTree): ReadonlySet<BookmarkId> =>
     ),
   )
 
-// 同じピンに複数のタブがバインドされている場合（復元の取り違えなど）、ピンに載せるのは
-// index の最も小さいタブだけにし、残りは一時タブとして見せる。どれかを隠すと閉じられなくなる
+// When several tabs are bound to the same pin (after a mix-up while restoring, say), only the
+// lowest-index one goes on the pin and the rest show as temporary tabs. Not hidden: a hidden tab
+// couldn't be closed
 const splitPinnedTabs = (spaceTabs: ReadonlyArray<SpaceTab>, tree: Option.Option<PinnedTree>) => {
   const existing = Option.match(tree, {
     onNone: () => new Set<BookmarkId>(),
@@ -184,10 +188,11 @@ const isPeekable = (item: PinnedItemView, showAll: boolean): boolean =>
   item.openTab !== null && (showAll || item.openTab.tab.isActive)
 
 /**
- * 閉じたフォルダの見出しの下に覗かせるもの。入れ子のフォルダの中も含め、フォルダの中での並び順に並べる。
- * 分割ピンは、どちらかの側が条件を満たせば 2 つそろえたまま返す。
+ * The items to peek out under a collapsed folder's heading, including those in nested folders, in
+ * their order within the folder. A pinned split is returned whole when either side qualifies.
  *
- * @param showAll - 開いているピンをすべて覗かせるか。false ならアクティブなタブのピンだけ
+ * @param showAll - Whether every open pin peeks out. When false, only the pin of the active tab
+ *   does.
  */
 export const peekableItems = (
   nodes: ReadonlyArray<PinnedNodeView>,
@@ -195,7 +200,8 @@ export const peekableItems = (
 ): ReadonlyArray<PinnedItemView | PinnedSplitView> =>
   nodes.flatMap((node): ReadonlyArray<PinnedItemView | PinnedSplitView> => {
     if (node._tag === "PinnedFolder") return peekableItems(node.children, showAll)
-    // 片側だけを覗かせると、開いたときの 2 つ並びの行と見た目が食い違う
+    // Not just the qualifying side: one side alone wouldn't look like the two-up row shown when
+    // the folder is expanded
     if (node._tag === "PinnedSplit") {
       return node.items.some((item) => isPeekable(item, showAll)) ? [node] : []
     }
@@ -218,7 +224,8 @@ const liveFolderStatus = (
 ): LiveFolderStatus => {
   if (isRefreshing) return { _tag: "Refreshing" }
   return Option.match(record, {
-    // 一度も取得を終えていないのは作った直後か記録を失った直後だけで、どちらもすぐに取得を始める
+    // Nothing has ever been fetched only right after the folder is created or its record is lost,
+    // and both start a fetch at once
     onNone: () => ({ _tag: "Refreshing" }),
     onSome: ({ lastAttempt }) =>
       lastAttempt._tag === "Fetched"
@@ -327,9 +334,9 @@ const spaceView = (
   }
 }
 
-// Chrome は分割ビューの 2 つのタブを必ず隣り合わせに置くので、index 順に並べた一覧で
-// 同じ分割の ID を持つ隣どうしを 1 行にまとめれば足りる。片方だけがこの Space の
-// 一時タブ（もう片方はピンや別の Space）なら、まとめずに単独の行として見せる
+// Chrome always keeps the two tabs of a split view next to each other, so merging neighbors with
+// the same split ID in the index-ordered list is enough. When only one of them is a temporary tab
+// of this Space (the other is a pin or in another Space), it shows as a row of its own
 const temporaryEntriesOf = (tabs: ReadonlyArray<TabView>): ReadonlyArray<TemporaryEntry> =>
   tabs.reduce<ReadonlyArray<TemporaryEntry>>((entries, tab) => {
     const previous = entries.at(-1)
@@ -347,9 +354,9 @@ const temporaryEntriesOf = (tabs: ReadonlyArray<TabView>): ReadonlyArray<Tempora
   }, [])
 
 /**
- * ウィンドウ 1 つ分のサイドパネルの表示内容を組み立てる。
+ * Builds what the side panel shows for one window.
  *
- * @returns Space が 1 つも無ければ表示できないので none。
+ * @returns None when there are no Spaces, since there is nothing to show.
  */
 export const projectSidebarView = (sources: SidebarSources): Option.Option<SidebarView> => {
   const tabs = Array.sort(sources.windowTabs, byIndex)

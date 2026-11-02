@@ -2,72 +2,72 @@ import { describe, expect, it } from "vitest"
 import { Option } from "effect"
 import { matchStrength, searchableTitle, searchableUrl, searchTerms } from "./search-text"
 
-describe("検索語の区切り", () => {
-  it("空白で区切った語に分ける", () => {
+describe("search terms", () => {
+  it("splits the input at whitespace", () => {
     expect(searchTerms("google  docs")).toStrictEqual(["google", "docs"])
   })
 
-  it("前後の空白だけの入力は語を持たない", () => {
+  it("a blank input has no terms", () => {
     expect(searchTerms("  \t ")).toStrictEqual([])
   })
 
-  it("大文字小文字と全角半角の違いをなくす", () => {
+  it("folds case, and full-width characters to their half-width forms", () => {
     expect(searchTerms("ＧｉｔＨｕｂ　Ｐｒ")).toStrictEqual(["github", "pr"])
   })
 })
 
-describe("照合用のタイトル", () => {
-  it("大文字小文字と全角半角の違いをなくす", () => {
+describe("searchable title", () => {
+  it("folds case, and full-width characters to their half-width forms", () => {
     expect(searchableTitle("Ｋａｔｉｐ Design")).toBe("katip design")
   })
 })
 
-describe("照合用の URL", () => {
-  it("scheme と先頭の www. を除く", () => {
+describe("searchable URL", () => {
+  it("drops the scheme and a leading www.", () => {
     expect(searchableUrl("https://www.GitHub.com/effect")).toBe("github.com/effect")
   })
 
-  it("chrome:// のページはページ名から始まる", () => {
+  it("a chrome:// page starts at the page name", () => {
     expect(searchableUrl("chrome://settings/")).toBe("settings/")
   })
 })
 
-describe("一致の強さ", () => {
-  it("全体が等しければ完全一致", () => {
+describe("match strength", () => {
+  it("is Exact when the whole text equals the term", () => {
     expect(matchStrength("katip", "katip")).toStrictEqual(Option.some("Exact"))
   })
 
-  it("先頭から一致すれば前方一致", () => {
+  it("is Prefix when the text starts with the term", () => {
     expect(matchStrength("katip design", "kat")).toStrictEqual(Option.some("Prefix"))
   })
 
-  it("途中の単語の先頭から一致すれば単語の先頭一致", () => {
+  it("is WordStart when a later word starts with the term", () => {
     expect(matchStrength("open katip design", "des")).toStrictEqual(Option.some("WordStart"))
   })
 
-  it("記号の直後も単語の先頭とみなす", () => {
+  it("treats the character after a symbol as the start of a word", () => {
     expect(matchStrength("github.com/effect-ts", "ts")).toStrictEqual(Option.some("WordStart"))
   })
 
-  it("単語の途中にだけ一致すれば部分一致", () => {
+  it("is Substring when the term only matches inside words", () => {
     expect(matchStrength("digital notes", "git")).toStrictEqual(Option.some("Substring"))
   })
 
-  it("単語の途中と先頭の両方に一致すれば、強いほうの単語の先頭一致", () => {
+  it("is the stronger WordStart when the term matches both inside a word and at the start of one", () => {
     expect(matchStrength("digital git", "git")).toStrictEqual(Option.some("WordStart"))
   })
 
-  it("日本語の文中に含まれれば部分一致", () => {
+  it("is Substring for a term inside Japanese text, which has no spaces between words", () => {
     expect(matchStrength("設計ドキュメント", "ドキュメント")).toStrictEqual(
       Option.some("Substring"),
     )
   })
 
-  it("含まれなければ一致しない", () => {
-    expect(matchStrength("katip", "arc")).toStrictEqual(Option.none())
+  it("doesn't match when the text doesn't contain the term", () => {
+    expect(matchStrength("katip", "mail")).toStrictEqual(Option.none())
   })
 
-  it("空の文字列には一致しない", () => {
+  it("doesn't match an empty text", () => {
     expect(matchStrength("", "a")).toStrictEqual(Option.none())
   })
 })

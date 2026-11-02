@@ -45,112 +45,117 @@ const actionsOf = (entries: ReadonlyArray<SpotlightEntry<TestCandidate>>) =>
     entry._tag === "Candidate"
       ? entry.candidate.name
       : entry._tag === "OpenUrl"
-        ? `開く ${entry.url}`
-        : `検索 ${entry.query}`,
+        ? `open ${entry.url}`
+        : `search ${entry.query}`,
   )
 
-describe("検索語が空のとき", () => {
-  it("開いているタブを最近使った順に並べ、続けて Space を並べる", () => {
+describe("with an empty input", () => {
+  it("lists the open tabs by most recent use, followed by the Spaces", () => {
     const entries = search("", [
-      candidate("仕事", { kind: "Space" }),
-      candidate("昨日のタブ", { usedMinutesAgo: 24 * 60 }),
-      candidate("さっきのタブ", { usedMinutesAgo: 1 }),
-      candidate("趣味", { kind: "Space" }),
+      candidate("Work", { kind: "Space" }),
+      candidate("tab used yesterday", { usedMinutesAgo: 24 * 60 }),
+      candidate("tab used just now", { usedMinutesAgo: 1 }),
+      candidate("Hobbies", { kind: "Space" }),
     ])
 
-    expect(namesOf(entries)).toStrictEqual(["さっきのタブ", "昨日のタブ", "仕事", "趣味"])
+    expect(namesOf(entries)).toStrictEqual([
+      "tab used just now",
+      "tab used yesterday",
+      "Work",
+      "Hobbies",
+    ])
   })
 
-  it("使った記録の無いタブは、記録のあるタブの後に並ぶ", () => {
+  it("lists tabs with no record of use after the tabs with one", () => {
     const entries = search("", [
-      candidate("記録なし"),
-      candidate("記録あり", { usedMinutesAgo: 600 }),
+      candidate("never used"),
+      candidate("used", { usedMinutesAgo: 600 }),
     ])
 
-    expect(namesOf(entries)).toStrictEqual(["記録あり", "記録なし"])
+    expect(namesOf(entries)).toStrictEqual(["used", "never used"])
   })
 
-  it("呼び出し元で今表示しているタブは出さない", () => {
+  it("leaves out the tab currently shown in the window Spotlight was opened from", () => {
     const entries = search("", [
-      candidate("表示中", { usedMinutesAgo: 0, isCurrent: true }),
-      candidate("別のタブ", { usedMinutesAgo: 5 }),
+      candidate("shown", { usedMinutesAgo: 0, isCurrent: true }),
+      candidate("another tab", { usedMinutesAgo: 5 }),
     ])
 
-    expect(namesOf(entries)).toStrictEqual(["別のタブ"])
+    expect(namesOf(entries)).toStrictEqual(["another tab"])
   })
 
-  it("ピンとブックマークは出さない", () => {
+  it("leaves out pins and bookmarks", () => {
     const entries = search("", [
-      candidate("ピン", { kind: "Pin" }),
-      candidate("ブックマーク", { kind: "Bookmark" }),
+      candidate("pin", { kind: "Pin" }),
+      candidate("bookmark", { kind: "Bookmark" }),
     ])
 
     expect(entries).toStrictEqual([])
   })
 
-  it("URL を開く項目もウェブ検索の項目も出さない", () => {
+  it("adds neither an open-URL entry nor a web search entry", () => {
     expect(search("   ", [])).toStrictEqual([])
   })
 
-  it("上限の件数までしか出さない", () => {
+  it("lists no more than the limit", () => {
     const entries = search(
       "",
-      [1, 2, 3].map((n) => candidate(`タブ${n}`, { usedMinutesAgo: n })),
+      [1, 2, 3].map((n) => candidate(`tab ${n}`, { usedMinutesAgo: n })),
       2,
     )
 
-    expect(namesOf(entries)).toStrictEqual(["タブ1", "タブ2"])
+    expect(namesOf(entries)).toStrictEqual(["tab 1", "tab 2"])
   })
 
-  it("上限に収まらなければ、Space を残して使ったのが古いタブを省く", () => {
+  it("over the limit, keeps the Spaces and drops the least recently used tabs", () => {
     const entries = search(
       "",
       [
-        ...[1, 2, 3].map((n) => candidate(`タブ${n}`, { usedMinutesAgo: n })),
-        candidate("仕事", { kind: "Space" }),
+        ...[1, 2, 3].map((n) => candidate(`tab ${n}`, { usedMinutesAgo: n })),
+        candidate("Work", { kind: "Space" }),
       ],
       3,
     )
 
-    expect(namesOf(entries)).toStrictEqual(["タブ1", "タブ2", "仕事"])
+    expect(namesOf(entries)).toStrictEqual(["tab 1", "tab 2", "Work"])
   })
 })
 
-describe("検索語があるとき", () => {
-  describe("絞り込み", () => {
-    it("タイトルにも URL にも含まれない候補は出さない", () => {
+describe("with an input", () => {
+  describe("filtering", () => {
+    it("leaves out candidates whose title and URL both lack the input", () => {
       const entries = search("katip", [
-        candidate("Katip の設計"),
-        candidate("Arc", { url: "https://arc.net/" }),
+        candidate("Katip design"),
+        candidate("Weather", { url: "https://weather.example/" }),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["Katip の設計"])
+      expect(namesOf(entries)).toStrictEqual(["Katip design"])
     })
 
-    it("複数の語は、すべての語がタイトルか URL のどちらかに含まれる候補だけを出す", () => {
+    it("with several terms, lists only the candidates whose title or URL contains every term", () => {
       const entries = search("effect schema", [
-        candidate("Schema の使い方", { url: "https://effect.website/docs/schema" }),
-        candidate("Effect の入門", { url: "https://effect.website/docs" }),
+        candidate("Using Schema", { url: "https://effect.website/docs/schema" }),
+        candidate("Getting started with Effect", { url: "https://effect.website/docs" }),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["Schema の使い方"])
+      expect(namesOf(entries)).toStrictEqual(["Using Schema"])
     })
 
-    it("大文字小文字と全角半角を区別しない", () => {
+    it("ignores case, and full-width versus half-width forms", () => {
       const entries = search("ＧＩＴＨＵＢ", [candidate("GitHub")])
 
       expect(namesOf(entries)).toStrictEqual(["GitHub"])
     })
 
-    it("URL の scheme と www. を飛ばしてホスト名から一致させる", () => {
+    it("matches a URL from its host name, skipping the scheme and www.", () => {
       const entries = search("github.com/eff", [
-        candidate("リポジトリ", { url: "https://www.github.com/effect-ts" }),
+        candidate("Repository", { url: "https://www.github.com/effect-ts" }),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["リポジトリ"])
+      expect(namesOf(entries)).toStrictEqual(["Repository"])
     })
 
-    it("scheme から書いた URL でも、同じ URL の候補に一致する", () => {
+    it("a URL typed with its scheme still matches a candidate with the same URL", () => {
       const entries = search("https://www.example.com/a", [
         candidate("Example", { url: "https://example.com/a" }),
       ])
@@ -158,13 +163,13 @@ describe("検索語があるとき", () => {
       expect(namesOf(entries)).toStrictEqual(["Example"])
     })
 
-    it("今表示しているタブも出す", () => {
+    it("includes the tab currently shown", () => {
       const entries = search("katip", [candidate("Katip", { isCurrent: true })])
 
       expect(namesOf(entries)).toStrictEqual(["Katip"])
     })
 
-    it("一致した候補は上限の件数までしか出さない", () => {
+    it("lists no more matches than the limit", () => {
       const entries = search(
         "doc",
         [1, 2, 3].map((n) => candidate(`doc ${n}`)),
@@ -175,8 +180,8 @@ describe("検索語があるとき", () => {
     })
   })
 
-  describe("一致の強さによる並び", () => {
-    it("完全一致、前方一致、単語の先頭一致、部分一致の順に並ぶ", () => {
+  describe("ordering by match strength", () => {
+    it("lists exact, then prefix, then word-start, then substring matches", () => {
       const entries = search("note", [
         candidate("footnotes"),
         candidate("my notes"),
@@ -187,16 +192,16 @@ describe("検索語があるとき", () => {
       expect(namesOf(entries)).toStrictEqual(["Note", "notebook", "my notes", "footnotes"])
     })
 
-    it("タイトルでの一致は、URL での同じ強さの一致より上に来る", () => {
+    it("a title match ranks above a URL match of the same strength", () => {
       const entries = search("git", [
         candidate("Pull requests", { url: "https://github.com/pulls" }),
-        candidate("Git の本", { url: "https://book.example/" }),
+        candidate("Git book", { url: "https://book.example/" }),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["Git の本", "Pull requests"])
+      expect(namesOf(entries)).toStrictEqual(["Git book", "Pull requests"])
     })
 
-    it("URL の前方一致は、タイトルの部分一致より上に来る", () => {
+    it("a URL prefix match ranks above a title substring match", () => {
       const entries = search("git", [
         candidate("digital notes", { url: "https://notes.example/" }),
         candidate("Pull requests", { url: "https://github.com/pulls" }),
@@ -205,7 +210,7 @@ describe("検索語があるとき", () => {
       expect(namesOf(entries)).toStrictEqual(["Pull requests", "digital notes"])
     })
 
-    it("語が入力どおりの順に続くタイトルは、語が散らばったタイトルより上に来る", () => {
+    it("a title with the terms in the typed order ranks above one with them scattered", () => {
       const entries = search("google docs", [
         candidate("Docs about Google"),
         candidate("Google Docs"),
@@ -215,44 +220,44 @@ describe("検索語があるとき", () => {
     })
   })
 
-  describe("同じ強さで一致したときの並び", () => {
-    it("最近使ったものが上に来る", () => {
+  describe("ordering among equally strong matches", () => {
+    it("the most recently used comes first", () => {
       const entries = search("doc", [
-        candidate("doc 先週", { usedMinutesAgo: 7 * 24 * 60 }),
-        candidate("doc さっき", { usedMinutesAgo: 1 }),
-        candidate("doc 昨日", { usedMinutesAgo: 24 * 60 }),
+        candidate("doc last week", { usedMinutesAgo: 7 * 24 * 60 }),
+        candidate("doc just now", { usedMinutesAgo: 1 }),
+        candidate("doc yesterday", { usedMinutesAgo: 24 * 60 }),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["doc さっき", "doc 昨日", "doc 先週"])
+      expect(namesOf(entries)).toStrictEqual(["doc just now", "doc yesterday", "doc last week"])
     })
 
-    it("使った記録も同じなら、開いているタブ、ピンと Space、操作、ブックマーク、履歴の順に並ぶ", () => {
+    it("with the same use too, lists open tabs, then pins and Spaces, actions, bookmarks and history", () => {
       const entries = search("work", [
-        candidate("work 履歴", { kind: "History" }),
-        candidate("work ブックマーク", { kind: "Bookmark" }),
-        candidate("work 操作", { kind: "Action" }),
-        candidate("work ピン", { kind: "Pin" }),
-        candidate("work タブ"),
+        candidate("work history", { kind: "History" }),
+        candidate("work bookmark", { kind: "Bookmark" }),
+        candidate("work action", { kind: "Action" }),
+        candidate("work pin", { kind: "Pin" }),
+        candidate("work tab"),
       ])
 
       expect(namesOf(entries)).toStrictEqual([
-        "work タブ",
-        "work ピン",
-        "work 操作",
-        "work ブックマーク",
-        "work 履歴",
+        "work tab",
+        "work pin",
+        "work action",
+        "work bookmark",
+        "work history",
       ])
     })
 
-    it("種類も同じなら、渡された順を保つ", () => {
+    it("with the same kind too, keeps the given order", () => {
       const entries = search("doc", [candidate("doc B"), candidate("doc A")])
 
       expect(namesOf(entries)).toStrictEqual(["doc B", "doc A"])
     })
   })
 
-  describe("一致の強さと、最近使ったことや種類との兼ね合い", () => {
-    it("一段強い一致は、今使ったばかりの開いているタブより上に来る", () => {
+  describe("match strength against recent use and kind", () => {
+    it("a match one step stronger ranks above an open tab used just now", () => {
       const entries = search("note", [
         candidate("my notes", { usedMinutesAgo: 0 }),
         candidate("notebook", { kind: "Bookmark" }),
@@ -262,97 +267,97 @@ describe("検索語があるとき", () => {
     })
   })
 
-  describe("URL を開く項目とウェブ検索の項目", () => {
-    it("最後に、入力そのものでウェブを検索する項目が付く", () => {
-      const entries = search("  katip 拡張  ", [candidate("Katip 拡張の設計")])
+  describe("open-URL and web search entries", () => {
+    it("ends with an entry that searches the web for the input itself", () => {
+      const entries = search("  katip extension  ", [candidate("Katip extension design")])
 
-      expect(actionsOf(entries)).toStrictEqual(["Katip 拡張の設計", "検索 katip 拡張"])
+      expect(actionsOf(entries)).toStrictEqual(["Katip extension design", "search katip extension"])
     })
 
-    it("一致する候補が無くても、ウェブを検索する項目は出す", () => {
-      expect(actionsOf(search("zzz", []))).toStrictEqual(["検索 zzz"])
+    it("adds the web search entry even with no matches", () => {
+      expect(actionsOf(search("zzz", []))).toStrictEqual(["search zzz"])
     })
 
-    it("scheme を書いた URL なら、開く項目を先頭に置く", () => {
+    it("for a URL with a scheme, puts the open entry first", () => {
       const entries = search("https://example.com", [
         candidate("Example", { url: "https://example.com/" }),
       ])
 
       expect(actionsOf(entries)).toStrictEqual([
-        "開く https://example.com",
+        "open https://example.com",
         "Example",
-        "検索 https://example.com",
+        "search https://example.com",
       ])
     })
 
-    it("scheme を省いた URL らしい入力なら、一致した候補の後、ウェブ検索の前に置く", () => {
+    it("for URL-like input without a scheme, puts the open entry after the matches and before the web search", () => {
       const entries = search("example.com", [candidate("Example", { url: "https://example.com/" })])
 
       expect(actionsOf(entries)).toStrictEqual([
         "Example",
-        "開く https://example.com",
-        "検索 example.com",
+        "open https://example.com",
+        "search example.com",
       ])
     })
 
-    it("URL らしくなければ、開く項目を出さない", () => {
-      expect(actionsOf(search("katip", []))).toStrictEqual(["検索 katip"])
+    it("adds no open entry when the input doesn't look like a URL", () => {
+      expect(actionsOf(search("katip", []))).toStrictEqual(["search katip"])
     })
   })
 })
 
-describe("操作の候補", () => {
+describe("action candidates", () => {
   const actions = [
-    action("URL をコピー", ["Copy URL"]),
-    action("タブを複製", ["Duplicate Tab"]),
-    action("設定を開く", ["Open Settings"]),
+    action("Copy URL", ["Copiar URL"]),
+    action("Duplicate Tab", ["Duplicar pestaña"]),
+    action("Open Settings", ["Abrir ajustes"]),
   ]
 
-  describe("操作だけを探すとき", () => {
-    it("入力が空なら、渡された操作をすべて渡された順に並べる", () => {
+  describe("when searching only actions", () => {
+    it("with an empty input, lists every given action in the given order", () => {
       expect(namesOf(searchActions("", actions))).toStrictEqual([
-        "URL をコピー",
-        "タブを複製",
-        "設定を開く",
+        "Copy URL",
+        "Duplicate Tab",
+        "Open Settings",
       ])
     })
 
-    it("操作でない候補は、一致しても出さない", () => {
-      const entries = searchActions("設定", [candidate("設定のタブ"), ...actions])
+    it("leaves out candidates that aren't actions, even when they match", () => {
+      const entries = searchActions("settings", [candidate("Settings tab"), ...actions])
 
-      expect(namesOf(entries)).toStrictEqual(["設定を開く"])
+      expect(namesOf(entries)).toStrictEqual(["Open Settings"])
     })
 
-    it("入力があれば、一致する操作だけを一致の強さの順に並べる", () => {
-      const entries = searchActions("タブ", [action("新しいタブ"), action("タブを閉じる")])
+    it("with an input, lists only the matching actions, strongest match first", () => {
+      const entries = searchActions("mute", [action("Unmute Tab"), action("Mute Tab")])
 
-      expect(namesOf(entries)).toStrictEqual(["タブを閉じる", "新しいタブ"])
+      expect(namesOf(entries)).toStrictEqual(["Mute Tab", "Unmute Tab"])
     })
 
-    it("URL を開く項目もウェブ検索の項目も付けない", () => {
+    it("adds neither an open-URL entry nor a web search entry", () => {
       expect(actionsOf(searchActions("https://example.com/", actions))).toStrictEqual([])
     })
   })
 
-  describe("すべてから探すとき", () => {
-    it("入力が空なら、操作は出さない", () => {
+  describe("when searching everything", () => {
+    it("with an empty input, lists no actions", () => {
       expect(
-        namesOf(search("", [candidate("タブ", { usedMinutesAgo: 1 }), ...actions])),
-      ).toStrictEqual(["タブ"])
+        namesOf(search("", [candidate("Tab", { usedMinutesAgo: 1 }), ...actions])),
+      ).toStrictEqual(["Tab"])
     })
 
-    it("一致した操作も、ほかの候補と一緒に一致の強さの順に並ぶ", () => {
-      const entries = search("複製", [
-        candidate("手順を複製する", { kind: "Bookmark" }),
+    it("ranks matching actions together with the other candidates by match strength", () => {
+      const entries = search("tab", [
+        candidate("Timetable", { kind: "Bookmark" }),
         ...actions,
-        candidate("複製の手順"),
+        candidate("Tab groups"),
       ])
 
-      expect(namesOf(entries)).toStrictEqual(["複製の手順", "タブを複製", "手順を複製する"])
+      expect(namesOf(entries)).toStrictEqual(["Tab groups", "Duplicate Tab", "Timetable"])
     })
   })
 
-  it("表示している名前とは別の言語の名前でも引ける", () => {
-    expect(namesOf(searchActions("copy", actions))).toStrictEqual(["URL をコピー"])
+  it("finds an action by its name in a language other than the one shown", () => {
+    expect(namesOf(searchActions("copiar", actions))).toStrictEqual(["Copy URL"])
   })
 })

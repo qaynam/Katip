@@ -2,23 +2,23 @@ import { Option } from "effect"
 
 export interface UrlInput {
   readonly url: string
-  /** 入力に scheme が書かれていて、URL を開くつもりだとはっきりしている。 */
+  /** The input spells out a scheme, so it is clearly meant to be opened as a URL. */
   readonly hasScheme: boolean
 }
 
-// ページを開く scheme だけを受け付ける。javascript: などを開けると、入力を貼り付けただけで
-// スクリプトが動いてしまう
+// Only schemes that open a page. Opening javascript: and the like would run a script just because
+// it was pasted in
 const openableScheme = /^(https?|file|ftp|chrome|chrome-extension|about|view-source):/i
 
-// localhost、IPv4 アドレス、末尾が 2 文字以上の英字のドメイン名だけを対象とする。
-// IPv6 アドレスや、ドットを含まない社内向けのホスト名は scheme を書いたときだけ開く
+// Only localhost, IPv4 addresses and domain names ending in a label of two or more letters.
+// IPv6 addresses and dotless intranet host names open only when the scheme is spelled out
 const localHost = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i
 const domainName = /^([\p{L}\p{N}-]+\.)+\p{L}{2,}(:\d+)?([/?#].*)?$/u
 
 const parseable = (url: string): Option.Option<string> =>
   URL.canParse(url) ? Option.some(url) : Option.none()
 
-/** 入力が URL として開けそうなら、開く URL を返す。 */
+/** The URL to open when the input looks like one, or none when it doesn't. */
 export const urlFromInput = (input: string): Option.Option<UrlInput> => {
   const trimmed = input.trim()
   if (trimmed === "" || /\s/.test(trimmed)) return Option.none()

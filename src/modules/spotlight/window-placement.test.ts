@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest"
 import { spotlightBoundsOver } from "./window-placement"
 
-describe("Spotlight のウィンドウの置き場所", () => {
-  describe("十分に大きいウィンドウの上に開くとき", () => {
+describe("Spotlight window placement", () => {
+  describe("over a large enough window", () => {
     const caller = { left: 100, top: 50, width: 1440, height: 900 }
 
-    it("幅 640px、高さ 440px で開く", () => {
+    it("opens 640px wide and 440px high", () => {
       const { width, height } = spotlightBoundsOver(caller)
 
       expect([width, height]).toStrictEqual([640, 440])
     })
 
-    it("左右の中央に置く", () => {
+    it("is centered horizontally", () => {
       const { left, width } = spotlightBoundsOver(caller)
 
       expect(left - caller.left).toBe(caller.left + caller.width - (left + width))
     })
 
-    it("上下の中央より上に寄せ、上端からは離す", () => {
+    it("sits above vertical center, clear of the top edge", () => {
       const { top, height } = spotlightBoundsOver(caller)
       const above = top - caller.top
       const below = caller.top + caller.height - (top + height)
@@ -27,8 +27,8 @@ describe("Spotlight のウィンドウの置き場所", () => {
     })
   })
 
-  describe("小さいウィンドウの上に開くとき", () => {
-    it("ウィンドウからはみ出さないよう縮める", () => {
+  describe("over a small window", () => {
+    it("shrinks to stay inside the window", () => {
       const caller = { left: 0, top: 0, width: 600, height: 400 }
 
       const bounds = spotlightBoundsOver(caller)
@@ -39,14 +39,14 @@ describe("Spotlight のウィンドウの置き場所", () => {
       expect(bounds.top + bounds.height).toBeLessThanOrEqual(caller.top + caller.height)
     })
 
-    it("使えなくなるほどは縮めない", () => {
+    it("doesn't shrink below a usable size", () => {
       const bounds = spotlightBoundsOver({ left: 0, top: 0, width: 200, height: 150 })
 
       expect([bounds.width, bounds.height]).toStrictEqual([360, 240])
     })
   })
 
-  it("位置と大きさは整数になる", () => {
+  it("has whole-number position and size", () => {
     const bounds = spotlightBoundsOver({ left: 0, top: 0, width: 1001, height: 777 })
 
     expect(Object.values(bounds).every(Number.isInteger)).toBe(true)

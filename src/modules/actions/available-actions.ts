@@ -5,16 +5,19 @@ import type { Action } from "./action"
 
 export interface ActionTarget {
   readonly isMuted: boolean
-  /** タブが Space に属していれば、その Space とピン留めかどうか。Favorites など属さないタブは None。 */
+  /**
+   * The Space the tab belongs to and whether it is pinned there. None for a tab outside every
+   * Space, such as a Favorite.
+   */
   readonly membership: Option.Option<{ readonly spaceId: SpaceId; readonly isPinned: boolean }>
 }
 
 export interface ActionContext {
-  /** 実行するウィンドウでアクティブなタブ。 */
+  /** The active tab of the window the action runs in. */
   readonly activeTab: Option.Option<ActionTarget>
-  /** 実行するウィンドウで表示している Space。 */
+  /** The Space shown in the window the action runs in. */
   readonly activeSpaceId: Option.Option<SpaceId>
-  /** 並べる順の Space。 */
+  /** The Spaces, in the order their actions are listed. */
   readonly spaces: ReadonlyArray<{ readonly id: SpaceId; readonly name: string }>
 }
 
@@ -36,10 +39,10 @@ const tabActions = (target: ActionTarget, context: ActionContext): ReadonlyArray
 }
 
 /**
- * 今のウィンドウとタブで実行できる操作を、決まった順に返す。
+ * Returns the actions available for the current window and tab, in a fixed order.
  *
- * アクティブなタブが無ければ、タブを対象にする操作は含めない。どの Space にも属さないタブ
- * （Favorites など）には、ピン留めと Space の移動を含めない。
+ * Without an active tab, actions on a tab are left out. For a tab outside every Space (such as a
+ * Favorite), pinning and moving to another Space are left out.
  */
 export const availableActions = (context: ActionContext): ReadonlyArray<Action> => [
   ...Option.match(context.activeTab, {
@@ -59,7 +62,9 @@ const isPinned = (context: ActionContext) =>
 const isMuted = (context: ActionContext) =>
   Option.exists(context.activeTab, (target) => target.isMuted)
 
-/** 操作の名前。ピン留めとミュートは、タブの今の状態から切り替える向きの名前になる。 */
+/**
+ * The action's name. Pinning and muting are named for the change from the tab's current state.
+ */
 export const actionTitle = (
   action: Action,
   context: ActionContext,

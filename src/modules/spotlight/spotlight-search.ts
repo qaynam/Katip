@@ -11,22 +11,25 @@ import { urlFromInput } from "./url-input"
 
 export type CandidateKind = "OpenTab" | "Pin" | "Space" | "Bookmark" | "History" | "Action"
 
-/** `All` はすべての種類の候補から探す。`Actions` は操作（`Action`）の候補だけから探す。 */
+/**
+ * `All` searches candidates of every kind. `Actions` searches only the action (`Action`)
+ * candidates.
+ */
 export type SpotlightSearchMode = "All" | "Actions"
 
 export interface SearchCandidate {
   readonly kind: CandidateKind
   readonly title: string
   /**
-   * タイトルと同じように照合する別の名前。表示の言語とは別の言語での操作の名前など。
-   * 一致してもタイトルとして表示されるのは `title`。
+   * Other names matched the same way as the title, such as an action's name in a language other
+   * than the one shown. A match on one of them still shows `title`.
    */
   readonly keywords?: ReadonlyArray<string>
-  /** 空文字は URL を持たない候補（Space）。 */
+  /** Empty for a candidate without a URL (a Space). */
   readonly url: string
-  /** 最後に使った時刻（エポックミリ秒）。 */
+  /** When it was last used, in epoch milliseconds. */
   readonly lastUsedAt: Option.Option<number>
-  /** 呼び出し元のウィンドウで今表示しているタブ。 */
+  /** Whether it is the tab currently shown in the window Spotlight was opened from. */
   readonly isCurrent: boolean
 }
 
@@ -38,7 +41,7 @@ export type SpotlightEntry<C> =
 export interface SpotlightSearchOptions {
   readonly mode: SpotlightSearchMode
   readonly now: number
-  /** 候補の最大件数。URL を開く項目とウェブ検索の項目は数えない。 */
+  /** The most candidates to return. The open-URL and web search entries don't count toward it. */
   readonly limit: number
 }
 
@@ -49,12 +52,14 @@ const strengthScore: Record<MatchStrength, number> = {
   Substring: 40,
 }
 
-// URL での一致は、タイトルでの一段弱い一致と同じ重みにする。URL には同じサイトのホスト名が
-// 繰り返し現れるので、タイトルと同じ重みにすると、タイトルに関係なく同じサイトのページが上位を占める
+// A URL match weighs the same as a title match one strength lower. Not the same weight as the
+// title: the same site's host name recurs across URLs, so that site's pages would take the top
+// whatever their titles
 const URL_MATCH_DISCOUNT = 20
 
-// 種類と最近使ったことによる加点は、合わせても一致の強さ 1 段分（20）に届かないようにする。
-// 届くと、打った語との一致よりも開いた時刻で並びが決まり、絞り込むほど結果が読めなくなる
+// The bonuses for kind and recent use together stay below one step of match strength (20).
+// Reaching it would let when a page was opened outrank how well it matches what was typed, and
+// narrowing the search would make the results harder to predict
 const kindBonus: Record<CandidateKind, number> = {
   OpenTab: 4,
   Pin: 3,
@@ -74,7 +79,7 @@ const recencyBonus = (lastUsedAt: Option.Option<number>, now: number): number =>
   })
 
 interface SearchableText {
-  /** タイトルと、タイトルと同じように照合する別の名前。 */
+  /** The title, and the other names matched the same way as the title. */
   readonly titles: ReadonlyArray<string>
   readonly url: string
 }
@@ -180,16 +185,20 @@ const searchActions = <C extends SearchCandidate>(
 }
 
 /**
- * Spotlight に並べる項目を、上から表示する順に返す。
+ * Returns the entries to list in Spotlight, from top to bottom.
  *
  * @remarks
- * `All` で入力が空なら、開いているタブ（今表示しているものを除く）を最近使った順に並べ、Space を続ける。
- * 上限に収まらないときは Space を残し、使ったのが古いタブから省く。
- * 入力があれば、すべての語がタイトルか URL に含まれる候補を一致の強さの順に並べ、
- * 最後に入力でウェブを検索する項目を付ける。入力が URL らしければ、それを開く項目も加える。
+ * In `All` with an empty input, lists the open tabs (except the one currently shown) by most
+ * recent use, followed by the Spaces. When they don't fit the limit, the Spaces stay and the least
+ * recently used tabs are dropped.
+ * With an input, lists the candidates whose title or URL contains every term, strongest match
+ * first, and ends with an entry that searches the web for the input. When the input looks like a
+ * URL, an entry that opens it is added too: first when the input spells out the scheme, otherwise
+ * right after the candidates.
  *
- * `Actions` では操作の候補だけを返す。入力が空なら渡された順のまますべて、入力があれば一致するものを
- * 一致の強さの順に返し、URL を開く項目やウェブ検索の項目は付けない。
+ * In `Actions`, returns only the action candidates: all of them in the given order for an empty
+ * input, otherwise the matching ones, strongest match first. No open-URL or web search entry is
+ * added.
  */
 export const searchSpotlight = <C extends SearchCandidate>(
   input: string,

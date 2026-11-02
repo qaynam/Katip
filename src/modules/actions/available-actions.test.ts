@@ -15,9 +15,9 @@ const work = SpaceId.make("work")
 const hobby = SpaceId.make("hobby")
 
 const spaces = [
-  { id: home, name: "ホーム" },
-  { id: work, name: "仕事" },
-  { id: hobby, name: "趣味" },
+  { id: home, name: "Home" },
+  { id: work, name: "Work" },
+  { id: hobby, name: "Hobbies" },
 ]
 
 const tabIn = (
@@ -35,29 +35,28 @@ const context = (overrides: Partial<ActionContext> = {}): ActionContext => ({
   ...overrides,
 })
 
-const ja = makeTranslator("ja")
 const en = makeTranslator("en")
 
-const titlesIn = (actionContext: ActionContext, translator = ja) =>
+const titlesIn = (actionContext: ActionContext, translator = en) =>
   availableActions(actionContext).map((action) => actionTitle(action, actionContext, translator))
 
-describe("実行できる操作", () => {
-  it("アクティブなタブが Space にあれば、すべての操作を決まった順に並べる", () => {
+describe("available actions", () => {
+  it("when the active tab is in a Space, lists every action in a fixed order", () => {
     expect(titlesIn(context())).toStrictEqual([
-      "URL をコピー",
-      "URL を Markdown のリンクとしてコピー",
-      "タブをピン留め",
-      "タブを複製",
-      "タブを閉じる",
-      "タブをミュート",
-      "タブを「仕事」へ移動",
-      "タブを「趣味」へ移動",
-      "一時タブをすべて閉じる",
-      "設定を開く",
+      "Copy URL",
+      "Copy URL as Markdown Link",
+      "Pin Tab",
+      "Duplicate Tab",
+      "Close Tab",
+      "Mute Tab",
+      "Move Tab to Work",
+      "Move Tab to Hobbies",
+      "Close All Temporary Tabs",
+      "Open Settings",
     ])
   })
 
-  it("Space の移動は、タブが今いる Space 以外の Space の分だけ並ぶ", () => {
+  it("lists a move for each Space other than the one the tab is in", () => {
     const moves = availableActions(context({ activeTab: Option.some(tabIn(work)) })).filter(
       (action): action is Extract<Action, { _tag: "MoveTabToSpace" }> =>
         action._tag === "MoveTabToSpace",
@@ -66,14 +65,14 @@ describe("実行できる操作", () => {
     expect(moves.map((action) => action.spaceId)).toStrictEqual([home, hobby])
   })
 
-  it("アクティブなタブが無ければ、タブを対象にする操作は並べない", () => {
+  it("without an active tab, leaves out the actions on a tab", () => {
     expect(titlesIn(context({ activeTab: Option.none() }))).toStrictEqual([
-      "一時タブをすべて閉じる",
-      "設定を開く",
+      "Close All Temporary Tabs",
+      "Open Settings",
     ])
   })
 
-  it("どの Space にも属さないタブには、ピン留めと Space の移動を並べない", () => {
+  it("for a tab outside every Space, leaves out pinning and moving to a Space", () => {
     const favorite: ActionTarget = { isMuted: false, membership: Option.none() }
 
     expect(
@@ -89,29 +88,29 @@ describe("実行できる操作", () => {
     ])
   })
 
-  it("表示している Space が決まっていなければ、一時タブを閉じる操作は並べない", () => {
+  it("without a shown Space, leaves out closing the temporary tabs", () => {
     const tags = availableActions(context({ activeSpaceId: Option.none() })).map(({ _tag }) => _tag)
 
     expect(tags).not.toContain("CloseTemporaryTabs")
   })
 })
 
-describe("操作の名前", () => {
-  it("ピン留めしたタブでは、ピン留めを外す名前になる", () => {
+describe("action names", () => {
+  it("for a pinned tab, names the action for unpinning", () => {
     const pinned = context({ activeTab: Option.some(tabIn(home, { isPinned: true })) })
 
-    expect(actionTitle({ _tag: "TogglePin" }, pinned, ja)).toBe("タブのピン留めを外す")
+    expect(actionTitle({ _tag: "TogglePin" }, pinned, en)).toBe("Unpin Tab")
   })
 
-  it("ミュートしているタブでは、ミュートを解除する名前になる", () => {
+  it("for a muted tab, names the action for unmuting", () => {
     const muted = context({ activeTab: Option.some(tabIn(home, { isMuted: true })) })
 
-    expect(actionTitle({ _tag: "ToggleMute" }, muted, ja)).toBe("タブのミュートを解除")
+    expect(actionTitle({ _tag: "ToggleMute" }, muted, en)).toBe("Unmute Tab")
   })
 
-  it("表示する言語で名前を付ける", () => {
-    expect(actionTitle({ _tag: "MoveTabToSpace", spaceId: work }, context(), en)).toBe(
-      "Move Tab to 仕事",
-    )
+  it("names the action in the translator's language", () => {
+    expect(
+      actionTitle({ _tag: "MoveTabToSpace", spaceId: work }, context(), makeTranslator("es")),
+    ).toBe("Mover pestaña a Work")
   })
 })
