@@ -26,7 +26,7 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
   await (await choosing).setFiles(ARC_SIDEBAR_FIXTURE)
   const preview = options.getByRole("region", { name: "Ready to import from Arc" })
   await expect(preview.getByRole("list", { name: "To be added" }).getByRole("listitem")).toHaveText(
-    ["3 Spaces", "7 pinned tabs", "2 folders", "2 split views", "2 Favorites"],
+    ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "3 Favorites"],
   )
   expect(await pinnedBookmarks(background, "Work")).toBeNull()
 
@@ -38,6 +38,7 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
     work: await pinnedBookmarks(background, "Work"),
     reading: await pinnedBookmarks(background, "Reading"),
     untitled: await pinnedBookmarks(background, "Space 4"),
+    personal: await pinnedBookmarks(background, "Personal"),
   }).toStrictEqual({
     home: [],
     work: [
@@ -49,6 +50,7 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
     ],
     reading: ["Long Read"],
     untitled: ["Weather"],
+    personal: ["Recipes", "Trips[Packing List]"],
   })
   await expect
     .poll(() =>
@@ -56,9 +58,13 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
         (await chrome.tabs.query({ pinned: true })).map((tab) => tab.pendingUrl ?? tab.url),
       ),
     )
-    .toStrictEqual(["https://calendar.example.com/", "https://music.example.com/"])
+    .toStrictEqual([
+      "https://calendar.example.com/",
+      "https://music.example.com/",
+      "https://photos.example.com/",
+    ])
   const switcher = sidebar.getByRole("navigation", { name: "Switch Space" })
-  for (const name of ["Home", "Work", "Reading", "Space 4"]) {
+  for (const name of ["Home", "Work", "Reading", "Space 4", "Personal"]) {
     await expect(switcher.getByRole("button", { name, exact: true })).toBeVisible()
   }
 })

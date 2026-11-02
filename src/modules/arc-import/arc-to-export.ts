@@ -1,67 +1,78 @@
 import { Array, type Data, Option, Result } from "effect"
-import {
-  EXPORT_FORMAT,
-  exportedSettingsOf,
-  LATEST_EXPORT_VERSION,
-  type LatestExport,
-} from "#modules/export"
-import { defaultSettings } from "#modules/settings"
+import type { LatestExport } from "#modules/export"
 import { neutralTheme } from "#modules/theme"
 import {
   ArcItemKind,
   readArcSidebar,
+  type ArcFavoritesContainer,
   type ArcItemEntry,
+  type ArcProfile,
   type ArcSidebar,
   type ArcSpaceEntry,
   type NotArcSidebar,
 } from "./arc-sidebar"
 import { themeOfArcSpace } from "./arc-theme"
 
-type ExportedSpace = LatestExport["spaces"][number]
+export type ExportedSpace = LatestExport["spaces"][number]
 type ExportedNode = ExportedSpace["pinned"][number]
 type ExportedPin = Extract<ExportedNode, { readonly type: "pin" }>
-type ExportedLink = ExportedSpace["tabs"][number]
+export type ExportedLink = ExportedSpace["tabs"][number]
 
-/** What turning Arc's sidebar into a Katip export document left out or changed. */
-export interface ArcImportReport {
+/** What converting a part of Arc's sidebar left out or changed, by count. */
+export interface ArcTally {
   /** Tabs whose address isn't http or https, such as Arc's own pages and local files. */
   readonly nonWebLinks: number
   /** Split views with more than two tabs. Their first two tabs stay split; the rest follow as pins. */
   readonly widerSplits: number
   /** Items with no Katip equivalent, such as notes and easels. */
   readonly unsupportedItems: number
-  /**
-   * IDs of the document's Spaces whose Arc Space had no theme Katip could read. Their theme in the
-   * document is only a placeholder, for Katip to pick one as it does for a new Space.
-   */
-  readonly spacesWithoutTheme: ReadonlyArray<string>
 }
 
-export interface ArcImport {
-  /**
-   * Arc's Spaces with their pinned entries, unpinned (Today) tabs and the Favorites. Only tabs
-   * with a web address are kept. The settings are Katip's defaults, as Arc has none to carry over.
-   */
-  readonly document: LatestExport
-  readonly report: ArcImportReport
-}
+export const noTally: ArcTally = { nonWebLinks: 0, widerSplits: 0, unsupportedItems: 0 }
 
-type Tally = Omit<ArcImportReport, "spacesWithoutTheme">
-
-const noTally: Tally = { nonWebLinks: 0, widerSplits: 0, unsupportedItems: 0 }
-
-const addTallies = (a: Tally, b: Tally): Tally => ({
+export const addTallies = (a: ArcTally, b: ArcTally): ArcTally => ({
   nonWebLinks: a.nonWebLinks + b.nonWebLinks,
   widerSplits: a.widerSplits + b.widerSplits,
   unsupportedItems: a.unsupportedItems + b.unsupportedItems,
 })
 
-interface Converted<A> {
-  readonly value: ReadonlyArray<A>
-  readonly tally: Tally
+export interface ConvertedArcSpace {
+  /**
+   * The Space as it's imported on its own: its pinned entries, and its unpinned (Today) tabs as
+   * temporary tabs. It keeps its ID and title in Arc, blank when untitled.
+   */
+  readonly space: ExportedSpace
+  readonly profile: ArcProfile
+  readonly tally: ArcTally
+  /** When `false`, Arc's theme for the Space couldn't be read, and `space.theme` is a placeholder. */
+  readonly hasTheme: boolean
 }
 
-const converted = <A>(value: ReadonlyArray<A>, tally: Partial<Tally> = {}): Converted<A> => ({
+export interface ConvertedArcFavorites {
+  readonly profile: ArcProfile
+  /** In Arc's order, each page once. */
+  readonly links: ReadonlyArray<ExportedLink>
+  readonly tally: ArcTally
+}
+
+/** Arc's sidebar, converted part by part to choose what of it to import. Only web pages are kept. */
+export interface ArcConversion {
+  /** In Arc's order. */
+  readonly spaces: ReadonlyArray<ConvertedArcSpace>
+  /** In Arc's order, one set for each profile. */
+  readonly favorites: ReadonlyArray<ConvertedArcFavorites>
+  /** Arc, with the version it wrote in the file. */
+  readonly generator: LatestExport["generator"]
+  /** An ISO 8601 date and time. */
+  readonly convertedAt: string
+}
+
+interface Converted<A> {
+  readonly value: ReadonlyArray<A>
+  readonly tally: ArcTally
+}
+
+const converted = <A>(value: ReadonlyArray<A>, tally: Partial<ArcTally> = {}): Converted<A> => ({
   value,
   tally: { ...noTally, ...tally },
 })
@@ -114,6 +125,7 @@ const linksIn = (
         Folder: () => linksIn(sidebar, item, path),
         SplitView: () => linksIn(sidebar, item, path),
         Container: () => converted<ExportedLink>([]),
+        FavoritesContainer: () => converted<ExportedLink>([]),
         Unsupported: () => converted<ExportedLink>([], { unsupportedItems: 1 }),
       }),
     ),
@@ -165,6 +177,7 @@ const pinnedNodesIn = (
         },
         SplitView: () => splitNodesOf(linksIn(sidebar, item, path)),
         Container: () => converted<ExportedNode>([]),
+        FavoritesContainer: () => converted<ExportedNode>([]),
         Unsupported: () => converted<ExportedNode>([], { unsupportedItems: 1 }),
       }),
     ),
@@ -176,7 +189,7 @@ const itemOf = (sidebar: ArcSidebar, id: Option.Option<string>) =>
 
 const noAncestors: Path = new Set()
 
-const spaceOf = (sidebar: ArcSidebar, space: ArcSpaceEntry) => {
+const spaceOf = (sidebar: ArcSidebar, space: ArcSpaceEntry): ConvertedArcSpace => {
   const pinned = Option.match(itemOf(sidebar, space.pinnedContainerId), {
     onNone: () => converted<ExportedNode>([]),
     onSome: (container) => pinnedNodesIn(sidebar, container, noAncestors),
@@ -193,55 +206,45 @@ const spaceOf = (sidebar: ArcSidebar, space: ArcSpaceEntry) => {
       theme: Option.getOrElse(theme, () => neutralTheme),
       pinned: pinned.value,
       tabs: today.value,
-    } satisfies ExportedSpace,
+    },
+    profile: space.profile,
     tally: addTallies(pinned.tally, today.tally),
     hasTheme: Option.isSome(theme),
   }
 }
 
-const favoritesOf = (sidebar: ArcSidebar): Converted<ExportedLink> => {
-  const links = concatenated(
-    sidebar.favoritesContainerIds.flatMap((id) =>
-      Option.toArray(itemOf(sidebar, Option.some(id))).map((container) =>
-        linksIn(sidebar, container, noAncestors),
-      ),
-    ),
-  )
-  return { ...links, value: Array.dedupeWith(links.value, (a, b) => a.url === b.url) }
-}
-
-/**
- * Turns the content of Arc's sidebar file (`StorableSidebar.json`) into a Katip export document of
- * the latest version.
- *
- * @remarks
- * Each Arc Space becomes a Space with the same name, its pinned tabs, folders and split views
- * become pins, folders and split pins in the same order, and its unpinned (Today) tabs become
- * temporary tabs. A pin is named after the title given in Arc, else the page's saved title, else
- * the address's host. Space icons are dropped, as Katip has none.
- *
- * @param convertedAt - Epoch milliseconds, written as the document's export time.
- */
-export const arcSidebarToExport = (
-  content: string,
-  convertedAt: number,
-): Result.Result<ArcImport, NotArcSidebar> =>
-  Result.map(readArcSidebar(content), (sidebar): ArcImport => {
-    const spaces = sidebar.spaces.map((space) => spaceOf(sidebar, space))
-    const favorites = favoritesOf(sidebar)
+const favoritesOf = (
+  sidebar: ArcSidebar,
+  container: ArcFavoritesContainer,
+): ReadonlyArray<ConvertedArcFavorites> =>
+  Option.toArray(itemOf(sidebar, Option.some(container.id))).map((item) => {
+    const links = linksIn(sidebar, item, noAncestors)
     return {
-      document: {
-        format: EXPORT_FORMAT,
-        version: LATEST_EXPORT_VERSION,
-        exportedAt: new Date(convertedAt).toISOString(),
-        generator: { name: "Arc", version: Option.getOrElse(sidebar.version, () => "") },
-        spaces: spaces.map(({ space }) => space),
-        favorites: favorites.value,
-        settings: exportedSettingsOf(defaultSettings),
-      },
-      report: {
-        ...[...spaces.map(({ tally }) => tally), favorites.tally].reduce(addTallies, noTally),
-        spacesWithoutTheme: spaces.filter(({ hasTheme }) => !hasTheme).map(({ space }) => space.id),
-      },
+      profile: container.profile,
+      links: Array.dedupeWith(links.value, (a, b) => a.url === b.url),
+      tally: links.tally,
     }
   })
+
+/**
+ * Converts the content of Arc's sidebar file (`StorableSidebar.json`) into the parts of a Katip
+ * export document: each Arc Space, and each profile's Favorites.
+ *
+ * @remarks
+ * A Space's pinned tabs, folders and split views become pins, folders and split pins in the same
+ * order, and its unpinned (Today) tabs become temporary tabs. A pin is named after the title given
+ * in Arc, else the page's saved title, else the address's host. Space icons are dropped, as Katip
+ * has none.
+ *
+ * @param convertedAt - Epoch milliseconds.
+ */
+export const convertArcSidebar = (
+  content: string,
+  convertedAt: number,
+): Result.Result<ArcConversion, NotArcSidebar> =>
+  Result.map(readArcSidebar(content), (sidebar): ArcConversion => ({
+    spaces: sidebar.spaces.map((space) => spaceOf(sidebar, space)),
+    favorites: sidebar.favoritesContainers.flatMap((container) => favoritesOf(sidebar, container)),
+    generator: { name: "Arc", version: Option.getOrElse(sidebar.version, () => "") },
+    convertedAt: new Date(convertedAt).toISOString(),
+  }))

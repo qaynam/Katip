@@ -151,13 +151,13 @@ describe("previewing Arc's file", () => {
       applied: await applyRequests(requests),
     }).toStrictEqual({
       file: true,
-      added: ["3 Spaces", "7 pinned tabs", "2 folders", "2 split views", "2 Favorites"],
+      added: ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "3 Favorites"],
       adjusted: [
         "1 folder is nested deeper than Katip allows, so its contents go into the folder above it.",
         "1 split view has more than two tabs. The first two stay split, and the rest become pinned tabs right after them.",
       ],
       leftOut: [
-        "2 unpinned tabs, as unpinned tabs are temporary",
+        "3 unpinned tabs, as unpinned tabs are temporary",
         "2 tabs that aren’t web pages, as only http and https addresses are imported",
         "1 item Katip has nothing like, such as a note or an easel",
       ],
@@ -194,8 +194,12 @@ describe("previewing Arc's file", () => {
       openFavorites: apply?._tag === "Apply" && apply.openFavorites,
       spacesWithoutTheme: apply?._tag === "Apply" && apply.spacesWithoutTheme,
     }).toStrictEqual({
-      spaces: ["Work", "Reading", ""],
-      favorites: ["https://calendar.example.com/", "https://music.example.com/"],
+      spaces: ["Work", "Reading", "", "Personal"],
+      favorites: [
+        "https://calendar.example.com/",
+        "https://music.example.com/",
+        "https://photos.example.com/",
+      ],
       openFavorites: true,
       spacesWithoutTheme: ["space-untitled"],
     })
@@ -213,7 +217,7 @@ describe("previewing Arc's file", () => {
 
     const [apply] = await applyRequests(requests)
     expect([
-      added.includes("2 Favorites"),
+      added.includes("3 Favorites"),
       apply?._tag === "Apply" && apply.openFavorites,
     ]).toStrictEqual([false, false])
   })

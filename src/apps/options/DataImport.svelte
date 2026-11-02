@@ -1,13 +1,15 @@
 <script lang="ts">
-  import { Cause, type Effect, Exit, Option } from "effect"
+  import { Cause, Effect, Exit, Option } from "effect"
+  import { wholeSidebar } from "#modules/arc-import"
   import type { Translator } from "#modules/i18n"
   import type { Ports } from "#platform/browser"
   import {
     confirmImport,
     type ImportCandidate,
     type ImportSource,
-    prepareArcImport,
     prepareKatipImport,
+    previewArcImport,
+    readArcFile,
   } from "./data-import"
   import { previewLinesOf, problemMessageOf, type PreparationError } from "./import-preview"
   import type { OptionsRuntime } from "./options-runtime"
@@ -60,7 +62,11 @@
     source: ImportSource,
     file: File,
   ): Effect.Effect<ImportCandidate, PreparationError, Ports> =>
-    source === "Arc" ? prepareArcImport(file) : prepareKatipImport(file)
+    source === "Arc"
+      ? Effect.flatMap(readArcFile(file), (arc) =>
+          previewArcImport(arc, wholeSidebar(arc.conversion)),
+        )
+      : prepareKatipImport(file)
 
   const choose = async (source: ImportSource, input: HTMLInputElement) => {
     const file = input.files?.[0]

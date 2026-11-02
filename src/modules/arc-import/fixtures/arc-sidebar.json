@@ -139,6 +139,93 @@
             "title": "",
             "profile": { "default": {} },
             "containerIDs": ["pinned", "untitled-pinned", "unpinned", "untitled-unpinned"]
+          },
+          "space-personal",
+          {
+            "id": "space-personal",
+            "title": "Personal",
+            "profile": { "custom": { "_0": { "directoryBasename": "Profile 1" } } },
+            "newContainerIDs": [
+              { "pinned": {} },
+              "personal-pinned",
+              { "unpinned": {} },
+              "personal-unpinned"
+            ],
+            "customInfo": {
+              "iconType": { "icon": "house" },
+              "windowTheme": {
+                "background": {
+                  "single": {
+                    "_0": {
+                      "style": {
+                        "color": {
+                          "_0": {
+                            "blendedGradient": {
+                              "_0": {
+                                "baseColors": [
+                                  {
+                                    "red": 0.956863,
+                                    "green": 0.898039,
+                                    "blue": 0.713725,
+                                    "alpha": 1,
+                                    "colorSpace": "extendedSRGB"
+                                  },
+                                  {
+                                    "red": 0.694118,
+                                    "green": 0.894118,
+                                    "blue": 0.952941,
+                                    "alpha": 1,
+                                    "colorSpace": "extendedSRGB"
+                                  }
+                                ],
+                                "overlayColors": [
+                                  {
+                                    "red": 0,
+                                    "green": 0,
+                                    "blue": 0,
+                                    "alpha": 0,
+                                    "colorSpace": "extendedSRGB"
+                                  },
+                                  {
+                                    "red": 0.807843,
+                                    "green": 0.733333,
+                                    "blue": 0.964706,
+                                    "alpha": 1,
+                                    "colorSpace": "extendedSRGB"
+                                  }
+                                ],
+                                "modifiers": {
+                                  "overlay": "sand",
+                                  "intensityFactor": 1,
+                                  "noiseFactor": 0.5
+                                },
+                                "wheel": { "complimentary": {} },
+                                "translucencyStyle": "light"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "isVibrant": true,
+                      "contentOverBackgroundAppearance": "light"
+                    }
+                  }
+                },
+                "semanticColorPalette": {
+                  "appearanceBased": {
+                    "light": {
+                      "background": {
+                        "red": 0.941176,
+                        "green": 0.933333,
+                        "blue": 0.898039,
+                        "alpha": 1,
+                        "colorSpace": "extendedSRGB"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         ],
         "items": [
@@ -559,9 +646,136 @@
             "isUnread": false,
             "originatingDevice": "device-1",
             "data": { "tab": { "savedURL": "chrome://settings/", "savedTitle": "Settings" } }
+          },
+          "personal-pinned",
+          {
+            "id": "personal-pinned",
+            "parentID": null,
+            "childrenIds": ["recipes", "trips"],
+            "title": null,
+            "createdAt": 700000030,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-personal" } } }
+            }
+          },
+          "recipes",
+          {
+            "id": "recipes",
+            "parentID": "personal-pinned",
+            "childrenIds": [],
+            "title": "Recipes",
+            "createdAt": 700000031,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://recipes.example.com/", "savedTitle": "Recipe Box" }
+            }
+          },
+          "trips",
+          {
+            "id": "trips",
+            "parentID": "personal-pinned",
+            "childrenIds": ["packing"],
+            "title": "Trips",
+            "createdAt": 700000032,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": { "list": {} }
+          },
+          "packing",
+          {
+            "id": "packing",
+            "parentID": "trips",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000033,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": {
+                "savedURL": "https://packing.example.com/list",
+                "savedTitle": "Packing List"
+              }
+            }
+          },
+          "personal-unpinned",
+          {
+            "id": "personal-unpinned",
+            "parentID": null,
+            "childrenIds": ["forecast"],
+            "title": null,
+            "createdAt": 700000034,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": { "containerType": { "spaceItems": { "_0": "space-personal" } } }
+            }
+          },
+          "forecast",
+          {
+            "id": "forecast",
+            "parentID": "personal-unpinned",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000035,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://weather.example.com/week", "savedTitle": "Forecast" }
+            }
+          },
+          "personal-top-apps",
+          {
+            "id": "personal-top-apps",
+            "parentID": null,
+            "childrenIds": ["photos", "personal-calendar"],
+            "title": null,
+            "createdAt": 700000036,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "itemContainer": {
+                "containerType": {
+                  "topApps": { "_0": { "custom": { "_0": { "directoryBasename": "Profile 1" } } } }
+                }
+              }
+            }
+          },
+          "photos",
+          {
+            "id": "photos",
+            "parentID": "personal-top-apps",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000037,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://photos.example.com/", "savedTitle": "Photos" }
+            }
+          },
+          "personal-calendar",
+          {
+            "id": "personal-calendar",
+            "parentID": "personal-top-apps",
+            "childrenIds": [],
+            "title": null,
+            "createdAt": 700000038,
+            "isUnread": false,
+            "originatingDevice": "device-1",
+            "data": {
+              "tab": { "savedURL": "https://calendar.example.com/", "savedTitle": "Calendar" }
+            }
           }
         ],
-        "topAppsContainerIDs": [{ "default": {} }, "top-apps"]
+        "topAppsContainerIDs": [
+          { "default": {} },
+          "top-apps",
+          { "custom": { "_0": { "directoryBasename": "Profile 1" } } },
+          "personal-top-apps"
+        ]
       }
     ]
   },

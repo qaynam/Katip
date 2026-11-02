@@ -1,5 +1,11 @@
 import { Clock, type Duration, Effect, Option, Result, Schema, Stream } from "effect"
-import { arcSidebarToExport, type ArcImportReport } from "#modules/arc-import"
+import {
+  arcImportOf,
+  convertArcSidebar,
+  type ArcConversion,
+  type ArcImportChoice,
+  type ArcImportReport,
+} from "#modules/arc-import"
 import { decodeExportFile, encodeExportFile } from "#modules/export"
 import type { ImportSummary } from "#modules/import"
 import { Ports } from "#platform/browser"
@@ -16,6 +22,12 @@ export interface ImportCandidate {
   readonly summary: ImportSummary
   /** What turning Arc's file into a Katip export file left out or changed. `None` for a Katip file. */
   readonly arcReport: Option.Option<ArcImportReport>
+}
+
+/** Arc's sidebar file, read and converted here in the page, to choose what of it to import. */
+export interface ArcFile {
+  readonly fileName: string
+  readonly conversion: ArcConversion
 }
 
 /** What the page needs of a chosen file. A `File` from a file input is one. */
@@ -67,23 +79,28 @@ const previewOf = (content: string) =>
 const readText = (file: ChosenFile) =>
   Effect.tryPromise({ try: () => file.text(), catch: () => new FileUnreadable() })
 
-/**
- * Reads Arc's sidebar file here in the page and asks the background what importing it would do.
- * Nothing leaves the browser.
- */
-export const prepareArcImport = Effect.fnUntraced(function* (file: ChosenFile) {
+/** Reads and converts Arc's sidebar file here in the page. Nothing leaves the browser. */
+export const readArcFile = Effect.fnUntraced(function* (file: ChosenFile) {
   const text = yield* readText(file)
-  const converted = arcSidebarToExport(text, yield* Clock.currentTimeMillis)
+  const converted = convertArcSidebar(text, yield* Clock.currentTimeMillis)
   if (Result.isFailure(converted)) {
     return yield* Result.isSuccess(decodeExportFile(text))
       ? Effect.fail(new KatipFileChosen())
       : Effect.fail(converted.failure)
   }
-  const { document, report } = converted.success
+  return { fileName: file.name, conversion: converted.success } satisfies ArcFile
+})
+
+/** Asks the background what importing the chosen part of Arc's file, arranged as chosen, would do. */
+export const previewArcImport = Effect.fnUntraced(function* (
+  file: ArcFile,
+  choice: ArcImportChoice,
+) {
+  const { document, report } = arcImportOf(file.conversion, choice)
   const content = yield* Effect.orDie(Effect.fromResult(encodeExportFile(document)))
   return {
     source: "Arc",
-    fileName: file.name,
+    fileName: file.fileName,
     content,
     summary: yield* previewOf(content),
     arcReport: Option.some(report),
@@ -96,7 +113,7 @@ export const prepareKatipImport = Effect.fnUntraced(function* (file: ChosenFile)
   const decoded = decodeExportFile(text)
   if (Result.isFailure(decoded)) {
     return yield* decoded.failure._tag === "NotKatipExport" &&
-    Result.isSuccess(arcSidebarToExport(text, 0))
+    Result.isSuccess(convertArcSidebar(text, 0))
       ? Effect.fail(new ArcFileChosen())
       : Effect.fail(decoded.failure)
   }

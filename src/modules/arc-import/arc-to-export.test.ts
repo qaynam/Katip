@@ -2,14 +2,21 @@ import { Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { decodeExportFile, encodeExportFile } from "#modules/export"
 import { themeColorOfSrgb } from "#modules/theme"
-import { NotArcSidebar } from "./arc-sidebar"
-import { arcSidebarToExport, type ArcImport } from "./arc-to-export"
+import { arcImportOf, wholeSidebar, type ArcImport } from "./arc-choice"
+import { ArcProfile, NotArcSidebar } from "./arc-sidebar"
+import { convertArcSidebar, type ArcConversion } from "./arc-to-export"
 import arcSidebar from "./fixtures/arc-sidebar.json?raw"
 
 const CONVERTED_AT = Date.UTC(2026, 10, 2, 3, 4, 5)
 
-const convert = (content: string): ArcImport =>
-  Result.getOrThrow(arcSidebarToExport(content, CONVERTED_AT))
+const conversionOf = (content: string): ArcConversion =>
+  Result.getOrThrow(convertArcSidebar(content, CONVERTED_AT))
+
+/** Everything in the file, each Arc Space as a Space of its own. */
+const convert = (content: string): ArcImport => {
+  const conversion = conversionOf(content)
+  return arcImportOf(conversion, wholeSidebar(conversion))
+}
 
 type ItemDraft = Readonly<Record<string, unknown>> & { readonly id: string }
 
@@ -40,6 +47,17 @@ const container = (id: string, childrenIds: ReadonlyArray<string>): ItemDraft =>
   data: { itemContainer: { containerType: { spaceItems: { _0: "space" } } } },
 })
 
+const favoritesContainer = (
+  id: string,
+  childrenIds: ReadonlyArray<string>,
+  profile: unknown,
+): ItemDraft => ({
+  id,
+  title: null,
+  childrenIds,
+  data: { itemContainer: { containerType: { topApps: { _0: profile } } } },
+})
+
 /** An Arc Space listing its containers the older way, as string labels. */
 const space = (
   id: string,
@@ -52,14 +70,18 @@ const space = (
   ...extra,
 })
 
+const DEFAULT_PROFILE = { default: {} }
+
 const arcFile = ({
   spaces,
   items,
   favorites = [],
+  topAppsContainerIDs = [DEFAULT_PROFILE, "favorites"],
 }: {
   spaces: ReadonlyArray<ItemDraft>
   items: ReadonlyArray<ItemDraft>
   favorites?: ReadonlyArray<string>
+  topAppsContainerIDs?: ReadonlyArray<unknown>
 }) =>
   JSON.stringify({
     version: 1,
@@ -68,16 +90,10 @@ const arcFile = ({
         { global: {} },
         {
           spaces: spaces.flatMap((entry) => [entry.id, entry]),
-          items: [
-            ...items,
-            {
-              id: "favorites",
-              title: null,
-              childrenIds: favorites,
-              data: { itemContainer: { containerType: { topApps: { _0: { default: {} } } } } },
-            },
-          ].flatMap((entry) => [entry.id, entry]),
-          topAppsContainerIDs: [{ default: {} }, "favorites"],
+          items: [...items, favoritesContainer("favorites", favorites, DEFAULT_PROFILE)].flatMap(
+            (entry) => [entry.id, entry],
+          ),
+          topAppsContainerIDs,
         },
       ],
     },
@@ -92,7 +108,7 @@ const homeWith = (pinnedIds: ReadonlyArray<string>, items: ReadonlyArray<ItemDra
 
 const pinnedOfHome = (content: string) => convert(content).document.spaces[0]?.pinned
 
-describe("arcSidebarToExport", () => {
+describe("convertArcSidebar", () => {
   it("turns each Arc Space into a Space with its pinned tabs, folders and split views in order", () => {
     const { document } = convert(arcSidebar)
 
@@ -168,13 +184,30 @@ describe("arcSidebarToExport", () => {
         pinned: [{ type: "pin", title: "Weather", url: "https://weather.example.com/" }],
         tabs: [],
       },
+      {
+        id: "space-personal",
+        name: "Personal",
+        pinned: [
+          { type: "pin", title: "Recipes", url: "https://recipes.example.com/" },
+          {
+            type: "folder",
+            title: "Trips",
+            icon: null,
+            children: [
+              { type: "pin", title: "Packing List", url: "https://packing.example.com/list" },
+            ],
+          },
+        ],
+        tabs: [{ title: "Forecast", url: "https://weather.example.com/week" }],
+      },
     ])
   })
 
-  it("turns Arc's Favorites into Favorites, keeping only web pages", () => {
+  it("turns the Favorites of every profile into Favorites, keeping only web pages, each page once", () => {
     expect(convert(arcSidebar).document.favorites).toStrictEqual([
       { title: "Calendar", url: "https://calendar.example.com/" },
       { title: "Music", url: "https://music.example.com/" },
+      { title: "Photos", url: "https://photos.example.com/" },
     ])
   })
 
@@ -184,6 +217,7 @@ describe("arcSidebarToExport", () => {
       widerSplits: 1,
       unsupportedItems: 1,
       spacesWithoutTheme: ["space-untitled"],
+      spacesNamedByImport: [],
     })
   })
 
@@ -461,6 +495,120 @@ describe("arcSidebarToExport", () => {
     ])
   })
 
+  it("reads a Space listed twice under the same ID once", () => {
+    const content = arcFile({
+      spaces: [space("home", "Home"), space("home", "Home again")],
+      items: [container("home-pinned", [])],
+    })
+
+    expect(conversionOf(content).spaces.map(({ space }) => space.name)).toStrictEqual(["Home"])
+  })
+
+  describe("profiles", () => {
+    const profileOfSpaceWith = (profile: unknown) =>
+      conversionOf(
+        arcFile({
+          spaces: [space("home", "Home", profile === undefined ? {} : { profile })],
+          items: [container("home-pinned", [])],
+        }),
+      ).spaces[0]?.profile
+
+    it("knows which profile each of the file's Spaces belongs to", () => {
+      expect(conversionOf(arcSidebar).spaces.map(({ profile }) => profile)).toStrictEqual([
+        ArcProfile.Default(),
+        ArcProfile.Default(),
+        ArcProfile.Default(),
+        ArcProfile.Custom({ directory: "Profile 1" }),
+      ])
+    })
+
+    it.each([
+      ["an empty object", { default: {} }],
+      ["true", { default: true }],
+      ["a plain label", "default"],
+    ])("reads the default profile labelled with %s", (_, profile) => {
+      expect(profileOfSpaceWith(profile)).toStrictEqual(ArcProfile.Default())
+    })
+
+    it.each([
+      ["wrapped", { custom: { _0: { directoryBasename: "Profile 2" } } }],
+      ["unwrapped", { custom: { directoryBasename: "Profile 2" } }],
+      ["as a bare name", { custom: "Profile 2" }],
+      ["wrapped as a bare name", { custom: { _0: "Profile 2" } }],
+    ])("reads another profile by its folder's name, %s", (_, profile) => {
+      expect(profileOfSpaceWith(profile)).toStrictEqual(
+        ArcProfile.Custom({ directory: "Profile 2" }),
+      )
+    })
+
+    it.each([
+      ["no profile", undefined],
+      ["a profile of a kind it doesn't know", { guest: {} }],
+      ["another profile without a folder's name", { custom: { _0: { name: 7 } } }],
+      ["another profile with a blank folder's name", { custom: { directoryBasename: " " } }],
+    ])("tells apart no profile for a Space with %s", (_, profile) => {
+      expect(profileOfSpaceWith(profile)).toStrictEqual(ArcProfile.Unknown())
+    })
+
+    it("keeps each profile's Favorites apart, each page once within a profile", () => {
+      expect(
+        conversionOf(arcSidebar).favorites.map(({ profile, links }) => ({
+          profile,
+          urls: links.map(({ url }) => url),
+        })),
+      ).toStrictEqual([
+        {
+          profile: ArcProfile.Default(),
+          urls: ["https://calendar.example.com/", "https://music.example.com/"],
+        },
+        {
+          profile: ArcProfile.Custom({ directory: "Profile 1" }),
+          urls: ["https://photos.example.com/", "https://calendar.example.com/"],
+        },
+      ])
+    })
+
+    const favoritesFile = (topAppsContainerIDs: ReadonlyArray<unknown>) =>
+      JSON.stringify({
+        sidebar: {
+          containers: [
+            {
+              spaces: [space("home", "Home")],
+              items: [
+                container("home-pinned", []),
+                favoritesContainer("mine", ["a"], { default: true }),
+                favoritesContainer("theirs", ["b"], { custom: { _0: { directoryBasename: "P" } } }),
+                tab("a", "https://a.example/"),
+                tab("b", "https://b.example/"),
+              ],
+              topAppsContainerIDs,
+            },
+          ],
+        },
+      })
+
+    it("takes the profile of Favorites from the container's type when the label can't be read", () => {
+      const content = favoritesFile([{ unknownLabel: {} }, "mine", 42, "theirs"])
+
+      expect(conversionOf(content).favorites.map(({ profile }) => profile)).toStrictEqual([
+        ArcProfile.Default(),
+        ArcProfile.Custom({ directory: "P" }),
+      ])
+    })
+
+    it("finds each profile's Favorites by their container's type when the file doesn't list them", () => {
+      expect(
+        conversionOf(favoritesFile([])).favorites.map(({ profile, links }) => [
+          profile,
+          links.map(({ url }) => url),
+        ]),
+      ).toStrictEqual([
+        [ArcProfile.Default(), ["https://a.example/"]],
+        [ArcProfile.Custom({ directory: "P" }), ["https://b.example/"]],
+      ])
+    })
+  })
+
   describe("Space themes", () => {
     const srgb = (red: number, green: number, blue: number, alpha = 1) => ({
       red,
@@ -694,7 +842,7 @@ describe("arcSidebarToExport", () => {
         JSON.stringify({ format: "katip.export", version: 1, spaces: [], favorites: [] }),
       ],
     ])("refuses %s", (_, content) => {
-      expect(arcSidebarToExport(content, CONVERTED_AT)).toStrictEqual(
+      expect(convertArcSidebar(content, CONVERTED_AT)).toStrictEqual(
         Result.fail(new NotArcSidebar()),
       )
     })

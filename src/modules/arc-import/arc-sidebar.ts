@@ -21,6 +21,7 @@ const ArcSpace = Schema.Struct({
   containerIDs: Schema.optional(Schema.Array(Schema.Unknown)),
   newContainerIDs: Schema.optional(Schema.Array(Schema.Unknown)),
   customInfo: Schema.optional(Schema.Unknown),
+  profile: Schema.optional(Schema.Unknown),
 })
 
 const ArcItem = Schema.Struct({
@@ -41,6 +42,8 @@ const SplitViewData = Schema.Struct({ splitView: Schema.Struct({}) })
 const ContainerData = Schema.Struct({
   itemContainer: Schema.Struct({ containerType: Schema.optional(Schema.Unknown) }),
 })
+const FavoritesContainerType = Schema.Struct({ topApps: Schema.Unknown })
+const ProfileDirectory = Schema.Struct({ directoryBasename: Schema.String })
 
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 const decodeFile = Schema.decodeUnknownOption(ArcSidebarFile)
@@ -51,9 +54,21 @@ const decodeTab = Schema.decodeUnknownOption(TabData)
 const decodeList = Schema.decodeUnknownOption(ListData)
 const decodeSplitView = Schema.decodeUnknownOption(SplitViewData)
 const decodeContainer = Schema.decodeUnknownOption(ContainerData)
+const decodeFavoritesContainerType = Schema.decodeUnknownOption(FavoritesContainerType)
+const decodeProfileDirectory = Schema.decodeUnknownOption(ProfileDirectory)
 
 /** The file isn't JSON, or has no sidebar with Spaces. */
 export class NotArcSidebar extends Schema.TaggedError<NotArcSidebar>()("NotArcSidebar", {}) {}
+
+/** The Arc profile that a Space or a set of Favorites belongs to. */
+export type ArcProfile = Data.TaggedEnum<{
+  Default: Record<never, never>
+  /** `directory` names the profile's folder among Arc's data, such as `Profile 1`. */
+  Custom: { readonly directory: string }
+  /** The file names no profile, or names one in a form Katip can't read. */
+  Unknown: Record<never, never>
+}>
+export const ArcProfile = Data.taggedEnum<ArcProfile>()
 
 export interface ArcSpaceEntry {
   readonly id: string
@@ -64,6 +79,7 @@ export interface ArcSpaceEntry {
   readonly unpinnedContainerId: Option.Option<string>
   /** Holds the Space's theme, among other things. */
   readonly customInfo: unknown
+  readonly profile: ArcProfile
 }
 
 /** `Unsupported` is anything with no Katip equivalent, such as notes and easels. */
@@ -71,8 +87,9 @@ export type ArcItemKind = Data.TaggedEnum<{
   Tab: { readonly url: string; readonly savedTitle: Option.Option<string> }
   Folder: Record<never, never>
   SplitView: Record<never, never>
-  /** Holds a Space's pinned or unpinned entries, or the Favorites. */
-  Container: { readonly holdsFavorites: boolean }
+  /** Holds a Space's pinned or unpinned entries. */
+  Container: Record<never, never>
+  FavoritesContainer: { readonly profile: ArcProfile }
   Unsupported: Record<never, never>
 }>
 export const ArcItemKind = Data.taggedEnum<ArcItemKind>()
@@ -85,14 +102,19 @@ export interface ArcItemEntry {
   readonly kind: ArcItemKind
 }
 
+/** An item whose children are one profile's Favorites. */
+export interface ArcFavoritesContainer {
+  readonly id: string
+  readonly profile: ArcProfile
+}
+
 export interface ArcSidebar {
   /** The version Arc wrote in the file. */
   readonly version: Option.Option<string>
-  /** In the order Arc lists them. */
+  /** In the order Arc lists them, each once. */
   readonly spaces: ReadonlyArray<ArcSpaceEntry>
   readonly items: ReadonlyMap<string, ArcItemEntry>
-  /** The items whose children are the Favorites. */
-  readonly favoritesContainerIds: ReadonlyArray<string>
+  readonly favoritesContainers: ReadonlyArray<ArcFavoritesContainer>
 }
 
 const nonBlank = (text: string | null | undefined): Option.Option<string> =>
@@ -116,16 +138,51 @@ const containerIdOf = (space: typeof ArcSpace.Type, label: string) =>
     containerIdAfter(space.containerIDs ?? [], label),
   )
 
+/** The value Arc wraps in `{ "_0": … }`, or `value` itself when it isn't wrapped. */
+const unwrapped = (value: unknown): unknown =>
+  Predicate.isObject(value) && Predicate.hasProperty(value, "_0") ? value._0 : value
+
+// Only some files show how Arc writes another profile, so the folder's name is read with or
+// without the wrapping, and as a bare string, rather than from one exact shape
+const profileDirectoryIn = (custom: unknown): Option.Option<string> =>
+  Option.firstSomeOf([
+    Option.flatMap(Option.liftPredicate(custom, Predicate.isString), nonBlank),
+    Option.flatMap(decodeProfileDirectory(custom), ({ directoryBasename }) =>
+      nonBlank(directoryBasename),
+    ),
+    unwrapped(custom) === custom ? Option.none() : profileDirectoryIn(unwrapped(custom)),
+  ])
+
+/**
+ * The profile a label names: `{ "default": {} }` (or `true`) for the default profile, and one like
+ * `{ "custom": { "_0": { "directoryBasename": "Profile 1" } } }` for another.
+ */
+const profileOf = (label: unknown): ArcProfile => {
+  if (isLabel(label, "default")) return ArcProfile.Default()
+  if (!Predicate.isObject(label) || !Predicate.hasProperty(label, "custom")) {
+    return ArcProfile.Unknown()
+  }
+  return Option.match(profileDirectoryIn(label.custom), {
+    onNone: () => ArcProfile.Unknown(),
+    onSome: (directory) => ArcProfile.Custom({ directory }),
+  })
+}
+
 const spaceEntryOf = (space: typeof ArcSpace.Type): ArcSpaceEntry => ({
   id: space.id,
   title: nonBlank(space.title),
   pinnedContainerId: containerIdOf(space, "pinned"),
   unpinnedContainerId: containerIdOf(space, "unpinned"),
   customInfo: space.customInfo,
+  profile: profileOf(space.profile),
 })
 
-const holdsFavorites = (containerType: unknown) =>
-  Predicate.isObject(containerType) && Predicate.hasProperty(containerType, "topApps")
+const containerKindOf = (containerType: unknown): ArcItemKind =>
+  Option.match(decodeFavoritesContainerType(containerType), {
+    onNone: () => ArcItemKind.Container(),
+    onSome: ({ topApps }) =>
+      ArcItemKind.FavoritesContainer({ profile: profileOf(unwrapped(topApps)) }),
+  })
 
 const kindOf = (data: unknown): ArcItemKind =>
   Option.firstSomeOf([
@@ -135,7 +192,7 @@ const kindOf = (data: unknown): ArcItemKind =>
     Option.map(decodeList(data), () => ArcItemKind.Folder()),
     Option.map(decodeSplitView(data), () => ArcItemKind.SplitView()),
     Option.map(decodeContainer(data), ({ itemContainer }) =>
-      ArcItemKind.Container({ holdsFavorites: holdsFavorites(itemContainer.containerType) }),
+      containerKindOf(itemContainer.containerType),
     ),
   ]).pipe(Option.getOrElse(() => ArcItemKind.Unsupported()))
 
@@ -154,17 +211,30 @@ const objectsIn = <A>(
 ): ReadonlyArray<A> =>
   Array.getSomes(entries.filter(Predicate.isObject).map((entry) => decode(entry)))
 
-// Without the labels, the Favorites container is still recognizable by its type
-const favoritesContainerIdsOf = (
+const ownProfileOf = (container: ArcItemEntry | undefined): ArcProfile =>
+  container?.kind._tag === "FavoritesContainer" ? container.kind.profile : ArcProfile.Unknown()
+
+/**
+ * Arc lists each profile's Favorites container as the profile's label, then the container's ID.
+ * The container's type names the profile too, for when the label can't be read. Without the list,
+ * the containers are still recognizable by their type.
+ */
+const favoritesContainersOf = (
   topAppsContainerIds: ReadonlyArray<unknown>,
-  items: ReadonlyArray<ArcItemEntry>,
-): ReadonlyArray<string> => {
-  const listed = topAppsContainerIds.filter(Predicate.isString)
-  return listed.length > 0
-    ? listed
-    : items
-        .filter((item) => item.kind._tag === "Container" && item.kind.holdsFavorites)
-        .map((item) => item.id)
+  items: ReadonlyMap<string, ArcItemEntry>,
+): ReadonlyArray<ArcFavoritesContainer> => {
+  const listed = topAppsContainerIds.flatMap((entry, index) =>
+    Predicate.isString(entry) ? [{ id: entry, label: topAppsContainerIds[index - 1] }] : [],
+  )
+  if (listed.length === 0) {
+    return [...items.values()].flatMap((item) =>
+      item.kind._tag === "FavoritesContainer" ? [{ id: item.id, profile: item.kind.profile }] : [],
+    )
+  }
+  return listed.map(({ id, label }) => {
+    const labelled = profileOf(label)
+    return { id, profile: labelled._tag === "Unknown" ? ownProfileOf(items.get(id)) : labelled }
+  })
 }
 
 const versionOf = (version: unknown): Option.Option<string> =>
@@ -178,7 +248,8 @@ const versionOf = (version: unknown): Option.Option<string> =>
  *
  * @remarks
  * Fields Katip doesn't use are ignored, and Spaces and items without the expected shape are
- * skipped, so files from other versions of Arc still read.
+ * skipped, so files from other versions of Arc still read. A Space listed again under the same ID
+ * is read once.
  */
 export const readArcSidebar = (content: string): Result.Result<ArcSidebar, NotArcSidebar> =>
   Result.fromOption(
@@ -186,15 +257,17 @@ export const readArcSidebar = (content: string): Result.Result<ArcSidebar, NotAr
       Option.map(
         Array.findFirst(file.sidebar.containers, (entry) => decodeSpacesContainer(entry)),
         (container): ArcSidebar => {
-          const items = objectsIn(container.items, decodeItem).map(itemEntryOf)
+          const items = new Map(
+            objectsIn(container.items, decodeItem).map((item) => [item.id, itemEntryOf(item)]),
+          )
           return {
             version: versionOf(file.version),
-            spaces: objectsIn(container.spaces, decodeSpace).map(spaceEntryOf),
-            items: new Map(items.map((item) => [item.id, item])),
-            favoritesContainerIds: favoritesContainerIdsOf(
-              container.topAppsContainerIDs ?? [],
-              items,
+            spaces: Array.dedupeWith(
+              objectsIn(container.spaces, decodeSpace).map(spaceEntryOf),
+              (a, b) => a.id === b.id,
             ),
+            items,
+            favoritesContainers: favoritesContainersOf(container.topAppsContainerIDs ?? [], items),
           }
         },
       ),
