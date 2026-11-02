@@ -15,7 +15,7 @@ export default defineConfig({
       },
       {
         plugins: [svelte()],
-        // Svelte はサーバー向けビルドだと mount できないため、ブラウザ向けエクスポートを解決させる
+        // Svelte's server build can't mount components, so resolve its browser exports
         resolve: { conditions: ["browser"] },
         test: {
           name: "ui",

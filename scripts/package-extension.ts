@@ -9,13 +9,14 @@ const { version }: { version: string } = JSON.parse(readFileSync(fromRoot("packa
 const extensionDir = fromRoot(".release/extension")
 const zipPath = fromRoot(`.release/katip-${version}.zip`)
 
-// `pnpm build` の dist/ は `pnpm dev` が開発ビルドを書く場所でもあり、そこから詰めると開発ビルドを
-// 配りかねない。読み込んで使っている開発ビルドも、本番ビルドで置き換えてしまう
+// Not the dist/ of `pnpm build`: `pnpm dev` writes development builds there too, so packing it could
+// ship a development build, and building into it would replace the development build in use
 execFileSync("pnpm", ["exec", "vite", "build", "--outDir", extensionDir, "--emptyOutDir"], {
   stdio: "inherit",
 })
 
-// zip は既にある書庫へ書き足すので、前に作った同じ版の zip に消したファイルが残ってしまう
+// zip adds to an existing archive, so an earlier zip of the same version would keep files that have
+// since been deleted
 rmSync(zipPath, { force: true })
 execFileSync("zip", ["-r", "-X", "-q", zipPath, "."], { cwd: extensionDir, stdio: "inherit" })
 

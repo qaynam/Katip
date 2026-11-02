@@ -5,7 +5,7 @@ import ts from "typescript-eslint"
 import svelteConfig from "./svelte.config.js"
 
 const crossModuleMessage =
-  "モジュールの外へは相対パスで出ず、#modules/<name> などの公開エントリ経由で参照する"
+  "Don't leave a module through a relative path; import the other module's public entry, such as #modules/<name>"
 
 export default ts.config(
   { ignores: ["dist/", "node_modules/", ".e2e/", ".release/", ".claude/worktrees/"] },
