@@ -12,6 +12,7 @@ export const background: CatalogSection<"background"> = {
   "background.split.alreadySplit": "すでに分割しているタブです",
   "background.split.otherWindow": "別のウィンドウのタブとは分割できません",
   "background.pin.notFound": "ピン留めが見つかりません",
+  "background.folder.notFound": "フォルダが見つかりません",
   "background.folder.cannotOpen": "フォルダは開けません",
   "background.folder.tooDeepToCreate": "これ以上深い階層にはフォルダを作れません",
   "background.folder.tooDeepToMove": "これ以上深い階層には入れられません",

@@ -12,6 +12,7 @@ export const background = {
   "background.split.alreadySplit": "This tab is already in a split view",
   "background.split.otherWindow": "Tabs in different windows can't be split",
   "background.pin.notFound": "Pin not found",
+  "background.folder.notFound": "Folder not found",
   "background.folder.cannotOpen": "Folders can't be opened",
   "background.folder.tooDeepToCreate": "Folders can't be nested any deeper",
   "background.folder.tooDeepToMove": "It can't be moved any deeper",

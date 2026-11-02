@@ -15,6 +15,7 @@ import {
   isFolderExpanded,
   SPACE_ROOT_DEPTH,
   type FolderExpansion,
+  type FolderIcon,
   type FolderNestingRule,
   type PinnedLiveFolder,
   type PinnedNode,
@@ -47,6 +48,8 @@ export interface SidebarSources {
   /** 読めた Space のピン留めツリー。含まれない Space は読めなかったものとして表示する。 */
   readonly pinnedTrees: ReadonlyMap<SpaceId, PinnedTree>
   readonly folderExpansion: FolderExpansion
+  /** 含まれないフォルダはアイコンを選んでいない。 */
+  readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
   readonly liveFolders: LiveFolderSnapshot
   /** ビューに載せる文言（失敗の理由や名前の無いタブの名前など）の言語。 */
   readonly translator: Translator
@@ -143,6 +146,7 @@ const splitPinnedTabs = (spaceTabs: ReadonlyArray<SpaceTab>, tree: Option.Option
 interface PinnedProjection {
   readonly openTabs: ReadonlyMap<BookmarkId, SpaceTab>
   readonly folderExpansion: FolderExpansion
+  readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
   readonly liveFolders: LiveFolderSnapshot
   readonly translator: Translator
   readonly untitledTab: string
@@ -274,6 +278,7 @@ const pinnedNodeViews = (
       _tag: "PinnedFolder",
       bookmarkId: node.id,
       title: node.title,
+      icon: projection.folderIcons.get(node.id) ?? null,
       isExpanded,
       canCreateSubfolder: canCreateFolderInside(depth, projection.rule),
       children,
@@ -294,6 +299,7 @@ const spaceView = (
   const projection: PinnedProjection = {
     openTabs: byBookmark,
     folderExpansion: sources.folderExpansion,
+    folderIcons: sources.folderIcons,
     liveFolders: sources.liveFolders,
     translator: sources.translator,
     untitledTab: sources.translator.t("common.newTab"),

@@ -9,11 +9,13 @@ import {
 } from "#modules/live-folders"
 import {
   FolderExpansionStore,
+  FolderIconStore,
   LiveFolderStore,
   liveFoldersIn,
   PinnedBookmarks,
   PinnedParent,
   SpaceFolders,
+  type FolderIcon,
   type FolderNestingRule,
   type PinnedNode,
   type PinnedPosition,
@@ -788,6 +790,21 @@ const pinnedCommands = {
     bookmarkId: BookmarkId
     isExpanded: boolean
   }) => FolderExpansionStore.use((store) => store.setExpanded(bookmarkId, isExpanded)),
+
+  // ブックマークや分割ピンの ID にも付けられると、それらを消すときにはアイコンを捨てないので
+  // 保存値に残り続ける。普通のフォルダだけに付けさせる
+  SetFolderIcon: Effect.fnUntraced(function* ({
+    bookmarkId,
+    icon,
+  }: {
+    bookmarkId: BookmarkId
+    icon: FolderIcon | null
+  }) {
+    const { node } = yield* (yield* PinnedBookmarks).locate(bookmarkId)
+    if (node._tag !== "PinnedFolder") return yield* reject("background.folder.notFound")
+    const store = yield* FolderIconStore
+    yield* icon === null ? store.forget([bookmarkId]) : store.setIcon(bookmarkId, icon)
+  }),
 
   DeleteFolder: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
     const pinned = yield* PinnedBookmarks

@@ -12,6 +12,7 @@ export const background: CatalogSection<"background"> = {
   "background.split.alreadySplit": "此标签页已在分屏视图中",
   "background.split.otherWindow": "无法与其他窗口中的标签页分屏",
   "background.pin.notFound": "找不到该固定标签页",
+  "background.folder.notFound": "找不到该文件夹",
   "background.folder.cannotOpen": "无法打开文件夹",
   "background.folder.tooDeepToCreate": "无法在更深的层级中创建文件夹",
   "background.folder.tooDeepToMove": "无法移到更深的层级",

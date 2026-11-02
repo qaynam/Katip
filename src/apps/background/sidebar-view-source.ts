@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import { LiveFolders } from "#modules/live-folders"
-import { FolderExpansionStore, PinnedBookmarks } from "#modules/pinned"
+import { FolderExpansionStore, FolderIconStore, PinnedBookmarks } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
 import { projectSidebarView } from "#modules/sidebar-view"
 import { Tabs, type WindowId } from "#platform/browser"
@@ -19,6 +19,7 @@ export const buildSidebarView = Effect.fnUntraced(function* (windowId: WindowId)
     windowTabs: yield* (yield* Tabs).query({ windowId }),
     pinnedTrees: yield* (yield* PinnedBookmarks).loadAllSpaceTrees,
     folderExpansion: yield* (yield* FolderExpansionStore).load,
+    folderIcons: yield* (yield* FolderIconStore).load,
     liveFolders: yield* (yield* LiveFolders).snapshot,
     translator: yield* currentTranslator,
     preferences: {

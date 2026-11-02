@@ -7,6 +7,7 @@ import { BookmarkId, Bookmarks, type BookmarkFolderType } from "#platform/browse
 import { FakeBrowser } from "#platform/browser-testing"
 import { isFolderExpanded } from "./folder-expansion"
 import { FolderExpansionStore } from "./folder-expansion-store"
+import { FolderIconStore } from "./folder-icon-store"
 import { FolderDepthExceeded } from "./pinned-errors"
 import { LiveFolderStore } from "./live-folder-store"
 import { PinnedBookmarks, PinnedParent } from "./pinned-bookmarks"
@@ -645,6 +646,23 @@ describe("削除", () => {
       assert.isFalse(yield* exists(outer))
       assert.isFalse(yield* exists(pinId))
       assert.deepStrictEqual(yield* store.load, {})
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("フォルダを削除すると、そのフォルダと配下のフォルダのアイコンも捨てる", () =>
+    Effect.gen(function* () {
+      const pinned = yield* PinnedBookmarks
+      const icons = yield* FolderIconStore
+      const outer = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "1" }, syncOff)
+      const inner = yield* pinned.createFolder({ parent: inFolder(outer) }, { title: "2" }, syncOff)
+      const other = yield* pinned.createFolder({ parent: spaceRoot(work) }, { title: "3" }, syncOff)
+      yield* icons.setIcon(outer, "star")
+      yield* icons.setIcon(inner, "moon")
+      yield* icons.setIcon(other, "leaf")
+
+      yield* pinned.removeFolder(outer)
+
+      assert.deepStrictEqual(yield* icons.load, new Map([[other, "leaf"]]))
     }).pipe(Effect.provide(TestLayer)),
   )
 })

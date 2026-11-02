@@ -9,6 +9,7 @@ import {
   type FolderNestingRule,
 } from "./folder-depth"
 import { FolderExpansionStore } from "./folder-expansion-store"
+import { FolderIconStore } from "./folder-icon-store"
 import { LiveFolderStore } from "./live-folder-store"
 import {
   FolderDepthExceeded,
@@ -159,7 +160,7 @@ export class PinnedBookmarks extends Context.Service<
     removeBookmark(
       bookmarkId: BookmarkId,
     ): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
-    /** 中身ごと消し、配下のフォルダの開閉状態と、配下の分割ピン・ライブフォルダの印も捨てる。 */
+    /** 中身ごと消し、配下のフォルダの開閉状態とアイコンと、配下の分割ピン・ライブフォルダの印も捨てる。 */
     removeFolder(folderId: BookmarkId): Effect.Effect<void, PinnedNodeNotFound | BrowserApiError>
   }
 >()("katip/pinned/PinnedBookmarks") {
@@ -169,6 +170,7 @@ export class PinnedBookmarks extends Context.Service<
       const bookmarks = yield* Bookmarks
       const spaceFolders = yield* SpaceFolders
       const folderExpansion = yield* FolderExpansionStore
+      const folderIcons = yield* FolderIconStore
       const splitFolders = yield* SplitFolderStore
       const liveFolders = yield* LiveFolderStore
 
@@ -375,6 +377,7 @@ export class PinnedBookmarks extends Context.Service<
           const liveFolderIds = liveFoldersIn(location.node.children).map((live) => live.id)
           yield* bookmarks.removeTree(folderId)
           yield* folderExpansion.forget([...folderIds, ...liveFolderIds])
+          yield* folderIcons.forget(folderIds)
           yield* splitFolders.forget(splitIdsWithin(location.node))
           // 外でブックマークを入れられて普通のフォルダとして見えているライブフォルダの印も残さない
           yield* liveFolders.forget([...folderIds, ...liveFolderIds])
@@ -384,12 +387,13 @@ export class PinnedBookmarks extends Context.Service<
   )
 
   /**
-   * {@link SpaceFolders}、{@link FolderExpansionStore}、{@link SplitFolderStore}、
-   * {@link LiveFolderStore} も合わせて提供する。
+   * {@link SpaceFolders}、{@link FolderExpansionStore}、{@link FolderIconStore}、
+   * {@link SplitFolderStore}、{@link LiveFolderStore} も合わせて提供する。
    */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(SpaceFolders.layer),
     Layer.provideMerge(FolderExpansionStore.layer),
+    Layer.provideMerge(FolderIconStore.layer),
     Layer.provideMerge(SplitFolderStore.layer),
     Layer.provideMerge(LiveFolderStore.layer),
   )

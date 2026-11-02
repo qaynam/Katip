@@ -84,6 +84,7 @@ export const pinnedFolder = (
   _tag: "PinnedFolder",
   bookmarkId: BookmarkId.make(id),
   title: `フォルダ ${id}`,
+  icon: null,
   isExpanded: true,
   canCreateSubfolder: true,
   children: [],

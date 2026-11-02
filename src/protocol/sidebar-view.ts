@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
 import { LiveItem, LiveSort, LiveSource } from "#modules/live-folders"
+import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -89,6 +90,7 @@ export interface PinnedFolderView {
   readonly _tag: "PinnedFolder"
   readonly bookmarkId: BookmarkId
   readonly title: string
+  readonly icon: FolderIcon | null
   readonly isExpanded: boolean
   readonly canCreateSubfolder: boolean
   readonly children: ReadonlyArray<PinnedNodeView>
@@ -99,6 +101,7 @@ interface PinnedFolderViewEncoded {
   readonly _tag: "PinnedFolder"
   readonly bookmarkId: string
   readonly title: string
+  readonly icon: FolderIcon | null
   readonly isExpanded: boolean
   readonly canCreateSubfolder: boolean
   readonly children: ReadonlyArray<PinnedNodeViewEncoded>
@@ -118,6 +121,8 @@ type PinnedNodeViewEncoded =
 export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   bookmarkId: BookmarkId,
   title: Schema.String,
+  // null はアイコンを選んでいない。フォルダの絵で表示する
+  icon: Schema.NullOr(FolderIcon),
   isExpanded: Schema.Boolean,
   canCreateSubfolder: Schema.Boolean,
   children: Schema.Array(

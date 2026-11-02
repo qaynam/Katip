@@ -734,6 +734,91 @@ describe("フォルダの移動", () => {
   )
 })
 
+describe("フォルダのアイコン", () => {
+  const homeFolders = (view: SidebarView) =>
+    Option.match(spaceNamed(view, "ホーム"), {
+      onNone: () => [],
+      onSome: (space) =>
+        space.pinned._tag === "Available"
+          ? space.pinned.nodes.filter((node) => node._tag === "PinnedFolder")
+          : [],
+    })
+
+  const createFolderIn = (sidebar: Effect.Success<ReturnType<typeof openSidebar>>) =>
+    Effect.gen(function* () {
+      const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
+      const outcome = yield* sidebar.run({ _tag: "CreateFolder", spaceId: home, parentId: null })
+      return outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null
+        ? outcome.createdBookmarkId
+        : yield* Effect.die(new Error("フォルダを作れなかった"))
+    })
+
+  it.live("フォルダに選んだアイコンが、ビューのフォルダに載る", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const folderId = yield* createFolderIn(sidebar)
+
+        yield* sidebar.run({ _tag: "SetFolderIcon", bookmarkId: folderId, icon: "planet" })
+        const view = yield* sidebar.viewWhere((v) =>
+          homeFolders(v).some((folder) => folder.icon !== null),
+        )
+
+        expect(homeFolders(view).map((folder) => folder.icon)).toStrictEqual(["planet"])
+      }),
+    ),
+  )
+
+  it.live("アイコンを外したフォルダは、ビューでアイコンを持たない", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        const folderId = yield* createFolderIn(sidebar)
+        yield* sidebar.run({ _tag: "SetFolderIcon", bookmarkId: folderId, icon: "planet" })
+        yield* sidebar.viewWhere((v) => homeFolders(v).some((folder) => folder.icon !== null))
+
+        yield* sidebar.run({ _tag: "SetFolderIcon", bookmarkId: folderId, icon: null })
+        const view = yield* sidebar.viewWhere((v) =>
+          homeFolders(v).every((folder) => folder.icon === null),
+        )
+
+        expect(homeFolders(view).map((folder) => folder.icon)).toStrictEqual([null])
+      }),
+    ),
+  )
+
+  it.live("フォルダでないピンにアイコンを付けようとすると、理由つきで断られる", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://mail.example/" }, { url: "https://b.example/" }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
+        const pinned = yield* sidebar.viewWhere((v) => pinnedItems(v, "ホーム").length === 1)
+        const pin = Option.getOrThrow(Array.head(pinnedItems(pinned, "ホーム")))
+
+        const outcome = yield* sidebar.run({
+          _tag: "SetFolderIcon",
+          bookmarkId: pin.bookmarkId,
+          icon: "star",
+        })
+
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "フォルダが見つかりません" })
+      }),
+    ),
+  )
+})
+
 describe("Chrome の API が応答しないとき", () => {
   it.live("時間を超えた操作は打ち切られ、その後の操作は処理される", () =>
     inBackground(

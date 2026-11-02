@@ -6,6 +6,8 @@ export {
 } from "./folder-depth"
 export { FolderExpansion, isFolderExpanded } from "./folder-expansion"
 export { FolderExpansionStore } from "./folder-expansion-store"
+export { FolderIcon } from "./folder-icon"
+export { FolderIconStore } from "./folder-icon-store"
 export { LiveFolderStore } from "./live-folder-store"
 export {
   PinnedBookmarks,

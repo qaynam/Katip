@@ -81,6 +81,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
     [spaceId("work"), []],
   ]),
   folderExpansion: {},
+  folderIcons: new Map(),
   liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map() },
   translator: makeTranslator("ja"),
   preferences: {
@@ -429,6 +430,21 @@ describe("フォルダ", () => {
     })
 
     expect(folderOf(view).canCreateSubfolder).toBe(false)
+  })
+
+  it("アイコンを選んだフォルダは、そのアイコンを載せる", () => {
+    const view = project({
+      pinnedTrees: homeWithPin(tree),
+      folderIcons: new Map([[bookmarkId("f"), "star"]]),
+    })
+
+    expect(folderOf(view).icon).toBe("star")
+  })
+
+  it("アイコンを選んでいないフォルダは、アイコンを持たない", () => {
+    const view = project({ pinnedTrees: homeWithPin(tree) })
+
+    expect(folderOf(view).icon).toBeNull()
   })
 })
 

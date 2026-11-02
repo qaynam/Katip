@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
 import { LiveSort, LiveSource } from "#modules/live-folders"
+import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
@@ -79,6 +80,8 @@ export const SidebarCommand = Schema.Union([
     parentId: Schema.NullOr(BookmarkId),
   }),
   Schema.TaggedStruct("SetFolderExpanded", { bookmarkId: BookmarkId, isExpanded: Schema.Boolean }),
+  // null はフォルダの絵に戻す
+  Schema.TaggedStruct("SetFolderIcon", { bookmarkId: BookmarkId, icon: Schema.NullOr(FolderIcon) }),
   Schema.TaggedStruct("DeleteFolder", { bookmarkId: BookmarkId }),
 
   Schema.TaggedStruct("RestoreArchiveEntry", { windowId: WindowId, entryId: ArchiveEntryId }),
