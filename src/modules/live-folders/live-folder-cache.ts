@@ -7,11 +7,11 @@ const LiveFolderRecords = Schema.Record(BookmarkId, LiveFolderRecord)
 type LiveFolderRecords = typeof LiveFolderRecords.Type
 
 /**
- * ライブフォルダの中身を、ブックマークではなくこの端末の storage に持つ。
+ * Holds the contents of live folders in this device's storage rather than in bookmarks.
  *
  * @remarks
- * 取得のたびにブックマークを書き換えると、ブックマークの変更イベントと Chrome Sync の
- * 同期が数分おきに走り続ける。中身は取得し直せば戻るので、端末ごとのキャッシュで足りる。
+ * Rewriting bookmarks on every fetch would keep bookmark change events and Chrome Sync running
+ * every few minutes. The contents come back with the next fetch, so a per-device cache is enough.
  */
 export class LiveFolderCache extends Context.Service<
   LiveFolderCache,
@@ -22,13 +22,13 @@ export class LiveFolderCache extends Context.Service<
       folderId: BookmarkId,
       next: (previous: Option.Option<LiveFolderRecord>) => LiveFolderRecord,
     ): Effect.Effect<void, BrowserApiError>
-    /** 記録の無いフォルダには何もしない。 */
+    /** Does nothing for a folder that has no record. */
     modify(
       folderId: BookmarkId,
       change: (record: LiveFolderRecord) => LiveFolderRecord,
     ): Effect.Effect<void, BrowserApiError>
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
-    /** `folderIds` に含まれないフォルダの記録を捨てる。 */
+    /** Discards the record of every folder not in `folderIds`. */
     retainOnly(folderIds: ReadonlySet<BookmarkId>): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/live-folders/LiveFolderCache") {

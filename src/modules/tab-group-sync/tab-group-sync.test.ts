@@ -23,7 +23,7 @@ class CallLog extends Context.Service<
   CallLog,
   {
     readonly calls: Ref.Ref<ReadonlyArray<ChromeCall>>
-    /** 条件に合う次の呼び出しを 1 回だけ失敗させる。 */
+    /** Fails the next matching call, once. */
     failOnce(matches: (call: ChromeCall) => boolean): Effect.Effect<void>
     around<A>(
       call: ChromeCall,
@@ -42,14 +42,17 @@ class CallLog extends Context.Service<
         around: (call, effect) =>
           Effect.gen(function* () {
             yield* Ref.update(calls, Array.append(call))
-            // 並行に走らせた同期が、実際に途中で入れ替わるようにする
+            // Lets syncs run concurrently actually interleave midway
             yield* Effect.yieldNow
             const sprung = yield* Ref.modify(traps, (pending) => {
               const index = pending.findIndex((matches) => matches(call))
               return index < 0 ? [false, pending] : [true, Array.remove(pending, index)]
             })
             if (sprung) {
-              return yield* new BrowserApiError({ api: call.api, cause: new Error("注入した失敗") })
+              return yield* new BrowserApiError({
+                api: call.api,
+                cause: new Error("Injected failure"),
+              })
             }
             return yield* effect
           }),
@@ -161,49 +164,51 @@ const groupingOf = (tabId: TabId) => (call: ChromeCall) =>
   call.api === "tabs.group" && !!call.tabIds?.includes(tabId)
 
 describe("TabGroupSync", () => {
-  it.effect("Space ごとに、名前・色・折りたたみを揃えたグループをそのウィンドウに作る", () =>
-    Effect.gen(function* () {
-      const main = yield* seedWindowOf("mail", "docs", "recipe")
-      const other = yield* seedWindowOf("wiki")
+  it.effect(
+    "creates a group for each Space in its window, with the Space's name, color and collapsed state",
+    () =>
+      Effect.gen(function* () {
+        const main = yield* seedWindowOf("mail", "docs", "recipe")
+        const other = yield* seedWindowOf("wiki")
 
-      yield* sync([
-        space("仕事", main.windowId, [main.tab("mail"), main.tab("docs")]),
-        space("家", main.windowId, [main.tab("recipe")], { color: "green", collapsed: true }),
-        space("仕事", other.windowId, [other.tab("wiki")]),
-      ])
+        yield* sync([
+          space("Work", main.windowId, [main.tab("mail"), main.tab("docs")]),
+          space("Home", main.windowId, [main.tab("recipe")], { color: "green", collapsed: true }),
+          space("Work", other.windowId, [other.tab("wiki")]),
+        ])
 
-      expect(yield* groupsInChrome).toStrictEqual([
-        {
-          windowId: main.windowId,
-          title: "仕事",
-          color: "blue",
-          collapsed: false,
-          tabIds: [main.tab("mail"), main.tab("docs")],
-        },
-        {
-          windowId: main.windowId,
-          title: "家",
-          color: "green",
-          collapsed: true,
-          tabIds: [main.tab("recipe")],
-        },
-        {
-          windowId: other.windowId,
-          title: "仕事",
-          color: "blue",
-          collapsed: false,
-          tabIds: [other.tab("wiki")],
-        },
-      ])
-    }).pipe(Effect.provide(testBrowser)),
+        expect(yield* groupsInChrome).toStrictEqual([
+          {
+            windowId: main.windowId,
+            title: "Work",
+            color: "blue",
+            collapsed: false,
+            tabIds: [main.tab("mail"), main.tab("docs")],
+          },
+          {
+            windowId: main.windowId,
+            title: "Home",
+            color: "green",
+            collapsed: true,
+            tabIds: [main.tab("recipe")],
+          },
+          {
+            windowId: other.windowId,
+            title: "Work",
+            color: "blue",
+            collapsed: false,
+            tabIds: [other.tab("wiki")],
+          },
+        ])
+      }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("同期した直後にもう一度同期しても、Chrome への変更は 1 回も呼ばない", () =>
+  it.effect("syncing again right after a sync makes no change in Chrome", () =>
     Effect.gen(function* () {
       const { windowId, tab } = yield* seedWindowOf("mail", "docs", "recipe")
       const desired = [
-        space("仕事", windowId, [tab("mail"), tab("docs")]),
-        space("家", windowId, [tab("recipe")], { collapsed: true }),
+        space("Work", windowId, [tab("mail"), tab("docs")]),
+        space("Home", windowId, [tab("recipe")], { collapsed: true }),
       ]
       yield* sync(desired)
 
@@ -213,62 +218,72 @@ describe("TabGroupSync", () => {
     }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("前回作ったグループを使い続け、中身と見た目だけを揃え直す", () =>
-    Effect.gen(function* () {
-      const { windowId, tab } = yield* seedWindowOf("mail", "recipe", "news")
-      yield* sync([space("仕事", windowId, [tab("mail"), tab("recipe"), tab("news")])])
-      const groupBefore = yield* groupOfTab(tab("mail"))
+  it.effect(
+    "keeps using the groups it created before, realigning only their tabs and appearance",
+    () =>
+      Effect.gen(function* () {
+        const { windowId, tab } = yield* seedWindowOf("mail", "recipe", "news")
+        yield* sync([space("Work", windowId, [tab("mail"), tab("recipe"), tab("news")])])
+        const groupBefore = yield* groupOfTab(tab("mail"))
 
-      yield* sync([
-        space("仕事", windowId, [tab("mail")], { title: "仕事（改名）" }),
-        space("家", windowId, [tab("recipe")]),
-      ])
+        yield* sync([
+          space("Work", windowId, [tab("mail")], { title: "Work (renamed)" }),
+          space("Home", windowId, [tab("recipe")]),
+        ])
 
-      expect(yield* groupOfTab(tab("mail"))).toBe(groupBefore)
-      expect(yield* groupsInChrome).toStrictEqual([
-        { windowId, title: "仕事（改名）", color: "blue", collapsed: false, tabIds: [tab("mail")] },
-        { windowId, title: "家", color: "blue", collapsed: false, tabIds: [tab("recipe")] },
-      ])
-    }).pipe(Effect.provide(testBrowser)),
+        expect(yield* groupOfTab(tab("mail"))).toBe(groupBefore)
+        expect(yield* groupsInChrome).toStrictEqual([
+          {
+            windowId,
+            title: "Work (renamed)",
+            color: "blue",
+            collapsed: false,
+            tabIds: [tab("mail")],
+          },
+          { windowId, title: "Home", color: "blue", collapsed: false, tabIds: [tab("recipe")] },
+        ])
+      }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("サービスを作り直しても、保存した対応表から前回のグループを使い続ける", () =>
-    Effect.gen(function* () {
-      const { windowId, tab } = yield* seedWindowOf("mail", "docs")
-      yield* sync([space("仕事", windowId, [tab("mail")])])
-      const restarted = yield* Effect.map(
-        Layer.build(recordedTabGroupSync),
-        Context.get(TabGroupSync),
-      )
+  it.effect(
+    "after the service is rebuilt, keeps using the previous groups from the saved projection",
+    () =>
+      Effect.gen(function* () {
+        const { windowId, tab } = yield* seedWindowOf("mail", "docs")
+        yield* sync([space("Work", windowId, [tab("mail")])])
+        const restarted = yield* Effect.map(
+          Layer.build(recordedTabGroupSync),
+          Context.get(TabGroupSync),
+        )
 
-      const calls = yield* callsDuring(
-        restarted.sync([space("仕事", windowId, [tab("mail"), tab("docs")])]),
-      )
+        const calls = yield* callsDuring(
+          restarted.sync([space("Work", windowId, [tab("mail"), tab("docs")])]),
+        )
 
-      expect(calls).toStrictEqual([
-        { api: "tabs.group", tabIds: [tab("docs")], groupId: yield* groupOfTab(tab("mail")) },
-      ])
-    }).pipe(Effect.provide(testBrowser)),
+        expect(calls).toStrictEqual([
+          { api: "tabs.group", tabIds: [tab("docs")], groupId: yield* groupOfTab(tab("mail")) },
+        ])
+      }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("同期の結果として、Space・ウィンドウごとに使ったグループを返す", () =>
+  it.effect("returns the group used for each Space and window", () =>
     Effect.gen(function* () {
       const main = yield* seedWindowOf("mail")
       const other = yield* seedWindowOf("recipe")
 
       const projection = yield* sync([
-        space("仕事", main.windowId, [main.tab("mail")]),
-        space("家", other.windowId, [other.tab("recipe")]),
+        space("Work", main.windowId, [main.tab("mail")]),
+        space("Home", other.windowId, [other.tab("recipe")]),
       ])
 
       expect(projection).toStrictEqual([
         {
-          spaceId: "仕事",
+          spaceId: "Work",
           windowId: main.windowId,
           groupId: yield* groupOfTab(main.tab("mail")),
         },
         {
-          spaceId: "家",
+          spaceId: "Home",
           windowId: other.windowId,
           groupId: yield* groupOfTab(other.tab("recipe")),
         },
@@ -276,25 +291,25 @@ describe("TabGroupSync", () => {
     }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("保存された対応表が壊れていても、記憶が無いものとして同期する", () =>
+  it.effect("syncs as if nothing were remembered when the saved projection is broken", () =>
     Effect.gen(function* () {
       const { windowId, tab } = yield* seedWindowOf("mail")
       yield* (yield* FakeBrowser).seedStorage("session", {
-        "katip/tab-group-sync/projection": { 壊れた: "値" },
+        "katip/tab-group-sync/projection": { broken: "value" },
       })
 
-      yield* sync([space("仕事", windowId, [tab("mail")])])
+      yield* sync([space("Work", windowId, [tab("mail")])])
 
       expect(yield* groupsInChrome).toStrictEqual([
-        { windowId, title: "仕事", color: "blue", collapsed: false, tabIds: [tab("mail")] },
+        { windowId, title: "Work", color: "blue", collapsed: false, tabIds: [tab("mail")] },
       ])
     }).pipe(Effect.provide(testBrowser)),
   )
 
-  it.effect("同時に呼ばれても、同じ Space のグループを 2 つ作らない", () =>
+  it.effect("concurrent calls don't create two groups for the same Space", () =>
     Effect.gen(function* () {
       const { windowId, tab } = yield* seedWindowOf("mail", "docs")
-      const desired = [space("仕事", windowId, [tab("mail"), tab("docs")])]
+      const desired = [space("Work", windowId, [tab("mail"), tab("docs")])]
 
       const calls = yield* callsDuring(
         Effect.all([sync(desired), sync(desired)], { concurrency: "unbounded" }),
@@ -305,33 +320,33 @@ describe("TabGroupSync", () => {
     }).pipe(Effect.provide(testBrowser)),
   )
 
-  describe("Chrome の呼び出しが失敗したとき", () => {
-    it.effect("残りの操作は続け、失敗した操作をまとめて報告する", () =>
+  describe("when a Chrome call fails", () => {
+    it.effect("carries on with the remaining operations and reports the failed ones together", () =>
       Effect.gen(function* () {
         const { windowId, tab } = yield* seedWindowOf("mail", "recipe")
         yield* (yield* CallLog).failOnce(groupingOf(tab("mail")))
 
         const error = yield* syncExpectingIncomplete([
-          space("仕事", windowId, [tab("mail")]),
-          space("家", windowId, [tab("recipe")]),
+          space("Work", windowId, [tab("mail")]),
+          space("Home", windowId, [tab("recipe")]),
         ])
 
         expect(error.failures.map((f) => f.operation)).toStrictEqual([
-          expect.objectContaining({ _tag: "CreateGroup", spaceId: "仕事" }),
+          expect.objectContaining({ _tag: "CreateGroup", spaceId: "Work" }),
         ])
         expect(yield* groupsInChrome).toStrictEqual([
-          expect.objectContaining({ title: "家", tabIds: [tab("recipe")] }),
+          expect.objectContaining({ title: "Home", tabIds: [tab("recipe")] }),
         ])
       }).pipe(Effect.provide(testBrowser)),
     )
 
-    it.effect("次の同期で、失敗した分だけをやり直す", () =>
+    it.effect("the next sync retries only what failed", () =>
       Effect.gen(function* () {
         const { windowId, tab } = yield* seedWindowOf("mail", "recipe")
         yield* (yield* CallLog).failOnce(groupingOf(tab("mail")))
         const desired = [
-          space("仕事", windowId, [tab("mail")]),
-          space("家", windowId, [tab("recipe")]),
+          space("Work", windowId, [tab("mail")]),
+          space("Home", windowId, [tab("recipe")]),
         ]
         yield* syncExpectingIncomplete(desired)
 
@@ -344,10 +359,10 @@ describe("TabGroupSync", () => {
       }).pipe(Effect.provide(testBrowser)),
     )
 
-    it.effect("作ったグループの見た目を整えられなくても、次の同期ではそのグループを使う", () =>
+    it.effect("uses a created group in the next sync even when styling it failed", () =>
       Effect.gen(function* () {
         const { windowId, tab } = yield* seedWindowOf("mail")
-        const desired = [space("仕事", windowId, [tab("mail")])]
+        const desired = [space("Work", windowId, [tab("mail")])]
         yield* (yield* CallLog).failOnce((call) => call.api === "tabGroups.update")
         yield* syncExpectingIncomplete(desired)
 
@@ -355,7 +370,7 @@ describe("TabGroupSync", () => {
 
         expect(calls.map((c) => c.api)).toStrictEqual(["tabGroups.update"])
         expect(yield* groupsInChrome).toStrictEqual([
-          { windowId, title: "仕事", color: "blue", collapsed: false, tabIds: [tab("mail")] },
+          { windowId, title: "Work", color: "blue", collapsed: false, tabIds: [tab("mail")] },
         ])
       }).pipe(Effect.provide(testBrowser)),
     )

@@ -4,7 +4,7 @@ import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
 import type { GitHubQuery, LiveItem } from "./live-source"
 
-/** github.com の検索画面の、結果の種類の切り替え（URL の `type`）。 */
+/** The result kind chosen on github.com's search page (`type` in the URL). */
 export type GitHubWebSearchType = "pullrequests" | "issues"
 
 export interface GitHubWebSearch {
@@ -26,23 +26,24 @@ const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<
     "assigned-issues": [
       { type: "issues", query: "is:open is:issue assignee:@me archived:false sort:updated-desc" },
     ],
-    // 画面の検索はプルリクエストと Issue を別々の種類として返すので、両方を検索して合わせる
+    // Two searches: the web search returns pull requests and issues as separate result kinds
     mentioned: [
       { type: "pullrequests", query: "is:open mentions:@me archived:false sort:updated-desc" },
       { type: "issues", query: "is:open mentions:@me archived:false sort:updated-desc" },
     ],
   }
 
-/** ライブフォルダ 1 つ分の検索。複数あれば、すべての結果を合わせたものが中身になる。 */
+/** The searches for one live folder. With several, the folder holds all their results. */
 export const githubWebSearchesFor = (
   query: GitHubQuery,
 ): Array.NonEmptyReadonlyArray<GitHubWebSearch> => searchesByQuery[query]
 
 /**
- * ログイン中のセッションの cookie で、github.com の検索画面の結果を JSON で読む。
+ * Reads the results of github.com's search page as JSON, with the signed-in session's cookies.
  *
- * トークンを置かずに使えるよう公式 API ではなく画面の検索を読む。応答の形は公開されておらず
- * 予告なく変わりうるので、読めなければ読み取れないとして失敗させ、壊れたことが分かるようにする。
+ * Reads the web search rather than the official API so that it works without a token. The response
+ * shape isn't published and can change without notice, so a response that can't be read fails as
+ * unreadable, making the breakage visible.
  */
 export const githubWebSearchRequest = (search: GitHubWebSearch): HttpRequest => ({
   url: `https://github.com/search?${new URLSearchParams({ q: search.query, type: search.type })}`,
@@ -94,11 +95,12 @@ const decodeEntity = (reference: string, body: string): string => {
   return codePoint <= MAX_CODE_POINT ? String.fromCodePoint(codePoint) : reference
 }
 
-// 一致箇所の強調（<em> など）を外すためのもの。属性の値に > を含むタグや、コメントは想定しない
+// Only for stripping match highlighting (such as <em>). Doesn't handle tags with > in an
+// attribute value, or comments
 const tagPattern = /<[^>]*>/g
 const referencePattern = /&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi
 
-/** 一致箇所に強調のタグが入った件名を、タグを外して文字参照を解いた文字列にする。 */
+/** Strips the highlighting tags around matches from a title, and decodes character references. */
 const plainTitleOf = (highlighted: string): string =>
   highlighted.replace(tagPattern, "").replace(referencePattern, decodeEntity)
 
@@ -113,18 +115,22 @@ const itemFrom =
       title: plainTitleOf(result.hl_title),
       subtitle: `${repository}#${result.number}`,
       url: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/${kind}/${result.number}`,
-      // 画面の検索の結果には更新時刻が無い。並びは検索式の更新順に任せ、時刻には作成時刻を使う
+      // The web search results have no update time. The query's update order decides the order,
+      // and the creation time stands in for the time
       updatedAt: DateTime.toEpochMillis(result.created),
     }
   }
 
 export interface GitHubWebSearchPage {
   readonly isLoggedIn: boolean
-  /** 検索式の並び（更新の新しい順）のまま。 */
+  /** In the query's order (most recently updated first). */
   readonly items: ReadonlyArray<LiveItem>
 }
 
-/** 画面の検索の応答本文を読む。1 件でも形が合わなければ、応答全体を読めないものとして None。 */
+/**
+ * Reads a web search response body. If even one result has the wrong shape, the whole response
+ * counts as unreadable and it's None.
+ */
 export const parseGitHubWebSearch = (
   body: string,
   type: GitHubWebSearchType,
@@ -134,7 +140,7 @@ export const parseGitHubWebSearch = (
     items: route.results.map(itemFrom(type)),
   }))
 
-/** @param now - 上限に達したときの再開時刻を、待ち時間で知らされた場合の起点。 */
+/** @param now - What the retry time counts from when the rate limit gives it as a wait. */
 export const githubWebItemsFrom = (
   response: HttpResponse,
   search: GitHubWebSearch,
@@ -149,7 +155,7 @@ export const githubWebItemsFrom = (
   }
   return Option.match(parseGitHubWebSearch(response.body, search.type), {
     onNone: () => Result.fail({ _tag: "UnreadableResponse" }),
-    // @me を使う検索式は、ログインしていないと結果が空になるだけで失敗にはならない
+    // Signed out, a query with @me doesn't fail; it just comes back empty
     onSome: (page) =>
       page.isLoggedIn ? Result.succeed(page.items) : Result.fail({ _tag: "NotSignedIn" }),
   })

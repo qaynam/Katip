@@ -7,8 +7,8 @@ import {
   type LiveSource,
 } from "./live-source"
 
-const ja = makeTranslator("ja")
 const en = makeTranslator("en")
+const ja = makeTranslator("ja")
 
 const gmail = (accountIndex: number, label: string | null): LiveSource => ({
   _tag: "Gmail",
@@ -16,48 +16,48 @@ const gmail = (accountIndex: number, label: string | null): LiveSource => ({
   label,
 })
 
-describe("取得元に要るホストの許可", () => {
-  it("Gmail は mail.google.com、GitHub はログイン中のセッションで読む github.com への許可が要る", () => {
+describe("host permission a source needs", () => {
+  it("Gmail needs mail.google.com, and GitHub needs github.com, read with the signed-in session", () => {
     expect([
-      originPatternOf(gmail(1, "仕事")),
+      originPatternOf(gmail(1, "Work")),
       originPatternOf({ _tag: "GitHub", query: "mentioned" }),
     ]).toStrictEqual(["https://mail.google.com/*", "https://github.com/*"])
   })
 })
 
-describe("ログインのために開くページ", () => {
-  it("Gmail はそのアカウントの受信トレイ、GitHub はログインページ", () => {
+describe("page opened to sign in", () => {
+  it("is the account's inbox for Gmail and the sign-in page for GitHub", () => {
     expect([
-      signInUrlOf(gmail(1, "仕事")),
+      signInUrlOf(gmail(1, "Work")),
       signInUrlOf({ _tag: "GitHub", query: "mentioned" }),
     ]).toStrictEqual(["https://mail.google.com/mail/u/1/", "https://github.com/login"])
   })
 })
 
-describe("作ったときの名前", () => {
-  it("Gmail は受信トレイかラベルの名前になる", () => {
+describe("name given on creation", () => {
+  it("names a Gmail folder after the inbox or the label", () => {
     expect([
-      defaultLiveFolderTitle(gmail(0, null), ja),
-      defaultLiveFolderTitle(gmail(0, "請求書"), ja),
-    ]).toStrictEqual(["Gmail の受信トレイ", "Gmail の 請求書"])
+      defaultLiveFolderTitle(gmail(0, null), en),
+      defaultLiveFolderTitle(gmail(0, "Invoices"), en),
+    ]).toStrictEqual(["Gmail Inbox", "Gmail: Invoices"])
   })
 
-  it("2 つ目以降の Google アカウントは、アカウントの番号を添えて区別する", () => {
-    expect(defaultLiveFolderTitle(gmail(1, null), ja)).toBe("Gmail の受信トレイ（u/1）")
+  it("tells the second and later Google accounts apart by adding the account's index", () => {
+    expect(defaultLiveFolderTitle(gmail(1, null), en)).toBe("Gmail Inbox (u/1)")
   })
 
-  it("GitHub は並べる対象の名前になる", () => {
-    expect(defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" }, ja)).toBe(
-      "GitHub のレビュー依頼",
+  it("names a GitHub folder after what it lists", () => {
+    expect(defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" }, en)).toBe(
+      "GitHub Review Requests",
     )
   })
 })
 
-describe("作ったときの名前の言語", () => {
-  it("英語に設定していれば、英語の名前を付ける", () => {
+describe("language of the name given on creation", () => {
+  it("names the folder in the translator's language", () => {
     expect([
-      defaultLiveFolderTitle(gmail(1, null), en),
-      defaultLiveFolderTitle({ _tag: "GitHub", query: "mentioned" }, en),
-    ]).toStrictEqual(["Gmail Inbox (u/1)", "GitHub Mentions"])
+      defaultLiveFolderTitle(gmail(1, null), ja),
+      defaultLiveFolderTitle({ _tag: "GitHub", query: "mentioned" }, ja),
+    ]).toStrictEqual(["Gmail の受信トレイ（u/1）", "GitHub のメンション"])
   })
 })

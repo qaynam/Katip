@@ -31,14 +31,15 @@ const interleave = (lists: ReadonlyArray<ReadonlyArray<LiveItem>>): ReadonlyArra
   })
 
 /**
- * 取得元が新しい順に並べた複数の一覧を、1 つの新しい順の一覧にまとめる。
+ * Merges several lists, each ordered newest first by its source, into one newest-first list.
  *
- * それぞれの一覧の中の並びは崩さず、先頭どうしの更新時刻を比べて新しい方から取り出す。
- * 同じ時刻なら先に渡した一覧から取り出す。同じ ID の項目は最初の 1 つだけを残す。
+ * Keeps the order within each list, repeatedly taking whichever list head was updated most
+ * recently. On equal times the list passed first wins. Of items with the same id, only the first is
+ * kept.
  *
  * @remarks
- * 一覧の中の並びを時刻で並べ直さないのは、取得元の並びが手元の時刻より正確なことがあるため
- * （GitHub の画面の検索は更新順に並ぶが、応答には作成時刻しか載らない）。
+ * Lists aren't re-sorted by time because the source's order can be more accurate than the times at
+ * hand (GitHub's web search orders by update, but its response only carries the creation time).
  */
 export const mergeNewestFirst = (
   lists: ReadonlyArray<ReadonlyArray<LiveItem>>,
@@ -52,17 +53,18 @@ const byText = Order.make<string>((a, b) => {
 
 const groupNameOf = (source: LiveSource) => (item: LiveItem) =>
   Match.valueTags(source, {
-    // GitHub の補足は <owner>/<repo>#<番号> の形
+    // GitHub subtitles are <owner>/<repo>#<number>
     GitHub: () => item.subtitle.replace(/#\d+$/, ""),
     Gmail: () => item.subtitle,
   })
 
 /**
- * ライブフォルダの項目を、指定の並べ方で並べ直す。
+ * Reorders a live folder's items in the given sort order.
  *
- * `items` は取得元が新しい順に並べた順で渡すこと。新しい順はその並びのまま、古い順はその逆にする。
- * 件名順と取得元順（GitHub はリポジトリ、Gmail は差出人ごとにまとめる）で並びが同じになる項目は、
- * 新しい順に並べる。文字の比較は大文字と小文字を区別せず、数字は数の大きさで比べる。
+ * `items` must be in the newest-first order the source gave. Newest keeps that order and oldest
+ * reverses it. Items that tie under title order or source order (grouped by repository for GitHub,
+ * by sender for Gmail) stay newest first. Text comparison ignores case, and digits compare by
+ * numeric value.
  */
 export const sortLiveItems = (
   items: ReadonlyArray<LiveItem>,

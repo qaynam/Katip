@@ -16,7 +16,7 @@ const FOLDER = BookmarkId.make("live-1")
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 
 const entry = (id: string, title: string) =>
-  `<entry><title>${title}</title><link rel="alternate" href="https://mail.google.com/mail?message_id=${id}" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><id>${id}</id><author><name>差出人</name></author></entry>`
+  `<entry><title>${title}</title><link rel="alternate" href="https://mail.google.com/mail?message_id=${id}" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><id>${id}</id><author><name>Sender</name></author></entry>`
 
 const feed = (...entries: ReadonlyArray<string>) =>
   `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><fullcount>${entries.length}</fullcount>${entries.join("")}</feed>`
@@ -44,8 +44,8 @@ const refreshAndSettle = Effect.andThen(
   recordOf,
 )
 
-describe("取得", () => {
-  it.effect("取得している間は取得中になり、終わると取得した項目が残る", () =>
+describe("refreshing", () => {
+  it.effect("is refreshing while the fetch runs, and keeps the fetched items once it ends", () =>
     Effect.gen(function* () {
       yield* grantGmail
       const response = yield* Deferred.make<HttpResponse>()
@@ -54,7 +54,7 @@ describe("取得", () => {
 
       yield* folders.refresh(FOLDER, inbox)
       const during = yield* snapshot
-      yield* Deferred.succeed(response, httpResponse(200, feed(entry("a", "請求書"))))
+      yield* Deferred.succeed(response, httpResponse(200, feed(entry("a", "Invoice"))))
       const record = yield* recordOf
 
       assert.deepStrictEqual(
@@ -62,12 +62,12 @@ describe("取得", () => {
           during.refreshing.has(FOLDER),
           Option.map(record, (r) => r.items.map((item) => item.title)),
         ],
-        [true, Option.some(["請求書"])],
+        [true, Option.some(["Invoice"])],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("取得している間にもう一度取得しても、取得元へは 1 回しか問い合わせない", () =>
+  it.effect("refreshing again while a fetch runs asks the source only once", () =>
     Effect.gen(function* () {
       yield* grantGmail
       const response = yield* Deferred.make<HttpResponse>()
@@ -83,10 +83,10 @@ describe("取得", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("失敗したら、前回取得した項目を残したまま失敗を残す", () =>
+  it.effect("on failure, keeps the previously fetched items and records the failure", () =>
     Effect.gen(function* () {
       yield* grantGmail
-      yield* serveFeed(feed(entry("a", "請求書")))
+      yield* serveFeed(feed(entry("a", "Invoice")))
       yield* refreshAndSettle
       yield* (yield* FakeHttp).route("https://mail.google.com/", unreachable)
 
@@ -94,14 +94,14 @@ describe("取得", () => {
 
       assert.deepStrictEqual(
         [record.items.map((item) => item.title), record.lastAttempt._tag],
-        [["請求書"], "Failed"],
+        [["Invoice"], "Failed"],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 })
 
-describe("既読", () => {
-  it.effect("開いた項目だけが既読になる", () =>
+describe("seen items", () => {
+  it.effect("only the opened item becomes read", () =>
     Effect.gen(function* () {
       yield* grantGmail
       yield* serveFeed(feed(entry("a", "A"), entry("b", "B")))
@@ -117,7 +117,7 @@ describe("既読", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("まとめて既読にすると、すべての項目が既読になる", () =>
+  it.effect("marking all as seen makes every item read", () =>
     Effect.gen(function* () {
       yield* grantGmail
       yield* serveFeed(feed(entry("a", "A"), entry("b", "B")))
@@ -134,8 +134,8 @@ describe("既読", () => {
   )
 })
 
-describe("忘れる", () => {
-  it.effect("取得した項目を捨てる", () =>
+describe("forgetting", () => {
+  it.effect("discards the fetched items", () =>
     Effect.gen(function* () {
       yield* grantGmail
       yield* serveFeed(feed(entry("a", "A")))
@@ -147,7 +147,7 @@ describe("忘れる", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("取得している途中なら取得を止め、後から結果が残ることもない", () =>
+  it.effect("stops a fetch in progress, so its outcome isn't kept later either", () =>
     Effect.gen(function* () {
       yield* grantGmail
       const response = yield* Deferred.make<HttpResponse>()
@@ -167,21 +167,23 @@ describe("忘れる", () => {
   )
 })
 
-describe("並べ方", () => {
-  it.effect("設定した並べ方を覚え、既定の新しい順に戻すと設定を持たない", () =>
-    Effect.gen(function* () {
-      const folders = yield* LiveFolders
+describe("sort order", () => {
+  it.effect(
+    "remembers the chosen order, and stores nothing once back to the default newest first",
+    () =>
+      Effect.gen(function* () {
+        const folders = yield* LiveFolders
 
-      yield* folders.setSort(FOLDER, "title")
-      const titled = (yield* snapshot).sorts.get(FOLDER)
-      yield* folders.setSort(FOLDER, "newest")
-      const reset = (yield* snapshot).sorts.has(FOLDER)
+        yield* folders.setSort(FOLDER, "title")
+        const titled = (yield* snapshot).sorts.get(FOLDER)
+        yield* folders.setSort(FOLDER, "newest")
+        const reset = (yield* snapshot).sorts.has(FOLDER)
 
-      assert.deepStrictEqual([titled, reset], ["title", false])
-    }).pipe(Effect.provide(TestLayer)),
+        assert.deepStrictEqual([titled, reset], ["title", false])
+      }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("忘れたフォルダの並べ方も捨てる", () =>
+  it.effect("discards the order of a forgotten folder too", () =>
     Effect.gen(function* () {
       const folders = yield* LiveFolders
       yield* folders.setSort(FOLDER, "oldest")
@@ -192,7 +194,7 @@ describe("並べ方", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("残すフォルダに含まれないフォルダの並べ方を捨てる", () =>
+  it.effect("discards the order of folders not among those kept", () =>
     Effect.gen(function* () {
       const folders = yield* LiveFolders
       const kept = BookmarkId.make("live-2")

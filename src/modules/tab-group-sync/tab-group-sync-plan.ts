@@ -47,11 +47,11 @@ export type TabGroupOperation = typeof TabGroupOperation.Type
 
 export interface TabGroupSyncPlan {
   /**
-   * 先頭から順に実行する前提で並ぶ（グループへ入れる操作が、グループから外す操作より先）。
-   * 並び替えの操作は含まない。
+   * Meant to run in order from the first (operations adding tabs to groups come before those
+   * removing them). Includes no reordering.
    */
   readonly operations: ReadonlyArray<TabGroupOperation>
-  /** 新しく作るグループの対応は、実行するまで ID が決まらないので含まない。 */
+  /** Leaves out the groups to be created, whose ids aren't known until the operations run. */
   readonly reusedGroups: TabGroupProjection
 }
 
@@ -75,7 +75,7 @@ const looksAsDesired = (group: ObservedTabGroup, desired: GroupAppearance) =>
   group.color === desired.color &&
   group.collapsed === desired.collapsed
 
-// tabs.group は別ウィンドウのタブをグループのウィンドウへ移し、固定タブの固定を外してしまう
+// tabs.group would move a tab from another window into the group's window, and unpin a pinned tab
 const canJoinGroupIn = (windowId: WindowId, tab: ObservedTab | undefined) =>
   tab !== undefined && tab.windowId === windowId && !tab.pinned
 
@@ -126,18 +126,18 @@ const alignGroupWith = (
 }
 
 /**
- * Chrome のタブグループを `desired` に揃えるための操作を計画する。
+ * Plans the operations that bring Chrome's tab groups in line with `desired`.
  *
- * @param desired - 全ウィンドウ分のあるべき姿。含まれない Space・ウィンドウの記憶は捨て、
- *   そのグループに残ったタブはグループから外す。
- * @param projection - 前回の同期で各 Space・ウィンドウに使ったグループ。
+ * @param desired - What every window should look like. What's remembered for a Space and window
+ *   not in it is discarded, and the tabs left in its group are ungrouped.
+ * @param projection - The group each Space and window used in the previous sync.
  *
  * @remarks
- * - 対応表に無いグループ（ユーザーが作ったもの）の見た目は変えず、そこから Space に
- *   属さないタブを外すこともしない。Space のタブがそこにあれば Space のグループへ移す。
- * - 指定されたウィンドウに無いタブと、Chrome で固定されたタブはグループに入れない。
- * - 同じタブや同じ Space・ウィンドウが重複して指定されたら、先の指定に従う。
- * - 計画どおりに実行した結果からもう一度計画すると、操作は 0 件になる。
+ * - A group not in the projection (one the user made) keeps its appearance, and tabs outside any
+ *   Space aren't removed from it. Tabs of a Space found there move to the Space's group.
+ * - A tab not in the given window, and a tab pinned in Chrome, never join a group.
+ * - When the same tab, or the same Space and window, is given more than once, the first wins.
+ * - Planning again from the result of carrying out the plan yields no operations.
  */
 export const planTabGroupSync = (
   desired: ReadonlyArray<DesiredGroup>,
@@ -157,8 +157,8 @@ export const planTabGroupSync = (
     (a, b) => isSameSpaceInWindow(a, b) || a.groupId === b.groupId,
   )
 
-  // 中身がすべて他の Space のグループへ移るグループは、移した時点で Chrome に消され、
-  // 後に続く操作が存在しないグループを指してしまうので再利用しない
+  // Not reused when all its tabs move to other Spaces' groups: Chrome deletes it once they move,
+  // leaving the operations that follow pointing at a group that no longer exists
   const keepsSomeTab = (group: ObservedTabGroup, target: GroupTarget) =>
     actualTabs.some((tab) => {
       const owner = targetOfTab.get(tab.id)

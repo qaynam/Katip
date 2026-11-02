@@ -4,21 +4,21 @@ import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
 import { isOpenableUrl, type GitHubQuery, type LiveItem } from "./live-source"
 
-/** トークンを使う公式 API に要るホストの許可。 */
+/** The host permission needed for the official API, which is used with a token. */
 export const GITHUB_API_ORIGIN = "https://api.github.com/*"
 
 const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<string>>> = {
   "review-requested": ["is:pr is:open review-requested:@me archived:false"],
   "authored-pull-requests": ["is:pr is:open author:@me archived:false"],
   "assigned-issues": ["is:issue is:open assignee:@me archived:false"],
-  // 検索 API は is:issue と is:pr のどちらも含まない検索式を受け付けないので、2 回に分けて検索する
+  // Two searches: the search API rejects a query with neither is:issue nor is:pr
   mentioned: [
     "is:issue is:open mentions:@me archived:false",
     "is:pr is:open mentions:@me archived:false",
   ],
 }
 
-/** ライブフォルダ 1 つ分の検索式。複数あれば、すべての結果を合わせたものが中身になる。 */
+/** The search queries for one live folder. With several, the folder holds all their results. */
 export const githubApiSearchesFor = (query: GitHubQuery): Array.NonEmptyReadonlyArray<string> =>
   searchesByQuery[query]
 
@@ -52,7 +52,7 @@ type SearchItem = typeof SearchItem.Type
 const decodeResponse = Schema.decodeUnknownOption(SearchResponse)
 const decodeItem = Schema.decodeUnknownOption(SearchItem)
 
-// repository_url は https://api.github.com/repos/<owner>/<repo> の形
+// repository_url is https://api.github.com/repos/<owner>/<repo>
 const repositoryNameOf = (repositoryUrl: string): string =>
   repositoryUrl.match(/\/repos\/([^/]+\/[^/]+)$/)?.[1] ?? repositoryUrl
 
@@ -65,8 +65,8 @@ const itemFrom = (item: SearchItem): LiveItem => ({
 })
 
 /**
- * 検索 API の応答本文から、更新の新しい順に項目を取り出す。形の合わない項目と開けない URL の
- * 項目は除く。応答そのものが読めなければ None。
+ * Reads the items, most recently updated first, from a search API response body. Leaves out items
+ * of the wrong shape and items whose URL can't be opened. None if the response is unreadable.
  */
 export const parseGitHubApiSearch = (body: string): Option.Option<ReadonlyArray<LiveItem>> =>
   Option.map(decodeResponse(body), ({ items }) =>
@@ -81,7 +81,7 @@ export const parseGitHubApiSearch = (body: string): Option.Option<ReadonlyArray<
     ),
   )
 
-/** @param now - 上限に達したときの再開時刻を、待ち時間で知らされた場合の起点。 */
+/** @param now - What the retry time counts from when the rate limit gives it as a wait. */
 export const githubApiItemsFrom = (
   response: HttpResponse,
   now: number,

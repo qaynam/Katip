@@ -9,29 +9,29 @@ export const LiveFolderAttempt = Schema.TaggedUnion({
 })
 export type LiveFolderAttempt = typeof LiveFolderAttempt.Type
 
-/** ライブフォルダ 1 つ分の、最後に取得できた項目と最後の取得の結果。 */
+/** One live folder's items from its last successful fetch, and the outcome of its last fetch. */
 export const LiveFolderRecord = Schema.Struct({
-  /** 取得元が新しい順に並べた順。取得に失敗しても、前回取得できた項目を残す。 */
+  /** In the source's newest-first order. A failed fetch keeps the items from the previous one. */
   items: Schema.Array(LiveItem),
   lastAttempt: LiveFolderAttempt,
-  /** 項目の ID ごとに、最後に見たときのその項目の更新時刻。 */
+  /** For each item id, the item's update time when it was last seen. */
   seenVersions: Schema.Record(Schema.String, Schema.Number),
 })
 export type LiveFolderRecord = typeof LiveFolderRecord.Type
 
 export interface LiveFolderSnapshot {
-  /** まだ一度も取得を終えていないフォルダは含まない。 */
+  /** Leaves out folders whose first fetch hasn't finished yet. */
   readonly records: ReadonlyMap<BookmarkId, LiveFolderRecord>
   readonly refreshing: ReadonlySet<BookmarkId>
-  /** 含まれないフォルダは既定の並べ方（新しい順）。 */
+  /** A folder missing from the map uses the default order (newest first). */
   readonly sorts: ReadonlyMap<BookmarkId, LiveSort>
 }
 
 /**
- * 項目を開いた後に更新されたか、一度も開いていなければ未読。
+ * Whether an item is unread: never opened, or updated after it was opened.
  *
- * Gmail のフィードには未読のメールしか載らないので、開くまでは未読のまま。
- * GitHub は、前回見た時刻より後にコメントやレビューで更新されると未読に戻る。
+ * The Gmail feed only carries unread mail, so a mail stays unread until opened. A GitHub item
+ * becomes unread again when a comment or review updates it after it was last seen.
  */
 export const isUnseen = (record: LiveFolderRecord, item: LiveItem): boolean =>
   Option.match(Record.get(record.seenVersions, item.id), {
@@ -40,9 +40,9 @@ export const isUnseen = (record: LiveFolderRecord, item: LiveItem): boolean =>
   })
 
 /**
- * 取得できた項目で置き換える。
+ * Replaces the items with the ones fetched.
  *
- * 取得元から消えた項目の既読の記録は捨てる。記録が際限なく増えないように。
+ * Drops what was seen of items gone from the source, so the record doesn't grow without bound.
  */
 export const recordFetched = (
   previous: Option.Option<LiveFolderRecord>,
@@ -67,7 +67,7 @@ export const recordFailed = (
   seenVersions: Option.match(previous, { onNone: () => ({}), onSome: (r) => r.seenVersions }),
 })
 
-/** 項目が無ければそのまま返す。 */
+/** Returns the record unchanged when it has no such item. */
 export const markItemSeen = (record: LiveFolderRecord, itemId: string): LiveFolderRecord =>
   Option.match(
     Array.findFirst(record.items, (item) => item.id === itemId),
@@ -86,9 +86,10 @@ export const markAllSeen = (record: LiveFolderRecord): LiveFolderRecord => ({
 })
 
 /**
- * 自動で取得し直す頃合いか。一度も取得していなければ常に真。
+ * Whether it's time to refetch automatically. Always true when nothing was ever fetched.
  *
- * 利用上限に達して失敗したなら、知らされた再開時刻までは間隔によらず偽。
+ * After a failure from hitting the rate limit, false until the given retry time whatever the
+ * interval.
  */
 export const isRefreshDue = (
   record: Option.Option<LiveFolderRecord>,

@@ -28,41 +28,41 @@ const entryOf = (fields: {
       : `<modified>${fields.modified ?? "2026-10-30T09:10:01Z"}</modified>`
   const issued =
     fields.issued === null ? "" : `<issued>${fields.issued ?? "2026-10-30T09:10:01Z"}</issued>`
-  return `<entry><title>${fields.title ?? "週次ミーティングの議事録"}</title><summary>山田さん お疲れさまです。今週の議事録を共有します。</summary>${link}${modified}${issued}<id>${fields.id ?? "tag:gmail.google.com,2004:1847261839201746352"}</id><author><name>${fields.name ?? "佐藤 花子"}</name><email>${fields.email ?? "hanako.sato@example.co.jp"}</email></author></entry>`
+  return `<entry><title>${fields.title ?? "Weekly meeting notes"}</title><summary>Hi Taro, here are this week&#39;s meeting notes.</summary>${link}${modified}${issued}<id>${fields.id ?? "tag:gmail.google.com,2004:1847261839201746352"}</id><author><name>${fields.name ?? "Hanako Sato"}</name><email>${fields.email ?? "hanako.sato@example.co.jp"}</email></author></entry>`
 }
 
 const itemsOf = (xml: string) => Option.getOrThrow(parseGmailFeed(xml, 0))
 
-describe("未読フィードの解析", () => {
-  it("未読のメールが、件名・差出人・会話へのリンク・更新時刻を持つ項目になる", () => {
+describe("parsing the unread feed", () => {
+  it("turns each unread mail into an item with its subject, sender, conversation link and update time", () => {
     const items = itemsOf(feedOf(entryOf({})))
 
     expect(items).toStrictEqual([
       {
         id: "tag:gmail.google.com,2004:1847261839201746352",
-        title: "週次ミーティングの議事録",
-        subtitle: "佐藤 花子",
+        title: "Weekly meeting notes",
+        subtitle: "Hanako Sato",
         url: "https://mail.google.com/mail?account_id=taro.yamada@example.com&message_id=19a3c1f2e4b5d6a7&view=conv&extsrc=atom",
         updatedAt: Date.UTC(2026, 9, 30, 9, 10, 1),
       },
     ])
   })
 
-  it("複数のメールはフィードの順に並ぶ", () => {
+  it("lists several mails in the feed's order", () => {
     const xml = feedOf(
-      entryOf({ id: "tag:gmail.google.com,2004:2", title: "新しい方" }) +
-        entryOf({ id: "tag:gmail.google.com,2004:1", title: "古い方" }),
+      entryOf({ id: "tag:gmail.google.com,2004:2", title: "Newer" }) +
+        entryOf({ id: "tag:gmail.google.com,2004:1", title: "Older" }),
       2,
     )
 
-    expect(itemsOf(xml).map((item) => item.title)).toStrictEqual(["新しい方", "古い方"])
+    expect(itemsOf(xml).map((item) => item.title)).toStrictEqual(["Newer", "Older"])
   })
 
-  it("未読が無ければ空になる", () => {
+  it("is empty when there is no unread mail", () => {
     expect(itemsOf(feedOf("", 0))).toStrictEqual([])
   })
 
-  it("件名や差出人の文字参照・実体参照は元の文字に戻る", () => {
+  it("decodes character and entity references in the subject and sender", () => {
     const xml = feedOf(
       entryOf({ title: "Re: It&#39;s &quot;done&quot; &amp; merged", name: "O&#39;Brien" }),
     )
@@ -72,40 +72,40 @@ describe("未読フィードの解析", () => {
     ])
   })
 
-  it("数字だけの件名も文字列のまま残る", () => {
+  it("keeps a subject made only of digits as a string", () => {
     expect(itemsOf(feedOf(entryOf({ title: "0042" })))[0]?.title).toBe("0042")
   })
 
-  it("件名が空なら、件名を空のまま残す", () => {
+  it("leaves a blank subject empty", () => {
     expect(itemsOf(feedOf(entryOf({ title: "  " })))[0]?.title).toBe("")
   })
 
-  it("差出人の名前が無ければメールアドレスを示す", () => {
+  it("shows the sender's email address when the sender has no name", () => {
     expect(itemsOf(feedOf(entryOf({ name: "" })))[0]?.subtitle).toBe("hanako.sato@example.co.jp")
   })
 
-  it("会話へのリンクが無いメールは、そのアカウントの受信トレイを開く", () => {
+  it("opens the account's inbox for a mail without a conversation link", () => {
     const items = Option.getOrThrow(parseGmailFeed(feedOf(entryOf({ link: null })), 2))
 
     expect(items[0]?.url).toBe("https://mail.google.com/mail/u/2/")
   })
 
-  it("会話へのリンクが https でなければ、開かずにアカウントの受信トレイを開く", () => {
+  it("opens the account's inbox instead of a conversation link that isn't https", () => {
     const items = itemsOf(feedOf(entryOf({ link: "javascript:alert(1)" })))
 
     expect(items[0]?.url).toBe("https://mail.google.com/mail/u/0/")
   })
 
-  it("更新時刻が無ければ受信時刻を使う", () => {
+  it("uses the received time when there is no update time", () => {
     const xml = feedOf(entryOf({ modified: null, issued: "2026-10-29T23:00:00Z" }))
 
     expect(itemsOf(xml)[0]?.updatedAt).toBe(Date.UTC(2026, 9, 29, 23, 0, 0))
   })
 
-  it("時刻の無いメールや時刻の読めないメールだけを除き、ほかのメールは残す", () => {
+  it("leaves out only the mails without a readable time, keeping the others", () => {
     const xml = feedOf(
       entryOf({ id: "a", modified: null, issued: null }) +
-        entryOf({ id: "b", modified: "昨日" }) +
+        entryOf({ id: "b", modified: "yesterday" }) +
         entryOf({ id: "c" }),
       3,
     )
@@ -113,19 +113,19 @@ describe("未読フィードの解析", () => {
     expect(itemsOf(xml).map((item) => item.id)).toStrictEqual(["c"])
   })
 
-  it("ログイン画面などの HTML はフィードとして読めない", () => {
+  it("can't read HTML such as the sign-in page as a feed", () => {
     const html = `<!DOCTYPE html><html><head><title>Gmail</title></head><body><form action="https://accounts.google.com/"></form></body></html>`
 
     expect(parseGmailFeed(html, 0)).toStrictEqual(Option.none())
   })
 
-  it("XML でない本文はフィードとして読めない", () => {
+  it("can't read a body that isn't XML as a feed", () => {
     expect(parseGmailFeed("Service Unavailable", 0)).toStrictEqual(Option.none())
   })
 })
 
-describe("未読フィードの要求", () => {
-  it("受信トレイは、アカウントの番号のフィードをログイン中の cookie 付きで読む", () => {
+describe("requesting the unread feed", () => {
+  it("reads the inbox from the feed of the account's index, with the signed-in cookies", () => {
     expect(gmailFeedRequest(inbox)).toStrictEqual({
       url: "https://mail.google.com/mail/u/0/feed/atom",
       credentials: "include",
@@ -133,7 +133,7 @@ describe("未読フィードの要求", () => {
     })
   })
 
-  it("ラベルを指定すると、そのラベルのフィードを読む", () => {
+  it("with a label, reads that label's feed, percent-encoding a non-ASCII label and its slash", () => {
     const request = gmailFeedRequest({ _tag: "Gmail", accountIndex: 1, label: "仕事/重要" })
 
     expect(request.url).toBe(
@@ -142,38 +142,38 @@ describe("未読フィードの要求", () => {
   })
 })
 
-describe("未読フィードの応答の判定", () => {
-  it("フィードが返れば、その項目が取り込まれる", () => {
+describe("judging the unread feed's response", () => {
+  it("takes in the items when a feed comes back", () => {
     const result = gmailItemsFrom(httpResponse(200, feedOf(entryOf({}))), inbox)
 
     expect(Result.map(result, (items) => items.length)).toStrictEqual(Result.succeed(1))
   })
 
-  it("ログイン画面へリダイレクトされたら、ログインしていないと判定する", () => {
+  it("a redirect to the sign-in page means not signed in", () => {
     expect(gmailItemsFrom(redirectResponse, inbox)).toStrictEqual(
       Result.fail({ _tag: "NotSignedIn" }),
     )
   })
 
-  it("認証を求められたら、ログインしていないと判定する", () => {
+  it("a request for authentication means not signed in", () => {
     expect(gmailItemsFrom(httpResponse(401), inbox)).toStrictEqual(
       Result.fail({ _tag: "NotSignedIn" }),
     )
   })
 
-  it("拒否されたら、アクセスできないと判定する", () => {
+  it("a refusal means access is denied", () => {
     expect(gmailItemsFrom(httpResponse(403), inbox)).toStrictEqual(
       Result.fail({ _tag: "AccessDenied", status: 403 }),
     )
   })
 
-  it("それ以外のエラー応答は、その状態コードで失敗する", () => {
+  it("any other error response fails with its status code", () => {
     expect(gmailItemsFrom(httpResponse(503, "Service Unavailable"), inbox)).toStrictEqual(
       Result.fail({ _tag: "UnexpectedStatus", status: 503 }),
     )
   })
 
-  it("成功の応答でもフィードでなければ、読み取れないと判定する", () => {
+  it("a successful response that isn't a feed is unreadable", () => {
     expect(gmailItemsFrom(httpResponse(200, "<html></html>"), inbox)).toStrictEqual(
       Result.fail({ _tag: "UnreadableResponse" }),
     )

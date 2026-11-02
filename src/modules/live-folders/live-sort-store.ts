@@ -8,15 +8,15 @@ type LiveSorts = typeof LiveSorts.Type
 
 export const DEFAULT_LIVE_SORT: LiveSort = "newest"
 
-/** ライブフォルダごとの並べ方。既定の並べ方のフォルダは保存しない。 */
+/** The sort order of each live folder. Folders using the default order aren't stored. */
 export class LiveSortStore extends Context.Service<
   LiveSortStore,
   {
-    /** 含まれないフォルダは既定の並べ方（新しい順）。 */
+    /** A folder missing from the map uses the default order (newest first). */
     readonly all: Effect.Effect<ReadonlyMap<BookmarkId, LiveSort>>
     set(folderId: BookmarkId, sort: LiveSort): Effect.Effect<void, BrowserApiError>
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
-    /** `folderIds` に含まれないフォルダの並べ方を捨てる。 */
+    /** Discards the sort order of every folder not in `folderIds`. */
     retainOnly(folderIds: ReadonlySet<BookmarkId>): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/live-folders/LiveSortStore") {

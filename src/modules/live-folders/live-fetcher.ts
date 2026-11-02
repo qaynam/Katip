@@ -18,7 +18,7 @@ import { LiveFetchError, type LiveFetchFailure } from "./live-fetch-failure"
 import { mergeNewestFirst } from "./live-item-order"
 import { originPatternOf, type LiveItem, type LiveSource } from "./live-source"
 
-/** 取得元が応答しないまま待つ上限。超えたら接続できなかったものとして扱う。 */
+/** How long to wait for a source to answer. Past this, it's treated as unreachable. */
 export const FETCH_TIME_LIMIT: Duration.Input = "30 seconds"
 
 const failWith = (failure: LiveFetchFailure) => Effect.fail(new LiveFetchError({ failure }))
@@ -30,13 +30,13 @@ export class LiveFetcher extends Context.Service<
   LiveFetcher,
   {
     /**
-     * 取得元から、取得元が新しい順に並べた順で項目を取り込む。
+     * Takes in items from the source, in the source's newest-first order.
      *
-     * GitHub は、トークンが設定されていれば公式 API で、無ければブラウザのログイン中の
-     * セッションで読む。
+     * GitHub is read through the official API when a token is set, and otherwise with the
+     * browser's signed-in session.
      *
-     * 取得元へのアクセスが許可されていなければ、要求を送らずに失敗する。許可は求めない
-     * （許可を求めるダイアログはユーザーの操作中のページからしか出せない）。
+     * Fails without sending a request when access to the source isn't granted. Never asks for the
+     * permission (the dialog asking for it can only come from a page the user is acting on).
      */
     fetch(source: LiveSource): Effect.Effect<ReadonlyArray<LiveItem>, LiveFetchError>
   }
@@ -59,7 +59,7 @@ export class LiveFetcher extends Context.Service<
           .containsOrigin(originPattern)
           .pipe(
             Effect.catch((error) =>
-              Effect.as(Effect.logWarning("許可を確かめられなかった", error), false),
+              Effect.as(Effect.logWarning("Couldn't check the permission", error), false),
             ),
           )
         if (!isGranted) return yield* failWith({ _tag: "PermissionMissing" })
@@ -67,7 +67,7 @@ export class LiveFetcher extends Context.Service<
 
       const loadToken = tokens.load.pipe(
         Effect.catch((error) =>
-          Effect.as(Effect.logWarning("トークンを読めなかった", error), Option.none<string>()),
+          Effect.as(Effect.logWarning("Couldn't read the token", error), Option.none<string>()),
         ),
       )
 
@@ -125,6 +125,6 @@ export class LiveFetcher extends Context.Service<
     }),
   )
 
-  /** {@link GitHubTokenStore} も合わせて提供する。 */
+  /** Also provides {@link GitHubTokenStore}. */
   static readonly layer = this.layerNoDeps.pipe(Layer.provideMerge(GitHubTokenStore.layer))
 }

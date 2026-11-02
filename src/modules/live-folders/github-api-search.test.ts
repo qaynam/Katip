@@ -19,7 +19,7 @@ const searchItem = (overrides: Record<string, unknown> = {}) => ({
   id: 2876543210,
   node_id: "PR_kwDOLx3k9c6Fq2Zt",
   number: 42,
-  title: "ライブフォルダを追加する",
+  title: "Add live folders",
   user: { login: "hanako", id: 1029384, type: "User" },
   labels: [],
   state: "open",
@@ -36,7 +36,7 @@ const searchItem = (overrides: Record<string, unknown> = {}) => ({
     html_url: "https://github.com/katip-dev/katip/pull/42",
     merged_at: null,
   },
-  body: "ライブフォルダの background 側",
+  body: "The background side of live folders",
   score: 1,
   ...overrides,
 })
@@ -44,7 +44,7 @@ const searchItem = (overrides: Record<string, unknown> = {}) => ({
 const searchBody = (items: ReadonlyArray<unknown>) =>
   JSON.stringify({ total_count: items.length, incomplete_results: false, items })
 
-describe("公式 API の検索式", () => {
+describe("official API search queries", () => {
   it.each<[GitHubQuery, ReadonlyArray<string>]>([
     ["review-requested", ["is:pr is:open review-requested:@me archived:false"]],
     ["authored-pull-requests", ["is:pr is:open author:@me archived:false"]],
@@ -53,15 +53,15 @@ describe("公式 API の検索式", () => {
       "mentioned",
       ["is:issue is:open mentions:@me archived:false", "is:pr is:open mentions:@me archived:false"],
     ],
-  ])("%s は、開いているものだけを対象に検索する", (query, expected) => {
+  ])("%s searches only open items", (query, expected) => {
     expect(githubApiSearchesFor(query)).toStrictEqual(expected)
   })
 })
 
-describe("公式 API への検索の要求", () => {
+describe("search requests to the official API", () => {
   const request = githubApiSearchRequest("is:pr is:open author:@me", "ghp_secret")
 
-  it("検索式を更新の新しい順で問い合わせる", () => {
+  it("asks for the query's results most recently updated first", () => {
     const url = new URL(request.url)
 
     expect([
@@ -77,7 +77,7 @@ describe("公式 API への検索の要求", () => {
     ])
   })
 
-  it("トークンで認証し、ブラウザの cookie は送らない", () => {
+  it("authenticates with the token and sends no browser cookies", () => {
     expect([request.headers?.["Authorization"], request.credentials]).toStrictEqual([
       "Bearer ghp_secret",
       "omit",
@@ -85,15 +85,15 @@ describe("公式 API への検索の要求", () => {
   })
 })
 
-describe("公式 API の検索結果の解析", () => {
-  it("Issue やプルリクエストが、リポジトリと番号を補足に持つ項目になる", () => {
+describe("parsing official API search results", () => {
+  it("turns issues and pull requests into items with the repository and number as the subtitle", () => {
     const items = parseGitHubApiSearch(searchBody([searchItem()]))
 
     expect(items).toStrictEqual(
       Option.some([
         {
           id: "2876543210",
-          title: "ライブフォルダを追加する",
+          title: "Add live folders",
           subtitle: "katip-dev/katip#42",
           url: "https://github.com/katip-dev/katip/pull/42",
           updatedAt: Date.UTC(2026, 9, 30, 8, 55, 41),
@@ -102,11 +102,11 @@ describe("公式 API の検索結果の解析", () => {
     )
   })
 
-  it("該当が無ければ空になる", () => {
+  it("is empty when nothing matches", () => {
     expect(parseGitHubApiSearch(searchBody([]))).toStrictEqual(Option.some([]))
   })
 
-  it("形の合わない項目だけを除き、ほかの項目は残す", () => {
+  it("leaves out only the items of the wrong shape, keeping the others", () => {
     const body = searchBody([
       searchItem({ id: 1, title: null }),
       searchItem({ id: 2, updated_at: "not a date" }),
@@ -118,7 +118,7 @@ describe("公式 API の検索結果の解析", () => {
     )
   })
 
-  it("リンクが https でない項目は除く", () => {
+  it("leaves out items whose link isn't https", () => {
     const body = searchBody([
       searchItem({ id: 1, html_url: "javascript:alert(1)" }),
       searchItem({ id: 2 }),
@@ -129,7 +129,7 @@ describe("公式 API の検索結果の解析", () => {
     )
   })
 
-  it("JSON でない本文や項目の一覧の無い本文は読めない", () => {
+  it("can't read a body that isn't JSON or has no list of items", () => {
     expect([
       parseGitHubApiSearch("<html>Bad gateway</html>"),
       parseGitHubApiSearch(JSON.stringify({ message: "Validation Failed" })),
@@ -137,26 +137,26 @@ describe("公式 API の検索結果の解析", () => {
   })
 })
 
-describe("公式 API の応答の判定", () => {
-  it("成功すれば項目が取り込まれる", () => {
+describe("judging official API responses", () => {
+  it("takes in the items on success", () => {
     const result = githubApiItemsFrom(httpResponse(200, searchBody([searchItem()])), NOW)
 
     expect(Result.map(result, (items) => items.length)).toStrictEqual(Result.succeed(1))
   })
 
-  it("成功の応答でも読めない本文なら、読み取れないと判定する", () => {
+  it("a successful response with an unreadable body is unreadable", () => {
     expect(githubApiItemsFrom(httpResponse(200, "{"), NOW)).toStrictEqual(
       Result.fail({ _tag: "UnreadableResponse" }),
     )
   })
 
-  it("トークンを受け付けられなかったら、トークンが無効と判定する", () => {
+  it("a token that isn't accepted is rejected", () => {
     expect(
       githubApiItemsFrom(httpResponse(401, '{"message":"Bad credentials"}'), NOW),
     ).toStrictEqual(Result.fail({ _tag: "TokenRejected" }))
   })
 
-  it("回数の上限を使い切ったら、知らされた回復時刻まで待つ", () => {
+  it("after using up the request quota, waits until the reset time given", () => {
     const response = httpResponse(403, '{"message":"API rate limit exceeded"}', {
       "x-ratelimit-remaining": "0",
       "x-ratelimit-reset": "1793350000",
@@ -167,7 +167,7 @@ describe("公式 API の応答の判定", () => {
     )
   })
 
-  it("短時間に送りすぎたら、知らされた秒数だけ待つ", () => {
+  it("after sending too much in a short time, waits the seconds given", () => {
     const response = httpResponse(403, '{"message":"secondary rate limit"}', {
       "retry-after": "90",
       "x-ratelimit-remaining": "25",
@@ -178,13 +178,13 @@ describe("公式 API の応答の判定", () => {
     )
   })
 
-  it("待つ時間を知らされずに上限に達したら、1 分待つ", () => {
+  it("waits one minute when the limit is hit without saying how long to wait", () => {
     expect(githubApiItemsFrom(httpResponse(429), NOW)).toStrictEqual(
       Result.fail({ _tag: "RateLimited", retryAt: NOW + 60_000 }),
     )
   })
 
-  it("上限ではない拒否は、アクセスできないと判定する", () => {
+  it("a refusal that isn't the rate limit means access is denied", () => {
     const response = httpResponse(403, '{"message":"Resource protected by SAML enforcement"}', {
       "x-ratelimit-remaining": "4999",
     })
@@ -194,7 +194,7 @@ describe("公式 API の応答の判定", () => {
     )
   })
 
-  it("それ以外のエラー応答は、その状態コードで失敗する", () => {
+  it("any other error response fails with its status code", () => {
     expect(githubApiItemsFrom(httpResponse(422), NOW)).toStrictEqual(
       Result.fail({ _tag: "UnexpectedStatus", status: 422 }),
     )

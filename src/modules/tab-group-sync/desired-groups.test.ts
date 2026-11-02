@@ -23,7 +23,7 @@ const tab = (id: number, windowId: number, index: number, pinned = false) =>
   }) as BrowserTab
 
 describe("desiredGroupsFor", () => {
-  it("ウィンドウごと・Space ごとに、名前とテーマに近い色を付けたグループを index 順のタブで作る", () => {
+  it("makes a group per window and Space, named after the Space, colored close to its theme, with tabs in index order", () => {
     const workspace = [
       [1, "home"],
       [2, "work"],
@@ -41,7 +41,7 @@ describe("desiredGroupsFor", () => {
     ])
   })
 
-  it("そのウィンドウのアクティブ Space 以外のグループは折りたたむ", () => {
+  it("collapses the groups of every Space but the window's active one", () => {
     const workspace = assignTab(
       assignTab(
         switchSpace(emptyWorkspace, WindowId.make(1), spaceId("work")),
@@ -62,7 +62,7 @@ describe("desiredGroupsFor", () => {
     ])
   })
 
-  it("ピン留めのタブも Space のグループに入り、Chrome で固定されたタブと所属の無いタブは入らない", () => {
+  it("puts Katip-pinned tabs in their Space's group too, but not tabs pinned in Chrome or tabs in no Space", () => {
     const workspace = bindPinned(
       assignTab(emptyWorkspace, TabId.make(1), spaceId("home"), 0),
       TabId.make(1),
@@ -78,7 +78,7 @@ describe("desiredGroupsFor", () => {
     expect(groups.map((g) => g.tabIds)).toStrictEqual([[1]])
   })
 
-  it("別々のウィンドウにある同じ Space のタブは、ウィンドウごとに別のグループになる", () => {
+  it("puts tabs of the same Space in different windows into a separate group per window", () => {
     const workspace = assignTab(
       assignTab(emptyWorkspace, TabId.make(1), spaceId("home"), 0),
       TabId.make(2),
@@ -94,7 +94,7 @@ describe("desiredGroupsFor", () => {
     ])
   })
 
-  it("アクティブ Space が決まっていないウィンドウのグループは折りたたまない", () => {
+  it("doesn't collapse groups in a window with no active Space yet", () => {
     const workspace = assignTab(emptyWorkspace, TabId.make(1), spaceId("home"), 0)
 
     const groups = desiredGroupsFor(spaces, workspace, [tab(1, 1, 0)])

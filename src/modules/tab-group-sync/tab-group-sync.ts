@@ -20,15 +20,15 @@ export class TabGroupSync extends Context.Service<
   TabGroupSync,
   {
     /**
-     * Chrome のタブグループを `desired` に揃え、新しい対応表を保存して返す。
+     * Brings Chrome's tab groups in line with `desired`, then saves and returns the new projection.
      *
-     * @param desired - 全ウィンドウ分のあるべき姿。含まれない Space・ウィンドウのグループは
-     *   Katip の管理から外れ、そこに残ったタブはグループから外される。
+     * @param desired - What every window should look like. The group of a Space and window not in
+     *   it is no longer managed by Katip, and the tabs left in it are ungrouped.
      *
      * @remarks
-     * 操作が失敗しても残りの操作は続け、対応表を保存してから失敗をまとめて
-     * {@link TabGroupSyncIncomplete} で返す。失敗した分は次の同期でやり直される。
-     * 同時に呼ばれても 1 回ずつ順に実行する。
+     * A failed operation doesn't stop the remaining ones. The projection is saved first, then the
+     * failures are returned together as {@link TabGroupSyncIncomplete}. What failed is retried by
+     * the next sync. Concurrent calls run one at a time, in order.
      */
     sync(
       desired: ReadonlyArray<DesiredGroup>,
@@ -45,9 +45,13 @@ export class TabGroupSync extends Context.Service<
 
       const loadProjection = storage.session.getDecoded(projectionKey, TabGroupProjection).pipe(
         Effect.map(Option.getOrElse((): TabGroupProjection => [])),
-        // 壊れた対応表で同期を止め続けるより、全グループを管理外とみなして作り直すほうがよい
+        // Not a failure: a broken projection would block every sync, while treating every group as
+        // unmanaged just rebuilds them
         Effect.catchTag("StorageDecodeError", (error) =>
-          Effect.as(Effect.logWarning("タブグループの対応表を読めなかったので捨てる", error), []),
+          Effect.as(
+            Effect.logWarning("Discarding the tab group projection it couldn't read", error),
+            [],
+          ),
         ),
       )
 
@@ -64,8 +68,8 @@ export class TabGroupSync extends Context.Service<
         const [actualTabs, actualGroups] = yield* Effect.all([tabs.query({}), tabGroups.query({})])
         const plan = planTabGroupSync(desired, actualTabs, actualGroups, projection)
 
-        // 作ったグループの見た目を整える呼び出しが失敗しても、グループ自体は対応表に残す。
-        // 残さないと次の同期で同じ Space のグループをもう 1 つ作ってしまう
+        // A created group stays in the projection even when styling it fails. Otherwise the next
+        // sync would create a second group for the same Space
         const createdGroups = yield* Ref.make<ReadonlyArray<ProjectedGroup>>([])
         const perform = TabGroupOperation.match({
           CreateGroup: ({ spaceId, windowId, tabIds, appearance }) =>
@@ -82,7 +86,8 @@ export class TabGroupSync extends Context.Service<
           UngroupTabs: ({ tabIds }) => tabs.ungroup(tabIds),
         })
 
-        // 計画は「グループへ入れてから外す」順に並んでいて、並行に流すとグループが先に空になって消える
+        // Not concurrent: the plan adds tabs to groups before removing them, and out of order a
+        // group could empty first and be deleted
         const [, failures] = yield* Effect.partition(
           plan.operations,
           (operation) => Effect.mapError(perform(operation), (cause) => ({ operation, cause })),

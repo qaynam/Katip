@@ -26,42 +26,42 @@ const record = (
   seenVersions: Record<string, number> = {},
 ): LiveFolderRecord => ({ items, lastAttempt: { _tag: "Fetched", at: 0 }, seenVersions })
 
-describe("未読の判定", () => {
-  it("一度も見ていない項目は未読", () => {
+describe("unread", () => {
+  it("an item never seen is unread", () => {
     expect(isUnseen(record([item("a")]), item("a"))).toBe(true)
   })
 
-  it("見た後に更新されていない項目は既読", () => {
+  it("an item not updated since it was seen is read", () => {
     expect(isUnseen(record([item("a", 100)], { a: 100 }), item("a", 100))).toBe(false)
   })
 
-  it("見た後に更新された項目は未読に戻る", () => {
+  it("an item updated after it was seen becomes unread again", () => {
     expect(isUnseen(record([item("a", 200)], { a: 100 }), item("a", 200))).toBe(true)
   })
 })
 
-describe("既読にする", () => {
-  it("開いた項目は、その時点の更新時刻まで見たことになる", () => {
+describe("marking as seen", () => {
+  it("an opened item counts as seen up to its update time at that moment", () => {
     const marked = markItemSeen(record([item("a", 100), item("b", 200)]), "b")
 
     expect(marked.items.map((i) => isUnseen(marked, i))).toStrictEqual([true, false])
   })
 
-  it("無い項目を既読にしても何も変わらない", () => {
+  it("marking a missing item as seen changes nothing", () => {
     const original = record([item("a")])
 
     expect(markItemSeen(original, "missing")).toStrictEqual(original)
   })
 
-  it("まとめて既読にすると、今ある項目がすべて既読になる", () => {
+  it("marking all as seen makes every current item read", () => {
     const marked = markAllSeen(record([item("a", 100), item("b", 200)], { a: 50 }))
 
     expect(marked.items.map((i) => isUnseen(marked, i))).toStrictEqual([false, false])
   })
 })
 
-describe("取得できたとき", () => {
-  it("項目を取得した項目で置き換え、取得した時刻を残す", () => {
+describe("after a successful fetch", () => {
+  it("replaces the items with the fetched ones and keeps the fetch time", () => {
     const next = recordFetched(Option.some(record([item("old")])), [item("new")], 500)
 
     expect([next.items, next.lastAttempt]).toStrictEqual([
@@ -70,7 +70,7 @@ describe("取得できたとき", () => {
     ])
   })
 
-  it("残った項目の既読は保ち、消えた項目の既読の記録は捨てる", () => {
+  it("keeps what was seen of remaining items and drops it for items that are gone", () => {
     const previous = record([item("a"), item("b")], { a: 100, b: 100 })
 
     const next = recordFetched(Option.some(previous), [item("a")], 500)
@@ -78,15 +78,15 @@ describe("取得できたとき", () => {
     expect(next.seenVersions).toStrictEqual({ a: 100 })
   })
 
-  it("初めての取得では、すべての項目が未読になる", () => {
+  it("on the first fetch, every item is unread", () => {
     const next = recordFetched(Option.none(), [item("a"), item("b")], 500)
 
     expect(next.items.map((i) => isUnseen(next, i))).toStrictEqual([true, true])
   })
 })
 
-describe("取得できなかったとき", () => {
-  it("前回の項目と既読を残したまま、失敗の理由と時刻を残す", () => {
+describe("after a failed fetch", () => {
+  it("keeps the previous items and what was seen, adding the failure's reason and time", () => {
     const previous = record([item("a")], { a: 100 })
 
     const next = recordFailed(Option.some(previous), { _tag: "Unreachable" }, 500)
@@ -98,35 +98,35 @@ describe("取得できなかったとき", () => {
     })
   })
 
-  it("一度も取得できていなければ、項目は空", () => {
+  it("has no items when nothing was ever fetched", () => {
     const next = recordFailed(Option.none(), { _tag: "PermissionMissing" }, 500)
 
     expect(next.items).toStrictEqual([])
   })
 })
 
-describe("自動で取得し直す頃合い", () => {
+describe("when to refetch automatically", () => {
   const fetchedAt = (at: number) => Option.some(recordFetched(Option.none(), [], at))
 
-  it("一度も取得していなければ取得する", () => {
+  it("fetches when nothing was ever fetched", () => {
     expect(isRefreshDue(Option.none(), 0, MINUTE)).toBe(true)
   })
 
-  it("前回の取得から間隔が空いていなければ取得しない", () => {
+  it("doesn't fetch before the interval since the last fetch has passed", () => {
     expect(isRefreshDue(fetchedAt(0), MINUTE - 1, MINUTE)).toBe(false)
   })
 
-  it("前回の取得から間隔が空いていれば取得する", () => {
+  it("fetches once the interval since the last fetch has passed", () => {
     expect(isRefreshDue(fetchedAt(0), MINUTE, MINUTE)).toBe(true)
   })
 
-  it("失敗した後も、間隔が空けば取得し直す", () => {
+  it("refetches after a failure too, once the interval has passed", () => {
     const failed = recordFailed(Option.none(), { _tag: "Unreachable" }, 0)
 
     expect(isRefreshDue(Option.some(failed), MINUTE, MINUTE)).toBe(true)
   })
 
-  it("利用上限に達していれば、再開時刻までは間隔が空いても取得しない", () => {
+  it("after hitting the rate limit, doesn't fetch before the retry time even when the interval has passed", () => {
     const limited = recordFailed(Option.none(), { _tag: "RateLimited", retryAt: 10 * MINUTE }, 0)
 
     expect([

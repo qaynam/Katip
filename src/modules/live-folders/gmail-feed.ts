@@ -5,16 +5,17 @@ import type { LiveFetchFailure } from "./live-fetch-failure"
 import { gmailMailboxUrl, isOpenableUrl, type GmailSource, type LiveItem } from "./live-source"
 
 /**
- * ログイン中のセッションの cookie で読む未読フィード。
+ * The unread feed, read with the signed-in session's cookies.
  *
- * Google の OAuth はスコープの審査が重く、拡張だけでは Gmail API を使えないため、
- * ブラウザでログインしている状態をそのまま使えるこのフィードを読む。
+ * Not the Gmail API: Google's OAuth scope review is heavy, and an extension alone can't use the
+ * API. This feed works with the browser's signed-in state as it is.
  */
 export const gmailFeedRequest = ({ accountIndex, label }: GmailSource): HttpRequest => ({
   url: `${gmailMailboxUrl(accountIndex)}feed/atom${label === null ? "" : `/${encodeURIComponent(label)}`}`,
   credentials: "include",
-  // ログインしていないとログイン画面へリダイレクトされる。たどると許可の無い
-  // accounts.google.com への要求になって接続エラーと区別できなくなるので、たどらずに判定する
+  // Signed out, the feed redirects to the sign-in page. Following it would request
+  // accounts.google.com, which has no permission, and become indistinguishable from a connection
+  // error, so the redirect is judged without following it
   redirect: "manual",
 })
 
@@ -23,7 +24,8 @@ const feedParser = new XMLParser({
   ignoreAttributes: (_name, jPath) => jPath !== "feed.entry.link",
   parseTagValue: false,
   parseAttributeValue: false,
-  // 既定では XML の文字参照（&#39; など）が解かれない。Gmail は件名や差出人の記号を文字参照で送る
+  // By default XML character references (such as &#39;) stay undecoded, and Gmail sends symbols in
+  // subjects and senders as character references
   htmlEntities: true,
   isArray: (_name, jPath) => jPath === "feed.entry" || jPath === "feed.entry.link",
 })
@@ -84,7 +86,7 @@ const itemFrom =
       ),
       (updated) => ({
         id: entry.id,
-        // 件名の無いメールは空のまま残し、表示するときに表示の言語で件名なしと示す
+        // A mail without a subject stays empty here; the view says "no subject" in its own language
         title: Option.getOrElse(nonBlank(entry.title), () => ""),
         subtitle: senderOf(entry),
         url: Option.getOrElse(conversationUrlOf(entry), () => gmailMailboxUrl(accountIndex)),
@@ -95,9 +97,10 @@ const itemFrom =
 const parseXml = Option.liftThrowable((xml: string): unknown => feedParser.parse(xml))
 
 /**
- * Gmail の未読フィード（Atom 0.3）から項目を取り出す。並びはフィードの順のまま。
+ * Reads the items from Gmail's unread feed (Atom 0.3), in the feed's order.
  *
- * フィードでなければ None。形の合わない項目や時刻の無い項目は、フィード全体を捨てずにその項目だけを除く。
+ * None if it isn't a feed. An entry of the wrong shape or without a time is left out on its own,
+ * without discarding the whole feed.
  */
 export const parseGmailFeed = (
   xml: string,

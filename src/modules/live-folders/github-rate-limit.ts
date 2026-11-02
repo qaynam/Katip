@@ -9,15 +9,18 @@ const headerNumber = (response: HttpResponse, name: string) =>
 const FALLBACK_WAIT_MS = 60_000
 
 /**
- * GitHub の利用上限に達した応答なら、取得し直してよい時刻（エポックミリ秒）を返す。
+ * For a response that hit GitHub's rate limit, returns when fetching again is allowed (epoch
+ * milliseconds).
  *
- * 上限による拒否でなければ None。待つ時間を知らされずに上限に達したなら、1 分後とする。
+ * None if the response isn't a rate-limit rejection. When the limit was hit without saying how long
+ * to wait, it's one minute from `now`.
  *
- * @param now - 待ち時間（秒）で知らされたときの起点。
+ * @param now - What a wait given in seconds counts from.
  */
 export const rateLimitRetryAt = (response: HttpResponse, now: number): Option.Option<number> => {
   if (response.status !== 403 && response.status !== 429) return Option.none()
-  // 一次の上限は残り回数と回復時刻（エポック秒）、二次の上限は retry-after（秒）で知らされる
+  // The primary limit is reported as remaining requests plus a reset time (epoch seconds), the
+  // secondary limit as retry-after (seconds)
   const afterRetryAfter = Option.map(
     headerNumber(response, "retry-after"),
     (seconds) => now + seconds * 1000,

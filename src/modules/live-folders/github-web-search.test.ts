@@ -21,8 +21,8 @@ const searchResult = (overrides: Record<string, unknown> = {}) => ({
   id: "2876543210",
   num_comments: 3,
   created: "2026-10-28T02:11:09.000Z",
-  hl_text: "ライブフォルダの <em>background</em> 側",
-  hl_title: "<em>ライブフォルダ</em>を追加する",
+  hl_text: "The <em>background</em> side of live folders",
+  hl_title: "Add <em>live folders</em>",
   labels: [],
   language: "TypeScript",
   number: 42,
@@ -71,7 +71,7 @@ const searchPage = (
 const itemsOf = (body: string, search: GitHubWebSearch = pullRequests) =>
   Option.map(parseGitHubWebSearch(body, search.type), (page) => page.items)
 
-describe("画面の検索の検索式", () => {
+describe("web search queries", () => {
   it.each<[GitHubQuery, ReadonlyArray<GitHubWebSearch>]>([
     [
       "review-requested",
@@ -102,15 +102,15 @@ describe("画面の検索の検索式", () => {
         { type: "issues", query: "is:open mentions:@me archived:false sort:updated-desc" },
       ],
     ],
-  ])("%s は、開いているものを更新の新しい順に検索する", (query, expected) => {
+  ])("%s searches open items, most recently updated first", (query, expected) => {
     expect(githubWebSearchesFor(query)).toStrictEqual(expected)
   })
 })
 
-describe("画面の検索の要求", () => {
+describe("web search requests", () => {
   const request = githubWebSearchRequest(pullRequests)
 
-  it("検索式と結果の種類を指定して、検索画面の結果を JSON で求める", () => {
+  it("asks for the search page's results as JSON, giving the query and the result kind", () => {
     const url = new URL(request.url)
 
     expect([
@@ -126,18 +126,18 @@ describe("画面の検索の要求", () => {
     ])
   })
 
-  it("ログイン中のセッションの cookie を付け、ログイン画面へのリダイレクトはたどらない", () => {
+  it("sends the signed-in session's cookies and doesn't follow a redirect to the sign-in page", () => {
     expect([request.credentials, request.redirect]).toStrictEqual(["include", "manual"])
   })
 })
 
-describe("画面の検索の結果の解析", () => {
-  it("プルリクエストが、リポジトリと番号を補足に持ち、プルリクエストの画面を開く項目になる", () => {
+describe("parsing web search results", () => {
+  it("turns a pull request into an item with the repository and number as the subtitle, opening the pull request's page", () => {
     expect(itemsOf(searchPage([searchResult()]))).toStrictEqual(
       Option.some([
         {
           id: "katip-dev/katip#42",
-          title: "ライブフォルダを追加する",
+          title: "Add live folders",
           subtitle: "katip-dev/katip#42",
           url: "https://github.com/katip-dev/katip/pull/42",
           updatedAt: Date.UTC(2026, 9, 28, 2, 11, 9),
@@ -146,7 +146,7 @@ describe("画面の検索の結果の解析", () => {
     )
   })
 
-  it("Issue の検索の結果は、Issue の画面を開く", () => {
+  it("results of an issue search open the issue's page", () => {
     const items = itemsOf(searchPage([searchResult({ number: 7 })]), {
       type: "issues",
       query: "is:open is:issue assignee:@me",
@@ -157,7 +157,7 @@ describe("画面の検索の結果の解析", () => {
     )
   })
 
-  it("件名は一致箇所の強調を外し、文字参照を元の文字に戻す", () => {
+  it("strips match highlighting from the title and decodes character references", () => {
     const body = searchPage([
       searchResult({
         hl_title:
@@ -170,7 +170,7 @@ describe("画面の検索の結果の解析", () => {
     )
   })
 
-  it("結果は検索式の並び（更新の新しい順）のまま並ぶ", () => {
+  it("keeps the results in the query's order (most recently updated first)", () => {
     const body = searchPage([
       searchResult({ number: 1, created: "2026-01-01T00:00:00Z" }),
       searchResult({ number: 2, created: "2026-10-01T00:00:00Z" }),
@@ -181,24 +181,24 @@ describe("画面の検索の結果の解析", () => {
     )
   })
 
-  it("該当が無ければ空になる", () => {
+  it("is empty when nothing matches", () => {
     expect(itemsOf(searchPage([]))).toStrictEqual(Option.some([]))
   })
 
-  it("1 件でも形の合わない結果があれば、応答全体を読めないものとする", () => {
+  it("treats the whole response as unreadable when even one result has the wrong shape", () => {
     const body = searchPage([searchResult(), searchResult({ repo: { name: "katip" } })])
 
     expect(itemsOf(body)).toStrictEqual(Option.none())
   })
 
-  it("JSON でない本文や、検索の結果を持たない本文は読めない", () => {
+  it("can't read a body that isn't JSON or has no search results", () => {
     expect([
       itemsOf("<!DOCTYPE html><html><body>Sign in to GitHub</body></html>"),
       itemsOf(JSON.stringify({ payload: { repository: {} } })),
     ]).toStrictEqual([Option.none(), Option.none()])
   })
 
-  it("ログインしているかどうかを読み取る", () => {
+  it("reads whether the user is signed in", () => {
     expect(
       Option.map(
         parseGitHubWebSearch(searchPage([], { loggedIn: false }), "issues"),
@@ -208,8 +208,8 @@ describe("画面の検索の結果の解析", () => {
   })
 })
 
-describe("画面の検索の応答の判定", () => {
-  it("ログインしていて結果を読めれば、項目が取り込まれる", () => {
+describe("judging web search responses", () => {
+  it("takes in the items when signed in and the results are readable", () => {
     const result = githubWebItemsFrom(
       httpResponse(200, searchPage([searchResult()])),
       pullRequests,
@@ -219,7 +219,7 @@ describe("画面の検索の応答の判定", () => {
     expect(Result.map(result, (items) => items.length)).toStrictEqual(Result.succeed(1))
   })
 
-  it("ログインしていないと返されたら、ログインしていないと判定する", () => {
+  it("a response saying the user is signed out means not signed in", () => {
     const response = httpResponse(200, searchPage([], { loggedIn: false }))
 
     expect(githubWebItemsFrom(response, pullRequests, NOW)).toStrictEqual(
@@ -227,14 +227,14 @@ describe("画面の検索の応答の判定", () => {
     )
   })
 
-  it("リダイレクトされたり認証を求められたりしたら、ログインしていないと判定する", () => {
+  it("a redirect or a request for authentication means not signed in", () => {
     expect([
       githubWebItemsFrom(redirectResponse, pullRequests, NOW),
       githubWebItemsFrom(httpResponse(401), pullRequests, NOW),
     ]).toStrictEqual([Result.fail({ _tag: "NotSignedIn" }), Result.fail({ _tag: "NotSignedIn" })])
   })
 
-  it("送りすぎで断られたら、知らされた秒数だけ待つ", () => {
+  it("when refused for sending too much, waits the seconds given", () => {
     const response = httpResponse(429, "Too many requests", { "retry-after": "30" })
 
     expect(githubWebItemsFrom(response, pullRequests, NOW)).toStrictEqual(
@@ -242,19 +242,19 @@ describe("画面の検索の応答の判定", () => {
     )
   })
 
-  it("拒否されたら、アクセスできないと判定する", () => {
+  it("a refusal means access is denied", () => {
     expect(githubWebItemsFrom(httpResponse(403), pullRequests, NOW)).toStrictEqual(
       Result.fail({ _tag: "AccessDenied", status: 403 }),
     )
   })
 
-  it("それ以外のエラー応答は、その状態コードで失敗する", () => {
+  it("any other error response fails with its status code", () => {
     expect(githubWebItemsFrom(httpResponse(500), pullRequests, NOW)).toStrictEqual(
       Result.fail({ _tag: "UnexpectedStatus", status: 500 }),
     )
   })
 
-  it("成功の応答でも読めない本文なら、読み取れないと判定する", () => {
+  it("a successful response with an unreadable body is unreadable", () => {
     expect(githubWebItemsFrom(httpResponse(200, "{}"), pullRequests, NOW)).toStrictEqual(
       Result.fail({ _tag: "UnreadableResponse" }),
     )

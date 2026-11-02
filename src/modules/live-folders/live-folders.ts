@@ -28,9 +28,10 @@ export class LiveFolders extends Context.Service<
   LiveFolders,
   {
     /**
-     * 取得を始め、終わるのを待たずに戻る。同じフォルダの取得が進んでいる間は何もしない。
+     * Starts a fetch and returns without waiting for it to finish. Does nothing while a fetch of
+     * the same folder is in progress.
      *
-     * 成功しても失敗しても、結果をキャッシュに残す。
+     * The outcome, success or failure, is kept in the cache.
      */
     refresh(folderId: BookmarkId, source: LiveSource): Effect.Effect<void>
     readonly snapshot: Effect.Effect<LiveFolderSnapshot>
@@ -38,11 +39,11 @@ export class LiveFolders extends Context.Service<
     markItemSeen(folderId: BookmarkId, itemId: string): Effect.Effect<void, BrowserApiError>
     markAllSeen(folderId: BookmarkId): Effect.Effect<void, BrowserApiError>
     setSort(folderId: BookmarkId, sort: LiveSort): Effect.Effect<void, BrowserApiError>
-    /** 進んでいる取得を止めてから、キャッシュと並べ方を捨てる。 */
+    /** Stops any fetch in progress, then discards the cache and the sort order. */
     forget(folderIds: ReadonlyArray<BookmarkId>): Effect.Effect<void, BrowserApiError>
-    /** `folderIds` に含まれないフォルダのキャッシュと並べ方を捨てる。 */
+    /** Discards the cache and the sort order of every folder not in `folderIds`. */
     retainOnly(folderIds: ReadonlySet<BookmarkId>): Effect.Effect<void, BrowserApiError>
-    /** 取得を始めたときと終えたときに、そのフォルダの ID が流れる。 */
+    /** Emits a folder's id when a fetch of it starts and when it finishes. */
     readonly refreshEvents: Stream.Stream<BookmarkId>
   }
 >()("katip/live-folders/LiveFolders") {
@@ -88,7 +89,7 @@ export class LiveFolders extends Context.Service<
           folderId,
           fetchAndRecord(folderId, source).pipe(
             Effect.catch((error) =>
-              Effect.logWarning("ライブフォルダの取得結果を保存できなかった", error),
+              Effect.logWarning("Couldn't save the live folder's fetch outcome", error),
             ),
             Effect.ensuring(finish(folderId)),
           ),
@@ -126,7 +127,7 @@ export class LiveFolders extends Context.Service<
     }),
   )
 
-  /** {@link LiveFetcher}、{@link LiveFolderCache}、{@link LiveSortStore} も合わせて提供する。 */
+  /** Also provides {@link LiveFetcher}, {@link LiveFolderCache} and {@link LiveSortStore}. */
   static readonly layer = this.layerNoDeps.pipe(
     Layer.provideMerge(LiveFetcher.layer),
     Layer.provideMerge(LiveFolderCache.layer),

@@ -18,7 +18,7 @@ const GITHUB_API_ORIGIN = "https://api.github.com/*"
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const mentioned: LiveSource = { _tag: "GitHub", query: "mentioned" }
 
-const gmailFeed = `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><fullcount>1</fullcount><entry><title>請求書の送付</title><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=19a&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:1</id><author><name>経理部</name><email>keiri@example.co.jp</email></author></entry></feed>`
+const gmailFeed = `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><fullcount>1</fullcount><entry><title>Your invoice</title><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=19a&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:1</id><author><name>Accounting</name><email>accounting@example.co.jp</email></author></entry></feed>`
 
 const githubItem = (id: number, updatedAt: string) => ({
   id,
@@ -49,8 +49,8 @@ const fetchFailure = (source: LiveSource) =>
     (error) => error.failure,
   )
 
-describe("アクセスの許可", () => {
-  it.effect("取得元へのアクセスが許可されていなければ、要求を送らずに失敗する", () =>
+describe("access permission", () => {
+  it.effect("without access to the source, fails without sending a request", () =>
     Effect.gen(function* () {
       const failure = yield* fetchFailure(inbox)
 
@@ -63,7 +63,7 @@ describe("アクセスの許可", () => {
 })
 
 describe("Gmail", () => {
-  it.effect("許可されていれば、ログイン中の cookie 付きでフィードを読んで項目を返す", () =>
+  it.effect("with access, reads the feed with the signed-in cookies and returns its items", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])
       yield* (yield* FakeHttp).route("https://mail.google.com/", () =>
@@ -75,12 +75,12 @@ describe("Gmail", () => {
       const [request] = yield* (yield* FakeHttp).requests
       assert.deepStrictEqual(
         [items.map((item) => [item.title, item.subtitle]), request?.credentials],
-        [[["請求書の送付", "経理部"]], "include"],
+        [[["Your invoice", "Accounting"]], "include"],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("接続できなければ、接続できなかったとして失敗する", () =>
+  it.effect("fails as unreachable when it can't connect", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])
       yield* (yield* FakeHttp).route("https://mail.google.com/", unreachable)
@@ -89,7 +89,7 @@ describe("Gmail", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("応答が 30 秒返らなければ、接続できなかったとして打ち切る", () =>
+  it.effect("gives up as unreachable when no response comes within 30 seconds", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])
       yield* (yield* FakeHttp).route("https://mail.google.com/", () => Effect.never)
@@ -102,9 +102,9 @@ describe("Gmail", () => {
   )
 })
 
-describe("GitHub（ログイン中のセッション）", () => {
+describe("GitHub with the signed-in session", () => {
   it.effect(
-    "トークンが無ければ、検索画面をログイン中の cookie 付きで読み、プルリクエストと Issue の結果を合わせる",
+    "without a token, reads the search page with the signed-in cookies, combining pull request and issue results",
     () =>
       Effect.gen(function* () {
         yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
@@ -135,7 +135,7 @@ describe("GitHub（ログイン中のセッション）", () => {
       }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("github.com へのアクセスが許可されていなければ、要求を送らずに失敗する", () =>
+  it.effect("without access to github.com, fails without sending a request", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
 
@@ -148,7 +148,7 @@ describe("GitHub（ログイン中のセッション）", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("ログインしていなければ、ログインしていないとして失敗する", () =>
+  it.effect("fails as not signed in when signed out", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
       yield* (yield* FakeHttp).route("https://github.com/search", () =>
@@ -160,9 +160,9 @@ describe("GitHub（ログイン中のセッション）", () => {
   )
 })
 
-describe("GitHub（トークン）", () => {
+describe("GitHub with a token", () => {
   it.effect(
-    "トークンが設定されていれば公式 API をトークンで検索し、結果を更新の新しい順にまとめる",
+    "with a token set, searches the official API with it and merges the results most recently updated first",
     () =>
       Effect.gen(function* () {
         yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
@@ -196,7 +196,7 @@ describe("GitHub（トークン）", () => {
       }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("公式 API へのアクセスが許可されていなければ、要求を送らずに失敗する", () =>
+  it.effect("without access to the official API, fails without sending a request", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
       yield* (yield* GitHubTokenStore).save("ghp_secret")
@@ -210,7 +210,7 @@ describe("GitHub（トークン）", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("トークンを受け付けられなければ、トークンが無効として失敗する", () =>
+  it.effect("fails as token rejected when the token isn't accepted", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
       yield* (yield* GitHubTokenStore).save("ghp_revoked")
@@ -222,7 +222,7 @@ describe("GitHub（トークン）", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("空のトークンを保存するとトークンが消え、ログイン中のセッションで読む", () =>
+  it.effect("saving an empty token removes the token, so reading uses the signed-in session", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GITHUB_ORIGIN, GITHUB_API_ORIGIN])
       yield* (yield* FakeHttp).route("https://github.com/search", () =>

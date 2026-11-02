@@ -5,16 +5,16 @@ import type { LiveSource } from "./live-source"
 
 const gmail: LiveSource = { _tag: "Gmail", accountIndex: 2, label: null }
 const github: LiveSource = { _tag: "GitHub", query: "review-requested" }
-const ja = makeTranslator("ja")
 const en = makeTranslator("en")
+const ja = makeTranslator("ja")
 
 const fixesOf = (failure: LiveFetchFailure, source: LiveSource = github) => {
-  const { needsPermission, needsToken, signInUrl } = explainFailure(failure, source, ja)
+  const { needsPermission, needsToken, signInUrl } = explainFailure(failure, source, en)
   return { needsPermission, needsToken, signInUrl }
 }
 
-describe("失敗の説明", () => {
-  it("アクセスの許可が無ければ、許可を求めれば直ると示す", () => {
+describe("explaining a failure", () => {
+  it("without access permission, says asking for the permission fixes it", () => {
     expect(fixesOf({ _tag: "PermissionMissing" })).toStrictEqual({
       needsPermission: true,
       needsToken: false,
@@ -22,7 +22,7 @@ describe("失敗の説明", () => {
     })
   })
 
-  it("設定されたトークンが無効なら、トークンを入れ直せば直ると示す", () => {
+  it("with an invalid token, says entering the token again fixes it", () => {
     expect(fixesOf({ _tag: "TokenRejected" })).toStrictEqual({
       needsPermission: false,
       needsToken: true,
@@ -30,25 +30,25 @@ describe("失敗の説明", () => {
     })
   })
 
-  it("Gmail にログインしていなければ、そのアカウントの受信トレイを開いてログインすれば直ると示す", () => {
-    expect(explainFailure({ _tag: "NotSignedIn" }, gmail, ja)).toStrictEqual({
-      reason: "このアカウントで Gmail にログインしていません",
+  it("signed out of Gmail, says opening that account's inbox and signing in fixes it", () => {
+    expect(explainFailure({ _tag: "NotSignedIn" }, gmail, en)).toStrictEqual({
+      reason: "You aren't signed in to Gmail with this account",
       needsPermission: false,
       needsToken: false,
       signInUrl: "https://mail.google.com/mail/u/2/",
     })
   })
 
-  it("GitHub にログインしていなければ、ログインページを開けば直ると示す", () => {
-    expect(explainFailure({ _tag: "NotSignedIn" }, github, ja)).toStrictEqual({
-      reason: "GitHub にログインしていません",
+  it("signed out of GitHub, says opening the sign-in page fixes it", () => {
+    expect(explainFailure({ _tag: "NotSignedIn" }, github, en)).toStrictEqual({
+      reason: "You aren't signed in to GitHub",
       needsPermission: false,
       needsToken: false,
       signInUrl: "https://github.com/login",
     })
   })
 
-  it("ユーザーの操作では直らない失敗は、直し方を示さない", () => {
+  it("offers no fix for a failure the user can't fix", () => {
     const failures: ReadonlyArray<LiveFetchFailure> = [
       { _tag: "AccessDenied", status: 403 },
       { _tag: "RateLimited", retryAt: 0 },
@@ -62,27 +62,27 @@ describe("失敗の説明", () => {
     )
   })
 
-  it("応答を読み取れなければ、どの取得元の応答かを示す", () => {
-    expect(explainFailure({ _tag: "UnreadableResponse" }, github, ja).reason).toBe(
-      "GitHub の応答を読み取れませんでした",
+  it("for an unreadable response, names the source it came from", () => {
+    expect(explainFailure({ _tag: "UnreadableResponse" }, github, en).reason).toBe(
+      "Couldn't read the response from GitHub",
     )
   })
 
-  it("状態コードで失敗したなら、理由にその状態コードを含める", () => {
-    expect(explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail, ja).reason).toContain(
+  it("for a failure with a status code, includes the status code in the reason", () => {
+    expect(explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail, en).reason).toContain(
       "502",
     )
   })
 })
 
-describe("表示の言語", () => {
-  it("英語に設定していれば、理由を英語で説明する", () => {
-    expect(explainFailure({ _tag: "NotSignedIn" }, github, en).reason).toBe(
-      "You aren't signed in to GitHub",
+describe("language of the explanation", () => {
+  it("explains the reason in the translator's language", () => {
+    expect(explainFailure({ _tag: "NotSignedIn" }, github, ja).reason).toBe(
+      "GitHub にログインしていません",
     )
   })
 
-  it("理由に取得元の名前と状態コードを埋め込む", () => {
+  it("fills the source's name and the status code into the reason", () => {
     expect([
       explainFailure({ _tag: "RateLimited", retryAt: 0 }, github, en).reason,
       explainFailure({ _tag: "UnexpectedStatus", status: 502 }, gmail, en).reason,

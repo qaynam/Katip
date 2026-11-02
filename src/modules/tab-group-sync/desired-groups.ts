@@ -8,10 +8,10 @@ import type { DesiredGroup } from "./tab-group-sync-plan"
 const byIndex = Order.mapInput(Order.Number, (tab: Pick<BrowserTab, "index">) => tab.index)
 
 /**
- * Space の所属から、全ウィンドウ分のあるべきタブグループを組み立てる。
+ * Builds the tab groups every window should have, from which Space each tab belongs to.
  *
- * タブを 1 つも持たない Space・ウィンドウの組は含めない。並びは Space 一覧の順、
- * タブは index 順。
+ * Leaves out a Space and window pair with no tab. Within a window, groups follow the order of the
+ * Space list, and tabs are in index order.
  */
 export const desiredGroupsFor = (
   spaces: SpaceList,

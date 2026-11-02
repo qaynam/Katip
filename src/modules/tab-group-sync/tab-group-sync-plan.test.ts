@@ -22,7 +22,7 @@ const tab = (
   pinned: place.pinned ?? false,
 })
 
-const spaceAppearance: GroupAppearance = { title: "仕事", color: "blue", collapsed: false }
+const spaceAppearance: GroupAppearance = { title: "Work", color: "blue", collapsed: false }
 
 const chromeTitle = (title: string) => Option.some(title).pipe(Option.filter((t) => t !== ""))
 
@@ -77,8 +77,8 @@ interface BrowserState {
   readonly projection: TabGroupProjection
 }
 
-// Chrome と同じく、空になったグループは消え、消えたグループへの操作は失敗し、
-// グループに入れた固定タブは固定が外れる
+// As in Chrome, an emptied group disappears, an operation on a gone group fails, and a pinned tab
+// put in a group is unpinned
 const applyPlan = (state: BrowserState, plan: TabGroupSyncPlan): BrowserState => {
   let tabs = state.tabs
   let groups = state.groups
@@ -87,7 +87,7 @@ const applyPlan = (state: BrowserState, plan: TabGroupSyncPlan): BrowserState =>
 
   const requireGroup = (groupId: TabGroupId) => {
     const found = groups.find((g) => g.id === groupId)
-    if (found === undefined) throw new Error(`グループ ${groupId} はもう存在しない`)
+    if (found === undefined) throw new Error(`Group ${groupId} no longer exists`)
     return found
   }
   const moveIntoGroup = (tabIds: ReadonlyArray<TabId>, target: ObservedTabGroup) => {
@@ -154,9 +154,9 @@ const groupOf = (state: BrowserState, tabId: number) =>
   state.tabs.find((t) => t.id === tabId)?.groupId.pipe(Option.getOrUndefined)
 
 describe("planTabGroupSync", () => {
-  describe("Space のグループを記憶していないとき", () => {
-    it("Space のタブを、そのウィンドウの新しいグループにまとめる", () => {
-      const work = desired("work", [1, 2], { title: "仕事", color: "red", collapsed: true })
+  describe("when no group is remembered for the Space", () => {
+    it("gathers the Space's tabs into a new group in their window", () => {
+      const work = desired("work", [1, 2], { title: "Work", color: "red", collapsed: true })
 
       const plan = planTabGroupSync([work], [tab(1), tab(2)], [], [])
 
@@ -166,26 +166,26 @@ describe("planTabGroupSync", () => {
           spaceId: "work",
           windowId: 1,
           tabIds: [1, 2],
-          appearance: { title: "仕事", color: "red", collapsed: true },
+          appearance: { title: "Work", color: "red", collapsed: true },
         },
       ])
     })
 
-    it("新しく作るグループは、再利用する対応に含めない", () => {
+    it("leaves groups to be created out of the reused groups", () => {
       const plan = planTabGroupSync([desired("work", [1])], [tab(1)], [], [])
 
       expect(plan.reusedGroups).toStrictEqual([])
     })
   })
 
-  describe("記憶しているグループが、そのウィンドウにもう無いとき", () => {
-    it("グループが閉じられていたら、新しいグループを作る", () => {
+  describe("when the remembered group is no longer in the window", () => {
+    it("creates a new group when the group was closed", () => {
       const plan = planTabGroupSync([desired("work", [1])], [tab(1)], [], [remembered("work", 10)])
 
       expect(plan.operations.map((o) => o._tag)).toStrictEqual(["CreateGroup"])
     })
 
-    it("グループが別のウィンドウへ移っていたら、このウィンドウに新しいグループを作る", () => {
+    it("creates a new group in this window when the group moved to another window", () => {
       const tabs = [tab(1, { window: 1 }), tab(2, { window: 2, group: 10 })]
       const groups = [group(10, { window: 2 })]
 
@@ -200,8 +200,8 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("記憶しているグループが、そのウィンドウに残っているとき", () => {
-    it("タブも見た目も揃っていれば、何もしない", () => {
+  describe("when the remembered group is still in the window", () => {
+    it("does nothing when the tabs and the appearance already match", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -214,7 +214,7 @@ describe("planTabGroupSync", () => {
       expect(plan.operations).toStrictEqual([])
     })
 
-    it("グループの外にある Space のタブだけを、そのグループに入れる", () => {
+    it("adds only the Space's tabs outside the group to it", () => {
       const tabs = [tab(1, { group: 10 }), tab(2), tab(3, { group: 10 }), tab(4)]
 
       const plan = planTabGroupSync(
@@ -229,9 +229,9 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("Katip の管理外のグループにある Space のタブも、Space のグループへ移す", () => {
+    it("moves the Space's tabs in a group Katip doesn't manage to the Space's group too", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 20 })]
-      const groups = [group(10), group(20, { title: "ユーザーのグループ" })]
+      const groups = [group(10), group(20, { title: "User's group" })]
 
       const plan = planTabGroupSync([desired("work", [1, 2])], tabs, groups, [
         remembered("work", 10),
@@ -241,10 +241,10 @@ describe("planTabGroupSync", () => {
     })
 
     it.each<[string, Partial<GroupAppearance>]>([
-      ["タイトル", { title: "旧い名前" }],
-      ["色", { color: "green" }],
-      ["折りたたみ", { collapsed: true }],
-    ])("%sがずれていれば、あるべき見た目に更新する", (_, drift) => {
+      ["title", { title: "Old name" }],
+      ["color", { color: "green" }],
+      ["collapsed state", { collapsed: true }],
+    ])("updates the group to the desired appearance when its %s drifted", (_, drift) => {
       const tabs = [tab(1, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -259,7 +259,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("タイトルの無いグループには、Space の名前を付ける", () => {
+    it("gives a group without a title the Space's name", () => {
       const tabs = [tab(1, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -274,7 +274,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("グループ内のタブの並びが Space の順と違っても、並べ替えない", () => {
+    it("doesn't reorder the tabs in a group even when they differ from the Space's order", () => {
       const tabs = [tab(3, { group: 10 }), tab(1, { group: 10 }), tab(2, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -287,7 +287,7 @@ describe("planTabGroupSync", () => {
       expect(plan.operations).toStrictEqual([])
     })
 
-    it("再利用するグループを対応表に残す", () => {
+    it("keeps a reused group in the projection", () => {
       const tabs = [tab(1, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -301,8 +301,8 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("Katip のグループに、その Space に属さないタブが残っているとき", () => {
-    it("どの Space にも属さなくなったタブを、グループから外す", () => {
+  describe("when a Katip group still holds tabs not in its Space", () => {
+    it("ungroups a tab that is no longer in any Space", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -315,7 +315,7 @@ describe("planTabGroupSync", () => {
       expect(plan.operations).toStrictEqual([{ _tag: "UngroupTabs", tabIds: [2] }])
     })
 
-    it("別の Space に移ったタブは、外さずに移った先のグループへ入れる", () => {
+    it("moves a tab that changed Spaces into its new Space's group instead of ungrouping it", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 10 }), tab(3, { group: 20 })]
 
       const plan = planTabGroupSync(
@@ -328,7 +328,7 @@ describe("planTabGroupSync", () => {
       expect(plan.operations).toStrictEqual([{ _tag: "AddTabsToGroup", groupId: 20, tabIds: [2] }])
     })
 
-    it("Space のタブが 1 つも無くなったグループからも、残ったタブを外す", () => {
+    it("ungroups the remaining tabs from a group whose Space has no tab left too", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 10 })]
 
       const plan = planTabGroupSync([], tabs, [group(10)], [remembered("work", 10)])
@@ -336,7 +336,7 @@ describe("planTabGroupSync", () => {
       expect(plan.operations).toStrictEqual([{ _tag: "UngroupTabs", tabIds: [1, 2] }])
     })
 
-    it("あるべき姿に無い Space・ウィンドウの対応は、対応表から消える", () => {
+    it("drops the projection entry of a Space and window not in the desired groups", () => {
       const tabs = [tab(1, { group: 10 })]
 
       const plan = planTabGroupSync([], tabs, [group(10)], [remembered("work", 10)])
@@ -345,17 +345,17 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("Katip が管理していないグループ", () => {
-    it("見た目を変えない", () => {
+  describe("groups Katip doesn't manage", () => {
+    it("keeps their appearance", () => {
       const tabs = [tab(1, { group: 20 })]
-      const userGroup = group(20, { title: "仕事", color: "red", collapsed: true })
+      const userGroup = group(20, { title: "Work", color: "red", collapsed: true })
 
       const plan = planTabGroupSync([], tabs, [userGroup], [])
 
       expect(plan.operations).toStrictEqual([])
     })
 
-    it("Space に属さないタブを外さない", () => {
+    it("doesn't ungroup tabs that aren't in a Space", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 20 })]
 
       const plan = planTabGroupSync(
@@ -369,8 +369,8 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("複数のウィンドウ", () => {
-    it("同じ Space でも、ウィンドウごとに別のグループにする", () => {
+  describe("several windows", () => {
+    it("makes a separate group per window, even for the same Space", () => {
       const tabs = [tab(1, { window: 1 }), tab(2, { window: 2 })]
 
       const plan = planTabGroupSync(
@@ -386,7 +386,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("別のウィンドウにあるタブは、このウィンドウのグループに入れない", () => {
+    it("doesn't put a tab from another window into this window's group", () => {
       const tabs = [tab(1, { window: 1 }), tab(2, { window: 2 })]
 
       const plan = planTabGroupSync([desired("work", [1, 2], { window: 1 })], tabs, [], [])
@@ -396,7 +396,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("そのウィンドウに Space のタブが 1 つも無ければ、グループを作らない", () => {
+    it("creates no group in a window without any of the Space's tabs", () => {
       const tabs = [tab(2, { window: 2 })]
 
       const plan = planTabGroupSync([desired("work", [1, 2], { window: 1 })], tabs, [], [])
@@ -405,8 +405,8 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("Chrome で固定されたタブ", () => {
-    it("Space に指定されていても、グループに入れない", () => {
+  describe("tabs pinned in Chrome", () => {
+    it("never join a group, even when listed for a Space", () => {
       const tabs = [tab(1, { pinned: true }), tab(2)]
 
       const plan = planTabGroupSync([desired("work", [1, 2])], tabs, [], [])
@@ -417,8 +417,8 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("矛盾した入力", () => {
-    it("同じタブが複数の Space に指定されていたら、先に指定された Space のグループに入れる", () => {
+  describe("conflicting input", () => {
+    it("puts a tab listed for several Spaces into the group of the Space listed first", () => {
       const plan = planTabGroupSync(
         [desired("work", [1, 2]), desired("home", [2, 3])],
         [tab(1), tab(2), tab(3)],
@@ -432,7 +432,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("同じ Space・ウィンドウが重複して指定されていたら、先の指定だけに従う", () => {
+    it("follows only the first of duplicate entries for the same Space and window", () => {
       const plan = planTabGroupSync(
         [desired("work", [1]), desired("work", [2])],
         [tab(1), tab(2)],
@@ -445,7 +445,7 @@ describe("planTabGroupSync", () => {
       ])
     })
 
-    it("1 つのグループを複数の Space の記憶が指していたら、先に記憶した Space だけが再利用する", () => {
+    it("when several Spaces remember the same group, only the Space remembered first reuses it", () => {
       const tabs = [tab(1, { group: 10 }), tab(2, { group: 10 })]
 
       const plan = planTabGroupSync(
@@ -462,38 +462,38 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("計画の実行結果", () => {
+  describe("result of carrying out the plan", () => {
     const work = (tabIds: ReadonlyArray<number>, overrides: Partial<GroupAppearance> = {}) =>
       desired("work", tabIds, overrides)
     const home = (tabIds: ReadonlyArray<number>, overrides: Partial<GroupAppearance> = {}) =>
-      desired("home", tabIds, { title: "家", color: "green", ...overrides })
+      desired("home", tabIds, { title: "Home", color: "green", ...overrides })
 
     it.each<[string, ReadonlyArray<DesiredGroup>, BrowserState]>([
       [
-        "グループが 1 つも無い",
+        "no groups at all",
         [work([1, 2]), home([3], { collapsed: true })],
         { tabs: [tab(1), tab(2), tab(3)], groups: [], projection: [] },
       ],
       [
-        "タブが Space をまたいで移った",
+        "tabs that moved across Spaces",
         [work([1]), home([2, 3])],
         {
           tabs: [tab(1, { group: 10 }), tab(2, { group: 10 }), tab(3, { group: 20 })],
-          groups: [group(10), group(20, { title: "家", color: "green" })],
+          groups: [group(10), group(20, { title: "Home", color: "green" })],
           projection: [remembered("work", 10), remembered("home", 20)],
         },
       ],
       [
-        "Space から外れたタブと、ユーザーのグループにある Space のタブがある",
+        "a tab that left its Space and a Space's tab in the user's group",
         [work([1, 3])],
         {
           tabs: [tab(1, { group: 10 }), tab(2, { group: 10 }), tab(3, { group: 20 })],
-          groups: [group(10), group(20, { title: "ユーザー" })],
+          groups: [group(10), group(20, { title: "User" })],
           projection: [remembered("work", 10)],
         },
       ],
       [
-        "Space が別のウィンドウにもある",
+        "a Space in another window too",
         [work([1]), desired("work", [2], { window: 2 })],
         {
           tabs: [tab(1, { window: 1 }), tab(2, { window: 2 })],
@@ -501,16 +501,19 @@ describe("planTabGroupSync", () => {
           projection: [],
         },
       ],
-    ])("%s状態から同期したあとに再び計画すると、操作は 0 件になる", (_, desiredGroups, before) => {
-      const { second } = syncTwice(desiredGroups, before)
+    ])(
+      "after syncing from a state with %s, planning again yields no operations",
+      (_, desiredGroups, before) => {
+        const { second } = syncTwice(desiredGroups, before)
 
-      expect(second.operations).toStrictEqual([])
-    })
+        expect(second.operations).toStrictEqual([])
+      },
+    )
 
-    it("2 つの Space のグループの中身が入れ替わっていても、1 回の同期で揃う", () => {
+    it("one sync is enough even when two Spaces' groups have swapped their tabs", () => {
       const before: BrowserState = {
         tabs: [tab(1, { group: 10 }), tab(2, { group: 20 })],
-        groups: [group(10), group(20, { title: "家", color: "green" })],
+        groups: [group(10), group(20, { title: "Home", color: "green" })],
         projection: [remembered("work", 10), remembered("home", 20)],
       }
 
@@ -521,7 +524,7 @@ describe("planTabGroupSync", () => {
     })
   })
 
-  describe("任意の状態からの同期", () => {
+  describe("syncing from any state", () => {
     const spaces = ["a", "b", "c"] as const
     const windows = [1, 2] as const
     const groupSlots = [10, 11, 20, 21] as const
@@ -592,7 +595,7 @@ describe("planTabGroupSync", () => {
     }
 
     it.prop(
-      "実行後にもう一度計画すると、操作は 0 件になる",
+      "planning again after carrying out the plan yields no operations",
       { scenario: Scenario },
       ({ scenario }) => {
         const { desiredGroups, before } = arrange(scenario)
@@ -603,7 +606,7 @@ describe("planTabGroupSync", () => {
       },
     )
 
-    it.prop("Chrome で固定されたタブの固定は外れない", { scenario: Scenario }, ({ scenario }) => {
+    it.prop("tabs pinned in Chrome stay pinned", { scenario: Scenario }, ({ scenario }) => {
       const { desiredGroups, before } = arrange(scenario)
 
       const { after } = syncTwice(desiredGroups, before)
@@ -611,7 +614,7 @@ describe("planTabGroupSync", () => {
       expect(after.tabs.map((t) => t.pinned)).toStrictEqual(before.tabs.map((t) => t.pinned))
     })
 
-    it.prop("タブはウィンドウをまたいで移らない", { scenario: Scenario }, ({ scenario }) => {
+    it.prop("tabs never move across windows", { scenario: Scenario }, ({ scenario }) => {
       const { desiredGroups, before } = arrange(scenario)
 
       const { after } = syncTwice(desiredGroups, before)
@@ -620,7 +623,7 @@ describe("planTabGroupSync", () => {
     })
 
     it.prop(
-      "Katip が管理していないグループの見た目は変わらない",
+      "groups Katip doesn't manage keep their appearance",
       { scenario: Scenario },
       ({ scenario }) => {
         const { desiredGroups, before } = arrange(scenario)
@@ -639,7 +642,7 @@ describe("planTabGroupSync", () => {
     )
 
     it.prop(
-      "Space のタブはウィンドウごとに 1 つのグループにまとまり、そのグループはあるべき見た目になる",
+      "a Space's tabs end up in one group per window, and that group has the desired appearance",
       { scenario: Scenario },
       ({ scenario }) => {
         const { desiredGroups, before } = arrange(scenario)
@@ -668,7 +671,7 @@ describe("planTabGroupSync", () => {
     )
 
     it.prop(
-      "同期後に残る Katip のグループには、そのグループの Space のタブしか入っていない",
+      "Katip groups left after the sync hold only tabs of their own Space",
       { scenario: Scenario },
       ({ scenario }) => {
         const { desiredGroups, before } = arrange(scenario)

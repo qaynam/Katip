@@ -2,15 +2,17 @@ import { Match, Schema } from "effect"
 import type { Translator } from "#modules/i18n"
 import { signInUrlOf, type LiveSource } from "./live-source"
 
-/** 取得元から項目を取り込めなかった理由。キャッシュに残し、次に取得できるまで表示する。 */
+/**
+ * Why items couldn't be taken in from a source. Kept in the cache and shown until a fetch succeeds.
+ */
 export const LiveFetchFailure = Schema.TaggedUnion({
   PermissionMissing: {},
-  /** 取得元のサイトに、ブラウザでログインしていない（Gmail なら指定した番号のアカウント）。 */
+  /** The browser isn't signed in to the source's site (for Gmail, as the account at the index). */
   NotSignedIn: {},
-  /** GitHub が、設定されたトークンを受け付けなかった（失効・取り消し・誤り）。 */
+  /** GitHub didn't accept the configured token (expired, revoked or wrong). */
   TokenRejected: {},
   AccessDenied: { status: Schema.Int },
-  /** `retryAt`（エポックミリ秒）まで、自動では取得し直さない。 */
+  /** No automatic refetch until `retryAt` (epoch milliseconds). */
   RateLimited: { retryAt: Schema.Number },
   Unreachable: {},
   UnexpectedStatus: { status: Schema.Int },
@@ -26,7 +28,7 @@ export interface FailureExplanation {
   readonly reason: string
   readonly needsPermission: boolean
   readonly needsToken: boolean
-  /** このページを開いてログインすれば直るなら、そのページ。 */
+  /** The page to open and sign in on, when signing in there would fix the failure. */
   readonly signInUrl: string | null
 }
 
@@ -43,7 +45,7 @@ const explanation = (
 const siteNameOf = (source: LiveSource): string =>
   Match.valueTags(source, { Gmail: () => "Gmail", GitHub: () => "GitHub" })
 
-/** 失敗の理由を `translator` の言語で説明し、利用者が直せるならその手段を示す。 */
+/** Explains the failure in `translator`'s language and, when the user can fix it, how. */
 export const explainFailure = (
   failure: LiveFetchFailure,
   source: LiveSource,

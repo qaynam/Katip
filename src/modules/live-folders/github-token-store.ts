@@ -4,17 +4,18 @@ import { Storage, type BrowserApiError } from "#platform/browser"
 const TOKEN_KEY = "katip/live-folders/github-token"
 
 /**
- * GitHub の個人アクセストークン。
+ * The GitHub personal access token.
  *
  * @remarks
- * local に置き、サイドパネルへ送るビューにも載せない。sync に置くと Google アカウントの
- * 同期先すべてに複製され、ビューに載せると拡張のどのページからでも読めてしまうため。
+ * Kept in local storage and never put in the view sent to the side panel. In sync storage it would
+ * be copied to every device the Google account syncs to, and in the view any page of the extension
+ * could read it.
  */
 export class GitHubTokenStore extends Context.Service<
   GitHubTokenStore,
   {
     readonly load: Effect.Effect<Option.Option<string>, BrowserApiError>
-    /** 前後の空白を除いて保存する。空なら保存してあるトークンを消す。 */
+    /** Saves the token without surrounding whitespace. An empty token removes the saved one. */
     save(token: string): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/live-folders/GitHubTokenStore") {
