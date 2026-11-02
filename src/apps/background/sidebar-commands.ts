@@ -431,6 +431,49 @@ const openSplitPin = Effect.fnUntraced(function* (
   yield* state.workspace.update((current) => bind(bind(current, left, leftPin), right, rightPin))
 })
 
+const pinSplit = Effect.fnUntraced(function* (
+  splitViewId: SplitViewId,
+  spaceId: SpaceId,
+  position: PinnedPosition,
+) {
+  const state = yield* KatipState
+  const pinned = yield* PinnedBookmarks
+  const [left, right] = yield* splitPairOf(splitViewId)
+  const existing = yield* sharedSplitPin(left, right)
+  if (Option.isSome(existing)) {
+    yield* movePinnedNode(existing.value, position)
+  } else {
+    // それぞれが別々にピン留めされていたら、その 2 つのピンは外して 1 つの分割ピンにまとめる
+    yield* Effect.forEach(
+      [left, right],
+      (tab) =>
+        Effect.flatMap(state.workspace.get, (workspace) =>
+          Option.match(trackedTab(workspace, tab.id), {
+            onNone: () => Effect.void,
+            onSome: removePin,
+          }),
+        ),
+      { discard: true },
+    )
+    const created = yield* pinned.createSplit(position, {
+      title: `${titleOf(left)} | ${titleOf(right)}`,
+      left: { title: titleOf(left), url: urlOf(left) },
+      right: { title: titleOf(right), url: urlOf(right) },
+    })
+    yield* state.workspace.update((current) =>
+      bindPinned(
+        bindPinned(current, left.id, { bookmarkId: created.left, pinnedUrl: urlOf(left) }),
+        right.id,
+        { bookmarkId: created.right, pinnedUrl: urlOf(right) },
+      ),
+    )
+  }
+  const now = yield* Clock.currentTimeMillis
+  yield* state.workspace.update((current) =>
+    [left, right].reduce((acc, tab) => assignTab(acc, tab.id, spaceId, now), current),
+  )
+})
+
 const splitCommands = {
   SplitTabs: Effect.fnUntraced(function* ({
     tabId,
@@ -513,45 +556,10 @@ const splitCommands = {
   PlaceSplitInPinned: Effect.fnUntraced(function* (
     command: Extract<SidebarCommand, { _tag: "PlaceSplitInPinned" }>,
   ) {
-    const state = yield* KatipState
-    const pinned = yield* PinnedBookmarks
-    const [left, right] = yield* splitPairOf(command.splitViewId)
-    const position = yield* pinnedPosition(command.placement)
-    const existing = yield* sharedSplitPin(left, right)
-    if (Option.isSome(existing)) {
-      yield* movePinnedNode(existing.value, position)
-    } else {
-      // それぞれが別々にピン留めされていたら、その 2 つのピンは外して 1 つの分割ピンにまとめる
-      yield* Effect.forEach(
-        [left, right],
-        (tab) =>
-          Effect.flatMap(state.workspace.get, (workspace) =>
-            Option.match(trackedTab(workspace, tab.id), {
-              onNone: () => Effect.void,
-              onSome: removePin,
-            }),
-          ),
-        { discard: true },
-      )
-      const created = yield* pinned.createSplit(position, {
-        title: `${titleOf(left)} | ${titleOf(right)}`,
-        left: { title: titleOf(left), url: urlOf(left) },
-        right: { title: titleOf(right), url: urlOf(right) },
-      })
-      yield* state.workspace.update((current) =>
-        bindPinned(
-          bindPinned(current, left.id, { bookmarkId: created.left, pinnedUrl: urlOf(left) }),
-          right.id,
-          { bookmarkId: created.right, pinnedUrl: urlOf(right) },
-        ),
-      )
-    }
-    const now = yield* Clock.currentTimeMillis
-    yield* state.workspace.update((current) =>
-      [left, right].reduce(
-        (acc, tab) => assignTab(acc, tab.id, command.placement.spaceId, now),
-        current,
-      ),
+    yield* pinSplit(
+      command.splitViewId,
+      command.placement.spaceId,
+      yield* pinnedPosition(command.placement),
     )
   }),
 }
@@ -619,8 +627,12 @@ const tabCommands = {
 
   PinTab: Effect.fnUntraced(function* ({ tabId }: { tabId: TabId }) {
     const tracked = yield* trackedOrReject(tabId)
+    // 分割ビューの片方だけをピンにすると、もう片方が一時タブに残って分割ピンにならない
+    const { splitViewId } = yield* (yield* Tabs).get(tabId)
     const space = yield* findSpace(tracked.spaceId)
-    yield* placeInPinned(tabId, tracked.spaceId, { parent: PinnedParent.SpaceRoot({ space }) })
+    const atEnd: PinnedPosition = { parent: PinnedParent.SpaceRoot({ space }) }
+    if (Option.isSome(splitViewId)) return yield* pinSplit(splitViewId.value, space.id, atEnd)
+    yield* placeInPinned(tabId, tracked.spaceId, atEnd)
   }),
 
   UnpinTab: Effect.fnUntraced(function* ({ tabId }: { tabId: TabId }) {

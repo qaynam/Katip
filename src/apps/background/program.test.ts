@@ -568,6 +568,29 @@ describe("分割ビュー", () => {
     ),
   )
 
+  it.live(
+    "分割しているタブを 1 つピン留めすると（ショートカットや Spotlight）、2 つそろった分割ピンになる",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+          yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+          yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+          yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
+          const view = yield* sidebar.viewWhere((v) => pinnedSplits(v).length === 1)
+
+          expect({
+            pins: pinnedSplits(view).map((pin) => pin.items.map((item) => item.title)),
+            temporary: entriesShape(view),
+          }).toStrictEqual({ pins: [["A", "B"]], temporary: ["C"] })
+        }),
+      ),
+  )
+
   it.live("閉じた分割ピンを開くと、2 つのタブが分割ビューで並んで開く", () =>
     inBackground(
       Effect.gen(function* () {
