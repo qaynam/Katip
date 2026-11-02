@@ -4,13 +4,15 @@ import type { WindowId } from "./ids"
 import { type BrowserWindow, fromChromeWindow } from "./window"
 
 export interface WindowCreateOptions {
-  /** 省略時は新しいタブのページを 1 つ開く。 */
+  /** Omitted, the window opens one New Tab page. */
   readonly url?: string
-  /** 省略時は `true`。 */
+  /** Defaults to `true`. */
   readonly focused?: boolean
-  /** `popup` はタブストリップもアドレスバーも無い、1 ページだけのウィンドウ。省略時は `normal`。 */
+  /**
+   * `popup` is a single-page window with no tab strip and no address bar. Defaults to `normal`.
+   */
   readonly type?: "normal" | "popup"
-  /** 位置と大きさは CSS ピクセル。省略した値は Chrome が決める。 */
+  /** Position and size in CSS pixels; Chrome picks any value left out. */
   readonly left?: number
   readonly top?: number
   readonly width?: number
@@ -18,7 +20,7 @@ export interface WindowCreateOptions {
 }
 
 export interface WindowUpdateOptions {
-  /** `false` にすると、重なり順で次のウィンドウにフォーカスが移る。 */
+  /** `false` moves focus to the next window in stacking order. */
   readonly focused?: boolean
 }
 
@@ -27,7 +29,7 @@ export class Windows extends Context.Service<
   {
     readonly getAll: Effect.Effect<ReadonlyArray<BrowserWindow>, BrowserApiError>
     get(windowId: WindowId): Effect.Effect<BrowserWindow, BrowserApiError>
-    /** ウィンドウが 1 つも無ければ失敗する。 */
+    /** Fails when there is no window at all. */
     readonly getLastFocused: Effect.Effect<BrowserWindow, BrowserApiError>
     create(options: WindowCreateOptions): Effect.Effect<BrowserWindow, BrowserApiError>
     update(

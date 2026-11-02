@@ -5,9 +5,9 @@ import { type BrowserApiError, callChrome } from "./browser-api-error"
 export class Alarms extends Context.Service<
   Alarms,
   {
-    /** 同じ名前のアラームがあれば置き換える。 */
+    /** Replaces any alarm with the same name. */
     create(name: string, schedule: AlarmSchedule): Effect.Effect<void, BrowserApiError>
-    /** @returns 消したアラームがあったか。 */
+    /** @returns Whether there was an alarm to clear. */
     clear(name: string): Effect.Effect<boolean, BrowserApiError>
     readonly getAll: Effect.Effect<ReadonlyArray<BrowserAlarm>, BrowserApiError>
   }

@@ -5,8 +5,8 @@ import { makeHeldStream } from "./held-stream"
 const subscribeNow = <A>(stream: Stream.Stream<A>) =>
   Effect.forkChild(Stream.runCollect(stream), { startImmediately: true })
 
-describe("購読者が現れる前に送られた値", () => {
-  it.effect("最初の購読者が送られた順に受け取る", () =>
+describe("values pushed before anyone subscribes", () => {
+  it.effect("go to the first subscriber in the order they were pushed", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       held.push(1)
@@ -18,7 +18,7 @@ describe("購読者が現れる前に送られた値", () => {
     }),
   )
 
-  it.effect("2 番目の購読者には渡らない", () =>
+  it.effect("do not go to the second subscriber", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       held.push(1)
@@ -32,8 +32,8 @@ describe("購読者が現れる前に送られた値", () => {
   )
 })
 
-describe("購読中に送られた値", () => {
-  it.effect("購読しているすべての購読者が受け取る", () =>
+describe("values pushed while subscribed", () => {
+  it.effect("go to every current subscriber", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       const first = yield* subscribeNow(held.stream)
@@ -47,7 +47,7 @@ describe("購読中に送られた値", () => {
     }),
   )
 
-  it.effect("購読をやめた後の値は受け取らない", () =>
+  it.effect("do not go to a subscriber after it stops", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       const stopped = yield* held.stream.pipe(Stream.take(1), Stream.runCollect, (collect) =>
@@ -65,8 +65,8 @@ describe("購読中に送られた値", () => {
   )
 })
 
-describe("終わった後", () => {
-  it.effect("購読すると溜まっていた値を受け取ってすぐ終わる", () =>
+describe("after the stream ends", () => {
+  it.effect("a subscriber receives the held values and ends at once", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       held.push(1)
@@ -78,7 +78,7 @@ describe("終わった後", () => {
     }),
   )
 
-  it.effect("送った値は捨てられる", () =>
+  it.effect("pushed values are dropped", () =>
     Effect.gen(function* () {
       const held = makeHeldStream<number>()
       held.end()

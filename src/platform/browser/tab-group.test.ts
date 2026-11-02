@@ -14,14 +14,14 @@ const chromeGroup = (
   ...overrides,
 })
 
-describe("Chrome のタブグループの変換", () => {
-  it("タイトルが空文字のグループは無題になる", () => {
+describe("converting a Chrome tab group", () => {
+  it("a group titled with an empty string is untitled", () => {
     const group = fromChromeTabGroup(chromeGroup({ title: "" }))
 
     assert.deepStrictEqual(group.title, Option.none())
   })
 
-  it("タイトルを返さなかったグループは無題になる", () => {
+  it("a group returned without a title is untitled", () => {
     const group = fromChromeTabGroup({
       id: 5,
       windowId: 10,
@@ -33,7 +33,7 @@ describe("Chrome のタブグループの変換", () => {
     assert.deepStrictEqual(group.title, Option.none())
   })
 
-  it("タイトルのあるグループはそのタイトルを持つ", () => {
+  it("a group with a title keeps that title", () => {
     const group = fromChromeTabGroup(chromeGroup({ title: "Work" }))
 
     assert.deepStrictEqual(group.title, Option.some("Work"))

@@ -17,14 +17,14 @@ const chromeWindow = (overrides: Partial<chrome.windows.Window> = {}): chrome.wi
   ...overrides,
 })
 
-describe("Chrome のウィンドウの変換", () => {
-  it("ID を持たないウィンドウは変換しない", () => {
+describe("converting a Chrome window", () => {
+  it("a window without an ID is not converted", () => {
     const window = fromChromeWindow(chromeWindow({ id: undefined }))
 
     assert.isTrue(Option.isNone(window))
   })
 
-  it("ID を持つウィンドウはその ID とフォーカスの有無を持つ", () => {
+  it("a window with an ID keeps that ID and whether it has focus", () => {
     const window = fromChromeWindow(chromeWindow({ id: 10, focused: false }))
 
     assert.deepStrictEqual(
@@ -33,7 +33,7 @@ describe("Chrome のウィンドウの変換", () => {
     )
   })
 
-  it("位置と大きさがすべて分かるウィンドウはそれを持つ", () => {
+  it("a window with its full position and size keeps them as bounds", () => {
     const window = fromChromeWindow(chromeWindow({ left: 100, top: 50, width: 1200, height: 800 }))
 
     assert.deepStrictEqual(
@@ -42,7 +42,7 @@ describe("Chrome のウィンドウの変換", () => {
     )
   })
 
-  it("位置と大きさのどれかが分からなければ、位置と大きさを持たない", () => {
+  it("a window missing any of its position and size has no bounds", () => {
     const window = fromChromeWindow(chromeWindow({ left: undefined }))
 
     assert.deepStrictEqual(

@@ -14,7 +14,7 @@ export const InstallReason = Schema.Literals([
 ])
 export type InstallReason = typeof InstallReason.Type
 
-/** Chrome の各 API のイベントを 1 対 1 に写したもの。タグ名は `<API><イベント名>` にそろえる。 */
+/** One case per Chrome API event, tagged `<Api><EventName>`. */
 export const BrowserEvent = Schema.TaggedUnion({
   TabCreated: { tab: BrowserTab },
   TabUpdated: { tabId: TabId, changes: TabChanges, tab: BrowserTab },
@@ -30,7 +30,7 @@ export const BrowserEvent = Schema.TaggedUnion({
   TabGroupMoved: { group: BrowserTabGroup },
   WindowCreated: { window: BrowserWindow },
   WindowRemoved: { windowId: WindowId },
-  // None はどの Chrome ウィンドウにもフォーカスが無い状態（別アプリへ切り替えたなど）
+  // None when no Chrome window has focus, such as after switching to another app
   WindowFocusChanged: { windowId: Schema.OptionFromNullOr(WindowId) },
   BookmarkCreated: { node: BookmarkNode },
   BookmarkChanged: {

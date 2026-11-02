@@ -11,16 +11,16 @@ export interface TabQuery {
   readonly pinned?: boolean
   readonly audible?: boolean
   readonly discarded?: boolean
-  /** `None` はどのグループにも属さないタブ。 */
+  /** `None` matches tabs in no group. */
   readonly groupId?: Option.Option<TabGroupId>
 }
 
 export interface TabCreateOptions {
-  /** 省略時は最後にフォーカスされたウィンドウ。 */
+  /** Defaults to the last focused window. */
   readonly windowId?: WindowId
   readonly index?: number
   readonly url?: string
-  /** 省略時は `true`。 */
+  /** Defaults to `true`. */
   readonly active?: boolean
   readonly pinned?: boolean
   readonly openerTabId?: TabId
@@ -37,7 +37,7 @@ export interface TabCreateOptions {
 
 export interface TabUpdateOptions {
   readonly url?: string
-  /** `false` は無視される。アクティブなタブを外すには別のタブをアクティブにする。 */
+  /** `false` is ignored; to deactivate a tab, activate another one. */
   readonly active?: boolean
   readonly pinned?: boolean
   readonly muted?: boolean
@@ -45,15 +45,15 @@ export interface TabUpdateOptions {
 
 export interface TabMoveOptions {
   readonly index: number | "end"
-  /** 省略時は移動元と同じウィンドウ。 */
+  /** Defaults to the tab's current window. */
   readonly windowId?: WindowId
 }
 
 export interface TabGroupOptions {
   readonly tabIds: Array.NonEmptyReadonlyArray<TabId>
-  /** 省略時は新しいグループを作る。 */
+  /** Omitted, a new group is created. */
   readonly groupId?: TabGroupId
-  /** 新しいグループを作るウィンドウ。省略時は最後にフォーカスされたウィンドウ。 */
+  /** The window to create a new group in. Defaults to the last focused window. */
   readonly windowId?: WindowId
 }
 
@@ -111,23 +111,25 @@ export class Tabs extends Context.Service<
      */
     discard(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     /**
-     * 分割ビューを作る・解く API（Chrome 155 以降）があるか。
-     * `false` でも、ユーザーが作った分割ビューは `BrowserTab.splitViewId` で読める（Chrome 140 以降）。
+     * Whether the API to create and dissolve split views exists (Chrome 155 and later).
+     * Even when `false`, split views the user made are readable through `BrowserTab.splitViewId`
+     * (Chrome 140 and later).
      */
     readonly supportsSplitView: boolean
     /**
-     * 隣り合う 2 つのタブを分割ビューにする。
+     * Makes a split view of two adjacent tabs.
      *
      * @remarks
-     * どちらも分割されておらず、ウィンドウ・ピン留め・グループが揃っていなければ失敗する。
-     * `supportsSplitView` が `false` なら失敗する。
+     * Fails unless neither tab is split and both share the same window, pinning and group.
+     * Fails when `supportsSplitView` is `false`.
      */
     createSplit(tabIds: readonly [TabId, TabId]): Effect.Effect<SplitViewId, BrowserApiError>
-    /** `supportsSplitView` が `false` なら失敗する。 */
+    /** Fails when `supportsSplitView` is `false`. */
     unsplit(splitViewId: SplitViewId): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/platform/browser/Tabs") {
-  // Layer.succeed だと import した時点で chrome.tabs を読み、chrome の無いテストが import だけで落ちる
+  // Not Layer.succeed: that reads chrome.tabs on import, which breaks tests without `chrome` just
+  // by importing this module
   static readonly layer = Layer.sync(Tabs, () => {
     const supportsSplitView = typeof chrome.tabs.createSplit === "function"
     const requireSplitViewApi = (api: string) =>
@@ -163,7 +165,8 @@ export class Tabs extends Context.Service<
             active: options.active,
             pinned: options.pinned,
             openerTabId: options.openerTabId,
-            // 分割ビューの無い Chrome は、値が undefined でもこの名前の項目があるだけで呼び出しを拒む
+            // Spread rather than set to undefined: Chrome without split views rejects the call if
+            // the key is present at all
             ...(options.splitWithTabId !== undefined && { splitWithTabId: options.splitWithTabId }),
           }),
         )
@@ -192,7 +195,8 @@ export class Tabs extends Context.Service<
       }),
       remove: (tabIds) => callChrome("tabs.remove", () => chrome.tabs.remove([...tabIds])),
       move: Effect.fn("Tabs.move")(function* (tabIds, options) {
-        // 型定義は配列を返すとしているが、Chrome は 1 つだけ動かしたときタブをそのまま返す
+        // The type definitions say it returns an array, but Chrome returns the bare tab when moving
+        // just one
         const moved: chrome.tabs.Tab | ReadonlyArray<chrome.tabs.Tab> = yield* callChrome(
           "tabs.move",
           () =>

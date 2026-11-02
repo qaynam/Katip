@@ -7,7 +7,7 @@ export const BrowserAlarm = Schema.Struct({
 })
 export type BrowserAlarm = typeof BrowserAlarm.Type
 
-/** 時刻はエポックミリ秒、間隔は分。 */
+/** `when` is in epoch milliseconds; delays and periods are in minutes. */
 export type AlarmSchedule =
   | { readonly delayInMinutes: number; readonly periodInMinutes?: number }
   | { readonly periodInMinutes: number }

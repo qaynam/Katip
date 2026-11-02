@@ -14,7 +14,7 @@ type ListenerIn<Source> = Source extends { addListener(listener: infer Listener)
   : never
 type ListenerArgs<Source> = Parameters<Extract<ListenerIn<Source>, (...args: never[]) => unknown>>
 
-/** `chrome` の代わりに渡し、テストから Chrome のイベントを起こす。 */
+/** Stands in for `chrome` so a test can fire Chrome events. */
 const makeFakeChromeEvents = () => {
   const listeners = new Map<string, ReadonlyArray<(...args: ReadonlyArray<unknown>) => void>>()
   const source = (key: string) => ({
@@ -88,8 +88,8 @@ const takeConnection = (captured: CapturedBrowserEvents) =>
     Effect.fromNullishOr(port),
   )
 
-describe("購読より前に起きたイベント", () => {
-  it.effect("最初の購読者が起きた順に受け取る", () =>
+describe("events that happen before anyone subscribes", () => {
+  it.effect("go to the first subscriber in the order they happened", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -110,8 +110,8 @@ describe("購読より前に起きたイベント", () => {
   )
 })
 
-describe("Chrome の値の正規化", () => {
-  it.effect("グループから外れたタブは、変化も現在の値も groupId が None になる", () =>
+describe("normalizing Chrome values", () => {
+  it.effect("a tab leaving its group has a groupId of None in both the changes and the tab", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -130,7 +130,7 @@ describe("Chrome の値の正規化", () => {
     }),
   )
 
-  it.effect("グループに入ったタブは groupId がそのグループになる", () =>
+  it.effect("a tab joining a group has that group as its groupId", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -145,32 +145,34 @@ describe("Chrome の値の正規化", () => {
     }),
   )
 
-  it.effect("分割ビューが解けたタブは、変化も現在の値も splitViewId が None になる", () =>
-    Effect.gen(function* () {
-      const chrome = makeFakeChromeEvents()
-      const captured = captureBrowserEvents(chrome.sources)
+  it.effect(
+    "a tab leaving its split view has a splitViewId of None in both the changes and the tab",
+    () =>
+      Effect.gen(function* () {
+        const chrome = makeFakeChromeEvents()
+        const captured = captureBrowserEvents(chrome.sources)
 
-      chrome.fire(
-        "tabs",
-        "onUpdated",
-        1,
-        { splitViewId: -1 },
-        chromeTab({ id: 1, splitViewId: -1 }),
-      )
+        chrome.fire(
+          "tabs",
+          "onUpdated",
+          1,
+          { splitViewId: -1 },
+          chromeTab({ id: 1, splitViewId: -1 }),
+        )
 
-      const updated = tabUpdated((yield* takeEvents(captured, 1))[0])
-      assert.deepStrictEqual(
-        Option.map(updated, ({ changes }) => changes.splitViewId),
-        Option.some(Option.none()),
-      )
-      assert.deepStrictEqual(
-        Option.map(updated, ({ tab }) => tab.splitViewId),
-        Option.some(Option.none()),
-      )
-    }),
+        const updated = tabUpdated((yield* takeEvents(captured, 1))[0])
+        assert.deepStrictEqual(
+          Option.map(updated, ({ changes }) => changes.splitViewId),
+          Option.some(Option.none()),
+        )
+        assert.deepStrictEqual(
+          Option.map(updated, ({ tab }) => tab.splitViewId),
+          Option.some(Option.none()),
+        )
+      }),
   )
 
-  it.effect("ID を持たないタブのイベントは流さない", () =>
+  it.effect("events for a tab without an ID are not emitted", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -186,7 +188,7 @@ describe("Chrome の値の正規化", () => {
     }),
   )
 
-  it.effect("どのウィンドウにもフォーカスが無くなると、フォーカス先は None になる", () =>
+  it.effect("when no window has focus, the focused window is None", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -202,7 +204,7 @@ describe("Chrome の値の正規化", () => {
     }),
   )
 
-  it.effect("初回インストールには以前のバージョンが無い", () =>
+  it.effect("a first install has no previous version", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -219,8 +221,8 @@ describe("Chrome の値の正規化", () => {
   )
 })
 
-describe("受け付けた Port", () => {
-  it.effect("接続直後に届いたメッセージを、後から購読しても受け取れる", () =>
+describe("an accepted Port", () => {
+  it.effect("delivers a message sent right after connecting to a later subscriber", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -235,7 +237,7 @@ describe("受け付けた Port", () => {
     }),
   )
 
-  it.effect("拡張の外からの接続は sender の external が true になる", () =>
+  it.effect("a connection from outside the extension has an external sender", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -259,7 +261,7 @@ describe("受け付けた Port", () => {
     }),
   )
 
-  it.effect("相手が切断すると messages が終わり、disconnected が完了する", () =>
+  it.effect("ends messages and completes disconnected when the peer disconnects", () =>
     Effect.gen(function* () {
       const chrome = makeFakeChromeEvents()
       const captured = captureBrowserEvents(chrome.sources)
@@ -275,19 +277,21 @@ describe("受け付けた Port", () => {
     }),
   )
 
-  it.effect("切断を検知した後に送ると PortDisconnectedError で失敗し、相手には届かない", () =>
-    Effect.gen(function* () {
-      const chrome = makeFakeChromeEvents()
-      const captured = captureBrowserEvents(chrome.sources)
-      const remote = makeChromePort("katip/sidebar")
-      chrome.fire("runtime", "onConnect", remote.port)
-      const port = yield* takeConnection(captured)
-      remote.disconnectFromOtherSide()
+  it.effect(
+    "fails with PortDisconnectedError when posting after a disconnect, without reaching the peer",
+    () =>
+      Effect.gen(function* () {
+        const chrome = makeFakeChromeEvents()
+        const captured = captureBrowserEvents(chrome.sources)
+        const remote = makeChromePort("katip/sidebar")
+        chrome.fire("runtime", "onConnect", remote.port)
+        const port = yield* takeConnection(captured)
+        remote.disconnectFromOtherSide()
 
-      const error = yield* Effect.flip(port.post("hello"))
+        const error = yield* Effect.flip(port.post("hello"))
 
-      assert.strictEqual(error._tag, "PortDisconnectedError")
-      assert.deepStrictEqual(remote.posted, [])
-    }),
+        assert.strictEqual(error._tag, "PortDisconnectedError")
+        assert.deepStrictEqual(remote.posted, [])
+      }),
   )
 })

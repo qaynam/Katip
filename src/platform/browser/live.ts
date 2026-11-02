@@ -9,7 +9,7 @@ import { Tabs } from "./tabs"
 import { WebSearch } from "./web-search"
 import { Windows } from "./windows"
 
-/** 実際の Chrome API を使う全サービス。`captured` はトップレベルで捕捉したイベント。 */
+/** Every service backed by the real Chrome APIs. `captured` holds events caught at top level. */
 export const liveBrowserLayer = (captured: CapturedBrowserEvents) =>
   Layer.mergeAll(
     BrowserEvents.layer(captured),

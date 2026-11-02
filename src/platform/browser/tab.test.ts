@@ -22,20 +22,20 @@ const chromeTab = (overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab =>
   ...overrides,
 })
 
-describe("Chrome のタブの変換", () => {
-  it("ID を持たないタブは変換しない", () => {
+describe("converting a Chrome tab", () => {
+  it("a tab without an ID is not converted", () => {
     const converted = fromChromeTab(chromeTab({ id: undefined }))
 
     assert.isTrue(Option.isNone(converted))
   })
 
-  it("ID が TAB_ID_NONE のタブは変換しない", () => {
+  it("a tab whose ID is TAB_ID_NONE is not converted", () => {
     const converted = fromChromeTab(chromeTab({ id: -1 }))
 
     assert.isTrue(Option.isNone(converted))
   })
 
-  it("groupId が -1 のタブはどのグループにも属さない", () => {
+  it("a tab whose groupId is -1 is in no group", () => {
     const converted = fromChromeTab(chromeTab({ groupId: -1 }))
 
     assert.deepStrictEqual(
@@ -44,7 +44,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("グループに属するタブはそのグループの ID を持つ", () => {
+  it("a tab in a group has that group's ID", () => {
     const converted = fromChromeTab(chromeTab({ groupId: 7 }))
 
     assert.deepStrictEqual(
@@ -53,7 +53,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("まだ取得できていない URL・タイトル・favicon は None になる", () => {
+  it("a URL, title or favicon not yet known becomes None", () => {
     const converted = fromChromeTab(chromeTab({ url: undefined, title: "", favIconUrl: undefined }))
 
     assert.deepStrictEqual(
@@ -62,7 +62,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("ミュートの情報が無ければミュートされていない", () => {
+  it("a tab without muted info is not muted", () => {
     const converted = fromChromeTab(chromeTab({ mutedInfo: undefined }))
 
     assert.deepStrictEqual(
@@ -71,7 +71,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("音が鳴っているか分からなければ鳴っていない", () => {
+  it("a tab without audible info is not audible", () => {
     const converted = fromChromeTab(chromeTab({ audible: undefined }))
 
     assert.deepStrictEqual(
@@ -80,7 +80,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("splitViewId が SPLIT_VIEW_ID_NONE のタブは分割ビューに入っていない", () => {
+  it("a tab whose splitViewId is SPLIT_VIEW_ID_NONE is in no split view", () => {
     const converted = fromChromeTab(chromeTab({ splitViewId: -1 }))
 
     assert.deepStrictEqual(
@@ -89,7 +89,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("splitViewId を返さない Chrome 140 未満のタブは分割ビューに入っていない", () => {
+  it("a tab from Chrome before 140, which returns no splitViewId, is in no split view", () => {
     const converted = fromChromeTab(chromeTab({ splitViewId: undefined }))
 
     assert.deepStrictEqual(
@@ -98,7 +98,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("分割ビューに入っているタブはその分割ビューの ID を持つ", () => {
+  it("a tab in a split view has that split view's ID", () => {
     const converted = fromChromeTab(chromeTab({ splitViewId: 4 }))
 
     assert.deepStrictEqual(
@@ -107,7 +107,7 @@ describe("Chrome のタブの変換", () => {
     )
   })
 
-  it("opener を持つタブは opener のタブ ID を持つ", () => {
+  it("a tab with an opener has the opener's tab ID", () => {
     const converted = fromChromeTab(chromeTab({ openerTabId: 3 }))
 
     assert.deepStrictEqual(
@@ -117,32 +117,32 @@ describe("Chrome のタブの変換", () => {
   })
 })
 
-describe("タブの変化の変換", () => {
-  it("通知された項目だけを持つ", () => {
+describe("converting tab change info", () => {
+  it("keeps only the reported fields", () => {
     const changes = fromChromeTabChangeInfo({ title: "New title", status: "complete" })
 
     assert.deepStrictEqual(changes, { title: "New title", status: "complete" })
   })
 
-  it("ミュートの変化はミュートされているかだけにする", () => {
+  it("reduces a muted-info change to whether the tab is muted", () => {
     const changes = fromChromeTabChangeInfo({ mutedInfo: { muted: true, reason: "user" } })
 
     assert.deepStrictEqual(changes, { muted: true })
   })
 
-  it("グループから外れた変化は groupId が None になる", () => {
+  it("leaving a group becomes a groupId of None", () => {
     const changes = fromChromeTabChangeInfo({ groupId: -1 })
 
     assert.deepStrictEqual(changes, { groupId: Option.none() })
   })
 
-  it("分割ビューに入った変化はその分割ビューの ID を持つ", () => {
+  it("joining a split view carries that split view's ID", () => {
     const changes = fromChromeTabChangeInfo({ splitViewId: 4 })
 
     assert.deepStrictEqual(changes, { splitViewId: Option.some(SplitViewId.make(4)) })
   })
 
-  it("分割ビューが解けた変化は splitViewId が None になる", () => {
+  it("leaving a split view becomes a splitViewId of None", () => {
     const changes = fromChromeTabChangeInfo({ splitViewId: -1 })
 
     assert.deepStrictEqual(changes, { splitViewId: Option.none() })

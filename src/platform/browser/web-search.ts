@@ -5,7 +5,7 @@ import type { TabId } from "./ids"
 export class WebSearch extends Context.Service<
   WebSearch,
   {
-    /** ユーザーが選んだ既定の検索エンジンで `text` を検索し、結果を `tabId` のタブに表示する。 */
+    /** Searches `text` with the user's default search engine and shows the results in `tabId`. */
     query(text: string, tabId: TabId): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/platform/browser/WebSearch") {

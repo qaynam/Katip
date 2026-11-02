@@ -24,7 +24,7 @@ export const BrowserTabGroup = Schema.Struct({
 })
 export type BrowserTabGroup = typeof BrowserTabGroup.Type
 
-/** 無題のグループは Chrome では空文字か undefined になるが、どちらも `title: None` にそろえる。 */
+/** Chrome gives an untitled group an empty string or undefined; both become `title: None`. */
 export const fromChromeTabGroup = (raw: chrome.tabGroups.TabGroup): BrowserTabGroup => ({
   id: TabGroupId.make(raw.id),
   windowId: WindowId.make(raw.windowId),

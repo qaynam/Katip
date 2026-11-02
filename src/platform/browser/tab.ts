@@ -28,9 +28,9 @@ export const BrowserTab = Schema.Struct({
 export type BrowserTab = typeof BrowserTab.Type
 
 /**
- * Chrome のタブを {@link BrowserTab} に変換する。
+ * Converts a Chrome tab to a {@link BrowserTab}.
  *
- * @returns ID を持たないタブ（devtools や他端末のセッションなど）は `None`。
+ * @returns `None` for a tab without an ID, such as devtools or a session from another device.
  */
 export const fromChromeTab = (raw: chrome.tabs.Tab): Option.Option<BrowserTab> =>
   Option.map(tabIdFrom(raw.id), (id) => ({
@@ -51,11 +51,12 @@ export const fromChromeTab = (raw: chrome.tabs.Tab): Option.Option<BrowserTab> =
     openerTabId: tabIdFrom(raw.openerTabId),
     groupId: tabGroupIdFrom(raw.groupId),
     splitViewId: splitViewIdFrom(raw.splitViewId),
-    // 型定義上は必須だが Chrome 121 で追加された値で、minimum_chrome_version の 120 では返らない
+    // Required by the type definitions, but added in Chrome 121, so Chrome 120 (our
+    // minimum_chrome_version) omits it
     lastAccessed: Option.fromNullishOr(raw.lastAccessed),
   }))
 
-/** `tabs.onUpdated` で変化したと通知された項目だけを持つ。 */
+/** Holds only the fields `tabs.onUpdated` reported as changed. */
 export const TabChanges = Schema.Struct({
   url: Schema.optionalKey(Schema.String),
   title: Schema.optionalKey(Schema.String),

@@ -6,9 +6,9 @@ export type StorageAreaName = typeof StorageAreaName.Type
 
 export interface StorageChange {
   readonly key: string
-  /** 変更前に値が無かったなら `None`。 */
+  /** `None` if there was no value before the change. */
   readonly oldValue: Option.Option<unknown>
-  /** 削除されたなら `None`。 */
+  /** `None` if the value was removed. */
   readonly newValue: Option.Option<unknown>
 }
 
@@ -19,24 +19,24 @@ export class StorageDecodeError extends Schema.TaggedError<StorageDecodeError>()
 
 export interface StorageArea {
   readonly name: StorageAreaName
-  /** 値が保存されていなければ `None`。 */
+  /** `None` if nothing is stored under `key`. */
   get(key: string): Effect.Effect<Option.Option<unknown>, BrowserApiError>
-  /** 保存されていない場合は `None`、形が合わない場合は {@link StorageDecodeError}。 */
+  /** `None` if nothing is stored; {@link StorageDecodeError} if the stored value won't decode. */
   getDecoded<A, RD>(
     key: string,
     schema: Schema.Decoder<A, RD>,
   ): Effect.Effect<Option.Option<A>, BrowserApiError | StorageDecodeError, RD>
-  /** Chrome は値を JSON にして保存するので、Schema で encode した値を渡すこと。 */
+  /** Chrome stores values as JSON, so pass a value encoded with a Schema. */
   set(key: string, value: unknown): Effect.Effect<void, BrowserApiError>
   remove(key: string): Effect.Effect<void, BrowserApiError>
   /**
-   * 購読を始めた後の変更。値が変わらない書き込みは流れない。
-   * 別のページ（background と sidepanel など）からの書き込みも流れる。
+   * Changes after subscribing, including writes from other pages such as the background and the
+   * side panel. Writes that leave the value unchanged are not emitted.
    */
   readonly changes: Stream.Stream<StorageChange>
 }
 
-/** `get` から `getDecoded` を組み立てる。fake と live で decode の振る舞いをそろえるために使う。 */
+/** Derives `getDecoded` from `get`, so the live and fake areas decode alike. */
 export const makeStorageArea = (primitives: Omit<StorageArea, "getDecoded">): StorageArea => ({
   ...primitives,
   getDecoded: (key, schema) =>
@@ -71,9 +71,9 @@ const liveStorageArea = (name: StorageAreaName, area: chrome.storage.StorageArea
       ),
     set: (key, value) => callChrome(`storage.${name}.set`, () => area.set({ [key]: value })),
     remove: (key) => callChrome(`storage.${name}.remove`, () => area.remove(key)),
-    // BrowserEvent と違ってトップレベルでは登録せず、購読したときに登録する。保存値は起動後に
-    // いつでも読み直せるので取りこぼしは読み直しで埋められる一方、溜め続けると購読しないページで
-    // 書き込みのたびにメモリが増えていくため
+    // Unlike BrowserEvent, registered on subscription rather than at top level: a missed change can
+    // be made up by reading the stored value again at any time, whereas holding changes would grow
+    // memory with every write on pages that never subscribe
     changes: Stream.callback<StorageChange>((queue) =>
       Effect.acquireRelease(
         Effect.sync(() => {
@@ -98,9 +98,15 @@ export class Storage extends Context.Service<
   Storage,
   {
     readonly local: StorageArea
-    /** ブラウザを終了すると消える。既定では background などの拡張のページからしか読めない。 */
+    /**
+     * Cleared when the browser quits. By default only extension pages such as the background can
+     * read it.
+     */
     readonly session: StorageArea
-    /** ログインしている端末間で同期される。容量と書き込み回数の上限が local よりずっと小さい。 */
+    /**
+     * Synced across the user's signed-in devices, with far lower size and write-rate limits than
+     * `local`.
+     */
     readonly sync: StorageArea
   }
 >()("katip/platform/browser/Storage") {

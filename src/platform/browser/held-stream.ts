@@ -12,12 +12,13 @@ interface Subscriber<A> {
 }
 
 /**
- * 購読者が現れるまで値を溜め、以降は購読中の全員へ配る Stream を作る。
+ * Makes a Stream that holds values until the first subscriber arrives, then delivers each value to
+ * every current subscriber.
  *
  * @remarks
- * 溜めていた値は最初の購読者だけが受け取る。2 番目以降の購読者は購読を始めた後の値だけを受け取る。
- * `end` の後に購読すると、溜めていた値（あれば）を受け取ってすぐ終わる。
- * `push` と `end` は Chrome のリスナーのような Effect の外から同期的に呼べる。
+ * Only the first subscriber receives the held values; later subscribers receive only values pushed
+ * after they subscribe. Subscribing after `end` delivers the held values, if any, and ends at once.
+ * `push` and `end` can be called synchronously from outside Effect, such as from a Chrome listener.
  */
 export const makeHeldStream = <A>(): HeldStream<A> => {
   let held: Array<A> | undefined = []

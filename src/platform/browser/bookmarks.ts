@@ -4,16 +4,16 @@ import { type BrowserApiError, callChrome, requirePresent } from "./browser-api-
 import type { BookmarkId } from "./ids"
 
 /**
- * 文字列は語とフレーズの検索で、すべての語がタイトルか URL のどちらかに含まれるノードに一致する。
- * オブジェクトの `title`・`url` は完全一致。
+ * A string searches words and phrases, matching nodes whose title contains every word or whose
+ * URL contains every word. An object's `title` and `url` match exactly.
  */
 export type BookmarkSearchQuery =
   string | { readonly query?: string; readonly url?: string; readonly title?: string }
 
 export interface BookmarkCreateOptions {
-  /** 省略時は「その他のブックマーク」。 */
+  /** Defaults to "Other bookmarks". */
   readonly parentId?: BookmarkId
-  /** 省略時は末尾。 */
+  /** Defaults to the end. */
   readonly index?: number
   readonly title?: string
   /** Omitted or empty, a folder is created. */
@@ -22,16 +22,16 @@ export interface BookmarkCreateOptions {
 
 export interface BookmarkUpdateOptions {
   readonly title?: string
-  /** フォルダに URL を設定しようとすると失敗する。 */
+  /** Fails when set on a folder. */
   readonly url?: string
 }
 
 export interface BookmarkMoveOptions {
-  /** 省略時は今の親フォルダ。 */
+  /** Defaults to the current parent folder. */
   readonly parentId?: BookmarkId
   /**
-   * 移動先フォルダの子のうち、どの子の前に入れるか（移動するノード自身も数える）。省略時は末尾。
-   * 同じフォルダ内で後ろへ動かすと、移動後の位置はこの値より 1 小さくなる。
+   * The child of the destination folder to insert before, counting the moved node itself.
+   * Defaults to the end. Moving a node later within its folder leaves it at one less than this.
    */
   readonly index?: number
 }
@@ -41,7 +41,7 @@ export class Bookmarks extends Context.Service<
   {
     readonly getTree: Effect.Effect<BookmarkFolder, BrowserApiError>
     getSubTree(id: BookmarkId): Effect.Effect<BookmarkNode, BrowserApiError>
-    /** 子ノード自身の `children` は読み込まない。 */
+    /** Does not load the children's own `children`. */
     getChildren(id: BookmarkId): Effect.Effect<ReadonlyArray<BookmarkNode>, BrowserApiError>
     get(id: BookmarkId): Effect.Effect<BookmarkNode, BrowserApiError>
     search(query: BookmarkSearchQuery): Effect.Effect<ReadonlyArray<BookmarkNode>, BrowserApiError>
@@ -51,7 +51,7 @@ export class Bookmarks extends Context.Service<
       options: BookmarkUpdateOptions,
     ): Effect.Effect<BookmarkNode, BrowserApiError>
     move(id: BookmarkId, options: BookmarkMoveOptions): Effect.Effect<BookmarkNode, BrowserApiError>
-    /** 空でないフォルダは消せず失敗する。中身ごと消すには `removeTree` を使う。 */
+    /** Fails on a non-empty folder; `removeTree` removes a folder with its contents. */
     remove(id: BookmarkId): Effect.Effect<void, BrowserApiError>
     removeTree(id: BookmarkId): Effect.Effect<void, BrowserApiError>
   }

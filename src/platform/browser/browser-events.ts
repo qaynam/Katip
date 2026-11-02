@@ -27,7 +27,7 @@ type EventSourcesOf<Namespace, Name extends keyof Namespace> = {
   readonly [K in Name]: EventSource<ListenerOf<Namespace[K]>>
 }
 
-/** {@link captureBrowserEvents} が購読する Chrome のイベント。`chrome` をそのまま渡せる。 */
+/** The Chrome events {@link captureBrowserEvents} listens to. `chrome` itself fits. */
 export interface BrowserEventSources {
   readonly tabs: EventSourcesOf<
     typeof chrome.tabs,
@@ -62,27 +62,27 @@ export interface BrowserEventSources {
 
 export interface CapturedBrowserEvents {
   /**
-   * ブラウザで起きたイベント。
+   * Events that happened in the browser.
    *
    * @remarks
-   * 最初の購読者が現れるまでのイベントは溜めておき、最初の購読者にだけ渡す。
-   * 2 番目以降の購読者は購読を始めた後のイベントだけを受け取るので、
-   * service worker を起こしたイベントを複数の処理で扱うなら、1 つの購読から分配すること。
+   * Events that arrive before the first subscriber are held and delivered to that subscriber only.
+   * Later subscribers receive only events after they subscribe, so to handle the event that woke
+   * the service worker in several places, fan it out from a single subscription.
    */
   readonly events: Stream.Stream<BrowserEvent>
   /**
-   * 受け付けた Port 接続（`runtime.onConnect` と `runtime.onConnectExternal`）。
-   * 溜め方は `events` と同じ。
+   * Accepted Port connections (`runtime.onConnect` and `runtime.onConnectExternal`), held the same
+   * way as `events`.
    */
   readonly connections: Stream.Stream<BrowserPort>
 }
 
 /**
- * Chrome のイベントリスナーをすべて登録し、届いたイベントを購読者が現れるまで溜める。
+ * Registers every Chrome event listener and holds incoming events until a subscriber arrives.
  *
  * @remarks
- * service worker ではモジュールのトップレベルで、Layer の構築より前に同期的に呼ぶこと。
- * 1 つのページで 2 回呼ぶと、同じイベントが 2 つの {@link CapturedBrowserEvents} に届く。
+ * In a service worker, call this synchronously at module top level, before building any Layer.
+ * Calling it twice in one page delivers each event to both {@link CapturedBrowserEvents}.
  */
 export const captureBrowserEvents = (sources: BrowserEventSources): CapturedBrowserEvents => {
   const events = makeHeldStream<BrowserEvent>()
@@ -92,9 +92,10 @@ export const captureBrowserEvents = (sources: BrowserEventSources): CapturedBrow
     if (Option.isSome(value)) emit(toEvent(value.value))
   }
 
-  // Stream.callback で購読時にリスナーを登録すると、Layer の構築や storage の読み込みを待つ間に
-  // service worker を起こしたイベントを取りこぼす。MV3 は起動の原因になったイベントを、
-  // スクリプトの評価中に同期的に登録されたリスナーにしか配送しないため、ここで全部登録して溜めておく。
+  // Not registered on subscription with Stream.callback: that would miss the event that woke the
+  // service worker while Layers are built and storage is read. MV3 delivers that event only to
+  // listeners registered synchronously while the script is evaluated, so all of them are registered
+  // here and their events held.
   sources.tabs.onCreated.addListener((raw) =>
     emitWhenPresent(fromChromeTab(raw), (tab) => ({ _tag: "TabCreated", tab })),
   )

@@ -11,14 +11,14 @@ export interface TabGroupQuery {
 }
 
 export interface TabGroupUpdateOptions {
-  /** 空文字で無題に戻す。 */
+  /** An empty string makes the group untitled again. */
   readonly title?: string
   readonly color?: TabGroupColor
   readonly collapsed?: boolean
 }
 
 export interface TabGroupMoveOptions {
-  /** 移動後にグループの先頭のタブが来る位置。 */
+  /** Where the group's first tab ends up after the move. */
   readonly index: number | "end"
   readonly windowId?: WindowId
 }
@@ -33,7 +33,7 @@ export class TabGroups extends Context.Service<
       groupId: TabGroupId,
       options: TabGroupUpdateOptions,
     ): Effect.Effect<BrowserTabGroup, BrowserApiError>
-    /** ピン留めされたタブの間や別のグループの途中へは動かせず失敗する。 */
+    /** Fails when the target is among pinned tabs or inside another group. */
     move(
       groupId: TabGroupId,
       options: TabGroupMoveOptions,

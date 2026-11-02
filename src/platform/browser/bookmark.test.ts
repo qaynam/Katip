@@ -26,26 +26,26 @@ const chromeFolder = (
 const folderChildren = (node: BookmarkNode) =>
   node._tag === "BookmarkFolder" ? Option.some(node.children) : Option.none()
 
-describe("Chrome のブックマークノードの変換", () => {
-  it("URL を持つノードはブックマークになる", () => {
+describe("converting a Chrome bookmark node", () => {
+  it("a node with a URL becomes a bookmark", () => {
     const node = fromChromeBookmark(chromeBookmark("https://example.com/"))
 
     assert.strictEqual(node._tag, "Bookmark")
   })
 
-  it("URL を持たないノードはフォルダになる", () => {
+  it("a node without a URL becomes a folder", () => {
     const node = fromChromeBookmark(chromeFolder())
 
     assert.strictEqual(node._tag, "BookmarkFolder")
   })
 
-  it("子を返さなかったフォルダは、子を読み込んでいないことを表す", () => {
+  it("a folder returned without children has its children not loaded", () => {
     const node = fromChromeBookmark(chromeFolder())
 
     assert.deepStrictEqual(folderChildren(node), Option.some(Option.none()))
   })
 
-  it("子を返したフォルダは子も変換する", () => {
+  it("a folder returned with children converts them too", () => {
     const node = fromChromeBookmark(chromeFolder([chromeBookmark("https://example.com/")]))
 
     assert.deepStrictEqual(
@@ -54,7 +54,7 @@ describe("Chrome のブックマークノードの変換", () => {
     )
   })
 
-  it("ルートには親も位置も無い", () => {
+  it("the root has neither a parent nor an index", () => {
     const node = fromChromeBookmark({ id: "0", title: "", syncing: false, children: [] })
 
     assert.deepStrictEqual([node.parentId, node.index], [Option.none(), Option.none()])

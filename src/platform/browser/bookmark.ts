@@ -24,8 +24,8 @@ export interface BookmarkFolder {
   readonly dateAdded: Option.Option<number>
   readonly folderType: Option.Option<BookmarkFolderType>
   /**
-   * 子ノードを取得した API（`getTree`・`getSubTree`・削除イベント）でだけ `Some`。
-   * `None` は「子が無い」ではなく「子を読み込んでいない」を表す。
+   * `Some` only from the APIs that fetch children (`getTree`, `getSubTree`, the removal event).
+   * `None` means "children not loaded", not "no children".
    */
   readonly children: Option.Option<ReadonlyArray<BookmarkNode>>
 }

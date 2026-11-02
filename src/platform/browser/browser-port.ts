@@ -10,7 +10,10 @@ export class PortDisconnectedError extends Schema.TaggedError<PortDisconnectedEr
 ) {}
 
 export interface PortSender {
-  /** `runtime.onConnectExternal` 経由、つまり拡張の外のページや他の拡張からの接続か。 */
+  /**
+   * Whether the connection came through `runtime.onConnectExternal`, that is, from a page outside
+   * the extension or from another extension.
+   */
   readonly external: boolean
   readonly url: Option.Option<string>
   readonly origin: Option.Option<string>
@@ -19,27 +22,28 @@ export interface PortSender {
 
 export interface BrowserPort {
   readonly name: string
-  /** 受け取った接続でだけ `Some`。自分から接続した Port には送信元が無い。 */
+  /** `Some` only on accepted connections; a Port this side opened has no sender. */
   readonly sender: Option.Option<PortSender>
   /**
-   * メッセージを送る。Chrome は JSON にして届けるので、Schema で encode した値を渡すこと。
+   * Sends a message. Chrome delivers it as JSON, so pass a value encoded with a Schema.
    *
    * @remarks
-   * 切断を検知済みなら {@link PortDisconnectedError}。Chrome が送信を拒んだ場合は
-   * {@link BrowserApiError}（相手の切断がまだ通知されていない場合もこちらになる）。
+   * Fails with {@link PortDisconnectedError} once the disconnect has been seen, and with
+   * {@link BrowserApiError} when Chrome refuses to send, which includes a peer disconnect that has
+   * not been reported yet.
    */
   post(message: unknown): Effect.Effect<void, PortDisconnectedError | BrowserApiError>
   /**
-   * 受信したメッセージ。切断されると終わる。
+   * Received messages; ends on disconnect.
    *
    * @remarks
-   * 購読を始める前に届いていたメッセージは、最初の購読者が受け取る。
-   * 値は相手が JSON で送ったものなので、Schema で decode してから使う。
+   * Messages that arrived before anyone subscribed go to the first subscriber.
+   * Values are whatever the peer sent as JSON, so decode them with a Schema before use.
    */
   readonly messages: Stream.Stream<unknown>
-  /** 相手から・自分からを問わず、切断されたときに完了する。 */
+  /** Completes on disconnect from either side. */
   readonly disconnected: Effect.Effect<void>
-  /** 切断する。切断済みなら何もしない。 */
+  /** Disconnects; does nothing if already disconnected. */
   readonly disconnect: Effect.Effect<void>
 }
 
@@ -53,7 +57,7 @@ export const fromChromeMessageSender = (
   tabId: tabIdFrom(raw?.tab?.id),
 })
 
-/** {@link fromChromePort} が使う `chrome.runtime.Port` の部分。 */
+/** The part of `chrome.runtime.Port` that {@link fromChromePort} uses. */
 export interface ChromePort {
   readonly name: string
   readonly sender?: chrome.runtime.MessageSender | undefined
@@ -64,11 +68,11 @@ export interface ChromePort {
 }
 
 /**
- * Chrome の Port を {@link BrowserPort} に包む。
+ * Wraps a Chrome Port as a {@link BrowserPort}.
  *
  * @remarks
- * 受信と切断のリスナーはこの呼び出しの中で同期的に登録する。
- * Port を受け取ってから `messages` を購読するまでに届いたメッセージも失わない。
+ * Registers the message and disconnect listeners synchronously within this call, so messages that
+ * arrive between receiving the Port and subscribing to `messages` are kept.
  */
 export const fromChromePort = (
   port: ChromePort,
@@ -98,7 +102,7 @@ export const fromChromePort = (
     disconnected: Deferred.await(closed),
     disconnect: Effect.sync(() => {
       if (Deferred.isDoneUnsafe(closed)) return
-      // Chrome は自分から切断した側には onDisconnect を通知しない
+      // Chrome does not fire onDisconnect on the side that disconnects
       port.disconnect()
       markClosed()
     }),
@@ -108,7 +112,10 @@ export const fromChromePort = (
 export class Ports extends Context.Service<
   Ports,
   {
-    /** 同じ拡張の別のページ（sidepanel から background など）へ接続する。スコープを閉じると切断する。 */
+    /**
+     * Connects to another page of this extension, such as from the side panel to the background.
+     * Closing the scope disconnects.
+     */
     connect(name: string): Effect.Effect<BrowserPort, BrowserApiError, Scope.Scope>
   }
 >()("katip/platform/browser/Ports") {
