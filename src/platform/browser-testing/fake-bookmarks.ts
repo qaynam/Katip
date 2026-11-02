@@ -22,14 +22,14 @@ export type BookmarkSeed =
 
 export interface FakeBookmarks {
   readonly service: Bookmarks["Service"]
-  /** イベントを発火せずにノードを作り、作ったノードを子ごと返す。 */
+  /** Creates nodes without firing events and returns them with their children. */
   readonly seed: <const Seeds extends ReadonlyArray<BookmarkSeed>>(
     parentId: BookmarkId,
     seeds: Seeds,
   ) => Effect.Effect<SeededBookmarks<Seeds>>
 }
 
-/** 仕込んだ順に、置いたノードを子ごと持つ。 */
+/** The seeded nodes with their children, in seeding order. */
 export type SeededBookmarks<Seeds extends ReadonlyArray<BookmarkSeed>> = {
   readonly [K in keyof Seeds]: BookmarkNode
 }
@@ -141,7 +141,7 @@ export const makeFakeBookmarks = Effect.fnUntraced(function* (world: FakeWorld) 
         const nodes = planted.success.ids.flatMap((id) =>
           Option.toArray(Result.getSuccess(subTree(planted.success.tree, id))),
         )
-        // flatMap は tuple の長さを型に残さないので、仕込みの形に合わせて戻す
+        // Cast because flatMap drops the tuple length from the type; restore the seeds' shape
         return nodes as SeededBookmarks<Seeds>
       }),
     )

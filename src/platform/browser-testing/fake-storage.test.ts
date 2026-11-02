@@ -8,9 +8,9 @@ const collectChanges = (area: StorageArea, count: number) =>
     startImmediately: true,
   })
 
-layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
-  describe("値を読み書きしたとき", () => {
-    it.effect("保存されていないキーは None になる", () =>
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake Storage", (it) => {
+  describe("reading and writing values", () => {
+    it.effect("a key with nothing stored reads as None", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
 
@@ -20,7 +20,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("保存した値は JSON を通った形で読み戻される", () =>
+    it.effect("a stored value reads back as it comes out of JSON", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
 
@@ -33,7 +33,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("local・session・sync は別々の領域になっている", () =>
+    it.effect("local, session and sync are separate areas", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
 
@@ -52,8 +52,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
     )
   })
 
-  describe("変更を購読しているとき", () => {
-    it.effect("値を変えると、変更前と変更後の値が流れる", () =>
+  describe("while subscribed to changes", () => {
+    it.effect("changing a value emits the old and new values", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
         const changes = yield* collectChanges(storage.local, 2)
@@ -68,7 +68,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("同じ値を書いても流れない", () =>
+    it.effect("writing the same value emits nothing", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
         const changes = yield* collectChanges(storage.local, 2)
@@ -84,7 +84,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("削除すると、変更後の値が None の変更が流れる", () =>
+    it.effect("removing a value emits a change whose new value is None", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage
@@ -99,7 +99,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("購読を始める前の変更は流れない", () =>
+    it.effect("changes from before subscribing are not emitted", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
         yield* storage.local.set("count", 1)
@@ -113,7 +113,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("仕込んだ値は変更として流れない", () =>
+    it.effect("seeded values are not emitted as changes", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage
@@ -130,10 +130,10 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
     )
   })
 
-  describe("decode して読んだとき", () => {
+  describe("reading with decoding", () => {
     const Counter = Schema.Struct({ count: Schema.Number })
 
-    it.effect("形の合う値は decode した値になる", () =>
+    it.effect("a value that fits the schema reads as the decoded value", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage
@@ -145,7 +145,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("形の合わない値は StorageDecodeError で失敗する", () =>
+    it.effect("a value that does not fit fails with StorageDecodeError", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage
@@ -160,7 +160,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("保存されていなければ None になる", () =>
+    it.effect("nothing stored reads as None", () =>
       Effect.gen(function* () {
         const storage = yield* Storage
 
@@ -171,9 +171,9 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
     )
   })
 
-  describe("並行して読み書きしたとき", () => {
+  describe("reading and writing concurrently", () => {
     it.effect(
-      "読み書きのたびに処理を手放すので、排他しない read-modify-write は更新を取りこぼす",
+      "loses an update in an unguarded read-modify-write, since every read and write yields",
       () =>
         Effect.gen(function* () {
           const storage = yield* Storage
@@ -189,8 +189,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
     )
   })
 
-  describe("失敗を仕込んだとき", () => {
-    it.effect("次の 1 回だけ BrowserApiError で失敗し、値は書き換わらない", () =>
+  describe("injecting a failure", () => {
+    it.effect("fails only the next call with BrowserApiError and leaves the value unchanged", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage
@@ -205,7 +205,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Storage の fake", (it) => {
       }),
     )
 
-    it.effect("get に仕込んだ失敗は getDecoded にも効く", () =>
+    it.effect("a failure injected into get applies to getDecoded too", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const storage = yield* Storage

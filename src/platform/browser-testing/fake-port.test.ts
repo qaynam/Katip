@@ -8,19 +8,21 @@ const acceptConnection = Effect.flatMap(
   ([port]) => Effect.fromNullishOr(port),
 )
 
-layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
-  describe("Ports で接続したとき", () => {
-    it.effect("受け付ける側の Port が、同じ名前で BrowserEvents.connections に流れる", () =>
-      Effect.gen(function* () {
-        const ports = yield* Ports
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake Port", (it) => {
+  describe("connecting through Ports", () => {
+    it.effect(
+      "emits the accepting side's Port on BrowserEvents.connections under the same name",
+      () =>
+        Effect.gen(function* () {
+          const ports = yield* Ports
 
-        yield* ports.connect("katip/sidebar")
+          yield* ports.connect("katip/sidebar")
 
-        assert.strictEqual((yield* acceptConnection).name, "katip/sidebar")
-      }),
+          assert.strictEqual((yield* acceptConnection).name, "katip/sidebar")
+        }),
     )
 
-    it.effect("送ったメッセージは JSON を通った形で相手に届く", () =>
+    it.effect("delivers a posted message to the peer as it comes out of JSON", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
         const client = yield* ports.connect("katip/sidebar")
@@ -33,7 +35,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
       }),
     )
 
-    it.effect("受け付ける側から送ったメッセージも接続した側に届く", () =>
+    it.effect("delivers messages from the accepting side to the connecting side too", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
         const client = yield* ports.connect("katip/sidebar")
@@ -46,7 +48,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
       }),
     )
 
-    it.effect("相手が切断すると、messages が終わり disconnected が完了する", () =>
+    it.effect("ends messages and completes disconnected when the peer disconnects", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
         const client = yield* ports.connect("katip/sidebar")
@@ -59,7 +61,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
       }),
     )
 
-    it.effect("切断した後に送ると PortDisconnectedError で失敗する", () =>
+    it.effect("fails with PortDisconnectedError when posting after a disconnect", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
         const client = yield* ports.connect("katip/sidebar")
@@ -72,7 +74,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
       }),
     )
 
-    it.effect("スコープを閉じると切断される", () =>
+    it.effect("disconnects when the scope closes", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
 
@@ -82,7 +84,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
       }),
     )
 
-    it.effect("自分から接続した側の Port には送信元が無い", () =>
+    it.effect("gives the connecting side's Port no sender", () =>
       Effect.gen(function* () {
         const ports = yield* Ports
 
@@ -93,8 +95,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Port の fake", (it) => {
     )
   })
 
-  describe("FakeBrowser から接続したとき", () => {
-    it.effect("指定した送信元が、受け付ける側の Port に入る", () =>
+  describe("connecting from FakeBrowser", () => {
+    it.effect("gives the accepting side's Port the specified sender", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const sender = {

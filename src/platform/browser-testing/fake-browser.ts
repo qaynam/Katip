@@ -48,7 +48,7 @@ import { closeWindowWithTabs, makeFakeWindows } from "./fake-windows"
 import { type FakeApiName, type FakeWorld, makeFakeWorld, transact } from "./fake-world"
 
 export interface TabSeed {
-  /** 省略時は新しいタブのページ。 */
+  /** Defaults to the New Tab page. */
   readonly url?: string
   readonly title?: string
   readonly favIconUrl?: string
@@ -58,24 +58,24 @@ export interface TabSeed {
   readonly audible?: boolean
   readonly muted?: boolean
   readonly discarded?: boolean
-  /** {@link WindowSeed.groups} のキー。 */
+  /** A key of {@link WindowSeed.groups}. */
   readonly group?: string
-  /** 同じキーを持つ隣り合った 2 つのタブが 1 つの分割ビューになる。 */
+  /** Two adjacent tabs with the same key form one split view. */
   readonly split?: string
-  /** このタブを開いたタブの、同じウィンドウの中での位置。 */
+  /** The index, within the same window, of the tab that opened this one. */
   readonly openerIndex?: number
-  /** 省略時は仕込んだ時刻。 */
+  /** Defaults to the time of seeding. */
   readonly lastAccessed?: number
 }
 
 export interface TabGroupSeed {
   readonly title?: string
-  /** 省略時は Chrome と同じく、そのウィンドウで使われている数が少ない色。 */
+  /** Defaults, as in Chrome, to the color least used in the window. */
   readonly color?: TabGroupColor
   readonly collapsed?: boolean
 }
 
-/** キーは {@link TabSeed.group} から参照する名前。 */
+/** Keyed by the names {@link TabSeed.group} refers to. */
 export interface TabGroupSeeds {
   readonly [key: string]: TabGroupSeed
 }
@@ -84,12 +84,12 @@ export interface WindowSeed<
   Tabs extends Array.NonEmptyReadonlyArray<TabSeed> = Array.NonEmptyReadonlyArray<TabSeed>,
   Groups extends TabGroupSeeds = TabGroupSeeds,
 > {
-  /** 並びがそのままタブストリップの順。`active` が無ければ先頭のタブがアクティブになる。 */
+  /** In tab strip order. Without an `active` tab, the first tab is active. */
   readonly tabs: Tabs
   readonly groups?: Groups
-  /** 省略時は、ほかにウィンドウが無いときだけフォーカスされる。 */
+  /** Omitted, the window is focused only when there is no other window. */
   readonly focused?: boolean
-  /** 省略時は左上に置いた 1280×800 のウィンドウ。 */
+  /** Defaults to a 1280×800 window at the top left. */
   readonly bounds?: WindowBounds
 }
 
@@ -100,14 +100,17 @@ export interface SeededWindow<
   Groups extends TabGroupSeeds = TabGroupSeeds,
 > {
   readonly windowId: WindowId
-  /** {@link WindowSeed.tabs} と同じ順。 */
+  /** In the same order as {@link WindowSeed.tabs}. */
   readonly tabIds: { readonly [K in keyof Tabs]: TabId }
   readonly groupIds: { readonly [K in keyof Groups]: TabGroupId }
-  /** キーは {@link TabSeed.split}。 */
+  /** Keyed by {@link TabSeed.split}. */
   readonly splitViewIds: { readonly [K in SplitKeyOf<Tabs[number]>]: SplitViewId }
 }
 
-/** ページの側で起きる変化。値が変わった項目だけが `TabUpdated` の `changes` に入る。 */
+/**
+ * A change made by the page itself. Only fields whose values change go into the `changes` of
+ * `TabUpdated`.
+ */
 export interface PageUpdate {
   readonly url?: string
   readonly title?: string
@@ -118,7 +121,7 @@ export interface PageUpdate {
 
 export interface BrowsingSnapshot {
   readonly windows: ReadonlyArray<BrowserWindow>
-  /** ウィンドウの作成順、ウィンドウの中では index 順。 */
+  /** In window creation order, and by index within each window. */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly groups: ReadonlyArray<BrowserTabGroup>
 }
@@ -130,16 +133,14 @@ const splitProblems = (seed: WindowSeed, key: string): ReadonlyArray<string> => 
   const members = seed.tabs.flatMap((tab, index) => (tab.split === key ? [{ tab, index }] : []))
   const [first, second] = members
   if (first === undefined || second === undefined || members.length > 2) {
-    return [`分割 "${key}" のタブが 2 つでない`]
+    return [`split "${key}" does not have exactly two tabs`]
   }
   return [
-    ...(second.index - first.index === 1 ? [] : [`分割 "${key}" のタブが隣り合っていない`]),
+    ...(second.index - first.index === 1 ? [] : [`split "${key}" tabs are not adjacent`]),
     ...((first.tab.pinned ?? false) === (second.tab.pinned ?? false)
       ? []
-      : [`分割 "${key}" のタブのピン留めが揃っていない`]),
-    ...(first.tab.group === second.tab.group
-      ? []
-      : [`分割 "${key}" のタブのグループが揃っていない`]),
+      : [`split "${key}" tabs differ in pinning`]),
+    ...(first.tab.group === second.tab.group ? [] : [`split "${key}" tabs differ in group`]),
   ]
 }
 
@@ -151,19 +152,19 @@ const seedProblems = (seed: WindowSeed): ReadonlyArray<string> => {
     ...(seed.tabs.some(
       (tab, index) => tab.pinned && seed.tabs.slice(0, index).some((before) => !before.pinned),
     )
-      ? ["ピン留めしたタブはピン留めしていないタブより前に置く"]
+      ? ["pinned tabs must come before unpinned tabs"]
       : []),
-    ...(seed.tabs.filter((tab) => tab.active).length > 1 ? ["アクティブなタブは 1 つまで"] : []),
+    ...(seed.tabs.filter((tab) => tab.active).length > 1 ? ["at most one tab can be active"] : []),
     ...seed.tabs.flatMap((tab, index) => [
       ...(tab.group !== undefined && !groupKeys.includes(tab.group)
-        ? [`タブ ${index} のグループ "${tab.group}" が groups に無い`]
+        ? [`tab ${index} refers to group "${tab.group}", which is not in groups`]
         : []),
       ...(tab.group !== undefined && tab.pinned
-        ? [`タブ ${index} はピン留めとグループを両立できない`]
+        ? [`tab ${index} cannot be both pinned and grouped`]
         : []),
       ...(tab.openerIndex !== undefined &&
       (tab.openerIndex === index || tab.openerIndex < 0 || tab.openerIndex >= seed.tabs.length)
-        ? [`タブ ${index} の openerIndex が範囲外`]
+        ? [`tab ${index} has an openerIndex out of range`]
         : []),
     ]),
     ...groupKeys.flatMap((key) => {
@@ -175,8 +176,8 @@ const seedProblems = (seed: WindowSeed): ReadonlyArray<string> => {
         () => true,
       )
       return [
-        ...(members.length === 0 ? [`グループ "${key}" にタブが無い`] : []),
-        ...(contiguous ? [] : [`グループ "${key}" のタブが連続していない`]),
+        ...(members.length === 0 ? [`group "${key}" has no tabs`] : []),
+        ...(contiguous ? [] : [`group "${key}" tabs are not contiguous`]),
       ]
     }),
     ...splitKeysOf(seed).flatMap((key) => splitProblems(seed, key)),
@@ -281,7 +282,8 @@ const seedWindowInto = <
         lastIssuedId:
           state.lastIssuedId + 1 + seed.tabs.length + groupEntries.length + splitKeys.length,
       })
-      // map や fromEntries は tuple の長さやキーを型に残さないので、仕込みの形に合わせて戻す
+      // Cast because map and fromEntries drop tuple lengths and keys from the types; restore the
+      // seed's shape
       return {
         windowId,
         tabIds: tabIds as SeededWindow<Tabs, Groups>["tabIds"],
@@ -312,7 +314,10 @@ const pageChanges = (tab: TabRecord, update: PageUpdate): TabChanges => ({
 })
 
 export interface FakeBrowserOptions {
-  /** 省略時は `true`。`false` なら分割ビューを作る・解く API の無い Chrome（155 未満）を再現する。 */
+  /**
+   * Defaults to `true`. `false` plays Chrome without the API to create and dissolve split views
+   * (before 155).
+   */
   readonly supportsSplitView?: boolean
 }
 
@@ -336,50 +341,53 @@ const extensionPageSender: PortSender = {
 }
 
 /**
- * テストからブラウザの状態を仕込み、観察し、ユーザーやページの側の操作を起こすハンドル。
- * `FakeBrowser.layer` は、これと Chrome API の全サービスの fake を、状態を共有させて提供する。
- * `FakeBrowser.layerWith` は Chrome のバージョンの違いを指定して同じものを提供する。
+ * A handle for tests to seed and observe browser state and to play what users and pages do.
+ * `FakeBrowser.layer` provides this and fakes of every Chrome API service, all sharing one state.
+ * `FakeBrowser.layerWith` provides the same with Chrome version differences specified.
  */
 export class FakeBrowser extends Context.Service<
   FakeBrowser,
   {
-    /** イベントを発火せずにウィンドウとタブとグループを置く。仕込みが矛盾していれば die する。 */
+    /** Places a window with its tabs and groups without firing events; dies on a bad seed. */
     seedWindow<
       const Tabs extends Array.NonEmptyReadonlyArray<TabSeed>,
       const Groups extends TabGroupSeeds = TabGroupSeeds,
     >(
       seed: WindowSeed<Tabs, Groups>,
     ): Effect.Effect<SeededWindow<Tabs, Groups>>
-    /** イベントを発火せずにブックマークを置き、置いたノードを子ごと返す。 */
+    /** Places bookmarks without firing events and returns the nodes with their children. */
     seedBookmarks<const Seeds extends ReadonlyArray<BookmarkSeed>>(
       parentId: BookmarkId,
       seeds: Seeds,
     ): Effect.Effect<SeededBookmarks<Seeds>>
-    /** 変更を通知せずに storage へ値を入れる。 */
+    /** Stores values without emitting changes. */
     seedStorage(
       area: StorageAreaName,
       entries: Record.ReadonlyRecord<string, unknown>,
     ): Effect.Effect<void>
     readonly snapshot: Effect.Effect<BrowsingSnapshot>
-    /** 状態を変えずにイベントだけを発火する。コマンドやインストールなど、fake が起こさないイベント用。 */
+    /**
+     * Emits an event without changing the state, for events the fake never causes itself, such as
+     * commands and installs.
+     */
     emit(event: BrowserEvent): Effect.Effect<void>
-    /** 前回取り出してから発火したイベントを、発火した順に取り出す。 */
+    /** Takes the events emitted since the last take, in the order emitted. */
     readonly takeEmittedEvents: Effect.Effect<ReadonlyArray<BrowserEvent>>
-    /** ユーザーがウィンドウを閉じる。タブは `isWindowClosing: true` で閉じる。 */
+    /** Plays the user closing a window; its tabs close with `isWindowClosing: true`. */
     closeWindow(windowId: WindowId): Effect.Effect<void, BrowserApiError>
-    /** ページの読み込みやタイトルの変化など、ページの側で起きる変化を起こす。 */
+    /** Plays a change made by the page, such as loading or a new title. */
     updatePage(tabId: TabId, update: PageUpdate): Effect.Effect<BrowserTab, BrowserApiError>
     fireAlarm(name: string): Effect.Effect<void, BrowserApiError>
     /**
-     * 次に `api` を呼んだとき、何もせずに {@link BrowserApiError} で失敗させる。
-     * 何度も呼ぶと、その回数だけ続けて失敗する。
+     * Makes the next call to `api` do nothing and fail with {@link BrowserApiError}. Calling this
+     * several times fails that many calls in a row.
      *
-     * @param cause - 失敗の原因として `BrowserApiError.cause` に入れる値。
+     * @param cause - The value to put in `BrowserApiError.cause`.
      */
     failNext(api: FakeApiName, cause?: unknown): Effect.Effect<void>
     /**
-     * 接続する側の Port を返し、受け付ける側の Port を `BrowserEvents.connections` に流す。
-     * スコープを閉じると切断する。
+     * Returns the connecting side's Port and emits the accepting side's Port on
+     * `BrowserEvents.connections`. Closing the scope disconnects.
      */
     connect(name: string, sender?: PortSender): Effect.Effect<BrowserPort, never, Scope.Scope>
   }

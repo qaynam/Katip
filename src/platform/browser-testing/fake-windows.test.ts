@@ -5,9 +5,9 @@ import { FakeBrowser } from "./fake-browser"
 
 const tagsOf = (events: ReadonlyArray<BrowserEvent>) => events.map(({ _tag }) => _tag)
 
-layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
-  describe("ウィンドウを作ったとき", () => {
-    it.effect("WindowCreated、TabCreated、TabActivated、WindowFocusChanged の順に発火する", () =>
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake Windows", (it) => {
+  describe("creating a window", () => {
+    it.effect("emits WindowCreated, TabCreated, TabActivated, then WindowFocusChanged", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -25,7 +25,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("指定した URL のタブを 1 つ持つ", () =>
+    it.effect("has one tab with the given URL", () =>
       Effect.gen(function* () {
         const windows = yield* Windows
         const tabs = yield* Tabs
@@ -39,7 +39,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("popup で位置と大きさを指定すると、その種類・位置・大きさのウィンドウになる", () =>
+    it.effect("as a popup with bounds, has that type, position and size", () =>
       Effect.gen(function* () {
         const windows = yield* Windows
 
@@ -58,7 +58,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("種類を指定しなければ通常のウィンドウになる", () =>
+    it.effect("without a type, is a normal window", () =>
       Effect.gen(function* () {
         const windows = yield* Windows
 
@@ -68,7 +68,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("focused: false で作ると、フォーカスは移らない", () =>
+    it.effect("with focused: false, leaves focus where it was", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -81,8 +81,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
     )
   })
 
-  describe("フォーカスを変えたとき", () => {
-    it.effect("別のウィンドウにフォーカスすると WindowFocusChanged が発火する", () =>
+  describe("changing focus", () => {
+    it.effect("focusing another window emits WindowFocusChanged", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -97,7 +97,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("既にフォーカスしているウィンドウなら発火しない", () =>
+    it.effect("focusing the focused window emits nothing", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -109,7 +109,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("フォーカスを外すと、直前にフォーカスしていたウィンドウへ移る", () =>
+    it.effect("unfocusing moves focus to the previously focused window", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -123,8 +123,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
     )
   })
 
-  describe("仕込んだウィンドウ", () => {
-    it.effect("位置と大きさを指定すれば、それを持つ", () =>
+  describe("a seeded window", () => {
+    it.effect("has the bounds it was seeded with", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -138,8 +138,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
     )
   })
 
-  describe("拡張がウィンドウを閉じたとき", () => {
-    it.effect("中のタブは isWindowClosing で閉じ、最後に WindowRemoved が発火する", () =>
+  describe("when the extension closes a window", () => {
+    it.effect("closes its tabs with isWindowClosing and emits WindowRemoved last", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -154,7 +154,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("閉じたウィンドウはもう取得できない", () =>
+    it.effect("the closed window can no longer be fetched", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -166,7 +166,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("存在しないウィンドウを閉じようとすると失敗する", () =>
+    it.effect("closing a window that does not exist fails", () =>
       Effect.gen(function* () {
         const windows = yield* Windows
 
@@ -177,8 +177,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
     )
   })
 
-  describe("ウィンドウが無いとき", () => {
-    it.effect("最後にフォーカスしたウィンドウを求めると失敗する", () =>
+  describe("with no windows", () => {
+    it.effect("asking for the last focused window fails", () =>
       Effect.gen(function* () {
         const windows = yield* Windows
 
@@ -189,7 +189,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
     )
   })
 
-  describe("ユーザーがウィンドウを閉じたとき", () => {
+  describe("when the user closes a window", () => {
     it.effect(
       "releases groups and pinning from the right, removes tabs from the right with isWindowClosing, then emits WindowRemoved",
       () =>
@@ -227,7 +227,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
         }),
     )
 
-    it.effect("フォーカスしていたウィンドウなら、直前のウィンドウへフォーカスが移る", () =>
+    it.effect("closing the focused window moves focus to the previous window", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const earlier = yield* fake.seedWindow({ tabs: [{}] })
@@ -242,7 +242,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
       }),
     )
 
-    it.effect("閉じている途中で別のタブがアクティブになることはない", () =>
+    it.effect("activates no other tab while closing", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const closing = yield* fake.seedWindow({ tabs: [{ active: true }, {}, {}] })

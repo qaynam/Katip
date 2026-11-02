@@ -4,7 +4,7 @@ import { chromeCall, type FakeWorld } from "./fake-world"
 
 export interface FakeAlarms {
   readonly service: Alarms["Service"]
-  /** アラームを鳴らす。一度きりのアラームは消え、繰り返しのアラームは次の時刻に進む。 */
+  /** Fires an alarm. A one-off alarm is cleared; a repeating alarm moves on to its next time. */
   readonly fire: (name: string) => Effect.Effect<void, BrowserApiError>
 }
 

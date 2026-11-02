@@ -113,7 +113,9 @@ export const moveWithinWindow = Effect.fnUntraced(function* (
   yield* tx.emit({ _tag: "TabMoved", tabId, windowId: window.id, fromIndex: index, toIndex })
 })
 
-/** 最後のタブが抜けたグループを消す。`windowId` は消える直前にグループがあったウィンドウ。 */
+/**
+ * Removes a group whose last tab has left. `windowId` is the window the group was in just before.
+ */
 export const removeGroupIfEmpty = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   groupId: Option.Option<TabGroupId>,
@@ -194,7 +196,10 @@ export interface DetachedTab extends TabLocation {
   readonly wasActive: boolean
 }
 
-/** タブをウィンドウから外す。イベントは発火しないので、呼び出し側が抜け方に応じて発火する。 */
+/**
+ * Takes a tab out of its window without emitting events; the caller emits whichever events fit how
+ * the tab left.
+ */
 export const detachTab = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   tabId: TabId,
@@ -202,7 +207,7 @@ export const detachTab = Effect.fnUntraced(function* (
   const location = yield* requireTab(tx, tabId)
   const { window, tab } = location
   const wasActive = Option.contains(window.activeTabId, tabId)
-  // Chrome はタブが抜けると、そのタブに開かれたタブの opener を、抜けたタブの opener に付け替える
+  // When a tab leaves, Chrome hands the tabs it opened over to its own opener
   const remaining = window.tabs
     .filter((other) => other.id !== tabId)
     .map((other) =>
@@ -272,7 +277,7 @@ export const removeTab = Effect.fnUntraced(function* (tx: BrowsingTx, tabId: Tab
 })
 
 /**
- * タブを別のウィンドウへ移す。
+ * Moves a tab to another window.
  *
  * @param keepGroup - `true` when moving with the whole group. When `false`, the tab releases its
  *   split, pinning and group before leaving, and joins a group at the destination only when both
@@ -310,7 +315,7 @@ export const transferTab = Effect.fnUntraced(function* (
   return index
 })
 
-/** `tabs.move` の 1 タブ分。置いた位置を返す。 */
+/** One tab's share of `tabs.move`; returns where the tab was placed. */
 export const moveTab = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   tabId: TabId,
@@ -343,7 +348,8 @@ const moveAndSetGroup = Effect.fnUntraced(function* (
 ) {
   const { tab } = yield* requireTab(tx, tabId)
   if (Option.isSome(groupId) && tab.pinned) {
-    // ピン留めを外すと通常はピン留めの境界へ動くが、グループに入れるときはその場で外してから一度だけ動かす
+    // Not moved to the pinned boundary as unpinning usually does: when grouping, the tab is
+    // unpinned in place and then moved just once
     yield* updateTab(tx, tabId, (record) => ({ ...record, pinned: false }))
     yield* emitTabUpdated(tx, tabId, { pinned: false })
   }
@@ -352,8 +358,8 @@ const moveAndSetGroup = Effect.fnUntraced(function* (
 })
 
 /**
- * 同じウィンドウのタブを `destination`（移動前の並びでの差し込み位置）にまとめて並べ、グループを設定する。
- * `tabIds` はタブストリップの並び順で渡す。
+ * Gathers tabs of one window at `destination` (the insertion point in the order before the move)
+ * and sets their group. Pass `tabIds` in tab strip order.
  */
 export const moveTabsAndSetGroup = Effect.fnUntraced(function* (
   tx: BrowsingTx,
@@ -366,7 +372,8 @@ export const moveTabsAndSetGroup = Effect.fnUntraced(function* (
   )
   const movingRight = indexed.filter(({ index }) => index < destination)
   const movingLeft = indexed.filter(({ index }) => index >= destination)
-  // 右へ動くタブは右端から、左へ動くタブは左端から動かすと、まだ動かしていないタブの位置がずれない
+  // Tabs moving right go from the rightmost and tabs moving left from the leftmost, so tabs not yet
+  // moved keep their positions
   yield* Effect.forEach(
     Array.reverse(
       movingRight.map(({ tabId }, i) => ({ tabId, to: destination - movingRight.length + i })),
@@ -388,7 +395,7 @@ export interface NewTab {
   readonly active: boolean
   readonly pinned: boolean
   readonly openerTabId: Option.Option<TabId>
-  /** 省略時は、両隣が同じグループの位置に開いたタブだけがそのグループに入る。 */
+  /** Omitted, the tab joins a group only when opened between two tabs of that group. */
   readonly groupId?: Option.Option<TabGroupId>
 }
 
@@ -436,7 +443,9 @@ export const focusWindow = Effect.fnUntraced(function* (tx: BrowsingTx, windowId
   yield* tx.emit({ _tag: "WindowFocusChanged", windowId: Option.some(windowId) })
 })
 
-/** フォーカスを外し、最近フォーカスされた順で次のウィンドウへ移す。ほかに無ければ何もしない。 */
+/**
+ * Moves focus away to the next most recently focused window; does nothing when there is no other.
+ */
 export const blurWindow = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: WindowId) {
   const state = yield* tx.state
   const others = state.focusOrder.filter((id) => id !== windowId)
@@ -454,7 +463,9 @@ const setSplitViewId = Effect.fnUntraced(function* (
   yield* emitTabUpdated(tx, tabId, { splitViewId })
 })
 
-/** 条件を確かめずに 2 つのタブを分割ビューにする。変化はタブストリップの順に発火する。 */
+/**
+ * Splits two tabs without checking the conditions; the changes are emitted in tab strip order.
+ */
 export const splitTabs = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   tabIds: readonly [TabId, TabId],
@@ -506,8 +517,8 @@ export const unsplitTabs = Effect.fnUntraced(function* (tx: BrowsingTx, splitVie
 })
 
 /**
- * 同じウィンドウで隣り合い、ピン留めとグループが揃った 2 つのタブ、という分割ビューの条件を
- * 満たさなくなった分割を解く。
+ * Dissolves split views that no longer meet their conditions: two adjacent tabs in the same window,
+ * with the same pinning and group.
  *
  * @remarks
  * The operations observed to dissolve a split before they run (moving one or both tabs, moving

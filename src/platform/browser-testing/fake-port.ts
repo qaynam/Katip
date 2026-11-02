@@ -8,14 +8,15 @@ import {
   type PortSender,
 } from "#platform/browser"
 
-// Chrome は Port のメッセージを JSON にして届ける。同じ変換を通し、encode し忘れた値（Option など）が
-// 相手側で decode できなくなることをテストで再現する
+// Chrome delivers Port messages as JSON. Passing them through the same conversion lets tests catch
+// a value someone forgot to encode (an Option, say) failing to decode on the other side
 const viaJson = (message: unknown): unknown =>
   Predicate.isUndefined(message) ? null : JSON.parse(JSON.stringify(message))
 
 /**
- * つながった Port の組を作る。`client` は接続した側、`server` は `runtime.onConnect` で受け取る側。
- * どちらかが切断すると、両方の `messages` が終わり `disconnected` が完了する。
+ * Makes a connected pair of Ports: `client` is the side that connected, `server` the side that
+ * receives it through `runtime.onConnect`. When either disconnects, both `messages` streams end and
+ * both `disconnected` effects complete.
  */
 export const makePortPair = (
   name: string,

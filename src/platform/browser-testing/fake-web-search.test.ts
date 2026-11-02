@@ -4,9 +4,9 @@ import { TabId, Tabs, WebSearch } from "#platform/browser"
 import { FakeBrowser } from "./fake-browser"
 import { fakeSearchUrl } from "./fake-web-search"
 
-layer(FakeBrowser.layer, { buildPerTest: true })("WebSearch の fake", (it) => {
-  describe("タブを指定して検索したとき", () => {
-    it.effect("そのタブが検索結果のページへ移る", () =>
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake WebSearch", (it) => {
+  describe("searching in a given tab", () => {
+    it.effect("navigates that tab to the results page", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const search = yield* WebSearch
@@ -22,7 +22,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("WebSearch の fake", (it) => {
       }),
     )
 
-    it.effect("ページの移動を TabUpdated で知らせる", () =>
+    it.effect("reports the navigation with TabUpdated", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const search = yield* WebSearch
@@ -37,7 +37,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("WebSearch の fake", (it) => {
       }),
     )
 
-    it.effect("存在しないタブなら失敗する", () =>
+    it.effect("fails for a tab that does not exist", () =>
       Effect.gen(function* () {
         const search = yield* WebSearch
 

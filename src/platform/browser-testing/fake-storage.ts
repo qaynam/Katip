@@ -10,15 +10,16 @@ import { chromeCall, type FakeWorld } from "./fake-world"
 
 export interface FakeStorage {
   readonly service: Storage["Service"]
-  /** 変更を通知せずに値を入れる。 */
+  /** Stores values without emitting changes. */
   readonly seed: (
     area: StorageAreaName,
     entries: Readonly<Record<string, unknown>>,
   ) => Effect.Effect<void>
 }
 
-// Chrome は値を JSON にして保存する。保存したものをそのまま返すと、Option や Date を encode せずに
-// 保存する誤りがテストで見つからないため、JSON の文字列で持って読むたびに組み立て直す
+// Not kept as the stored object: Chrome stores values as JSON, and returning the object as stored
+// would hide the mistake of saving an Option or Date without encoding it. Values are kept as JSON
+// text and rebuilt on every read
 const toStoredText = (value: unknown): Option.Option<string> =>
   Predicate.isUndefined(value) || Predicate.isFunction(value) || Predicate.isSymbol(value)
     ? Option.none()
@@ -71,7 +72,8 @@ const makeFakeArea = Effect.fnUntraced(function* (world: FakeWorld, name: Storag
         }),
       ),
     remove: (key) => chromeCall(world, `storage.${name}.remove`, write(key, Option.none())),
-    // BrowserEvents と違って購読前の変更を溜めない。live が購読のたびにリスナーを登録するのに合わせる
+    // Unlike BrowserEvents, changes before subscribing are not held, matching the live area, which
+    // registers a listener per subscription
     changes: Stream.fromPubSub(changes),
   })
 

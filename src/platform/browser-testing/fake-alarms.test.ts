@@ -4,9 +4,9 @@ import { TestClock } from "effect/testing"
 import { Alarms } from "#platform/browser"
 import { FakeBrowser } from "./fake-browser"
 
-layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
-  describe("アラームを作ったとき", () => {
-    it.effect("間隔だけを指定すると、今からその間隔の後に予定される", () =>
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake Alarms", (it) => {
+  describe("creating an alarm", () => {
+    it.effect("with only a period, schedules it one period from now", () =>
       Effect.gen(function* () {
         const alarms = yield* Alarms
         yield* TestClock.adjust(1000)
@@ -19,7 +19,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
       }),
     )
 
-    it.effect("時刻を指定すると、その時刻に一度だけ予定される", () =>
+    it.effect("with a time, schedules it once at that time", () =>
       Effect.gen(function* () {
         const alarms = yield* Alarms
 
@@ -31,7 +31,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
       }),
     )
 
-    it.effect("同じ名前で作ると置き換わる", () =>
+    it.effect("with an existing name, replaces that alarm", () =>
       Effect.gen(function* () {
         const alarms = yield* Alarms
         yield* alarms.create("tick", { periodInMinutes: 1 })
@@ -46,8 +46,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
     )
   })
 
-  describe("アラームを消したとき", () => {
-    it.effect("消したアラームがあったかどうかを返す", () =>
+  describe("clearing an alarm", () => {
+    it.effect("returns whether there was an alarm to clear", () =>
       Effect.gen(function* () {
         const alarms = yield* Alarms
         yield* alarms.create("tick", { periodInMinutes: 1 })
@@ -59,8 +59,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
     )
   })
 
-  describe("アラームが鳴ったとき", () => {
-    it.effect("一度きりのアラームは AlarmFired を発火して消える", () =>
+  describe("when an alarm fires", () => {
+    it.effect("a one-off alarm fires AlarmFired and is cleared", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const alarms = yield* Alarms
@@ -78,7 +78,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
       }),
     )
 
-    it.effect("繰り返しのアラームは次の時刻に進む", () =>
+    it.effect("a repeating alarm moves on to its next time", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const alarms = yield* Alarms
@@ -93,7 +93,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Alarms の fake", (it) => {
       }),
     )
 
-    it.effect("無いアラームを鳴らそうとすると失敗する", () =>
+    it.effect("firing a missing alarm fails", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 

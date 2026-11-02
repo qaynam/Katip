@@ -4,8 +4,8 @@ import { BrowserEvents, TabGroups, Tabs, Windows } from "#platform/browser"
 import { FakeBrowser } from "./fake-browser"
 
 layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
-  describe("ウィンドウを仕込んだとき", () => {
-    it.effect("仕込んだ順に index が振られ、イベントは発火しない", () =>
+  describe("seeding a window", () => {
+    it.effect("numbers the tabs in seeding order without firing events", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -20,7 +20,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("active を指定しなければ、先頭のタブがアクティブになる", () =>
+    it.effect("makes the first tab active when no tab is marked active", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -33,7 +33,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("最初に仕込んだウィンドウだけがフォーカスされる", () =>
+    it.effect("focuses only the first window seeded", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const windows = yield* Windows
@@ -51,27 +51,27 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("グループの見た目と所属が仕込んだとおりになる", () =>
+    it.effect("gives groups the seeded appearance and members", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
 
         const { windowId, groupIds } = yield* fake.seedWindow({
           tabs: [{ group: "work" }, {}],
-          groups: { work: { title: "仕事", color: "green", collapsed: true } },
+          groups: { work: { title: "Work", color: "green", collapsed: true } },
         })
 
         assert.deepStrictEqual(yield* groups.get(groupIds.work), {
           id: groupIds.work,
           windowId,
-          title: Option.some("仕事"),
+          title: Option.some("Work"),
           color: "green",
           collapsed: true,
         })
       }),
     )
 
-    it.effect("グループのタブが連続していなければ die する", () =>
+    it.effect("dies when a group's tabs are not contiguous", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -86,7 +86,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("ピン留めしたタブがピン留めしていないタブより後ろにあれば die する", () =>
+    it.effect("dies when a pinned tab comes after an unpinned one", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -97,24 +97,26 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("分割ビューを仕込んだとき", () => {
-    it.effect("同じ split キーの 2 つのタブが、返された ID の分割ビューに入る", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const tabs = yield* Tabs
+  describe("seeding a split view", () => {
+    it.effect(
+      "puts the two tabs with the same split key in the split view with the returned ID",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
 
-        const { windowId, splitViewIds } = yield* fake.seedWindow({
-          tabs: [{}, { split: "a" }, { split: "a" }],
-        })
+          const { windowId, splitViewIds } = yield* fake.seedWindow({
+            tabs: [{}, { split: "a" }, { split: "a" }],
+          })
 
-        assert.deepStrictEqual(
-          (yield* tabs.query({ windowId })).map(({ splitViewId }) => splitViewId),
-          [Option.none(), Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
-        )
-      }),
+          assert.deepStrictEqual(
+            (yield* tabs.query({ windowId })).map(({ splitViewId }) => splitViewId),
+            [Option.none(), Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
+          )
+        }),
     )
 
-    it.effect("split キーごとに別の分割ビューになる", () =>
+    it.effect("makes a separate split view per split key", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -126,7 +128,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("split キーのタブが 1 つだけなら die する", () =>
+    it.effect("dies when a split key has only one tab", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -136,7 +138,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("split キーのタブが 3 つあれば die する", () =>
+    it.effect("dies when a split key has three tabs", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -148,7 +150,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("split キーのタブが隣り合っていなければ die する", () =>
+    it.effect("dies when the tabs of a split key are not adjacent", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -160,7 +162,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("split キーのタブのピン留めが揃っていなければ die する", () =>
+    it.effect("dies when the tabs of a split key differ in pinning", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -172,7 +174,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("split キーのタブのグループが揃っていなければ die する", () =>
+    it.effect("dies when the tabs of a split key differ in group", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 
@@ -188,8 +190,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("Chrome のバージョンを指定しなかったとき", () => {
-    it.effect("分割ビューの API がある Chrome として振る舞う", () =>
+  describe("without a Chrome version specified", () => {
+    it.effect("behaves as Chrome with the split view API", () =>
       Effect.gen(function* () {
         const tabs = yield* Tabs
 
@@ -198,8 +200,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("BrowserEvents を購読したとき", () => {
-    it.effect("購読する前に起きたイベントも、最初の購読者が起きた順に受け取る", () =>
+  describe("subscribing to BrowserEvents", () => {
+    it.effect("gives the first subscriber the events from before it subscribed, in order", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -216,7 +218,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("emit したイベントは、状態を変えずにそのまま流れる", () =>
+    it.effect("passes an emitted event through as is without changing the state", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const events = yield* BrowserEvents
@@ -236,8 +238,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("発火したイベントを取り出したとき", () => {
-    it.effect("取り出した後は、次に発火するまで空になる", () =>
+  describe("taking the emitted events", () => {
+    it.effect("leaves nothing to take until the next event", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -251,15 +253,15 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("ページの側で変化が起きたとき", () => {
-    it.effect("値が変わった項目だけが TabUpdated の changes に入る", () =>
+  describe("when the page changes", () => {
+    it.effect("puts only the fields whose values changed in the TabUpdated changes", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const {
           tabIds: [tab],
-        } = yield* fake.seedWindow({ tabs: [{ title: "同じ", status: "loading" }] })
+        } = yield* fake.seedWindow({ tabs: [{ title: "Same", status: "loading" }] })
 
-        yield* fake.updatePage(tab, { title: "同じ", status: "complete", audible: true })
+        yield* fake.updatePage(tab, { title: "Same", status: "complete", audible: true })
 
         assert.deepStrictEqual(
           (yield* fake.takeEmittedEvents).map((event) =>
@@ -270,22 +272,22 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("何も変わらなければ発火しない", () =>
+    it.effect("fires nothing when nothing changes", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const {
           tabIds: [tab],
-        } = yield* fake.seedWindow({ tabs: [{ title: "同じ" }] })
+        } = yield* fake.seedWindow({ tabs: [{ title: "Same" }] })
 
-        yield* fake.updatePage(tab, { title: "同じ" })
+        yield* fake.updatePage(tab, { title: "Same" })
 
         assert.deepStrictEqual(yield* fake.takeEmittedEvents, [])
       }),
     )
   })
 
-  describe("失敗を仕込んだとき", () => {
-    it.effect("仕込んだ API の次の呼び出しだけが失敗し、状態もイベントも変わらない", () =>
+  describe("injecting a failure", () => {
+    it.effect("fails only the next call to that API, leaving the state and events unchanged", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -304,7 +306,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("渡した原因が BrowserApiError の cause に入る", () =>
+    it.effect("puts the given cause in the BrowserApiError cause", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -317,7 +319,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
       }),
     )
 
-    it.effect("別の API の呼び出しは失敗しない", () =>
+    it.effect("does not fail calls to other APIs", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -330,8 +332,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
-  describe("Chrome API を呼んだとき", () => {
-    it.effect("答えを返す前に、ほかの処理に順番を譲る", () =>
+  describe("calling a Chrome API", () => {
+    it.effect("yields to other work before answering", () =>
       Effect.gen(function* () {
         const tabs = yield* Tabs
         const order = yield* Ref.make<ReadonlyArray<string>>([])

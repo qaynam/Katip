@@ -100,8 +100,8 @@ const windowOfExistingGroup = Effect.fnUntraced(function* (
 })
 
 /**
- * グループの左半分にあるタブはグループの左へ、右半分にあるタブは右へ出す。
- * グループの途中でタブを抜くと、グループが 2 つに分かれてしまうため。
+ * Moves tabs in the left half of the group out to its left and tabs in the right half out to its
+ * right, because pulling a tab out of the middle would split the group in two.
  */
 const ungroupFrom = Effect.fnUntraced(function* (
   tx: BrowsingTx,
@@ -160,7 +160,8 @@ const createSplitWith = Effect.fnUntraced(function* (
   if (index !== partner.index && index !== partner.index + 1) {
     return yield* tx.reject("The index must be adjacent to the split-with tab.")
   }
-  // Chrome が食い違うピン留めをどちらに揃えるのか確かめられないので、黙って片方に揃えずに失敗させる
+  // Fails instead of silently picking one side: which pinned state Chrome settles on for a
+  // mismatch could not be confirmed
   if (options.pinned !== undefined && options.pinned !== partner.tab.pinned) {
     return yield* tx.reject("Split tabs must have matching pinned states.")
   }

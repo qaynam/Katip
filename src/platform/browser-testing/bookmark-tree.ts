@@ -15,7 +15,7 @@ export interface BookmarkRecord {
   readonly id: BookmarkId
   readonly parentId: Option.Option<BookmarkId>
   readonly title: string
-  /** `None` ならフォルダ。 */
+  /** `None` for a folder. */
   readonly url: Option.Option<string>
   readonly dateAdded: number
   readonly folderType: Option.Option<BookmarkFolderType>
@@ -190,8 +190,8 @@ const containsAllWords = (text: string, words: ReadonlyArray<string>) =>
   words.every((word) => text.toLowerCase().includes(word))
 
 /**
- * 語の検索は、すべての語がタイトルに含まれるか、すべての語が URL に含まれるノードに一致する。
- * 引用符で囲んだフレーズは扱わない。
+ * A word search matches nodes whose title contains every word or whose URL contains every word.
+ * Quoted phrases are not supported.
  */
 export const searchNodes = (
   tree: BookmarkTree,
@@ -276,7 +276,7 @@ export const updateNode = (
       title: changedRecord.title,
       url: changedRecord.url,
     })
-    // Chrome はタイトルと URL を別々に書き換え、それぞれで onChanged を発火する
+    // Chrome changes the title and the URL separately and fires onChanged for each
     const events = [
       ...(titleChanged ? [changed(retitled)] : []),
       ...(urlChanged ? [changed(updated)] : []),
@@ -312,8 +312,8 @@ export const moveNode = (
     const requested = yield* requireIndexWithin(newParent, options.index)
     const oldIndex = oldParent.childIds.indexOf(id)
     const sameParent = newParent.id === oldParent.id
-    // Chrome は index を「移動するノード自身も数えた並びでの差し込み位置」と解釈し、
-    // 今の位置かその直後を指すと何もしない
+    // Chrome reads index as the insertion point in the list that still counts the moved node, so an
+    // index at the node's current position or right after it does nothing
     if (sameParent && (requested === oldIndex || requested === oldIndex + 1)) {
       return { tree, events: [], value: describeNode(tree, record, false) }
     }

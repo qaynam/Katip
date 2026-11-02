@@ -3,7 +3,7 @@ import { WebSearch } from "#platform/browser"
 import { emitTabUpdated, requireTab, updateTab } from "./browsing-steps"
 import { type FakeWorld, transact } from "./fake-world"
 
-/** fake の既定の検索エンジンが `text` の検索結果として開く URL。 */
+/** The URL the fake's default search engine opens as the results for `text`. */
 export const fakeSearchUrl = (text: string): string =>
   `https://search.example/?q=${encodeURIComponent(text)}`
 

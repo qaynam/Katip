@@ -17,8 +17,8 @@ const childIdsOf = (folderId: BookmarkId) =>
 const childrenOf = (node: BookmarkNode) =>
   node._tag === "BookmarkFolder" ? node.children : Option.none()
 
-layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
-  describe("最初の状態", () => {
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake Bookmarks", (it) => {
+  describe("the initial state", () => {
     it.effect("the root holds only the bookmarks bar and other bookmarks, like a new profile", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
@@ -37,14 +37,16 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを作ったとき", () => {
-    it.effect("親を省略すると、その他のブックマークの末尾に作り BookmarkCreated が発火する", () =>
+  describe("creating a node", () => {
+    it.effect("without a parent, appends it to Other bookmarks and emits BookmarkCreated", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
-        yield* fake.seedBookmarks(otherBookmarks, [{ title: "既存", url: "https://a.example/" }])
+        yield* fake.seedBookmarks(otherBookmarks, [
+          { title: "Existing", url: "https://a.example/" },
+        ])
 
-        const created = yield* bookmarks.create({ title: "新規", url: "https://b.example/" })
+        const created = yield* bookmarks.create({ title: "New", url: "https://b.example/" })
 
         assert.deepStrictEqual(
           [created.parentId, created.index],
@@ -56,17 +58,17 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("URL を省略するとフォルダを作る", () =>
+    it.effect("without a URL, creates a folder", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
-        const created = yield* bookmarks.create({ parentId: bookmarksBar, title: "フォルダ" })
+        const created = yield* bookmarks.create({ parentId: bookmarksBar, title: "Folder" })
 
         assert.strictEqual(created._tag, "BookmarkFolder")
       }),
     )
 
-    it.effect("index を指定するとその位置に入り、後ろのノードの位置がずれる", () =>
+    it.effect("with an index, inserts it there and shifts the nodes after it", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -86,7 +88,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("子の数より大きい index は失敗する", () =>
+    it.effect("fails with an index beyond the number of children", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -98,7 +100,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("ルートの直下には作れない", () =>
+    it.effect("cannot create directly under the root", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -110,7 +112,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("URL として読めない文字列は失敗する", () =>
+    it.effect("fails with a string that does not parse as a URL", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -121,8 +123,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを更新したとき", () => {
-    it.effect("タイトルと URL を両方変えると、それぞれの BookmarkChanged が発火する", () =>
+  describe("updating a node", () => {
+    it.effect("changing both the title and the URL emits a BookmarkChanged for each", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -150,7 +152,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("値が変わらなければ発火しない", () =>
+    it.effect("emits nothing when no value changes", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -164,7 +166,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("フォルダに URL を設定すると失敗する", () =>
+    it.effect("fails when setting a URL on a folder", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -176,7 +178,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("固定のフォルダは変えられない", () =>
+    it.effect("cannot change a permanent folder", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -187,8 +189,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを動かしたとき", () => {
-    it.effect("同じフォルダの中で後ろへ動かすと、移動後の位置は指定より 1 小さい", () =>
+  describe("moving a node", () => {
+    it.effect("moving it later within its folder leaves it one less than the given index", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -216,7 +218,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("今の位置かその直後を指すと、何も起きない", () =>
+    it.effect("an index at its current position or right after it does nothing", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -231,7 +233,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("別のフォルダへ動かすと、移動前の親と位置が BookmarkMoved に入る", () =>
+    it.effect("moving it to another folder puts the old parent and index in BookmarkMoved", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -255,7 +257,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("フォルダを自分の配下へは動かせない", () =>
+    it.effect("cannot move a folder into its own descendants", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -269,8 +271,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを消したとき", () => {
-    it.effect("空でないフォルダは remove では消せない", () =>
+  describe("removing a node", () => {
+    it.effect("remove cannot remove a non-empty folder", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -306,7 +308,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
         }),
     )
 
-    it.effect("消したノードより後ろのノードの位置が詰まる", () =>
+    it.effect("shifts the nodes after the removed one back", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -322,8 +324,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを読んだとき", () => {
-    it.effect("getChildren は子の children を読み込まない", () =>
+  describe("reading nodes", () => {
+    it.effect("getChildren does not load the children's children", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -338,7 +340,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("getSubTree は配下をすべて読み込む", () =>
+    it.effect("getSubTree loads every descendant", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -352,7 +354,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("存在しないノードは失敗する", () =>
+    it.effect("fails for a node that does not exist", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -363,8 +365,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ノードを探したとき", () => {
-    it.effect("すべての語がタイトルに含まれるノードに一致する", () =>
+  describe("searching nodes", () => {
+    it.effect("matches nodes whose title contains every word", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -382,7 +384,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("url を指定すると完全に一致するブックマークだけを返す", () =>
+    it.effect("with a url, returns only bookmarks matching it exactly", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const bookmarks = yield* Bookmarks
@@ -400,7 +402,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
       }),
     )
 
-    it.effect("固定のフォルダは結果に含めない", () =>
+    it.effect("leaves permanent folders out of the results", () =>
       Effect.gen(function* () {
         const bookmarks = yield* Bookmarks
 
@@ -411,8 +413,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
   })
 
-  describe("ブックマークを仕込んだとき", () => {
-    it.effect("イベントは発火しない", () =>
+  describe("seeding bookmarks", () => {
+    it.effect("fires no events", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
 

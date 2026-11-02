@@ -32,7 +32,7 @@ export interface WindowRecord {
   readonly id: WindowId
   readonly type: "normal" | "popup"
   readonly bounds: WindowBounds
-  /** タブストリップの並び順。配列の位置がそのまま Chrome の index になる。 */
+  /** In tab strip order; a tab's position in the array is its Chrome index. */
   readonly tabs: ReadonlyArray<TabRecord>
   readonly activeTabId: Option.Option<TabId>
 }
@@ -45,17 +45,20 @@ export interface GroupRecord {
 }
 
 export interface BrowsingState {
-  /** 作られた順。 */
+  /** In creation order. */
   readonly windows: ReadonlyArray<WindowRecord>
-  /** グループの所属はタブ側の `groupId` で表し、ここには見た目だけを持つ。 */
+  /** Only the groups' appearance; membership lives in each tab's `groupId`. */
   readonly groups: ReadonlyArray<GroupRecord>
-  /** 最近フォーカスされた順。先頭がフォーカス中のウィンドウ。 */
+  /** Most recently focused first; the head is the focused window. */
   readonly focusOrder: ReadonlyArray<WindowId>
-  /** タブ・ウィンドウ・グループで共有する採番。種類の違う ID が偶然一致しないようにする。 */
+  /**
+   * One counter shared by tabs, windows and groups, so IDs of different kinds never coincide by
+   * accident.
+   */
   readonly lastIssuedId: number
 }
 
-/** 位置と大きさを指定せずに置いたウィンドウの位置と大きさ。 */
+/** The bounds of a window placed without a position and size. */
 export const DEFAULT_WINDOW_BOUNDS: WindowBounds = { left: 0, top: 0, width: 1280, height: 800 }
 
 export const emptyBrowsingState: BrowsingState = {
@@ -95,11 +98,11 @@ export const locateTab = (state: BrowsingState, tabId: TabId): Option.Option<Tab
     ),
   )
 
-/** ウィンドウの作成順、ウィンドウの中ではタブストリップの左から。 */
+/** In window creation order, and left to right within each tab strip. */
 export const allTabLocations = (state: BrowsingState): ReadonlyArray<TabLocation> =>
   state.windows.flatMap((window) => window.tabs.map((tab, index) => ({ window, index, tab })))
 
-/** ウィンドウの作成順、ウィンドウの中ではタブストリップの左から。 */
+/** In window creation order, and left to right within each tab strip. */
 export const splitViewMembers = (
   state: BrowsingState,
   splitViewId: SplitViewId,
@@ -109,7 +112,10 @@ export const splitViewMembers = (
 export const splitViewIds = (state: BrowsingState): ReadonlyArray<SplitViewId> =>
   Array.dedupe(allTabLocations(state).flatMap(({ tab }) => Option.toArray(tab.splitViewId)))
 
-/** `createSplit` の条件のうち、2 つのタブの並びと状態についての違反。どちらかが分割済みかは見ない。 */
+/**
+ * The `createSplit` conditions on the two tabs' placement and state that are violated. Whether
+ * either tab is already split is not checked here.
+ */
 export const splitViewProblems = (a: TabLocation, b: TabLocation): ReadonlyArray<string> => [
   ...(a.window.id === b.window.id ? [] : ["Split tabs must be in the same window."]),
   ...(a.window.id === b.window.id && Math.abs(a.index - b.index) !== 1
@@ -119,7 +125,7 @@ export const splitViewProblems = (a: TabLocation, b: TabLocation): ReadonlyArray
   ...(sameGroup(a.tab.groupId, b.tab.groupId) ? [] : ["Split tabs must be in the same group."]),
 ]
 
-/** 2 つのタブだけが条件を満たして並んでいる分割ビューか。 */
+/** Whether the split view has exactly two tabs placed as its conditions require. */
 export const isIntactSplitView = (members: ReadonlyArray<TabLocation>): boolean => {
   const [first, second, ...rest] = members
   return (
@@ -190,7 +196,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 export const pinnedCount = (tabs: ReadonlyArray<TabRecord>): number =>
   tabs.filter((tab) => tab.pinned).length
 
-/** 新しく差し込むタブの位置を、ピン留めの領域の内か外かに収める。 */
+/** Clamps where a new tab is inserted to inside or outside the pinned area, as fits the tab. */
 export const clampInsertion = (
   tabs: ReadonlyArray<TabRecord>,
   index: number | "end",
@@ -201,7 +207,7 @@ export const clampInsertion = (
   return index === "end" ? max : clamp(index, min, max)
 }
 
-/** 既にあるタブの移動先を、ピン留めの境界を越えない位置に収める。 */
+/** Clamps where an existing tab moves to so it does not cross the pinned boundary. */
 export const clampMove = (
   tabs: ReadonlyArray<TabRecord>,
   index: number,
@@ -226,7 +232,10 @@ export const splitsGap = (tabs: ReadonlyArray<TabRecord>, gap: number): boolean 
 export const groupAt = (tabs: ReadonlyArray<TabRecord>, index: number): Option.Option<TabGroupId> =>
   Option.flatMap(Array.get(tabs, index), (tab) => tab.groupId)
 
-/** `gap` の位置（その index のタブの直前）に差し込むタブが属するグループ。両隣が同じグループのときだけ。 */
+/**
+ * The group a tab inserted at `gap` (just before the tab at that index) joins; only when both
+ * neighbors are in the same group.
+ */
 export const groupEnclosingGap = (
   tabs: ReadonlyArray<TabRecord>,
   gap: number,
@@ -236,8 +245,8 @@ export const groupEnclosingGap = (
 }
 
 /**
- * 移動し終えた `index` のタブが属するべきグループ。
- * 元のグループから離れたら抜け、別のグループの途中に入ったらそのグループに入る。
+ * The group the tab at `index` belongs in after its move: it leaves its group when moved away from
+ * it, and joins another group when it lands inside one.
  */
 export const groupAfterMove = (
   tabs: ReadonlyArray<TabRecord>,
@@ -254,7 +263,7 @@ export const groupAfterMove = (
   return ownHasOtherMembers ? Option.none() : own
 }
 
-/** `start` の右側を近い順に、次に左側を近い順に探す。 */
+/** Searches outward from `start`: first to its right, nearest first, then to its left. */
 export const searchAround = (
   tabs: ReadonlyArray<TabRecord>,
   start: number,
@@ -271,10 +280,10 @@ const isInCollapsedGroup = (state: BrowsingState) => (tab: TabRecord) =>
   )
 
 /**
- * アクティブなタブが `removingIndex` から抜けたあとにアクティブにするタブ。
+ * The tab to activate once the active tab leaves `removingIndex`.
  *
- * 優先順: そのタブが開いたタブ、同じタブから開かれたタブ、それを開いたタブ、
- * 同じグループの隣のタブ、折りたたまれていない右のタブ、左のタブ。
+ * In priority order: a tab it opened, a tab opened by the same opener, its opener, the adjacent tab
+ * in the same group, then the nearest tab outside collapsed groups, right before left.
  */
 export const successorOfActiveTab = (
   state: BrowsingState,
@@ -318,8 +327,8 @@ export const successorOfActiveTab = (
   })
 
 /**
- * 新しいグループの置き場所（その位置に差し込む）。先頭のタブの直後から探し、
- * ピン留めの領域と、先頭のタブが属していたグループの途中を避ける。
+ * Where to insert a new group. Searches from just after the first tab, avoiding the pinned area and
+ * the inside of the group the first tab was in.
  */
 export const newGroupDestination = (tabs: ReadonlyArray<TabRecord>, firstIndex: number): number => {
   const firstGroup = groupAt(tabs, firstIndex)
@@ -335,7 +344,7 @@ export const newGroupDestination = (tabs: ReadonlyArray<TabRecord>, firstIndex: 
   )
 }
 
-/** そのウィンドウで使われている数が最も少ない色。同数なら Chrome の色の定義順で先のもの。 */
+/** The color least used in the window; ties go to the one Chrome defines first. */
 export const leastUsedColor = (colorsInUse: ReadonlyArray<TabGroupColor>): TabGroupColor => {
   const usage = (color: TabGroupColor) => colorsInUse.filter((used) => used === color).length
   return TabGroupColor.literals.reduce((best, color) => (usage(color) < usage(best) ? color : best))
@@ -395,7 +404,7 @@ export const groupSnapshot = (
     Option.map(windowOfGroup(state, groupId), (window) => toBrowserTabGroup(group, window.id)),
   )
 
-/** ウィンドウの作成順、ウィンドウの中ではタブストリップの左から。 */
+/** In window creation order, and left to right within each tab strip. */
 export const allGroups = (state: BrowsingState): ReadonlyArray<BrowserTabGroup> =>
   state.windows.flatMap((window) =>
     groupIdsInWindow(window).flatMap((groupId) =>

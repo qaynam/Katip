@@ -112,7 +112,8 @@ export const makeFakeTabGroups = (world: FakeWorld): TabGroups["Service"] =>
               sameGroup(tab.groupId, Option.some(groupId)),
             )
             if (index === currentIndex) return source
-            // 右へ動かすときは右端のタブから動かすと、まだ動かしていないタブの位置がずれない
+            // Moving right starts from the rightmost tab so the tabs not yet moved keep their
+            // positions
             const order = index < currentIndex ? members : Array.reverse(members)
             yield* Effect.forEach(
               order,

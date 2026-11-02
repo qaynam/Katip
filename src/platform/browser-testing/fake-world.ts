@@ -20,7 +20,7 @@ type ApiNameOf<Service> = {
   readonly [K in keyof Service & string]: Service[K] extends boolean ? never : K
 }[keyof Service & string]
 
-/** 失敗を仕込める API の名前。live の {@link BrowserApiError} の `api` と同じ表記。 */
+/** Names of APIs that can be made to fail, spelled as `api` in the live {@link BrowserApiError}. */
 export type FakeApiName =
   | `tabs.${ApiNameOf<Tabs["Service"]>}`
   | `tabGroups.${ApiNameOf<TabGroups["Service"]>}`
@@ -35,16 +35,19 @@ interface InjectedFailure {
   readonly cause: unknown
 }
 
-/** fake の各サービスが共有する状態と、イベントの配信先。 */
+/** The state shared by every fake service, and where its events go. */
 export interface FakeWorld {
   readonly browsing: Ref.Ref<BrowsingState>
-  /** 状態の読み書きとイベントの発火を、1 つの API 呼び出しごとに直列にする。 */
+  /** Serializes state reads, writes and event emission per API call. */
   readonly lock: Semaphore.Semaphore
   readonly publish: (events: ReadonlyArray<BrowserEvent>) => Effect.Effect<void>
   readonly takeEmitted: Effect.Effect<ReadonlyArray<BrowserEvent>>
   readonly events: HeldStream<BrowserEvent>
   readonly connections: HeldStream<BrowserPort>
-  /** 次の呼び出しで失敗させる API。仕込んだ順に、名前が一致した呼び出しが 1 回ずつ消費する。 */
+  /**
+   * APIs to fail on their next call. Each entry is used up, in the order queued, by one call with a
+   * matching name.
+   */
   readonly failures: Ref.Ref<ReadonlyArray<InjectedFailure>>
 }
 
@@ -80,12 +83,13 @@ const takeInjectedFailure = (world: FakeWorld, api: string) =>
   )
 
 /**
- * Chrome API の 1 回の呼び出しとして `effect` を実行する。
+ * Runs `effect` as one Chrome API call.
  *
  * @remarks
- * 実物の API は Promise で答えるので、呼び出した処理はかならず一度ほかの処理に順番を譲る。
- * 同期的に答えると、読んでから書くまでに別の処理が割り込む競合をテストで再現できない。
- * {@link FakeWorld.failures} に仕込まれた失敗があれば、`effect` を実行せずに失敗する。
+ * The real APIs answer with a Promise, so the caller always yields to other work once. Answering
+ * synchronously would keep tests from reproducing races where something else runs between a read
+ * and the write that follows it. If {@link FakeWorld.failures} holds a failure for this API, fails
+ * without running `effect`.
  */
 export const chromeCall = <A, E>(
   world: FakeWorld,
@@ -101,7 +105,7 @@ export const chromeCall = <A, E>(
     return yield* effect
   })
 
-/** 1 つの API 呼び出しの中で、状態を書き換えながら発火するイベントを積む。 */
+/** Within one API call, updates the state and queues the events to emit. */
 export interface BrowsingTx {
   readonly now: number
   readonly state: Effect.Effect<BrowsingState>
@@ -111,12 +115,12 @@ export interface BrowsingTx {
 }
 
 /**
- * `body` を排他的に実行し、成功したら状態を確定してから積んだイベントを発火する。
+ * Runs `body` exclusively; on success, commits the state and then emits the queued events.
  *
  * @remarks
- * 失敗したら状態もイベントも捨てる。Chrome のリスナーは操作が終わってから呼ばれるので、
- * イベントの購読者が API を呼び返しても、操作の途中の状態は見えない。
- * 確定する前に、条件を満たさなくなった分割ビューを解く。
+ * On failure, both the state and the events are discarded. Chrome calls listeners after an
+ * operation finishes, so a subscriber that calls back into the API never sees a half-done state.
+ * Before committing, dissolves split views that no longer meet their conditions.
  */
 export const transact = <A, E>(
   world: FakeWorld,

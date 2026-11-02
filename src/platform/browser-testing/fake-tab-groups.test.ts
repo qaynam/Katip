@@ -10,9 +10,9 @@ const tabOrderIn = (windowId: WindowId) =>
     Effect.map((found) => found.map(({ id }) => id)),
   )
 
-layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
-  describe("グループを更新したとき", () => {
-    it.effect("タイトルと色が変わり、TabGroupUpdated が発火する", () =>
+layer(FakeBrowser.layer, { buildPerTest: true })("the fake TabGroups", (it) => {
+  describe("updating a group", () => {
+    it.effect("changes the title and color and emits TabGroupUpdated", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -21,37 +21,37 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
           groups: { work: { color: "grey" } },
         })
 
-        const updated = yield* groups.update(groupIds.work, { title: "仕事", color: "red" })
+        const updated = yield* groups.update(groupIds.work, { title: "Work", color: "red" })
 
-        assert.deepStrictEqual([updated.title, updated.color], [Option.some("仕事"), "red"])
+        assert.deepStrictEqual([updated.title, updated.color], [Option.some("Work"), "red"])
         assert.deepStrictEqual(yield* fake.takeEmittedEvents, [
           { _tag: "TabGroupUpdated", group: updated },
         ])
       }),
     )
 
-    it.effect("何も変わらなければ発火しない", () =>
+    it.effect("emits nothing when nothing changes", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
         const { groupIds } = yield* fake.seedWindow({
           tabs: [{ group: "work" }],
-          groups: { work: { title: "仕事", color: "grey" } },
+          groups: { work: { title: "Work", color: "grey" } },
         })
 
-        yield* groups.update(groupIds.work, { title: "仕事", color: "grey" })
+        yield* groups.update(groupIds.work, { title: "Work", color: "grey" })
 
         assert.deepStrictEqual(yield* fake.takeEmittedEvents, [])
       }),
     )
 
-    it.effect("空文字のタイトルにすると無題になる", () =>
+    it.effect("an empty title makes the group untitled", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
         const { groupIds } = yield* fake.seedWindow({
           tabs: [{ group: "work" }],
-          groups: { work: { title: "仕事" } },
+          groups: { work: { title: "Work" } },
         })
 
         const updated = yield* groups.update(groupIds.work, { title: "" })
@@ -60,7 +60,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
       }),
     )
 
-    it.effect("存在しないグループは失敗する", () =>
+    it.effect("fails for a group that does not exist", () =>
       Effect.gen(function* () {
         const groups = yield* TabGroups
 
@@ -71,7 +71,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
     )
   })
 
-  describe("アクティブなタブを含むグループを折りたたんだとき", () => {
+  describe("collapsing a group that contains the active tab", () => {
     it.effect("keeps the active tab and emits only TabGroupUpdated", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -93,8 +93,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
     )
   })
 
-  describe("グループを動かしたとき", () => {
-    it.effect("グループのタブがまとまって動き、最後に TabGroupMoved が発火する", () =>
+  describe("moving a group", () => {
+    it.effect("moves the group's tabs together and emits TabGroupMoved last", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -118,7 +118,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
       }),
     )
 
-    it.effect("index はグループの先頭のタブが来る位置を表す", () =>
+    it.effect("treats index as where the group's first tab lands", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -137,7 +137,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
       }),
     )
 
-    it.effect("別のグループの途中へは動かせない", () =>
+    it.effect("cannot move into the middle of another group", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -152,7 +152,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
       }),
     )
 
-    it.effect("ピン留めしたタブの間へは動かせない", () =>
+    it.effect("cannot move among pinned tabs", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -167,7 +167,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
       }),
     )
 
-    it.effect("別のウィンドウへ動かすと、グループごと移る", () =>
+    it.effect("moving to another window takes the whole group along", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
@@ -197,8 +197,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
     )
   })
 
-  describe("グループを探したとき", () => {
-    it.effect("ウィンドウを指定すると、そのウィンドウのグループだけを返す", () =>
+  describe("querying groups", () => {
+    it.effect("with a window, returns only that window's groups", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
