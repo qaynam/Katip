@@ -3,7 +3,7 @@ import type { WindowId } from "#platform/browser"
 import { RequestId, type SpotlightClientMessage, SpotlightServerMessage } from "#protocol"
 import type { SearchResponse, SpotlightConnection } from "./spotlight-connection"
 
-/** chrome.runtime.Port のうち、接続が使う部分だけ。 */
+/** The part of chrome.runtime.Port the connection uses. */
 export interface SpotlightPort {
   readonly postMessage: (message: unknown) => void
   readonly disconnect: () => void
@@ -12,16 +12,19 @@ export interface SpotlightPort {
 }
 
 export interface SpotlightPortConnectionOptions {
-  /** 例外を投げてもよい（拡張の再読み込み直後など）。 */
+  /** May throw, as it does right after the extension reloads. */
   readonly openPort: () => SpotlightPort
-  /** Spotlight を開いたウィンドウ。 */
+  /** The window that opened Spotlight. */
   readonly callerWindowId: WindowId
-  /** 検索の応答を待つ時間。過ぎたら届かなかったものとして null で解決する。省略時は 5 秒。 */
+  /**
+   * How long to wait for a search response before resolving to null as if it never arrived.
+   * Defaults to 5 seconds.
+   */
   readonly searchTimeoutMs?: number
 }
 
 export interface SpotlightPortConnection extends SpotlightConnection {
-  /** 接続を切り、まだ答えの無い問い合わせを解決する。 */
+  /** Disconnects, resolving every request still waiting for an answer to null. */
   readonly close: () => void
 }
 
@@ -30,8 +33,9 @@ type Settle = (message: SpotlightServerMessage | null) => void
 const decodeServerMessage = Schema.decodeUnknownOption(SpotlightServerMessage)
 
 /**
- * background に Port でつなぐ。接続は最初の問い合わせのときに開き、切れたら次の問い合わせでつなぎ直す。
- * 開いている間に service worker が止まって Port が切れても、入力を続ければそのまま使える。
+ * Connects to the background through a Port. The Port opens on the first request and, once cut,
+ * reopens on the next one, so Spotlight keeps working as the user types on even after the service
+ * worker stops and cuts it.
  */
 export const createSpotlightPortConnection = (
   options: SpotlightPortConnectionOptions,
@@ -71,7 +75,8 @@ export const createSpotlightPortConnection = (
     return opened
   }
 
-  // 切断の通知より先に送信が失敗することがあるので、送れなければ一度だけつなぎ直して送る
+  // Posting can fail before the disconnect is reported, so a failed post reconnects once and
+  // tries again
   const post = (message: SpotlightClientMessage): boolean => {
     for (let attempt = 0; attempt < 2; attempt++) {
       const current = port ?? open()
@@ -92,7 +97,8 @@ export const createSpotlightPortConnection = (
   ): Promise<SpotlightServerMessage | null> => {
     const requestId = RequestId.make(nextRequestId++)
     return new Promise((resolve) => {
-      // background が要求を読めずに捨てると、応答も切断も届かず「読み込み中」のまま止まってしまう
+      // A request the background can't read is dropped with neither a response nor a disconnect,
+      // which would leave Spotlight loading forever
       const timer =
         timeoutMs === null
           ? undefined
@@ -128,7 +134,8 @@ export const createSpotlightPortConnection = (
         ? ({ results: reply.results, spaceTheme: reply.spaceTheme } satisfies SearchResponse)
         : null
     },
-    // 開く処理は background で他の操作の後に並ぶことがあり、時間を区切ると開けたのに失敗と出してしまう
+    // No time limit: opening can queue behind other work in the background, and a limit would
+    // report a failure for something that did open
     choose: async (result) => {
       const reply = await ask(
         (requestId) => ({

@@ -9,7 +9,8 @@ import { createSpotlightPortConnection, type SpotlightPort } from "./connection/
 
 const openPort = (): SpotlightPort => {
   const port = chrome.runtime.connect({ name: SPOTLIGHT_PORT_NAME })
-  // 読まないと、service worker の停止で切れるたびに Unchecked runtime.lastError が出る
+  // Left unread, it logs "Unchecked runtime.lastError" whenever a stopping service worker cuts the
+  // port
   port.onDisconnect.addListener(() => void chrome.runtime.lastError)
   return port
 }
@@ -21,13 +22,14 @@ const faviconUrl = (pageUrl: string) => {
   return url.toString()
 }
 
-// URL を手で開いたなどで呼び出し元が分からないときは、最後に使っていた通常のウィンドウを使う
+// For when the caller is unknown, such as when the URL was opened by hand
 const lastFocusedNormalWindow = async () => {
   const window = await chrome.windows.getLastFocused({ windowTypes: ["normal"] })
   return window.id === undefined ? null : WindowId.make(window.id)
 }
 
-// 設定を読めなくても開けるよう、そのときはブラウザの言語で表示する
+// Falls back to the browser's language, so that Spotlight still opens when the settings can't be
+// read
 const localePreference = Effect.runPromise(
   SettingsRepository.use((settings) => settings.get).pipe(
     Effect.map((settings) => settings.locale),

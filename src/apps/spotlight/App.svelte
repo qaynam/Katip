@@ -15,7 +15,7 @@
   interface Props {
     connection: SpotlightConnection
     faviconUrl: FaviconResolver
-    /** Spotlight のウィンドウを閉じる。 */
+    /** Closes Spotlight's window. */
     close: () => void
     translator: Translator
   }
@@ -44,7 +44,7 @@
   const appearance = $derived(spotlightAppearance(spaceTheme, systemScheme))
   const hasMatches = $derived(results.some(isMatchedCandidate))
 
-  // 応答は入力した順に届くとは限らない。先に打った語の応答で、後の語の結果を上書きしない
+  // Responses may arrive out of order, and an earlier query's must not overwrite a later one's
   let latestSearch = 0
   const search = async (text: string, searchMode: SpotlightMode) => {
     const ticket = ++latestSearch
@@ -84,7 +84,7 @@
     event.shiftKey || event.altKey || event.ctrlKey || event.metaKey
 
   const onkeydown = (event: KeyboardEvent) => {
-    // 日本語入力の変換中は、Enter や矢印キーを変換の確定と候補選びに使う
+    // While an input method is composing, Enter and the arrow keys confirm text and pick candidates
     if (event.isComposing) return
     const step = selectionStepOf(event)
     if (step !== null) {

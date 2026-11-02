@@ -9,17 +9,17 @@ import { displayOf, isMatchedCandidate } from "./result-display"
 const NOW = 1_800_000_000_000
 const DAY = 24 * 60 * 60 * 1000
 
-const display = (result: SpotlightResult) => displayOf(result, NOW, makeTranslator("ja"))
+const display = (result: SpotlightResult) => displayOf(result, NOW, makeTranslator("en"))
 
 const openTab = (
   overrides: Partial<Extract<SpotlightResult, { _tag: "OpenTab" }>> = {},
 ): SpotlightResult => ({
   _tag: "OpenTab",
   tabId: TabId.make(1),
-  title: "設計ドキュメント",
+  title: "Design doc",
   url: "https://www.docs.example/design/",
   favIconUrl: null,
-  spaceName: SpaceName.make("仕事"),
+  spaceName: SpaceName.make("Work"),
   isFavorite: false,
   isInOtherWindow: false,
   ...overrides,
@@ -30,82 +30,82 @@ const pin = (
 ): SpotlightResult => ({
   _tag: "Pin",
   bookmarkId: BookmarkId.make("10"),
-  title: "メール",
+  title: "Mail",
   url: "https://mail.example/",
-  spaceName: SpaceName.make("仕事"),
+  spaceName: SpaceName.make("Work"),
   folderPath: [],
   isSplit: false,
   ...overrides,
 })
 
-describe("開いているタブの表示", () => {
-  it("補足に所属する Space と URL を出す", () => {
-    expect(display(openTab()).detail).toBe("仕事 · docs.example/design")
+describe("an open tab's display", () => {
+  it("details the tab's Space and URL", () => {
+    expect(display(openTab()).detail).toBe("Work · docs.example/design")
   })
 
-  it("Favorites のタブは Favorites と出す", () => {
+  it("details a Favorites tab as Favorites", () => {
     expect(display(openTab({ isFavorite: true, spaceName: null })).detail).toBe(
       "Favorites · docs.example/design",
     )
   })
 
-  it("どの Space にも属さないタブはそのことを出す", () => {
+  it("details a tab in no Space as such", () => {
     expect(display(openTab({ spaceName: null })).detail).toBe(
-      "Space に属さないタブ · docs.example/design",
+      "Not in a Space · docs.example/design",
     )
   })
 
-  it("別のウィンドウのタブはそのことを出す", () => {
+  it("details a tab in another window as such", () => {
     expect(display(openTab({ isInOtherWindow: true })).detail).toBe(
-      "仕事 · 別のウィンドウ · docs.example/design",
+      "Work · In another window · docs.example/design",
     )
   })
 
-  it("種類はタブと出す", () => {
-    expect(display(openTab()).kindLabel).toBe("タブ")
+  it("is of the tab kind", () => {
+    expect(display(openTab()).kindLabel).toBe("Tab")
   })
 })
 
-describe("閉じているピンの表示", () => {
-  it("補足に Space からフォルダまでの階層と URL を出す", () => {
-    expect(display(pin({ folderPath: ["連絡", "社外"] })).detail).toBe(
-      "仕事 › 連絡 › 社外 · mail.example",
+describe("a closed pin's display", () => {
+  it("details the folders from the Space down, and the URL", () => {
+    expect(display(pin({ folderPath: ["Contacts", "External"] })).detail).toBe(
+      "Work › Contacts › External · mail.example",
     )
   })
 
-  it("分割ビューのピンは URL の代わりに分割ビューと出す", () => {
-    expect(display(pin({ isSplit: true })).detail).toBe("仕事 · 分割ビュー")
+  it("details a split view pin as a split view in place of the URL", () => {
+    expect(display(pin({ isSplit: true })).detail).toBe("Work · Split View")
   })
 })
 
-describe("Space の表示", () => {
+describe("a Space's display", () => {
   const space = (
     isActive: boolean,
     theme = themeOf([{ hue: 200, chroma: 0.5 }]),
   ): SpotlightResult => ({
     _tag: "Space",
     spaceId: SpaceId.make("work"),
-    name: SpaceName.make("仕事"),
+    name: SpaceName.make("Work"),
     theme,
     isActive,
   })
 
-  it("今の Space はそのことを出す", () => {
-    expect(display(space(true)).detail).toBe("現在の Space")
+  it("details the current Space as current", () => {
+    expect(display(space(true)).detail).toBe("Current Space")
   })
 
-  it("ほかの Space は切り替えられることを出す", () => {
-    expect(display(space(false)).detail).toBe("この Space に切り替える")
+  it("details another Space as one to switch to", () => {
+    expect(display(space(false)).detail).toBe("Switch to this Space")
   })
 
-  it("アイコンはテーマの主色の見本にする", () => {
+  it("shows a swatch of the theme's main color as the icon", () => {
     expect(display(space(false)).icon).toStrictEqual({
       _tag: "Swatch",
       color: swatchOf({ hue: 200, chroma: 0.5 }),
     })
   })
 
-  it("色の無いテーマなら灰色の見本にする", () => {
+  it("shows a gray swatch for a theme without color", () => {
     expect(display(space(false, neutralTheme)).icon).toStrictEqual({
       _tag: "Swatch",
       color: swatchOf({ hue: 0, chroma: 0 }),
@@ -113,8 +113,8 @@ describe("Space の表示", () => {
   })
 })
 
-describe("ブックマークの表示", () => {
-  it("名前の無いブックマークは URL を名前にする", () => {
+describe("a bookmark's display", () => {
+  it("takes the URL as the title of a bookmark without a name", () => {
     const shown = display({
       _tag: "Bookmark",
       bookmarkId: BookmarkId.make("20"),
@@ -126,7 +126,7 @@ describe("ブックマークの表示", () => {
   })
 })
 
-describe("履歴の表示", () => {
+describe("a history page's display", () => {
   const history = (title: string, daysAgo: number): SpotlightResult => ({
     _tag: "History",
     title,
@@ -134,60 +134,60 @@ describe("履歴の表示", () => {
     lastVisitedAt: NOW - daysAgo * DAY,
   })
 
-  it("補足に URL と、最後に訪れたのがどれだけ前かを出す", () => {
-    expect(display(history("記事", 3)).detail).toBe("blog.example/posts/1 · 3 日前")
+  it("details the URL and how long ago it was last visited", () => {
+    expect(display(history("Post", 3)).detail).toBe("blog.example/posts/1 · 3 days ago")
   })
 
-  it("名前の無いページは URL を名前にする", () => {
+  it("takes the URL as the title of a page without a name", () => {
     expect(display(history("", 1)).title).toBe("blog.example/posts/1")
   })
 
-  it("種類は履歴と出す", () => {
-    expect(display(history("記事", 1)).kindLabel).toBe("履歴")
+  it("is of the history kind", () => {
+    expect(display(history("Post", 1)).kindLabel).toBe("History")
   })
 })
 
-describe("コマンドの表示", () => {
+describe("a command's display", () => {
   const command = (shortcut: string | null): SpotlightResult => ({
     _tag: "Action",
     action: { _tag: "CopyUrl" },
-    title: "URL をコピー",
+    title: "Copy URL",
     shortcut,
   })
 
-  it("割り当てたキーを持つ", () => {
+  it("has the assigned keys", () => {
     expect(display(command("⇧⌘C")).shortcut).toBe("⇧⌘C")
   })
 
-  it("キーが割り当てられていなければ、キーを持たない", () => {
+  it("has no keys when none are assigned", () => {
     expect(display(command(null)).shortcut).toBeNull()
   })
 
-  it("コマンドのアイコンで、種類はコマンドと出す", () => {
+  it("shows the command icon and is of the command kind", () => {
     const shown = display(command(null))
 
-    expect([shown.icon, shown.kindLabel]).toStrictEqual([{ _tag: "Command" }, "コマンド"])
+    expect([shown.icon, shown.kindLabel]).toStrictEqual([{ _tag: "Command" }, "Command"])
   })
 
-  it("コマンド以外の行はキーを持たない", () => {
+  it("is the only kind of display that has keys", () => {
     expect(display(openTab()).shortcut).toBeNull()
   })
 })
 
-describe("URL を開く項目とウェブ検索の項目", () => {
-  it("URL を開く項目は、その URL を名前にして「開く」と出す", () => {
+describe("opening a URL and searching the web", () => {
+  it("opening a URL takes the URL as the title and is of the open kind", () => {
     const shown = display({ _tag: "OpenUrl", url: "https://example.com" })
 
-    expect([shown.title, shown.kindLabel]).toStrictEqual(["https://example.com", "開く"])
+    expect([shown.title, shown.kindLabel]).toStrictEqual(["https://example.com", "Open"])
   })
 
-  it("ウェブ検索の項目は、検索語を名前にして「ウェブで検索」と出す", () => {
+  it("searching the web takes the query as the title and is of the web search kind", () => {
     const shown = display({ _tag: "SearchWeb", query: "katip" })
 
-    expect([shown.title, shown.kindLabel]).toStrictEqual(["katip", "ウェブで検索"])
+    expect([shown.title, shown.kindLabel]).toStrictEqual(["katip", "Web Search"])
   })
 
-  it("検索に一致した候補とはみなさない", () => {
+  it("don't count as results that matched the query", () => {
     expect(
       [
         { _tag: "OpenUrl", url: "https://example.com" } as const,
@@ -198,23 +198,19 @@ describe("URL を開く項目とウェブ検索の項目", () => {
   })
 })
 
-describe("表示する言語", () => {
-  it("補足と種類を表示する言語で書く", () => {
-    const shown = displayOf(
-      openTab({ isFavorite: true, spaceName: null }),
-      NOW,
-      makeTranslator("en"),
-    )
+describe("the display language", () => {
+  it("is the language of the detail and the kind", () => {
+    const shown = displayOf(openTab({ spaceName: null }), NOW, makeTranslator("ja"))
 
     expect([shown.detail, shown.kindLabel]).toStrictEqual([
-      "Favorites · docs.example/design",
-      "Tab",
+      "Space に属さないタブ · docs.example/design",
+      "タブ",
     ])
   })
 
-  it("background から届いた名前は訳さずにそのまま出す", () => {
-    const shown = displayOf(openTab(), NOW, makeTranslator("en"))
+  it("leaves the title from the background untranslated", () => {
+    const shown = displayOf(openTab(), NOW, makeTranslator("ja"))
 
-    expect(shown.title).toBe("設計ドキュメント")
+    expect(shown.title).toBe("Design doc")
   })
 })

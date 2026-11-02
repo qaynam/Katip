@@ -1,6 +1,6 @@
 import { Option } from "effect"
 
-/** 一覧に出す URL。http(s) の scheme、先頭の www.、末尾の / を除く。 */
+/** The URL as listed, without the http(s) scheme, a leading www. or a trailing /. */
 export const readableUrl = (url: string): string =>
   url
     .replace(/^https?:\/\//, "")

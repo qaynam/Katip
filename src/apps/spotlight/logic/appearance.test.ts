@@ -4,12 +4,12 @@ import { spotlightAppearance } from "./appearance"
 
 const blue = themeOf([{ hue: 250, chroma: 0.8 }])
 
-describe("Spotlight の色", () => {
-  it("Space のテーマのモードが固定でも、OS のライト／ダークに従う", () => {
+describe("spotlightAppearance", () => {
+  it("follows the OS's light or dark even when the Space's theme fixes the mode", () => {
     expect(spotlightAppearance({ ...blue, mode: "dark" }, "light").scheme).toBe("light")
   })
 
-  it("Space のテーマより薄く塗る", () => {
+  it("is paler than the Space's theme", () => {
     const vivid = { ...blue, intensity: 1 }
 
     expect(spotlightAppearance(vivid, "light").background).not.toBe(
@@ -17,13 +17,13 @@ describe("Spotlight の色", () => {
     )
   })
 
-  it("もともと薄いテーマはそのままの濃さで塗る", () => {
+  it("keeps the intensity of a theme that is pale already", () => {
     const pale = { ...blue, intensity: 0.1 }
 
     expect(spotlightAppearance(pale, "dark").background).toBe(appearanceOf(pale, "dark").background)
   })
 
-  it("テーマが分からなければ、色の無いテーマと同じに塗る", () => {
+  it("without a theme, is the same as with the neutral theme", () => {
     expect(spotlightAppearance(null, "dark")).toStrictEqual(
       spotlightAppearance(neutralTheme, "dark"),
     )

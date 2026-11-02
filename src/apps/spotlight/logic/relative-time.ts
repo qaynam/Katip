@@ -14,7 +14,7 @@ const units = [
   ["minute", MINUTE_MS],
 ] as const
 
-/** `then` が `now` からどれだけ前かを、最も大きい単位で切り捨てて表す。 */
+/** How long before `now` `then` is, rounded down in the largest unit that fits. */
 export const relativeTimeLabel = (then: number, now: number, translator: Translator): string => {
   const elapsed = Math.max(0, now - then)
   const unit = units.find(([, unitMs]) => elapsed >= unitMs)

@@ -47,8 +47,8 @@ const searchResults = (requestId: number, title: string): SpotlightServerMessage
   spaceTheme: null,
 })
 
-describe("検索", () => {
-  it("開いたウィンドウを添えて問い合わせ、同じ requestId の応答で解決する", async () => {
+describe("search", () => {
+  it("asks with the window that opened Spotlight, and resolves with the response of the same requestId", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -66,7 +66,7 @@ describe("検索", () => {
     })
   })
 
-  it("指定したモードで問い合わせる", () => {
+  it("asks in the given mode", () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -78,7 +78,7 @@ describe("検索", () => {
     expect(port.sent).toMatchObject([{ _tag: "Search", query: "", mode: "Actions" }])
   })
 
-  it("問い合わせごとに別の requestId を付け、それぞれの応答で解決する", async () => {
+  it("gives each search its own requestId and resolves each with its own response", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -98,7 +98,7 @@ describe("検索", () => {
     ])
   })
 
-  it("形の合わないメッセージは無視する", async () => {
+  it("ignores messages of the wrong shape", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -106,13 +106,13 @@ describe("検索", () => {
     })
 
     const pending = connection.search("katip", "All")
-    port.deliver({ _tag: "SearchResults", requestId: "壊れた値" })
+    port.deliver({ _tag: "SearchResults", requestId: "not a request ID" })
     port.deliver(searchResults(port.sent[0]?.requestId ?? -1, "katip"))
 
     expect(await pending).not.toBeNull()
   })
 
-  it("応答の前に接続が切れたら null で解決する", async () => {
+  it("resolves to null when the connection closes before the response", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -125,7 +125,7 @@ describe("検索", () => {
     expect(await pending).toBeNull()
   })
 
-  it("接続が切れた後の問い合わせは、つなぎ直して送る", async () => {
+  it("reconnects to send a search made after the connection closed", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort(), fakePort()])
     const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
     void connection.search("a", "All")
@@ -139,7 +139,7 @@ describe("検索", () => {
     ])
   })
 
-  it("切断がまだ知らされていない接続へ送れなかったときも、つなぎ直して送る", async () => {
+  it("also reconnects to send when posting fails on a connection not yet reported as closed", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort({ rejectsPosts: true }), fakePort()])
     const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
 
@@ -148,12 +148,12 @@ describe("検索", () => {
     expect(opened[1]?.sent.map((message) => message._tag)).toStrictEqual(["Search"])
   })
 
-  describe("応答が来ないとき", () => {
+  describe("when no response comes", () => {
     afterEach(() => {
       vi.useRealTimers()
     })
 
-    it("待つ時間が過ぎたら null で解決する", async () => {
+    it("resolves to null once the wait is over", async () => {
       vi.useFakeTimers()
       const port = fakePort()
       const connection = createSpotlightPortConnection({
@@ -168,7 +168,7 @@ describe("検索", () => {
       expect(await pending).toBeNull()
     })
 
-    it("待つ時間が過ぎた後に届いた応答は無視する", async () => {
+    it("ignores a response that arrives after the wait is over", async () => {
       vi.useFakeTimers()
       const port = fakePort()
       const connection = createSpotlightPortConnection({
@@ -185,7 +185,7 @@ describe("検索", () => {
     })
   })
 
-  it("background へつなげなければ null で解決する", async () => {
+  it("resolves to null when it can't connect to the background", async () => {
     const connection = createSpotlightPortConnection({
       openPort: () => {
         throw new Error("Extension context invalidated")
@@ -197,8 +197,8 @@ describe("検索", () => {
   })
 })
 
-describe("決定", () => {
-  it("選んだ候補を開いたウィンドウを添えて送り、結果で解決する", async () => {
+describe("choose", () => {
+  it("sends the chosen result with the window that opened Spotlight, and resolves with the outcome", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -218,7 +218,7 @@ describe("決定", () => {
     expect(await pending).toStrictEqual({ _tag: "Succeeded" })
   })
 
-  it("結果の前に接続が切れたら null で解決する", async () => {
+  it("resolves to null when the connection closes before the outcome", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,
@@ -232,8 +232,8 @@ describe("決定", () => {
   })
 })
 
-describe("閉じたとき", () => {
-  it("接続を切り、まだ答えの無い問い合わせを解決する", async () => {
+describe("close", () => {
+  it("disconnects and resolves the searches still waiting for an answer to null", async () => {
     const port = fakePort()
     const connection = createSpotlightPortConnection({
       openPort: () => port,

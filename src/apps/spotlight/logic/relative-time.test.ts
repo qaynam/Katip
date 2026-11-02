@@ -7,31 +7,31 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-const japanese = makeTranslator("ja")
+const english = makeTranslator("en")
 
-describe("相対時刻", () => {
+describe("relativeTimeLabel", () => {
   it.each([
-    ["1 分たっていなければ「たった今」", 59 * 1000, "たった今"],
-    ["1 時間たっていなければ分で", 5 * MINUTE, "5 分前"],
-    ["1 日たっていなければ時間で", 3 * HOUR + 59 * MINUTE, "3 時間前"],
-    ["30 日たっていなければ日で", 3 * DAY, "3 日前"],
-    ["1 年たっていなければ月で", 65 * DAY, "2 か月前"],
-    ["1 年以上なら年で", 800 * DAY, "2 年前"],
-  ])("%s表す", (_, elapsed, label) => {
-    expect(relativeTimeLabel(NOW - elapsed, NOW, japanese)).toBe(label)
+    ["under a minute as just now", 59 * 1000, "Just now"],
+    ["under an hour in minutes", 5 * MINUTE, "5 minutes ago"],
+    ["under a day in whole hours", 3 * HOUR + 59 * MINUTE, "3 hours ago"],
+    ["under 30 days in days", 3 * DAY, "3 days ago"],
+    ["under a year in months", 65 * DAY, "2 months ago"],
+    ["a year or more in years", 800 * DAY, "2 years ago"],
+  ])("writes %s", (_, elapsed, label) => {
+    expect(relativeTimeLabel(NOW - elapsed, NOW, english)).toBe(label)
   })
 
-  it("時計のずれで未来の時刻になっていても「たった今」と表す", () => {
-    expect(relativeTimeLabel(NOW + 5 * MINUTE, NOW, japanese)).toBe("たった今")
+  it("writes a time in the future, as from a clock that is off, as just now", () => {
+    expect(relativeTimeLabel(NOW + 5 * MINUTE, NOW, english)).toBe("Just now")
   })
 })
 
-describe("相対時刻の言語", () => {
-  it("表示する言語の言い回しで表す", () => {
-    expect(relativeTimeLabel(NOW - 3 * DAY, NOW, makeTranslator("en"))).toBe("3 days ago")
+describe("relativeTimeLabel's wording", () => {
+  it("follows the display language", () => {
+    expect(relativeTimeLabel(NOW - 3 * DAY, NOW, makeTranslator("ja"))).toBe("3 日前")
   })
 
-  it("1 分たっていないときも表示する言語で表す", () => {
-    expect(relativeTimeLabel(NOW, NOW, makeTranslator("en"))).toBe("Just now")
+  it("follows the display language for just now too", () => {
+    expect(relativeTimeLabel(NOW, NOW, makeTranslator("ja"))).toBe("たった今")
   })
 })

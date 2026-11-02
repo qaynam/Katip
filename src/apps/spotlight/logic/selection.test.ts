@@ -1,25 +1,25 @@
 import { describe, expect, it } from "vitest"
 import { selectionStepOf, stepSelection } from "./selection"
 
-describe("選択の移動", () => {
-  it("次へ進む", () => {
+describe("stepSelection", () => {
+  it("moves to the next candidate", () => {
     expect(stepSelection(0, 3, 1)).toBe(1)
   })
 
-  it("最後の次は先頭へ回る", () => {
+  it("wraps from the last candidate to the first", () => {
     expect(stepSelection(2, 3, 1)).toBe(0)
   })
 
-  it("先頭の前は最後へ回る", () => {
+  it("wraps from the first candidate back to the last", () => {
     expect(stepSelection(0, 3, -1)).toBe(2)
   })
 
-  it("候補が無ければ先頭のまま", () => {
+  it("stays at the top when there are no candidates", () => {
     expect(stepSelection(0, 0, 1)).toBe(0)
   })
 })
 
-describe("選択を動かすキー", () => {
+describe("selectionStepOf", () => {
   const press = (key: string, modifiers: { ctrlKey?: boolean; metaKey?: boolean } = {}) => ({
     key,
     ctrlKey: false,
@@ -29,7 +29,7 @@ describe("選択を動かすキー", () => {
     ...modifiers,
   })
 
-  it("↓ と Ctrl+N で次へ、↑ と Ctrl+P で前へ動かす", () => {
+  it("moves down with ↓ and Ctrl+N, and up with ↑ and Ctrl+P", () => {
     expect(
       [
         press("ArrowDown"),
@@ -40,7 +40,7 @@ describe("選択を動かすキー", () => {
     ).toStrictEqual([1, 1, -1, -1])
   })
 
-  it("Ctrl を押していない N や、⌘ と合わせた N では動かさない", () => {
+  it("doesn't move for N without Ctrl, or for N with ⌘ as well", () => {
     expect(
       [press("n"), press("n", { ctrlKey: true, metaKey: true })].map(selectionStepOf),
     ).toStrictEqual([null, null])

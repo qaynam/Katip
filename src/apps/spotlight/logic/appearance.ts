@@ -6,14 +6,14 @@ import {
   type ThemeAppearance,
 } from "#modules/theme"
 
-// サイドパネルほど濃く塗ると、ページの上に浮かぶ小さな窓としては主張が強すぎる
+// Not as strong as the side panel: on a small window floating over the page, that would be too loud
 const MAX_INTENSITY = 0.4
 
 /**
- * Spotlight を塗る色。開いたウィンドウの Space のテーマをほのかに使う。
+ * Spotlight's colors: a faint version of the theme of the Space in the window that opened it.
  *
  * @remarks
- * ライト／ダークはテーマのモードによらず OS に従う。
+ * Light or dark follows the OS, whatever the theme's mode.
  */
 export const spotlightAppearance = (
   theme: SpaceTheme | null,

@@ -11,10 +11,10 @@ interface PendingSearch extends RecordedSearch {
 }
 
 export interface FakeConnection extends SpotlightConnection {
-  /** 問い合わせた順。 */
+  /** In the order they were made. */
   readonly searches: ReadonlyArray<RecordedSearch>
   readonly chosen: ReadonlyArray<SpotlightResult>
-  /** まだ答えていない `query` の問い合わせに、古いものから 1 つ答える。 */
+  /** Answers the oldest unanswered search for `query`. */
   readonly answer: (
     query: string,
     results: ReadonlyArray<SpotlightResult>,
@@ -23,12 +23,15 @@ export interface FakeConnection extends SpotlightConnection {
 }
 
 export interface FakeConnectionOptions {
-  /** 指定すると、問い合わせにすぐこの結果で答える。省略時は {@link FakeConnection.answer} を待つ。 */
+  /**
+   * When given, every search is answered at once with these results. Otherwise each search waits
+   * for {@link FakeConnection.answer}.
+   */
   readonly respond?: (query: string, mode: SpotlightMode) => ReadonlyArray<SpotlightResult>
   readonly outcome?: SpotlightOutcome
 }
 
-/** テストから応答の中身と順序を決められる、background の代わり。 */
+/** Stands in for the background, letting a test decide what each response holds and when it comes. */
 export const createFakeConnection = (options: FakeConnectionOptions = {}): FakeConnection => {
   const searches: Array<RecordedSearch> = []
   const chosen: Array<SpotlightResult> = []
@@ -52,7 +55,7 @@ export const createFakeConnection = (options: FakeConnectionOptions = {}): FakeC
     answer: async (query, results, answerOptions = {}) => {
       const index = pending.findIndex((search) => search.query === query)
       const [search] = pending.splice(index, 1)
-      if (index === -1 || search === undefined) throw new Error(`「${query}」の問い合わせが無い`)
+      if (index === -1 || search === undefined) throw new Error(`No search for "${query}"`)
       search.resolve(answerOptions.unreachable === true ? null : { results, spaceTheme: null })
       await Promise.resolve()
     },

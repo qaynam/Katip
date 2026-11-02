@@ -2,21 +2,22 @@ import type { SpaceTheme } from "#modules/theme"
 import type { SpotlightMode, SpotlightOutcome, SpotlightResult } from "#protocol"
 
 export interface SearchResponse {
-  /** 上から表示する順。 */
+  /** In display order, top first. */
   readonly results: ReadonlyArray<SpotlightResult>
-  /** 開いたウィンドウの今の Space のテーマ。 */
+  /** The theme of the current Space in the window that opened Spotlight. */
   readonly spaceTheme: SpaceTheme | null
 }
 
 export interface SpotlightConnection {
   /**
-   * reject しない。background に届かなかった、または応答の前に接続が切れたときは null で解決する。
-   * 問い合わせは並行してよく、どの応答が最新の入力のものかは呼び出し側が判断する。
+   * Never rejects. Resolves to null when the search didn't reach the background, or the connection
+   * closed before the response. Searches may overlap; the caller decides which response belongs to
+   * the latest input.
    */
   readonly search: (query: string, mode: SpotlightMode) => Promise<SearchResponse | null>
   /**
-   * reject しない。background に届かなかった、または結果の前に接続が切れて、開けたか分からないときは
-   * null で解決する。
+   * Never rejects. Resolves to null when the choice didn't reach the background, or the connection
+   * closed before the outcome, leaving unknown whether it opened.
    */
   readonly choose: (result: SpotlightResult) => Promise<SpotlightOutcome | null>
 }

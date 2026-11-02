@@ -9,14 +9,14 @@
     id: string
     result: SpotlightResult
     isSelected: boolean
-    /** 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。 */
+    /** The time a history page's "days ago" counts from, in epoch milliseconds. */
     now: number
     translator: Translator
-    /** 右端に種類を出すか。どの行も同じ種類と分かっているときは出さない。 */
+    /** Whether to show the kind at the right end. Hidden when every row is known to be one kind. */
     showsKind?: boolean
     faviconUrl: FaviconResolver
     onchoose: () => void
-    /** マウスで指したとき。選択をこの行へ移す。 */
+    /** Called when the mouse points at the row, to move the selection to it. */
     onpoint: () => void
   }
 
@@ -34,7 +34,8 @@
   const display = $derived(displayOf(result, now, translator))
 </script>
 
-<!-- キーボードでは入力欄から aria-activedescendant で操作するので、押しても入力欄からフォーカスを奪わない -->
+<!-- The keyboard works from the input through aria-activedescendant, so pressing a row must not
+     take focus from the input -->
 <button
   {id}
   class="row"

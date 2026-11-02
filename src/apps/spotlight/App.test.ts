@@ -9,7 +9,7 @@ import type { SpotlightMode, SpotlightResult } from "#protocol"
 import App from "./App.svelte"
 import { createFakeConnection, type FakeConnectionOptions } from "./testing/fake-connection"
 
-// jsdom はレイアウトを持たず scrollIntoView も実装していない
+// jsdom has no layout and doesn't implement scrollIntoView
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
@@ -20,7 +20,7 @@ const tab = (id: number, title: string): SpotlightResult => ({
   title,
   url: `https://example.com/${id}`,
   favIconUrl: null,
-  spaceName: SpaceName.make("仕事"),
+  spaceName: SpaceName.make("Work"),
   isFavorite: false,
   isInOtherWindow: false,
 })
@@ -43,14 +43,14 @@ const historyPage = (title: string, daysAgo: number): SpotlightResult => ({
   lastVisitedAt: Date.now() - daysAgo * DAY,
 })
 
-const commands = [command("URL をコピー", "⇧⌘C"), command("タブを複製", null)]
+const commands = [command("Copy URL", "⇧⌘C"), command("Duplicate tab", null)]
 
 const respondByMode = (query: string, mode: SpotlightMode) =>
   mode === "Actions" ? commands : query === "" ? threeTabs : [webSearch(query)]
 
-const threeTabs = [tab(1, "メール"), tab(2, "カレンダー"), tab(3, "ドキュメント")]
+const threeTabs = [tab(1, "Mail"), tab(2, "Calendar"), tab(3, "Docs")]
 
-const renderSpotlight = (options: FakeConnectionOptions = {}, locale: Locale = "ja") => {
+const renderSpotlight = (options: FakeConnectionOptions = {}, locale: Locale = "en") => {
   const connection = createFakeConnection(options)
   const close = vi.fn()
   render(App, {
@@ -66,38 +66,38 @@ const selectedOption = () =>
 
 const type = (input: HTMLElement, value: string) => fireEvent.input(input, { target: { value } })
 
-/** 届いた応答の処理と再描画を済ませる。 */
+/** Lets the delivered responses be handled and the page render them. */
 const settle = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   await tick()
 }
 
-describe("開いたとき", () => {
-  it("空の検索語で問い合わせ、応答が届くまでは読み込み中と出す", () => {
+describe("on opening", () => {
+  it("searches with an empty query and shows loading until the response arrives", () => {
     const { connection } = renderSpotlight()
 
     expect(connection.searches).toStrictEqual([{ query: "", mode: "All" }])
-    expect(screen.getByRole("status").textContent).toBe("読み込み中…")
+    expect(screen.getByRole("status").textContent).toBe("Loading…")
   })
 
-  it("応答が届くと候補を並べ、先頭を選んだ状態にする", async () => {
+  it("lists the results once the response arrives, with the first one selected", async () => {
     const { connection } = renderSpotlight()
 
     await connection.answer("", threeTabs)
 
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
-    expect(selectedOption()?.textContent).toContain("メール")
+    expect(selectedOption()?.textContent).toContain("Mail")
   })
 
-  it("検索欄にフォーカスがある", () => {
+  it("has the search field focused", () => {
     const { input } = renderSpotlight()
 
     expect(document.activeElement).toBe(input)
   })
 })
 
-describe("入力したとき", () => {
-  it("入力のたびにその検索語で問い合わせる", async () => {
+describe("typing", () => {
+  it("searches with the query on every input", async () => {
     const { connection, input } = renderSpotlight({ respond: () => [] })
 
     await type(input, "k")
@@ -106,54 +106,50 @@ describe("入力したとき", () => {
     expect(connection.searches.map(({ query }) => query)).toStrictEqual(["", "k", "ka"])
   })
 
-  it("古い入力の応答が後から届いても、最新の入力の候補を出し続ける", async () => {
+  it("keeps showing the latest input's results when an older input's response arrives later", async () => {
     const { connection, input } = renderSpotlight()
     await connection.answer("", [])
-    await type(input, "メ")
-    await type(input, "メー")
+    await type(input, "m")
+    await type(input, "ma")
 
-    await connection.answer("メー", [tab(1, "メール")])
-    await connection.answer("メ", [tab(1, "メール"), tab(4, "メモ")])
+    await connection.answer("ma", [tab(1, "Mail")])
+    await connection.answer("m", [tab(1, "Mail"), tab(4, "Memo")])
     await settle()
 
     expect(optionNames()).toHaveLength(1)
-    expect(optionNames()[0]).toContain("メール")
+    expect(optionNames()[0]).toContain("Mail")
   })
 
-  it("一致する候補が無ければそのことを出し、ウェブ検索の項目は並べる", async () => {
+  it("says nothing matched when nothing does, and still lists the web search", async () => {
     const { input } = renderSpotlight({
       respond: (query) => (query === "" ? [] : [webSearch(query)]),
     })
 
     await type(input, "zzz")
 
-    await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain("一致するものはありません"),
-    )
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("No matches"))
     expect(optionNames()).toHaveLength(1)
   })
 
-  it("検索語が空で何も無ければ、最近使ったタブが無いと出す", async () => {
+  it("with an empty query and nothing to list, says there are no recent tabs", async () => {
     renderSpotlight({ respond: () => [] })
 
-    await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain("最近使ったタブはありません"),
-    )
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("No recent tabs"))
   })
 
-  it("background に届かなければ、接続できなかったことを出す", async () => {
+  it("when the background can't be reached, says it couldn't connect", async () => {
     const { connection } = renderSpotlight()
 
     await connection.answer("", [], { unreachable: true })
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("接続できませんでした"),
+      expect(screen.getByRole("alert").textContent).toContain("Couldn’t connect to Katip"),
     )
   })
 })
 
-describe("キーボードで選ぶとき", () => {
-  it("↓ で次の候補、↑ で前の候補を選ぶ", async () => {
+describe("choosing with the keyboard", () => {
+  it("↓ selects the next result and ↑ the previous one", async () => {
     const { input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
@@ -161,10 +157,10 @@ describe("キーボードで選ぶとき", () => {
     await fireEvent.keyDown(input, { key: "ArrowDown" })
     await fireEvent.keyDown(input, { key: "ArrowUp" })
 
-    expect(selectedOption()?.textContent).toContain("カレンダー")
+    expect(selectedOption()?.textContent).toContain("Calendar")
   })
 
-  it("Ctrl+N で次の候補、Ctrl+P で前の候補を選ぶ", async () => {
+  it("Ctrl+N selects the next result and Ctrl+P the previous one", async () => {
     const { input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
@@ -172,10 +168,10 @@ describe("キーボードで選ぶとき", () => {
     await fireEvent.keyDown(input, { key: "n", ctrlKey: true })
     await fireEvent.keyDown(input, { key: "p", ctrlKey: true })
 
-    expect(selectedOption()?.textContent).toContain("カレンダー")
+    expect(selectedOption()?.textContent).toContain("Calendar")
   })
 
-  it("選んでいる候補を検索欄の aria-activedescendant で示す", async () => {
+  it("points the search field's aria-activedescendant at the selected result", async () => {
     const { input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
@@ -184,7 +180,7 @@ describe("キーボードで選ぶとき", () => {
     expect(input.getAttribute("aria-activedescendant")).toBe(selectedOption()?.id)
   })
 
-  it("Enter で選んでいる候補を開き、開けたら閉じる", async () => {
+  it("Enter opens the selected result, and Spotlight closes once it opened", async () => {
     const { connection, close, input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
     await fireEvent.keyDown(input, { key: "ArrowDown" })
@@ -195,20 +191,20 @@ describe("キーボードで選ぶとき", () => {
     await waitFor(() => expect(close).toHaveBeenCalled())
   })
 
-  it("開けなければ理由を出し、閉じない", async () => {
+  it("when the result can't be opened, shows why and stays open", async () => {
     const { close, input } = renderSpotlight({
       respond: () => threeTabs,
-      outcome: { _tag: "Failed", reason: "開けませんでした" },
+      outcome: { _tag: "Failed", reason: "Couldn't open it" },
     })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
     await fireEvent.keyDown(input, { key: "Enter" })
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("開けませんでした"))
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Couldn't open it"))
     expect(close).not.toHaveBeenCalled()
   })
 
-  it("日本語の変換中に押した Enter では開かない", async () => {
+  it("an Enter pressed while an input method is composing opens nothing", async () => {
     const { connection, input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
@@ -217,7 +213,7 @@ describe("キーボードで選ぶとき", () => {
     expect(connection.chosen).toStrictEqual([])
   })
 
-  it("Escape で閉じる", async () => {
+  it("Escape closes Spotlight", async () => {
     const { close, input } = renderSpotlight({ respond: () => threeTabs })
 
     await fireEvent.keyDown(input, { key: "Escape" })
@@ -226,8 +222,8 @@ describe("キーボードで選ぶとき", () => {
   })
 })
 
-describe("マウスで選ぶとき", () => {
-  it("候補を押すとその候補を開く", async () => {
+describe("choosing with the mouse", () => {
+  it("clicking a result opens it", async () => {
     const { connection } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
 
@@ -237,8 +233,8 @@ describe("マウスで選ぶとき", () => {
   })
 })
 
-describe("ほかのウィンドウへ移ったとき", () => {
-  it("閉じる", async () => {
+describe("moving to another window", () => {
+  it("closes Spotlight", async () => {
     const { close } = renderSpotlight({ respond: () => threeTabs })
 
     await fireEvent.blur(window)
@@ -247,27 +243,27 @@ describe("ほかのウィンドウへ移ったとき", () => {
   })
 })
 
-describe("コマンドモード", () => {
-  it("入力が空で Tab を押すとコマンドモードになり、コマンドだけを探す要求を送る", async () => {
+describe("command mode", () => {
+  it("is entered with Tab on an empty query, and searches commands only", async () => {
     const { connection, input } = renderSpotlight({ respond: respondByMode })
 
     await fireEvent.keyDown(input, { key: "Tab" })
 
     expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "Actions" })
-    expect(input.getAttribute("placeholder")).toBe("コマンドを検索")
+    expect(input.getAttribute("placeholder")).toBe("Search commands")
     expect(document.activeElement).toBe(input)
   })
 
-  it("コマンドモードで入力すると、その語でコマンドだけを探す", async () => {
+  it("searches commands only for what is typed", async () => {
     const { connection, input } = renderSpotlight({ respond: respondByMode })
     await fireEvent.keyDown(input, { key: "Tab" })
 
-    await type(input, "コピー")
+    await type(input, "copy")
 
-    expect(connection.searches.at(-1)).toStrictEqual({ query: "コピー", mode: "Actions" })
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "copy", mode: "Actions" })
   })
 
-  it("入力があるときの Tab ではコマンドモードにならない", async () => {
+  it("isn't entered with Tab while there is a query", async () => {
     const { connection, input } = renderSpotlight({ respond: respondByMode })
     await type(input, "katip")
 
@@ -276,7 +272,7 @@ describe("コマンドモード", () => {
     expect(connection.searches.every(({ mode }) => mode === "All")).toBe(true)
   })
 
-  it("Shift+Tab ではコマンドモードにならない", async () => {
+  it("isn't entered with Shift+Tab", async () => {
     const { connection, input } = renderSpotlight({ respond: respondByMode })
 
     await fireEvent.keyDown(input, { key: "Tab", shiftKey: true })
@@ -284,17 +280,17 @@ describe("コマンドモード", () => {
     expect(connection.searches.every(({ mode }) => mode === "All")).toBe(true)
   })
 
-  it("コマンドモードで入力が空のまま Backspace を押すと通常の検索に戻る", async () => {
+  it("goes back to the usual search with Backspace on an empty query", async () => {
     const { connection, input } = renderSpotlight({ respond: respondByMode })
     await fireEvent.keyDown(input, { key: "Tab" })
 
     await fireEvent.keyDown(input, { key: "Backspace" })
 
     expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "All" })
-    expect(input.getAttribute("placeholder")).toBe("検索するか URL を入力")
+    expect(input.getAttribute("placeholder")).toBe("Search or enter a URL")
   })
 
-  it("コマンドモードで Escape を押すと閉じずに通常の検索に戻る", async () => {
+  it("goes back to the usual search with Escape, instead of closing", async () => {
     const { close, connection, input } = renderSpotlight({ respond: respondByMode })
     await fireEvent.keyDown(input, { key: "Tab" })
 
@@ -304,7 +300,7 @@ describe("コマンドモード", () => {
     expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "All" })
   })
 
-  it("一致するコマンドが無ければそのことを出す", async () => {
+  it("says no command matched when none does", async () => {
     const { input } = renderSpotlight({
       respond: (_, mode) => (mode === "Actions" ? [] : threeTabs),
     })
@@ -313,13 +309,13 @@ describe("コマンドモード", () => {
     await fireEvent.keyDown(input, { key: "Tab" })
 
     await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain("一致するコマンドはありません"),
+      expect(screen.getByRole("status").textContent).toContain("No matching commands"),
     )
   })
 })
 
-describe("コマンドの行", () => {
-  it("割り当てたキーが表示され、割り当てが無ければ出ない", async () => {
+describe("a command row", () => {
+  it("shows the assigned keys, and none when no keys are assigned", async () => {
     renderSpotlight({ respond: () => commands })
 
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))
@@ -329,7 +325,7 @@ describe("コマンドの行", () => {
     expect(duplicate?.querySelector("kbd")).toBeNull()
   })
 
-  it("Enter を押すと、そのコマンドを選んだことを送る", async () => {
+  it("sends that the command was chosen on Enter", async () => {
     const { connection, input } = renderSpotlight({ respond: () => commands })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))
     await fireEvent.keyDown(input, { key: "ArrowDown" })
@@ -340,53 +336,55 @@ describe("コマンドの行", () => {
   })
 })
 
-describe("履歴の行", () => {
-  it("最後に訪れた時刻が出る", async () => {
-    renderSpotlight({ respond: () => [historyPage("ブログの記事", 3)] })
-
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
-
-    expect(screen.getByRole("option").textContent).toContain("3 日前")
-  })
-})
-
-describe("表示する言語", () => {
-  it("言語を英語にすると、検索欄と操作の案内が英語になる", async () => {
-    const { input } = renderSpotlight({ respond: () => threeTabs }, "en")
-
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
-
-    expect(input.getAttribute("placeholder")).toBe("Search or enter a URL")
-    expect(input.getAttribute("aria-label")).toBe(
-      "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
-    )
-    expect(screen.getAllByRole("option")[0]?.textContent).toContain("Tab")
-  })
-
-  it("コマンドモードの印とプレースホルダも訳される", async () => {
-    const { input } = renderSpotlight({ respond: respondByMode }, "en")
-
-    await fireEvent.keyDown(input, { key: "Tab" })
-
-    expect(input.getAttribute("placeholder")).toBe("Search commands")
-    expect(screen.getByText("Commands", { selector: ".mode-chip" })).toBeTruthy()
-  })
-
-  it("最後に訪れた時刻が、言語に合わせた相対時刻になる", async () => {
-    renderSpotlight({ respond: () => [historyPage("Effect blog", 3)] }, "en")
+describe("a history row", () => {
+  it("shows when the page was last visited", async () => {
+    renderSpotlight({ respond: () => [historyPage("Blog post", 3)] })
 
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
 
     expect(screen.getByRole("option").textContent).toContain("3 days ago")
   })
+})
 
-  it("background に届かなかったことも、表示する言語で出す", async () => {
-    const { connection } = renderSpotlight({}, "en")
+describe("the display language", () => {
+  it("with Japanese chosen, writes the search field and the results in Japanese", async () => {
+    const { input } = renderSpotlight({ respond: () => threeTabs }, "ja")
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
+
+    expect(input.getAttribute("placeholder")).toBe("検索するか URL を入力")
+    expect(input.getAttribute("aria-label")).toBe(
+      "タブ・ピン・Space・ブックマーク・履歴・コマンドを検索",
+    )
+    expect(screen.getAllByRole("option")[0]?.textContent).toContain("タブ")
+  })
+
+  it("translates the command mode's badge and placeholder too", async () => {
+    const { input } = renderSpotlight({ respond: respondByMode }, "ja")
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect(input.getAttribute("placeholder")).toBe("コマンドを検索")
+    expect(screen.getByText("コマンド", { selector: ".mode-chip" })).toBeTruthy()
+  })
+
+  it("writes when a page was last visited in that language's wording", async () => {
+    renderSpotlight({ respond: () => [historyPage("Blog post", 3)] }, "ja")
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+
+    expect(screen.getByRole("option").textContent).toContain("3 日前")
+  })
+
+  it("says the background couldn't be reached in that language too", async () => {
+    const { connection } = renderSpotlight({}, "ja")
 
     await connection.answer("", [], { unreachable: true })
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toBe("Couldn’t connect to Katip. Try again."),
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Katip に接続できませんでした。もう一度お試しください",
+      ),
     )
   })
 })

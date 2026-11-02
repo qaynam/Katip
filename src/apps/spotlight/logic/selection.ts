@@ -1,4 +1,4 @@
-/** 選択を `step` 個ずらした位置。端を越えたら反対の端へ回る。候補が無ければ 0。 */
+/** The selection moved by `step`, wrapping past either end. 0 when there are no candidates. */
 export const stepSelection = (current: number, count: number, step: 1 | -1): number =>
   count === 0 ? 0 : (((current + step) % count) + count) % count
 
@@ -7,10 +7,10 @@ type PressedKey = Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" |
 const isOnlyCtrl = (key: PressedKey) => key.ctrlKey && !key.metaKey && !key.altKey && !key.shiftKey
 
 /**
- * 選択を動かすキーなら、動かす向き。矢印キーのほか、Ctrl+N と Ctrl+P でも動かす。
+ * Which way a key moves the selection, if it does: the arrow keys, and Ctrl+N and Ctrl+P too.
  *
  * @remarks
- * Windows や Linux の Ctrl+N は新しいウィンドウを開く Chrome のショートカットで、ページからは止められない。
+ * On Windows and Linux, Ctrl+N is Chrome's shortcut for a new window, which a page can't stop.
  */
 export const selectionStepOf = (key: PressedKey): 1 | -1 | null => {
   if (key.key === "ArrowDown") return 1

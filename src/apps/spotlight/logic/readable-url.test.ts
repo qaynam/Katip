@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { readableUrl } from "./readable-url"
 
-describe("一覧に出す URL", () => {
-  it("http(s) の scheme、www.、末尾の / を除く", () => {
+describe("readableUrl", () => {
+  it("drops the http(s) scheme, www. and a trailing /", () => {
     expect(readableUrl("https://www.example.com/docs/")).toBe("example.com/docs")
   })
 
-  it("ほかの scheme はそのまま出す", () => {
+  it("keeps any other scheme", () => {
     expect(readableUrl("chrome://settings/")).toBe("chrome://settings")
   })
 })

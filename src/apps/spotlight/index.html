@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,8 +13,9 @@
         background: Canvas;
       }
 
-      /* system-ui を先頭に置くと、Chrome は日本語の字形を言語設定に応じた明朝体で補うことがある。
-         日本語のゴシック体を system-ui より先に名指しし、入力欄やボタンにも継承させずに直接指定する */
+      /* With system-ui first, Chrome may fill in Japanese glyphs from a serif face, depending on
+         the language settings. So Japanese sans-serif faces come before system-ui, and every
+         element gets them directly, since inputs and buttons don't inherit the font */
       *,
       *::before,
       *::after {

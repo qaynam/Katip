@@ -3,8 +3,8 @@ import { CopyRequest } from "#platform/clipboard"
 
 const isCopyRequest = Schema.is(CopyRequest)
 
-// offscreen ドキュメントはフォーカスを持てないため navigator.clipboard は拒否される。
-// 選択範囲をコピーする execCommand だけがここで使える
+// Not navigator.clipboard: an offscreen document can't take focus, so it is refused. Only
+// execCommand, which copies the selection, works here
 const copy = (text: string) => {
   const field = document.createElement("textarea")
   field.value = text

@@ -18,11 +18,11 @@ export type ResultIcon =
 
 export interface ResultDisplay {
   readonly title: string
-  /** タイトルの下に添える補足。 */
+  /** The line under the title. */
   readonly detail: string
   readonly kindLabel: string
   readonly icon: ResultIcon
-  /** コマンドに割り当てられたキーの書き方。コマンド以外と、割り当ての無いコマンドは null。 */
+  /** The keys assigned to a command, as written for display. null unless a command has keys. */
   readonly shortcut: string | null
 }
 
@@ -57,8 +57,8 @@ const titleOrUrl = (title: string, url: string) => (title.trim() === "" ? readab
 const neutralSwatch = swatchOf({ hue: 0, chroma: 0 })
 
 /**
- * @param now - 履歴の「何日前」を数える基準の時刻（エポックミリ秒）。
- * @param translator - 補足と種類を書く言語。タイトルは background から届いたまま出す。
+ * @param now - The time a history page's "days ago" counts from, in epoch milliseconds.
+ * @param translator - The language of the detail and kind. Titles show as the background sent them.
  */
 export const displayOf = (
   result: SpotlightResult,
@@ -153,6 +153,6 @@ export const displayOf = (
   })
 }
 
-/** 検索に一致した候補か。URL を開く項目とウェブ検索の項目は、何も一致しなくても出る。 */
+/** Whether the result matched the query. Opening a URL and searching the web show up regardless. */
 export const isMatchedCandidate = (result: SpotlightResult): boolean =>
   result._tag !== "OpenUrl" && result._tag !== "SearchWeb"
