@@ -164,6 +164,17 @@ describe("キーボードで選ぶとき", () => {
     expect(selectedOption()?.textContent).toContain("カレンダー")
   })
 
+  it("Ctrl+N で次の候補、Ctrl+P で前の候補を選ぶ", async () => {
+    const { input } = renderSpotlight({ respond: () => threeTabs })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))
+
+    await fireEvent.keyDown(input, { key: "n", ctrlKey: true })
+    await fireEvent.keyDown(input, { key: "n", ctrlKey: true })
+    await fireEvent.keyDown(input, { key: "p", ctrlKey: true })
+
+    expect(selectedOption()?.textContent).toContain("カレンダー")
+  })
+
   it("選んでいる候補を検索欄の aria-activedescendant で示す", async () => {
     const { input } = renderSpotlight({ respond: () => threeTabs })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3))

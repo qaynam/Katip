@@ -9,7 +9,7 @@
   import { spotlightAppearance } from "./logic/appearance"
   import type { FaviconResolver } from "./logic/favicon"
   import { isMatchedCandidate } from "./logic/result-display"
-  import { stepSelection } from "./logic/selection"
+  import { selectionStepOf, stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
 
   interface Props {
@@ -86,6 +86,12 @@
   const onkeydown = (event: KeyboardEvent) => {
     // 日本語入力の変換中は、Enter や矢印キーを変換の確定と候補選びに使う
     if (event.isComposing) return
+    const step = selectionStepOf(event)
+    if (step !== null) {
+      event.preventDefault()
+      selectedIndex = stepSelection(selectedIndex, results.length, step)
+      return
+    }
     switch (event.key) {
       case "Tab":
         if (query !== "" || hasModifier(event)) return
@@ -96,15 +102,6 @@
         if (mode !== "Actions" || query !== "") return
         event.preventDefault()
         switchMode("All")
-        return
-      case "ArrowDown":
-      case "ArrowUp":
-        event.preventDefault()
-        selectedIndex = stepSelection(
-          selectedIndex,
-          results.length,
-          event.key === "ArrowDown" ? 1 : -1,
-        )
         return
       case "Enter":
         event.preventDefault()
