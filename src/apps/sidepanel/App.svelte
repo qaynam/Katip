@@ -23,7 +23,10 @@
     connection: SidebarConnection
     originAccess: OriginAccess
     localePreferences: LocalePreferences
-    /** `navigator.languages` と同じく、優先する順に並んだ言語タグ。言語の設定が自動のときに使う */
+    /**
+     * Language tags in order of preference, like `navigator.languages`. Used when the language
+     * setting is auto.
+     */
     browserLanguages: ReadonlyArray<string>
     faviconUrl?: FaviconResolver
     onReload?: () => void
@@ -38,7 +41,8 @@
     onReload = () => location.reload(),
   }: Props = $props()
 
-  // 設定が届くまでの一瞬はブラウザの言語で出す。届くまで何も出さないより、読み込み中だと分かる
+  // Until the setting arrives, the browser language is used. Showing nothing until then would
+  // hide that the panel is loading
   let localePreference = $state<LocalePreference>("auto")
   $effect(() => localePreferences.listen((preference) => (localePreference = preference)))
   const translator = $derived(makeTranslator(resolveLocale(localePreference, browserLanguages)))

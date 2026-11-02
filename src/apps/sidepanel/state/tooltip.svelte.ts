@@ -19,7 +19,7 @@ export class TooltipController {
     this.#delayMs = delayMs
   }
 
-  /** ポインタが delayMs 留まったら、その時点のポインタの位置に出す */
+  /** Shows the tooltip at the pointer's position once the pointer has rested for delayMs. */
   schedule(content: TooltipContent, at: Point) {
     this.hide()
     const timer = setTimeout(() => {

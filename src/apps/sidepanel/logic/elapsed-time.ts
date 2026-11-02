@@ -4,7 +4,10 @@ const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 
-/** 「5 分前」のように今からさかのぼった時間で表す。1 週間以上前は月と日で表す。 */
+/**
+ * Describes how long ago a moment was, like "5 minutes ago". A week or more ago shows the
+ * month and day instead.
+ */
 export const describeElapsed = (since: number, now: number, translator: Translator): string => {
   const elapsed = Math.max(0, now - since)
   if (elapsed < MINUTE_MS) return translator.t("sidepanel.time.justNow")

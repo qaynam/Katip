@@ -4,7 +4,7 @@ import type { Rect } from "../logic/menu-position"
 export interface OpenThemePicker {
   readonly spaceId: SpaceId
   readonly anchor: Rect
-  /** 名前の編集と同時に開くときは、入力欄からフォーカスを奪わない */
+  /** When opened together with renaming, it doesn't take focus away from the name input. */
   readonly takesFocus: boolean
 }
 

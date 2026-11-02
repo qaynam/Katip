@@ -7,9 +7,9 @@ export type MenuEntry =
       readonly onSelect: () => void
       readonly tone?: "danger"
       readonly disabled?: boolean
-      /** 項目の前に置く色の見本（CSS の背景） */
+      /** A color swatch (CSS background) shown before the label. */
       readonly swatch?: string
-      /** 指定すると、いくつかから 1 つを選ぶ項目になり、true の項目に印が付く */
+      /** When given, the entry becomes one of a set of choices, and true marks it as chosen. */
       readonly checked?: boolean
     }
   | { readonly _tag: "Separator" }
@@ -38,7 +38,7 @@ export interface OpenMenu {
   readonly label: string
   readonly anchor: Rect
   readonly entries: ReadonlyArray<MenuEntry>
-  /** このボタンの上での押下は「外側のクリック」とみなさない（開閉ボタンとして使うため） */
+  /** Presses on this button don't count as outside clicks, because it toggles the menu. */
   readonly trigger: HTMLElement | null
 }
 

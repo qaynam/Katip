@@ -14,8 +14,8 @@
 
   const { menu, onClose }: Props = $props()
 
-  // 狭いサイドパネルでは横に開くサブメニューがどちらの側にも収まらないため、
-  // サブメニューは同じ場所で中身を差し替えて開く
+  // A submenu opening to the side wouldn't fit on either side of the narrow side panel, so it
+  // replaces the menu's contents in place
   let trail = $state.raw<ReadonlyArray<Submenu>>([])
   const page = $derived(trail.at(-1))
   const entries = $derived(page?.entries ?? menu.entries)

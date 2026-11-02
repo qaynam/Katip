@@ -121,7 +121,7 @@ export const pinnedSplitMenu = (
   ]
 }
 
-/** 作成できたら、そのフォルダの名前をすぐ編集できるようにする */
+/** Once the folder is created, its name is ready to edit right away. */
 export const createFolder = async (ctx: SidebarContext, parentId: BookmarkId | null) => {
   const outcome = await ctx.run({ _tag: "CreateFolder", spaceId: ctx.activeSpace.id, parentId })
   if (outcome._tag === "Succeeded" && outcome.createdBookmarkId !== null) {
@@ -142,8 +142,8 @@ export const addLiveFolderMenu = (ctx: SidebarContext, parentId: BookmarkId | nu
   )
 
 /**
- * 取得元へのアクセスを求め、許可されたら取得し直す。Chrome はユーザー操作の処理中にしか
- * 尋ねないので、クリックなどのハンドラから同期的に呼ぶ。
+ * Asks for access to the source and refreshes once it is granted. Chrome only prompts while it
+ * is handling a user gesture, so call this synchronously from a click handler or similar.
  */
 export const grantAccessAndRefresh = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
   const isGranted = await ctx.originAccess.request(sourceOrigins(folder.source._tag))
@@ -170,7 +170,7 @@ const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveF
   if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
 }
 
-/** 取得元のログインページを、このウィンドウの一時タブとして開く */
+/** Opens the source's sign-in page as a temporary tab in this window. */
 export const openSignInPage = (ctx: SidebarContext, url: string) =>
   void ctx.run({ _tag: "OpenUrl", windowId: ctx.view.windowId, url })
 
@@ -180,7 +180,8 @@ const sortMessages = {
   title: "sidepanel.liveFolder.sort.title",
 } as const satisfies Record<Exclude<LiveSort, "source">, MessageKey>
 
-// "source" はまとめる単位が取得元で違う（差出人・リポジトリ）ので、呼び名も取得元ごとに持つ
+// "source" groups by something different for each source (sender, repository), so each source
+// has its own label for it
 const sourceSortMessages = {
   Gmail: "sidepanel.liveFolder.sort.sender",
   GitHub: "sidepanel.liveFolder.sort.repository",
@@ -258,7 +259,7 @@ const confirmSpaceDeletion = async (ctx: SidebarContext, space: SpaceView) => {
   if (confirmed) void ctx.run({ _tag: "DeleteSpace", spaceId: space.id })
 }
 
-/** 名前やテーマの編集は、表示されていない Space ならまずその Space へ切り替えてから始める */
+/** For a Space that isn't on screen, renaming or theme editing first switches to that Space. */
 const setUpSpace = (ctx: SidebarContext, space: SpaceView, steps: SpaceSetupSteps) => () => {
   ctx.spaceSetup.requestFor(space.id, steps)
   if (space.id !== ctx.activeSpace.id) {

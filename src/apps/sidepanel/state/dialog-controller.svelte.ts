@@ -11,7 +11,7 @@ interface PendingConfirm extends ConfirmRequest {
 export class DialogController {
   current = $state.raw<PendingConfirm | null>(null)
 
-  /** 別の確認を開くと、表示中の確認は取り消されたものとして false で解決する */
+  /** Opening another confirmation cancels the one on screen, resolving it with false. */
   confirm(request: ConfirmRequest): Promise<boolean> {
     this.current?.resolve(false)
     return new Promise((resolve) => {

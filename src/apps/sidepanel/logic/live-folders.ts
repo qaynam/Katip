@@ -3,7 +3,7 @@ import type { PinnedLiveFolderView } from "#protocol"
 
 export type LiveSourceKind = LiveSource["_tag"]
 
-/** サービスの名前なので、どの言語でも訳さずに出す。 */
+/** Service names, shown untranslated in every language. */
 export const liveSourceNames: Readonly<Record<LiveSourceKind, string>> = {
   Gmail: "Gmail",
   GitHub: "GitHub",
@@ -12,7 +12,10 @@ export const liveSourceNames: Readonly<Record<LiveSourceKind, string>> = {
 export const GITHUB_TOKEN_PAGE_URL =
   "https://github.com/settings/tokens/new?description=Katip&scopes=repo"
 
-/** 取得元から読むために許可が要るオリジン。マニフェストの optional_host_permissions と一致させる */
+/**
+ * Origins that need permission before reading from the source. Keep in sync with
+ * optional_host_permissions in the manifest.
+ */
 export const sourceOrigins = (kind: LiveSourceKind): ReadonlyArray<string> => [
   originPatternOfKind(kind),
 ]
@@ -22,6 +25,6 @@ export const unseenCount = (folder: PinnedLiveFolderView): number =>
 
 const BADGE_LIMIT = 99
 
-/** 狭い見出しに収めるため、多すぎる件数は「99+」にまとめる */
+/** Caps large counts at "99+" so the badge fits in the narrow header. */
 export const unseenBadgeText = (count: number): string =>
   count > BADGE_LIMIT ? `${BADGE_LIMIT}+` : String(count)

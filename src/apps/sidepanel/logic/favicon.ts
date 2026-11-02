@@ -1,13 +1,14 @@
 import { Option, Predicate } from "effect"
 import { hostOf } from "./view-queries"
 
-/** ページ URL から favicon 画像の URL を作る。作れない環境では null を返す */
+/** Builds a favicon image URL from a page URL. Returns null where that isn't possible. */
 export type FaviconResolver = (pageUrl: string) => string | null
 
 export const noFaviconResolver: FaviconResolver = () => null
 
-// タブが持つ favicon を優先する。未読数などで動的に変わるものを、キャッシュより新しく出せるため。
-// 閉じたピンにはタブが無いので、ページ URL からの解決だけが頼りになる
+// The tab's own favicon comes first because it can be fresher than the cache when it changes
+// dynamically (unread counts and so on). Closed pins have no tab, so they can only resolve from
+// the page URL
 export const faviconCandidates = (
   pageUrl: string,
   favIconUrl: string | null,

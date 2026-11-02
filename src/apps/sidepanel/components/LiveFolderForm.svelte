@@ -38,7 +38,8 @@
     mentioned: "sidepanel.liveFolder.github.mentioned",
   } as const satisfies Record<GitHubQuery, MessageKey>
 
-  // 開いている間に依頼が変わりうるが、入力欄の構成は開いた時点で決めて、途中で出し入れしない
+  // The request may change while the dialog is open, but the set of fields is fixed when it
+  // opens so that fields don't appear or disappear midway
   const initial = untrack(() => request)
   const kind = initial._tag === "Create" ? initial.kind : "GitHub"
   const titleMessage =
@@ -52,7 +53,8 @@
   let label = $state("")
   let query = $state<GitHubQuery>("review-requested")
   let token = $state("")
-  // 表示している間に言語を変えても訳し直せるよう、文字列ではなく作り方を持つ
+  // Holds how to build the message rather than the string, so that a language change while it
+  // is shown retranslates it
   let error = $state.raw<(() => string) | null>(null)
   let isSubmitting = $state(false)
 
@@ -91,7 +93,7 @@
       showDraftError(draft.failure)
       return
     }
-    // Chrome はユーザー操作の処理中にしか許可を尋ねないので、await を挟む前に求める
+    // Chrome only prompts while handling a user gesture, so ask before any await
     const access = ctx.originAccess.request(sourceOrigins(kind))
     void whileSubmitting(async () => {
       if (!(await access)) {

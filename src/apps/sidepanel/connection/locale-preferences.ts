@@ -3,16 +3,19 @@ import type { LocalePreference } from "#modules/i18n"
 import { SettingsRepository } from "#modules/settings"
 import { Storage } from "#platform/browser"
 
-/** 設定で選んだ表示言語。テストや検証ページでは偽物に差し替える。 */
+/** The display language chosen in the settings. Tests and the dev harness swap in a fake. */
 export interface LocalePreferences {
   /**
-   * 今の設定をまず届け、以降は設定が変わるたびに届ける。返り値の関数を呼ぶと購読をやめる。
-   * 設定を読めないときは何も届けない。
+   * Delivers the current setting first, then again on every change. Call the returned
+   * function to unsubscribe. Delivers nothing when the settings can't be read.
    */
   readonly listen: (listener: (preference: LocalePreference) => void) => () => void
 }
 
-/** 拡張機能の設定（sync storage）から読む。設定画面で言語を変えると、開いたまま切り替わる。 */
+/**
+ * Reads from the extension's settings (sync storage). Changing the language on the options
+ * page switches an open side panel right away.
+ */
 export const makeStoredLocalePreferences = (): LocalePreferences => {
   const runtime = ManagedRuntime.make(SettingsRepository.layer.pipe(Layer.provide(Storage.layer)))
   return {
@@ -27,7 +30,7 @@ export const makeStoredLocalePreferences = (): LocalePreferences => {
   }
 }
 
-/** 決めた言語を返す偽物。`set` で設定を変えたことにする。 */
+/** A fake that delivers a fixed preference. `set` simulates changing the setting. */
 export interface MemoryLocalePreferences extends LocalePreferences {
   readonly set: (preference: LocalePreference) => void
 }

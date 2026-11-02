@@ -7,10 +7,13 @@ export type LiveFolderDialogRequest =
       readonly _tag: "Create"
       readonly kind: LiveSourceKind
       readonly spaceId: SpaceId
-      /** null は Space 直下 */
+      /** null places it at the top level of the Space. */
       readonly parentId: BookmarkId | null
     }
-  /** トークンが無いか無効で取得できなかったライブフォルダに、トークンを入れ直して取得し直す */
+  /**
+   * Sets a new token for a live folder that couldn't refresh because its token was missing
+   * or invalid, then refreshes it.
+   */
   | { readonly _tag: "SetGitHubToken"; readonly bookmarkId: BookmarkId }
 
 export class LiveFolderDialogController {

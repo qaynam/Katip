@@ -5,7 +5,7 @@
 
   interface Props {
     value: number
-    /** false の間は目盛りを出さず、操作も受け付けない */
+    /** While false, the tick marks are hidden and input is ignored. */
     isAvailable: boolean
     onChange: (value: number) => void
     onSettle: () => void

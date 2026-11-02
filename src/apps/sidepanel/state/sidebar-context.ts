@@ -17,7 +17,7 @@ import type { ToastQueue } from "./toast-queue.svelte"
 import type { TooltipController } from "./tooltip.svelte"
 
 export interface SidebarContext {
-  /** 失敗はトーストで知らせ済み。呼び出し側は結果を使うときだけ待てばよい */
+  /** Failures are already reported in a toast. Await it only when the outcome is needed. */
   readonly run: (command: SidebarCommand) => Promise<CommandOutcome>
   readonly view: SidebarView
   readonly activeSpace: SpaceView
@@ -31,7 +31,10 @@ export interface SidebarContext {
   readonly tooltip: TooltipController
   readonly faviconUrl: FaviconResolver
   readonly toasts: ToastQueue
-  /** 設定した言語。開いている間に言語を変えると入れ替わるので、使うたびに読む */
+  /**
+   * The configured language. It is replaced when the language changes while the panel is open,
+   * so read it on every use.
+   */
   readonly translator: Translator
   readonly originAccess: OriginAccess
   readonly liveFolderDialog: LiveFolderDialogController

@@ -2,7 +2,7 @@
   import type { TabId } from "#platform/browser"
 
   export interface SplitHalf {
-    /** 閉じているピンでは null */
+    /** null for a closed pin. */
     readonly tabId: TabId | null
     readonly title: string
     readonly pageUrl: string
@@ -15,7 +15,7 @@
     readonly renameInitial: string
     readonly onRename: (draft: string) => void
     readonly onActivate: () => void
-    /** 指定すると閉じるボタンと中クリックで閉じられる */
+    /** When given, the half can be closed with its close button or a middle click. */
     readonly onClose: (() => void) | undefined
   }
 </script>
@@ -31,10 +31,10 @@
 
   interface Props {
     rowKey: string
-    /** 左、右の順 */
+    /** Left, then right. */
     halves: readonly [SplitHalf, SplitHalf]
     menuLabel: string
-    /** half はメニューを開いた側。半分の外（隙間）で開いたときは左 */
+    /** half is the side the menu was opened on, or the left one when opened between them. */
     menuEntries: (half: SplitHalf, startRename: () => void) => ReadonlyArray<MenuEntry>
     dragSource: DragSource
     dropTargetAt: (edge: Edge) => DropTarget | null

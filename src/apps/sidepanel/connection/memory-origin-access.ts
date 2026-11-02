@@ -1,6 +1,6 @@
 import type { OriginAccess } from "./origin-access"
 
-/** 尋ねずに答える偽物。求められたオリジンを記録する */
+/** A fake that answers without prompting and records the requested origins. */
 export interface MemoryOriginAccess extends OriginAccess {
   readonly requestedOrigins: ReadonlyArray<ReadonlyArray<string>>
 }

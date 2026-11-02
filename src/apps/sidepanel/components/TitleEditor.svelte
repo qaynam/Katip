@@ -10,9 +10,9 @@
 
   const { initial, label, onCommit, onCancel }: Props = $props()
 
-  // 入力中に新しいビューが届いて initial が変わっても、打ちかけの文字を上書きしない
+  // A new view arriving mid-edit may change initial, but must not overwrite what's being typed
   let draft = $state(untrack(() => initial))
-  // Enter で確定して入力欄が消えるときにも blur が起きるので、二重に確定させない
+  // Committing with Enter removes the input, which also fires blur, so don't commit twice
   let isSettled = false
 
   const commit = () => {
@@ -28,7 +28,7 @@
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
-    // 日本語入力の変換を確定する Enter で、名前まで確定させない
+    // The Enter that commits IME composition must not commit the name as well
     if (event.isComposing) return
     if (event.key === "Enter") {
       event.preventDefault()

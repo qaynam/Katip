@@ -1,13 +1,16 @@
 import type { ColorScheme } from "#modules/theme"
 
-// テスト環境（jsdom）には matchMedia が無い。その場合はライトとして扱う
+// jsdom has no matchMedia, so the scheme is treated as light there
 const darkSchemeQuery = (): MediaQueryList | null =>
   typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null
 
 export const currentSystemScheme = (): ColorScheme =>
   darkSchemeQuery()?.matches === true ? "dark" : "light"
 
-/** OS のライト／ダークが切り替わるたびに知らせる。返り値の関数を呼ぶと購読をやめる */
+/**
+ * Notifies on every switch between the OS light and dark schemes. Call the returned function to
+ * stop watching.
+ */
 export const watchSystemScheme = (onChange: (scheme: ColorScheme) => void): (() => void) => {
   const query = darkSchemeQuery()
   if (query === null) return () => {}

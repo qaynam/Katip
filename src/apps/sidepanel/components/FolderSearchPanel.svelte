@@ -52,7 +52,7 @@
     document.getElementById(optionId(highlighted))?.scrollIntoView({ block: "nearest" })
   })
 
-  // anchor は DOMRect のことがあり、座標がプロトタイプの getter なので展開では写せない
+  // anchor may be a DOMRect, whose coordinates are prototype getters that spreading doesn't copy
   const place = (node: HTMLDivElement) => {
     const { left, right, top, bottom } = search.anchor
     position = popoverPosition(node, { left, right, top, bottom: bottom + 4 })
@@ -92,7 +92,7 @@
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
-    // 日本語入力の変換を確定する Enter や、候補を選ぶ矢印キーを横取りしない
+    // Don't intercept the Enter that commits IME composition or the arrow keys picking candidates
     if (event.isComposing) return
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault()

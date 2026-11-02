@@ -4,7 +4,7 @@
 
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
-  // Chrome のショートカットの書き方に合わせ、どの言語でも訳さない
+  // Written the way Chrome writes shortcuts, and untranslated in every language
   const SHORTCUT = "Alt+T"
 </script>
 

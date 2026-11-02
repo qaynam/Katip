@@ -20,20 +20,26 @@
     isAudible?: boolean
     isMuted?: boolean
     isDiscarded?: boolean
-    /** 指定すると favicon が「ピンした URL に戻る」ボタンになり、タイトルの前に「/」が付く */
+    /**
+     * When given, the favicon becomes a button that goes back to the pinned URL, and the title
+     * is prefixed with "/".
+     */
     onReturnToPinnedUrl?: (() => void) | undefined
     /** マウスを乗せたときに、名前の代わりに出す */
     tooltipTitle?: string | undefined
     renameInitial: string
     onRename: (draft: string) => void
     onActivate: () => void
-    /** 指定すると閉じるボタンと中クリックで閉じられる */
+    /** When given, the row can be closed with its close button or a middle click. */
     onClose?: (() => void) | undefined
     menuLabel: string
     menuEntries: (startRename: () => void) => ReadonlyArray<MenuEntry>
     dragSource: DragSource
     dropTargetAt: (edge: Edge) => DropTarget | null
-    /** 行の中央に落としたときのドロップ先。受け付けられないドラッグでは中央も前後への並べ替えに使う */
+    /**
+     * The drop target for the middle of the row. For drags it doesn't accept, the middle
+     * reorders like the edges.
+     */
     splitTarget?: DropTarget | null
   }
 
@@ -69,8 +75,8 @@
   const dropZone = $derived(ctx.drag.zoneFor(rowKey))
   const isDragged = $derived(ctx.drag.sourceKey === rowKey)
 
-  // 読み込み状態などの変化では動かさず、アクティブになった瞬間だけ追いかける。
-  // isActive を直接読むと、親のタブ情報が更新されるたびに値が同じでも再実行されてしまう
+  // Scrolls only when the tab becomes active, not on changes such as the loading state. Reading
+  // isActive directly would rerun on every update of the parent's tab data, even if unchanged
   const isActiveNow = $derived(isActive)
   $effect(() => {
     if (isActiveNow) row?.scrollIntoView({ block: "nearest" })

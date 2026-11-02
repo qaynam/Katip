@@ -48,9 +48,9 @@ export type PinnedItemDisplay =
 const firstNonEmpty = (...candidates: ReadonlyArray<string>): string =>
   candidates.find((candidate) => candidate.trim() !== "") ?? ""
 
-// 別のページへ移っても、行にはピンの名前を出す。ページの名前に切り替えると、ピンの名前を変えても
-// 行が変わらない。別のページにいることは「ピンした URL に戻る」ボタンで分かるので、今のページの
-// 名前はマウスを乗せたときに出す
+// The row keeps the pin's name after navigating away, because switching to the page title
+// would leave the row unchanged when the pin is renamed. The go-back button already shows that
+// the tab has left the pinned URL, so the current page's title appears on hover instead
 export const pinnedItemDisplay = (item: PinnedItemView): PinnedItemDisplay => {
   const fallbackTitle = Option.getOrElse(hostOf(item.url), () => item.url)
   if (item.openTab === null) {
@@ -78,7 +78,7 @@ export const openSplitViewOf = ({ items: [left, right] }: PinnedSplitView): Spli
   return splitViewId !== null && splitViewId === right.openTab?.tab.splitViewId ? splitViewId : null
 }
 
-/** フォルダの中も探す。分割ビューのピンの中の片側は探さない */
+/** Searches inside folders too, but not the halves of a pinned split view. */
 export const findPinnedNode = (
   nodes: ReadonlyArray<PinnedNodeView>,
   bookmarkId: BookmarkId,
@@ -92,7 +92,7 @@ export const findPinnedNode = (
   return Option.none()
 }
 
-/** フォルダ自身と、その中に入れ子になったすべてのフォルダ（ライブフォルダを含む） */
+/** The folder itself and every folder nested inside it, live folders included. */
 export const selfAndDescendantFolderIds = (
   folder: PinnedFolderView | PinnedLiveFolderView,
 ): ReadonlyArray<BookmarkId> =>

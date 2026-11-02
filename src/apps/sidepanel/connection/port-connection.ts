@@ -9,7 +9,7 @@ import {
 } from "#protocol"
 import type { SidebarConnection, SidebarEvent, Undelivered } from "./sidebar-connection"
 
-/** chrome.runtime.Port のうち、接続が使う部分だけ */
+/** The part of chrome.runtime.Port that the connection uses. */
 export interface SidebarPort {
   readonly postMessage: (message: unknown) => void
   readonly disconnect: () => void
@@ -18,17 +18,17 @@ export interface SidebarPort {
 }
 
 export interface PortConnectionOptions {
-  /** 例外を投げてもよい（拡張の再読み込み直後など）。その場合も間隔を空けて再試行する */
+  /** May throw (e.g. right after the extension reloads). Retries after a delay in that case. */
   readonly openPort: () => SidebarPort
-  /** null は「最後にフォーカスされた通常ウィンドウ」を購読する */
+  /** null subscribes to the last focused normal window. */
   readonly windowId: WindowId | null
   readonly keepAliveIntervalMs?: number
-  /** n 回目の再接続を待つ時間。回数が配列より多ければ最後の値を使い続ける */
+  /** Delay before the n-th reconnect. Attempts beyond the array keep using the last value. */
   readonly reconnectDelaysMs?: ReadonlyArray<number>
 }
 
 export interface PortConnection extends SidebarConnection {
-  /** 以後は再接続せず、未解決のコマンドを Undelivered で解決する */
+  /** Stops reconnecting and resolves pending commands with Undelivered. */
   readonly close: () => void
 }
 

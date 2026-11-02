@@ -65,7 +65,7 @@
   }
 
   let markList = $state<HTMLUListElement>()
-  // activeSpaceId を直接読むと、ビューが届くたびに値が同じでも再実行されてしまう
+  // Reading activeSpaceId directly would rerun on every view update, even if unchanged
   const currentSpaceId = $derived(activeSpaceId)
   $effect(() => {
     for (const mark of markList?.querySelectorAll<HTMLElement>("[data-space-id]") ?? []) {
@@ -75,8 +75,8 @@
     }
   })
 
-  // 印の並びの横スクロールを、サイドバー全体のスワイプによる Space 切替と取り違えさせない。
-  // 縦ホイールは横スクロールに読み替える（印が横一列にしか並ばないため）
+  // Horizontal scrolling of the marks must not be taken for the sidebar-wide swipe that switches
+  // Spaces. The vertical wheel scrolls horizontally, since the marks sit in a single row
   const scrollHorizontally = (list: HTMLElement) => {
     const onWheel = (event: WheelEvent) => {
       event.stopPropagation()

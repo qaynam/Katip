@@ -3,7 +3,7 @@ import type { SidebarConnection, SidebarEvent } from "./sidebar-connection"
 
 export interface CommandResponse {
   readonly outcome: CommandOutcome
-  /** 指定すると、結果を返す前にこのビューを配信する */
+  /** When given, this view is delivered before the outcome is returned. */
   readonly view?: SidebarView
   readonly notice?: string
 }
@@ -13,7 +13,7 @@ export interface MemoryConnectionOptions {
   readonly respond?: (command: SidebarCommand, current: SidebarView | null) => CommandResponse
 }
 
-/** background を使わずに UI を動かすための接続。送られたコマンドを記録する */
+/** A connection that runs the UI without the background and records the sent commands. */
 export interface MemoryConnection extends SidebarConnection {
   readonly sentCommands: ReadonlyArray<SidebarCommand>
   readonly pushView: (view: SidebarView) => void

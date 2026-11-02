@@ -8,7 +8,8 @@ import { createPortConnection, type SidebarPort } from "./connection/port-connec
 
 const openPort = (): SidebarPort => {
   const port = chrome.runtime.connect({ name: SIDEBAR_PORT_NAME })
-  // 読まないと、service worker の停止で切れるたびに Unchecked runtime.lastError が出る
+  // Without reading lastError, every disconnect caused by the service worker stopping logs
+  // "Unchecked runtime.lastError"
   port.onDisconnect.addListener(() => void chrome.runtime.lastError)
   return port
 }

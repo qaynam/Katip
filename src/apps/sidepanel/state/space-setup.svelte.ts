@@ -20,9 +20,9 @@ const isTargeted = (target: SetupTarget, activeSpaceId: SpaceId) =>
     ? target.spaceId === activeSpaceId
     : !target.knownSpaceIds.has(activeSpaceId)
 
-// 名前やテーマの編集は、その Space がサイドバーに表示されてからでないと始められない。
-// 切り替えや作成のコマンドの結果とビューのどちらが先に届くかは決まっていないため、
-// 依頼を覚えておき、対象の Space が表示された時点で受け取らせる
+// Renaming or editing the theme can only start once the Space is shown in the sidebar.
+// Since either the switch/create outcome or the view may arrive first, the request is kept
+// here and handed over when the target Space appears
 export class PendingSpaceSetup {
   #request = $state.raw<SetupRequest | null>(null)
 
@@ -30,7 +30,7 @@ export class PendingSpaceSetup {
     this.#request = { target: { _tag: "Space", spaceId }, steps }
   }
 
-  /** knownSpaceIds に無い Space が表示されたら、それを新しく作られた Space とみなす */
+  /** The first Space shown that isn't in knownSpaceIds is taken to be the newly created one. */
   requestForNextCreated(knownSpaceIds: ReadonlySet<SpaceId>, steps: SpaceSetupSteps) {
     this.#request = { target: { _tag: "NextCreated", knownSpaceIds }, steps }
   }
@@ -39,7 +39,7 @@ export class PendingSpaceSetup {
     this.#request = null
   }
 
-  /** 表示中の Space 宛ての依頼なら受け取って消す */
+  /** Takes and clears the request if it targets the Space on screen. */
   consume(activeSpaceId: SpaceId): Option.Option<SpaceSetupSteps> {
     const request = this.#request
     if (request === null || !isTargeted(request.target, activeSpaceId)) return Option.none()

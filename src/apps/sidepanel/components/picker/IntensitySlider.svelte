@@ -23,7 +23,7 @@
 
   interface Props {
     value: number
-    /** false の間はつまみを出さず、操作も受け付けない */
+    /** While false, the thumb is hidden and input is ignored. */
     isAvailable: boolean
     onChange: (value: number) => void
     onSettle: () => void

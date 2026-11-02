@@ -13,7 +13,7 @@
 
   interface Props {
     colors: ReadonlyArray<ThemeColor>
-    /** 続けて変わっていく値。ドラッグを離すと onSettle が呼ばれる */
+    /** Called continuously as the value changes. onSettle follows when the drag is released. */
     onChange: (colors: ReadonlyArray<ThemeColor>) => void
     onSettle: () => void
   }

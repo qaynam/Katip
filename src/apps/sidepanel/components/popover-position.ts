@@ -1,8 +1,8 @@
 import { fitMenuPosition, type Point, type Rect } from "../logic/menu-position"
 
 /**
- * 画面上の anchor に合わせて、node を offsetParent の中に収まる位置へ置くときの座標。
- * 返す座標は offsetParent の左上からの位置。
+ * Where to place node so that it lines up with the on-screen anchor while staying inside its
+ * offsetParent. The returned point is relative to the offsetParent's top-left corner.
  */
 export const popoverPosition = (node: HTMLElement, anchor: Rect): Point => {
   const container = node.offsetParent?.getBoundingClientRect() ?? {

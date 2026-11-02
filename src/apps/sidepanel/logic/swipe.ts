@@ -11,8 +11,8 @@ export interface WheelDelta {
   readonly deltaY: number
 }
 
-// 慣性スクロールは 1 回のスワイプで大量の wheel を出すため、クールダウン中は無視して
-// Space を 1 つずつしか進めない
+// Momentum scrolling fires many wheel events per swipe, so events during the cooldown are
+// ignored to move only one Space at a time
 export const detectSwipe = (
   delta: WheelDelta,
   msSinceLastSwipe: number,

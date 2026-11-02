@@ -2,16 +2,19 @@ import { Option } from "effect"
 import type { Equivalence } from "effect"
 
 export interface CoalescingSender<A> {
-  /** 最初の値はすぐに送り、以後は間隔内に届いた値をまとめて、間隔の終わりに最新の値だけを送る */
+  /**
+   * Sends the first value at once. Values pushed during the following interval are coalesced,
+   * and only the latest is sent when the interval ends.
+   */
   readonly push: (value: A) => void
-  /** 送っていない値があれば、間隔を待たずに今すぐ送る */
+  /** Sends any unsent value now instead of waiting for the interval. */
   readonly flush: () => void
 }
 
 export interface CoalescingSenderOptions<A> {
   readonly intervalMs: number
   readonly send: (value: A) => void
-  /** 直前に送った値と同じとみなす値は送らない */
+  /** Values considered the same as the last sent one are not sent. */
   readonly isSame: Equivalence.Equivalence<A>
 }
 

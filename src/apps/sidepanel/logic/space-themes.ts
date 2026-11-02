@@ -1,7 +1,10 @@
 import { Array, Option, pipe, Schema } from "effect"
 import { presetPages, swatchOf, themeOf, ThemeColor, type SpaceTheme } from "#modules/theme"
 
-/** テーマの色を小さな見本として塗る CSS の背景。色の無いテーマには見本が無い。 */
+/**
+ * CSS background that paints a theme's colors as a small swatch. A theme without colors has no
+ * swatch.
+ */
 export const themeSwatch = (colors: ReadonlyArray<ThemeColor>): Option.Option<string> =>
   Array.match(colors, {
     onEmpty: () => Option.none(),
@@ -15,8 +18,8 @@ export const themeSwatch = (colors: ReadonlyArray<ThemeColor>): Option.Option<st
 
 const sameColors = Schema.toEquivalence(Schema.Array(ThemeColor))
 
-// 新しい Space は見分けがつくよう色の付いたテーマで始める。無彩色に近いプリセットは
-// 既定のテーマと見分けがつかないので勧めない
+// New Spaces start with a colorful theme so they are easy to tell apart. Near-neutral presets
+// are not suggested because they look the same as the default theme
 const colorfulPresets = pipe(
   presetPages[0] ?? [],
   Array.filter(([primary]) => primary !== undefined && primary.chroma > 0.2),
@@ -38,12 +41,12 @@ export const suggestedTheme = (
 const WHEEL_STEP_DEGREES = 30
 
 /**
- * 色フィールドの点の格子を、その位置で選ばれる色にうっすら染めるための CSS の背景。
- * 中心ほど無彩色に近づく。
+ * CSS background that faintly tints the color field's dot grid with the color picked at each
+ * position. It fades toward neutral at the center.
  */
 export const hueWheelBackground = (): string => {
-  // ピッカーの色相は右から反時計回り（画面の上が 90 度）に増えるが、conic-gradient は
-  // 時計回りに描く。右から時計回りに進むほど色相が減るように並べる
+  // The picker's hue grows counterclockwise from the right (90 degrees at the top), but
+  // conic-gradient draws clockwise, so the stops start at the right with decreasing hue
   const stops = Array.makeBy(360 / WHEEL_STEP_DEGREES + 1, (step) => {
     const angle = step * WHEEL_STEP_DEGREES
     return `${swatchOf({ hue: (360 - angle) % 360, chroma: 1 })} ${angle}deg`

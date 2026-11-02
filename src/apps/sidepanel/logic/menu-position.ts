@@ -37,8 +37,9 @@ const placeOnAxis = (
 }
 
 /**
- * アンカーの右下に開くのを基本とし、はみ出す軸だけアンカーの反対側へ反転する。
- * どちらにも収まらなければ画面の端に寄せる（メニューが画面より大きい場合は左上の余白に揃える）。
+ * Opens below and to the right of the anchor, flipping to the anchor's other side only on the
+ * axis that would overflow. If neither side fits, it snaps to the viewport edge (to the top-left
+ * margin when the menu is larger than the viewport).
  */
 export const fitMenuPosition = (anchor: Rect, menu: Size, viewport: Size, margin = 8): Point => ({
   x: placeOnAxis(anchor.left, anchor.right, menu.width, viewport.width, margin),

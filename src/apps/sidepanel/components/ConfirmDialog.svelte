@@ -6,7 +6,8 @@
   const ids = $props.id()
   const request = $derived(ctx.dialog.current)
 
-  // 破壊的な操作の確認なので、Enter の押し間違いで実行されないよう取消側にフォーカスを置く
+  // These confirm destructive actions, so focus starts on Cancel where a stray Enter can't run
+  // them
   const focus = (button: HTMLButtonElement) => button.focus()
 
   const cancelOnEscape = (event: KeyboardEvent) => {

@@ -6,7 +6,7 @@
   const ctx = getSidebarContext()
   const tooltip = $derived(ctx.tooltip.current)
 
-  // ポインタの真下に出すとカーソルで隠れるため、少し右下にずらす
+  // Offset down and to the right, because right under the pointer the cursor would cover it
   const CURSOR_CLEARANCE = { x: 10, y: 18 }
 
   let position = $state<Point>({ x: 0, y: 0 })

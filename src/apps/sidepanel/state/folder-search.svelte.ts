@@ -3,9 +3,9 @@ import type { Rect } from "../logic/menu-position"
 
 export interface OpenFolderSearch {
   readonly bookmarkId: BookmarkId
-  /** 小窓をこの矩形の下に出す */
+  /** The popover opens below this rect. */
   readonly anchor: Rect
-  /** Escape で閉じたときにフォーカスを戻す先 */
+  /** Where focus returns when the popover is closed with Escape. */
   readonly trigger: HTMLElement
 }
 

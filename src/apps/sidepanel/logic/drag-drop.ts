@@ -20,30 +20,31 @@ export type DragSource =
       readonly _tag: "PinnedItem"
       readonly bookmarkId: BookmarkId
       readonly openTabId: TabId | null
-      // 閉じたフォルダに覗かせているアイテムは、実際の親と位置がビューから分からないことがある
+      // For items peeked from a collapsed folder, the view may not tell the actual parent and
+      // position
       readonly position: PinnedPosition | null
     }
   | {
       readonly _tag: "PinnedSplit"
       readonly bookmarkId: BookmarkId
-      // 2 つのタブが分割ビューとして開いているときだけ値を持つ
+      // Set only while both tabs are open as a split view
       readonly openSplitViewId: SplitViewId | null
-      // 覗かせている分割ピンは、ピンと同じく実際の親と位置が分からないことがある
+      // Like a peeked item, a peeked split pin may not tell its actual parent and position
       readonly position: PinnedPosition | null
     }
-  // 普通のフォルダもライブフォルダも、ブックマークのフォルダとして同じように動かす
+  // Regular and live folders move the same way, as bookmark folders
   | {
       readonly _tag: "PinnedFolder"
       readonly bookmarkId: BookmarkId
       readonly position: PinnedPosition
-      /** 自分と、中にあるすべてのフォルダ。どれの中にも落とせない */
+      /** The folder itself and every folder inside it. It can't be dropped into any of them. */
       readonly selfAndDescendantIds: ReadonlyArray<BookmarkId>
     }
   | { readonly _tag: "Favorite"; readonly tabId: TabId; readonly index: number }
   | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
 
-// slot は「現在の並び（ドラッグ中の要素を含む）の何番目の隙間か」。
-// 移動先の最終位置への換算は commandForDrop だけが行う
+// slot is the index of a gap in the current list, which still includes the dragged item.
+// Only commandForDrop converts it into the final destination index
 export type DropTarget =
   | { readonly _tag: "Temporary"; readonly placement: TemporaryPlacement }
   | { readonly _tag: "SplitWith"; readonly tabId: TabId }
@@ -52,7 +53,7 @@ export type DropTarget =
   | { readonly _tag: "SpaceBar"; readonly slot: number }
 
 export interface DropContext {
-  /** 表示中の Space。ピン留めや一時タブへの配置先になる */
+  /** The Space on screen. Drops into pinned or temporary tabs land in it. */
   readonly spaceId: SpaceId
   readonly canSplit: boolean
 }
@@ -69,10 +70,11 @@ export const temporaryPlacementAt = (tabId: TabId, edge: Edge): TemporaryPlaceme
 
 export type RowZone = Edge | "split"
 
-// 分割ビューにできる行は、上下中央の帯のうち左端を除いた部分（行の右寄り）を分割ビューに使う。
-// 分割したタブは右側に入るので、右へ持っていく動きで分割できるようにする。左端と上下の端は
-// 並べ替えに残し、つまんだ位置のまま縦に動かす並べ替えが分割に化けないようにする。
-// 分割できない行まで帯を空けると、並べ替えの当たり判定が無駄に狭くなる
+// On rows that can be split, the vertical middle band minus its left part (the right side of
+// the row) creates a split view. The dropped tab goes on the right, so moving right is what
+// splits. The left part and the top and bottom edges stay for reordering, so dragging straight
+// up or down from where the row was grabbed never turns into a split. Rows that can't be
+// split don't reserve the band, which would only shrink their reorder hit area
 export const rowZoneAt = (offset: Point, size: Size, canSplit: boolean): RowZone => {
   const vertical = edgeAt(offset.y, size.height)
   if (!canSplit) return vertical
@@ -84,8 +86,9 @@ export const rowZoneAt = (offset: Point, size: Size, canSplit: boolean): RowZone
 
 export type FolderZone = "before" | "into" | "after" | "firstChild"
 
-// 見出しの上下 1/4 だけを前後への挿入に使い、中央はフォルダの中へ入れる。
-// 開いたフォルダの下端は、見た目上すぐ下にある先頭の子の前とみなす
+// Only the top and bottom quarters of the header insert before or after the folder; the
+// middle drops into it. The bottom of an expanded folder counts as before its first child,
+// which is what sits right below it on screen
 export const folderZoneAt = (offset: number, size: number, isExpanded: boolean): FolderZone => {
   const ratio = offset / size
   if (ratio < 0.25) return "before"
@@ -114,7 +117,8 @@ const pinnedSlot = (parentId: BookmarkId | null, slot: number): DropTarget => ({
   slot,
 })
 
-// 同じ並びの中で後ろへ動かすときは、自分が抜けた分だけ挿入位置が前に詰まる
+// Moving an item later in the same list shifts the insertion index down by one, because the
+// item has left its old place
 const finalIndexWithin = (fromIndex: number, slot: number): number =>
   slot > fromIndex ? slot - 1 : slot
 
@@ -130,7 +134,7 @@ const reorder = (
 const isPlacementRelativeTo = (placement: TemporaryPlacement, tabId: TabId): boolean =>
   (placement._tag === "Above" || placement._tag === "Below") && placement.tabId === tabId
 
-/** 1 つのタブとして動かせるドラッグ元なら、そのタブ。分割ビューの行は 1 つのタブではない */
+/** The tab, if the drag source moves as a single tab. A split view row is not a single tab. */
 const singleTabOf = (source: DragSource): Option.Option<TabId> =>
   Match.valueTags(source, {
     TemporaryTab: ({ tabId }) => Option.some(tabId),
@@ -263,8 +267,8 @@ const dropOnSpaceBar = (source: DragSource, slot: number): Option.Option<Sidebar
     : Option.none()
 
 /**
- * 結果が None のドロップは受け付けない（元の位置に落とした場合や、閉じたピンを一時タブへ
- * 落とした場合、分割ビューを作れない環境で分割しようとした場合など）。
+ * A drop whose result is None is not accepted (e.g. dropping in the original place, dropping a
+ * closed pin into temporary tabs, or splitting where split views aren't available).
  */
 export const commandForDrop = (
   source: DragSource,
@@ -281,11 +285,11 @@ export const commandForDrop = (
 
 export type DropOutcome =
   | { readonly _tag: "Run"; readonly command: SidebarCommand }
-  // 分割ビューに対応した環境なら分割になったドロップ。前後への並べ替えに読み替えると、
-  // 分割しようとした人には意図しない並べ替えに見えるので、対応していないことを知らせる
+  // A drop that would split where split views are supported. Treating it as a reorder would
+  // surprise someone who meant to split, so it reports the lack of support instead
   | { readonly _tag: "SplitUnsupported" }
 
-/** 結果が None のドロップは受け付けない */
+/** A drop whose result is None is not accepted. */
 export const dropOutcome = (
   source: DragSource,
   target: DropTarget,

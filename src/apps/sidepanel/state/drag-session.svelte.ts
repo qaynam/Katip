@@ -16,8 +16,8 @@ export interface DropIndicator {
   readonly zone: DropZone
 }
 
-// ブラウザ標準の DnD ではドロップ先から dataTransfer の中身を読めないため、ドラッグ元は
-// ここに保持する。外部（リンクやファイル）のドラッグでは source が null のままなので無視できる
+// Native drag and drop doesn't let drop targets read the dataTransfer contents, so the drag
+// source is kept here. External drags (links, files) leave source null and can be ignored
 export class DragSession {
   source = $state.raw<DragSource | null>(null)
   sourceKey = $state.raw<string | null>(null)
@@ -40,7 +40,7 @@ export class DragSession {
     this.sourceKey = key
   }
 
-  /** 受け付けられるドロップ先のときだけ preventDefault し、ブラウザにドロップを許可させる */
+  /** Calls preventDefault, which lets the browser drop, only on targets that accept the drop. */
   offer(event: DragEvent, key: string, zone: DropZone, target: DropTarget | null) {
     event.stopPropagation()
     if (this.#hover !== null && this.#hover.key !== key) this.cancelHover()
@@ -65,7 +65,10 @@ export class DragSession {
     return this.source === null ? Option.none() : dropOutcome(this.source, target, this.#context())
   }
 
-  /** 行と行の隙間では直前の候補を保つ。候補が一瞬消えて挿入線がちらつくのを防ぐ */
+  /**
+   * Keeps the previous candidate over the gaps between rows, so the insertion line doesn't
+   * flicker as the candidate briefly disappears.
+   */
   keep(event: DragEvent) {
     event.stopPropagation()
     if (this.#outcome !== null) event.preventDefault()
@@ -80,7 +83,7 @@ export class DragSession {
     return this.indicator?.key === key ? this.indicator.zone : null
   }
 
-  /** 直前に受け付けたドロップ先での結果を取り出し、ドラッグを終える */
+  /** Takes the outcome for the last accepted drop target and ends the drag. */
   takeOutcome(): DropOutcome | null {
     const outcome = this.#outcome
     this.end()
@@ -95,7 +98,7 @@ export class DragSession {
     this.sourceKey = null
   }
 
-  /** 同じ key の上に delayMs 留まり続けたら action を実行する */
+  /** Runs action once the pointer has stayed over the same key for delayMs. */
   hoverFor(key: string, action: () => void, delayMs = 250) {
     if (this.#hover?.key === key) return
     this.cancelHover()

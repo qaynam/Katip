@@ -11,8 +11,9 @@ export interface DraftTheme {
 
 const sameTheme = Schema.toEquivalence(SpaceTheme)
 
-// 編集中のテーマは background の往復を待たずに手元で塗り、background へは間引いて送る。
-// ビューに届いたテーマで塗ると、ドラッグ中に色が指から遅れて追いかけてくる
+// The theme being edited is painted locally without waiting for the background round trip, and
+// sent to the background at a throttled rate. Painting from the view would make the color lag
+// behind the pointer while dragging
 export class ThemeDraft {
   current = $state.raw<DraftTheme | null>(null)
   #isReleased = $state(false)
@@ -34,14 +35,17 @@ export class ThemeDraft {
     return this.current?.spaceId === spaceId ? this.current.theme : null
   }
 
-  /** ドラッグ中など、続けて変わっていく値。手元ではすぐ塗り、background へは間引いて送る */
+  /**
+   * For values that keep changing, such as during a drag. Paints locally at once and sends to
+   * the background at a throttled rate.
+   */
   preview(spaceId: SpaceId, theme: SpaceTheme) {
     this.#isReleased = false
     this.current = { spaceId, theme }
     this.#sender.push(this.current)
   }
 
-  /** ここまでの値を待たずに送る */
+  /** Sends the latest value without waiting for the interval. */
   settle() {
     this.#sender.flush()
   }
@@ -51,16 +55,16 @@ export class ThemeDraft {
     this.settle()
   }
 
-  /** 編集を終える。下書きはビューが同じテーマに追いつくまで塗り続ける */
+  /** Ends editing. The draft stays painted until the view catches up with the same theme. */
   release() {
     this.settle()
     this.#isReleased = true
   }
 
   /**
-   * 編集を終えた下書きが、ビューに届いたテーマに追いついていれば捨てる。
+   * Discards a released draft once the theme in the view has caught up with it.
    *
-   * @param viewTheme - ビューにある、下書きと同じ Space のテーマ。Space が消えていれば null
+   * @param viewTheme - The view's theme for the draft's Space, or null if that Space is gone.
    */
   settleWith(viewTheme: SpaceTheme | null) {
     const draft = this.current

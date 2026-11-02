@@ -6,7 +6,7 @@
 
   interface Props {
     theme: SpaceTheme
-    /** Space ごとに異なる値を渡すと、切り替えたときに背景がフェードする */
+    /** Pass a value unique to each Space to fade the background when switching Spaces. */
     transitionKey: string
     children: Snippet
   }

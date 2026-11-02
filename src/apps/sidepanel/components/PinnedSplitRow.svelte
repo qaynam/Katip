@@ -10,7 +10,7 @@
 
   interface Props {
     split: PinnedSplitView
-    /** 閉じたフォルダに覗かせているときは、入れ子の中にあって位置が分からないことがある */
+    /** When peeked from a collapsed folder, it may be nested where its position is unknown. */
     position: PinnedPosition | null
     dropTargetAt: (edge: Edge) => DropTarget | null
   }
@@ -42,7 +42,7 @@
           })
         }
       },
-      // 片側のピンだけを開くと分割ビューにならないので、閉じている側を押しても 2 つ揃えて開く
+      // Opening only one half doesn't make a split view, so clicking a closed half opens both
       onActivate: () =>
         void ctx.run(
           tab === null

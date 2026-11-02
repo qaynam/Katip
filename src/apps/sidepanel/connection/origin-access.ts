@@ -1,9 +1,10 @@
-/** 取得元のサイトへのアクセスの許可。テストや検証ページでは偽物に差し替える */
+/** Permission to access live folder sources. Tests and the dev harness swap in a fake. */
 export interface OriginAccess {
   /**
-   * 許可を求め、許可されたかどうかで解決する。許可済みなら尋ねずに true になる。reject しない。
-   * Chrome はクリックなどのユーザー操作を処理している間しか尋ねないので、操作のハンドラから
-   * await を挟まずに呼ぶこと。
+   * Asks for permission and resolves with whether it was granted. Resolves true without
+   * asking when already granted. Never rejects.
+   * Chrome only prompts while it is handling a user gesture such as a click, so call this from
+   * the gesture's handler before any await.
    */
   readonly request: (origins: ReadonlyArray<string>) => Promise<boolean>
 }

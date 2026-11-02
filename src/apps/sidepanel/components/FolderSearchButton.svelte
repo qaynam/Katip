@@ -5,7 +5,7 @@
 
   interface Props {
     bookmarkId: BookmarkId
-    /** 小窓をこの要素の下に出す */
+    /** The popover opens below this element. */
     anchor: HTMLElement
   }
 

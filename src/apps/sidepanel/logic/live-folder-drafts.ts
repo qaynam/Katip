@@ -11,8 +11,8 @@ export interface GmailDraft {
 const DIGITS = /^\d+$/
 
 /**
- * アカウント番号が空なら 0（最初にログインしたアカウント）とみなす。全角の数字も受け付ける。
- * ラベルが空なら、受信トレイを表す null にする。
+ * An empty account number means 0 (the first signed-in account). Full-width digits are
+ * accepted. An empty label becomes null, which stands for the inbox.
  */
 export const gmailSourceFrom = (
   draft: GmailDraft,

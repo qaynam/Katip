@@ -2,14 +2,18 @@ import { Number, Option } from "effect"
 import type { PickerPoint } from "#modules/theme"
 import type { Point, Size } from "./menu-position"
 
-// フィールドの上端にはモードの切替、下端には色の増減のボタンが重なっている。最も鮮やかな色
-// （円の縁）を選んでも色の点がそれらのボタンに被らないよう、ボタンの帯より内側を円の縁にする
+// The mode switch overlaps the top of the field and the add/remove color buttons overlap the
+// bottom. The circle's edge sits inside those button bands so that the dot never ends up under
+// a button, even on the most saturated color (the edge)
 export const FIELD_EDGE_INSET_PX = 56
 
 const fieldRadius = (field: Size) =>
   Math.max(1, Math.min(field.width, field.height) / 2 - FIELD_EDGE_INSET_PX)
 
-/** フィールドの左上からの位置を、ピッカーの円の座標（中心が原点、y は上向き）に換算する。 */
+/**
+ * Converts an offset from the field's top-left corner into picker circle coordinates (origin
+ * at the center, y pointing up).
+ */
 export const pickerPointAt = (offset: Point, field: Size): PickerPoint => {
   const radius = fieldRadius(field)
   return {
@@ -25,7 +29,7 @@ export interface SliderTrack {
   readonly thumbLength: number
 }
 
-/** つまみの中心がトラックの左端にあるとき 0、右端にあるとき 1。 */
+/** 0 when the thumb's center is at the left end of the track, 1 at the right end. */
 export const sliderValueAt = (offset: number, track: SliderTrack): number => {
   const travel = Math.max(1, track.length - track.thumbLength)
   return unit((offset - track.thumbLength / 2) / travel)
@@ -37,10 +41,13 @@ const clockwiseTurnFromTop = ({ x, y }: Point) => {
 }
 
 /**
- * ダイヤルの中心から見た指の位置を値にする。真上が 0 で、時計回りに一周すると 1。
+ * Turns the pointer position around the dial's center into a value: 0 straight up, 1 after a
+ * full clockwise turn.
  *
- * @param offset - ダイヤルの中心からの位置（画面の座標で、y は下向き）
- * @param previous - 直前の値。一周の継ぎ目をまたいだときに、どちらの端で止めるかを決める
+ * @param offset - Position relative to the dial's center, in screen coordinates (y pointing
+ *   down).
+ * @param previous - The previous value. Decides which end to stop at when the pointer crosses
+ *   the seam where a full turn wraps around.
  */
 export const dialValueAt = (offset: Point, previous: number): number => {
   const value = clockwiseTurnFromTop(offset)
@@ -53,7 +60,7 @@ const KEY_STEP = 0.05
 
 const roundToHundredths = (value: number) => Math.round(value * 100) / 100
 
-/** スライダーやダイヤルをキーボードで動かしたあとの値。調整に使わないキーなら None。 */
+/** The slider or dial value after a key press, or None for keys that don't adjust it. */
 export const valueAfterKey = (value: number, key: string): Option.Option<number> => {
   const next: Partial<Record<string, number>> = {
     ArrowRight: value + KEY_STEP,
@@ -68,7 +75,7 @@ export const valueAfterKey = (value: number, key: string): Option.Option<number>
   )
 }
 
-/** 色の点をキーボードで動かしたあとの位置。調整に使わないキーなら None。 */
+/** The color dot's position after a key press, or None for keys that don't move it. */
 export const pointAfterKey = (point: PickerPoint, key: string): Option.Option<PickerPoint> => {
   const next: Partial<Record<string, PickerPoint>> = {
     ArrowRight: { x: point.x + KEY_STEP, y: point.y },

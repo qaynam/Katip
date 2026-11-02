@@ -15,14 +15,17 @@ export type SearchableFolder = PinnedFolderView | PinnedLiveFolderView
 export interface FolderSearchEntry {
   readonly key: string
   readonly title: string
-  /** 空文字は補足が無いことを表す */
+  /** An empty string means there is no subtitle. */
   readonly subtitle: string
   readonly pageUrl: string
   readonly favIconUrl: string | null
-  /** 最後に動きがあった時刻（ライブの項目なら取得元での更新時刻）。ビューから分からなければ null */
+  /**
+   * When the entry last had activity (for live items, when the source updated them). null when
+   * the view doesn't tell.
+   */
   readonly lastActivityAt: number | null
   readonly isUnseen: boolean
-  /** 選んだときに送るコマンド */
+  /** The command to send when the entry is chosen. */
   readonly command: SidebarCommand
 }
 
@@ -61,7 +64,7 @@ const nodeEntries = (node: PinnedNodeView, windowId: WindowId): ReadonlyArray<Fo
     PinnedItem: (item) => [
       pinnedEntry(item, { _tag: "OpenPinnedItem", windowId, bookmarkId: item.bookmarkId }),
     ],
-    // 片側のピンだけを開くと分割ビューにならないので、閉じていれば 2 つ揃えて開く
+    // Opening only one half doesn't make a split view, so a closed split pin opens both halves
     PinnedSplit: (split) =>
       split.items.map((item) =>
         pinnedEntry(item, { _tag: "OpenPinnedItem", windowId, bookmarkId: split.bookmarkId }),
@@ -70,7 +73,7 @@ const nodeEntries = (node: PinnedNodeView, windowId: WindowId): ReadonlyArray<Fo
     PinnedFolder: (folder) => folder.children.flatMap((child) => nodeEntries(child, windowId)),
   })
 
-/** 入れ子のフォルダの中身も含め、フォルダの中での並び順に並べる */
+/** Lists entries in their order within the folder, including those in nested folders. */
 export const folderSearchEntries = (
   folder: SearchableFolder,
   windowId: WindowId,
@@ -79,8 +82,8 @@ export const folderSearchEntries = (
 const normalized = (text: string) => text.normalize("NFKC").toLowerCase()
 
 /**
- * 空白で区切った語のすべてを、タイトル・補足・URL のどこかに含む項目を、元の並びのまま残す。
- * 大文字と小文字、全角と半角は区別しない。
+ * Keeps, in their original order, the entries whose title, subtitle, or URL contains every
+ * whitespace-separated term. Matching ignores case and full-width/half-width differences.
  */
 export const filterFolderSearch = (
   entries: ReadonlyArray<FolderSearchEntry>,

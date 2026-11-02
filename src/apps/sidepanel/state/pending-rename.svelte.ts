@@ -1,7 +1,7 @@
 import type { BookmarkId } from "#platform/browser"
 
-// 作成コマンドの結果と、作成されたフォルダを含むビューのどちらが先に届くかは決まっていない。
-// 結果で受け取った ID を覚えておき、その行が描画された時点で名前の編集を始めさせる
+// Either the create command's outcome or the view containing the new folder may arrive first.
+// The ID from the outcome is kept here, and renaming starts once that row is rendered
 export class PendingRename {
   bookmarkId = $state.raw<BookmarkId | null>(null)
 
@@ -9,7 +9,7 @@ export class PendingRename {
     this.bookmarkId = bookmarkId
   }
 
-  /** 自分宛ての依頼なら受け取って消す */
+  /** Takes and clears the request if it is for this bookmark. */
   consume(bookmarkId: BookmarkId): boolean {
     if (this.bookmarkId !== bookmarkId) return false
     this.bookmarkId = null

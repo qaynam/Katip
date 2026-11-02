@@ -3,7 +3,7 @@
 
   interface Props {
     background: string
-    /** この値が変わったときだけ前の背景からフェードする。同じ値の間は即座に塗り替える */
+    /** Fades from the previous background only when this changes; otherwise repaints at once. */
     transitionKey: string
     grainOpacity: number
   }
@@ -16,8 +16,8 @@
     readonly background: string
   }
 
-  // CSS はグラデーション同士の背景を補間できない。新しい背景の層を上に重ねてフェードインさせ、
-  // 覆い終わったら下の層を捨てる
+  // CSS can't interpolate between gradient backgrounds, so the new background fades in as a
+  // layer on top, and the layers below are dropped once it fully covers them
   let nextLayerId = 1
   let layers = $state.raw<ReadonlyArray<Layer>>(
     untrack(() => [{ id: 0, key: transitionKey, background }]),
@@ -73,8 +73,9 @@
     animation: layer-in 320ms ease-out;
   }
 
-  /* overlay で重ねると白に近い背景ではほとんど変化せず、無彩色のライトテーマで粒が消える。
-     黒と白の粒を通常の合成で重ね、背景の明るさによらず同じくらい見えるようにする */
+  /* The overlay blend mode barely changes near-white backgrounds, so the grain vanishes on
+     neutral light themes. Black and white grains with normal blending stay about as visible on
+     any background */
   .grain {
     position: absolute;
     inset: 0;

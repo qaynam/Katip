@@ -81,7 +81,7 @@
     })
   }
 
-  // 中身は取得元が決めるので、ドロップは中へ入れずに前後への並べ替えだけを受け付ける
+  // The source decides the contents, so drops only reorder before or after and never go inside
   const onHeaderDragOver = (event: DragEvent & { currentTarget: HTMLElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const edge = edgeAt(event.clientY - bounds.top, bounds.height)
