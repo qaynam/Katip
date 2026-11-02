@@ -21,7 +21,13 @@
   import { appearanceOf, type ColorScheme } from "#modules/theme"
   import { Tabs } from "#platform/browser"
   import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
-  import { CATEGORIES, type Category, categoryLooks, categoryOfFragment } from "./categories"
+  import {
+    CATEGORIES,
+    type Category,
+    categoryLooks,
+    categoryOfFragment,
+    SETTINGS_THEME,
+  } from "./categories"
   import CategoryTabs from "./CategoryTabs.svelte"
   import { downloadExportFile } from "./data-export"
   import FrameBackdrop from "./FrameBackdrop.svelte"
@@ -105,7 +111,7 @@
     })),
   ])
 
-  const appearance = $derived(appearanceOf(categoryLooks[selected].theme, systemScheme))
+  const appearance = $derived(appearanceOf(SETTINGS_THEME, systemScheme))
 
   /** `null` when no key is assigned, `undefined` while the assigned keys aren't known. */
   const keyOf = (command: string): string | null | undefined =>
@@ -287,11 +293,7 @@
   style:--divider={appearance.divider}
   style:--accent={appearance.accent}
 >
-  <FrameBackdrop
-    background={appearance.background}
-    transitionKey={selected}
-    grainOpacity={appearance.grainOpacity}
-  />
+  <FrameBackdrop background={appearance.background} grainOpacity={appearance.grainOpacity} />
 
   <header class="side">
     <h1 id={titleId}>{t("options.title")}</h1>
@@ -341,7 +343,7 @@
               {/snippet}
             </SettingRow>
             {#if repositoryUrl !== null}
-              <SettingRow label={t("options.sourceCode.label")} labelsControl={false}>
+              <SettingRow label={t("options.github.label")} labelsControl={false}>
                 {#snippet children(control)}
                   <a
                     {...control}

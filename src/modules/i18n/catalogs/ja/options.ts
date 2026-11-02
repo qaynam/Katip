@@ -13,7 +13,7 @@ export const options: CatalogSection<"options"> = {
   "options.language.footnote": "自動にすると、ブラウザの言語に合わせます。",
   "options.about.heading": "Katip について",
   "options.version.label": "バージョン",
-  "options.sourceCode.label": "ソースコード",
+  "options.github.label": "GitHub",
 
   "options.tabs.heading": "タブ",
   "options.newTabsOnTop.label": "新しいタブを一番上に表示",

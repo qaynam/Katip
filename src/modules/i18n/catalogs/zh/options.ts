@@ -13,7 +13,7 @@ export const options: CatalogSection<"options"> = {
   "options.language.footnote": "选择“自动”时，将跟随浏览器的语言。",
   "options.about.heading": "关于 Katip",
   "options.version.label": "版本",
-  "options.sourceCode.label": "源代码",
+  "options.github.label": "GitHub",
 
   "options.tabs.heading": "标签页",
   "options.newTabsOnTop.label": "在顶部显示新标签页",

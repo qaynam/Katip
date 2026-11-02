@@ -13,7 +13,7 @@ export const options = {
   "options.language.footnote": "Automatic matches your browser’s language.",
   "options.about.heading": "About Katip",
   "options.version.label": "Version",
-  "options.sourceCode.label": "Source code",
+  "options.github.label": "GitHub",
 
   "options.tabs.heading": "Tabs",
   "options.newTabsOnTop.label": "Show new tabs at the top",

@@ -11,55 +11,53 @@ export interface CategoryLook {
   /** The URL fragment that opens the category, so a reload or a link lands on it. */
   readonly slug: string
   readonly icon: GlyphName
-  /** Each category tints the page like a Space, so switching categories reads like switching Spaces. */
-  readonly theme: SpaceTheme
 }
 
 const color = (hue: number, chroma: number): ThemeColor => ({ hue, chroma })
 
-// Weaker than a Space's default intensity: the page is read for longer than the side panel is
-// glanced at, and a strong tint behind the text would tire the eyes
-const settingsTheme = (colors: ReadonlyArray<ThemeColor>): SpaceTheme => ({
-  ...themeOf(colors),
+/**
+ * The one tint behind every category.
+ *
+ * @remarks
+ * Not a tint per category: recoloring the whole window on every click pulled the eye away from the
+ * settings. Weaker than a Space's default intensity, because the page is read for longer than the
+ * side panel is glanced at and a strong tint behind the text tires the eyes.
+ */
+export const SETTINGS_THEME: SpaceTheme = {
+  ...themeOf([color(90, 0.1), color(250, 0.15)]),
   intensity: 0.4,
-})
+}
 
 export const categoryLooks: Readonly<Record<Category, CategoryLook>> = {
   General: {
     heading: "options.general.heading",
     slug: "general",
     icon: "sliders",
-    theme: settingsTheme([color(90, 0.1), color(250, 0.15)]),
   },
   Tabs: {
     heading: "options.tabs.heading",
     slug: "tabs",
     icon: "tabs",
-    theme: settingsTheme([color(175, 0.5), color(220, 0.45)]),
   },
   Archive: {
     heading: "options.autoArchive.heading",
     slug: "archive",
     icon: "archive",
-    theme: settingsTheme([color(65, 0.5), color(95, 0.35)]),
   },
   Spotlight: {
     heading: "options.spotlight.heading",
     slug: "spotlight",
     icon: "search",
-    theme: settingsTheme([color(225, 0.5), color(275, 0.45)]),
   },
   Shortcuts: {
     heading: "options.shortcuts.heading",
     slug: "shortcuts",
     icon: "command",
-    theme: settingsTheme([color(260, 0.35), color(310, 0.35)]),
   },
   Data: {
     heading: "options.data.heading",
     slug: "data",
     icon: "export",
-    theme: settingsTheme([color(135, 0.45), color(175, 0.4)]),
   },
 }
 

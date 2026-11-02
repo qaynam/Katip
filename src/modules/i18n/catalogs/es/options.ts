@@ -14,7 +14,7 @@ export const options: CatalogSection<"options"> = {
   "options.language.footnote": "En automático, se usa el idioma del navegador.",
   "options.about.heading": "Acerca de Katip",
   "options.version.label": "Versión",
-  "options.sourceCode.label": "Código fuente",
+  "options.github.label": "GitHub",
 
   "options.tabs.heading": "Pestañas",
   "options.newTabsOnTop.label": "Mostrar las pestañas nuevas arriba",

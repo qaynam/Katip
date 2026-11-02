@@ -336,14 +336,28 @@ describe("display", () => {
     expect(screen.getByText(VERSION)).toBeTruthy()
   })
 
-  it("links to the source code repository, opening it in a new tab", async () => {
+  it("links to the repository on GitHub, opening it in a new tab", async () => {
     await renderLoaded()
 
     const link = screen.getByRole("link", { name: "git.example/katip" })
-    expect([link.getAttribute("href"), link.getAttribute("target")]).toStrictEqual([
-      REPOSITORY_URL,
-      "_blank",
-    ])
+    expect([
+      link.closest(".row")?.querySelector(".label")?.textContent,
+      link.getAttribute("href"),
+      link.getAttribute("target"),
+    ]).toStrictEqual(["GitHub", REPOSITORY_URL, "_blank"])
+  })
+
+  it("keeps the same backdrop tint whichever category is open", async () => {
+    await renderLoaded()
+    const tint = () =>
+      document
+        .querySelector<HTMLElement>(".backdrop")
+        ?.style.getPropertyValue("--backdrop-background")
+    const first = tint()
+
+    await fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement)
+
+    expect([first !== "", tint()]).toStrictEqual([true, first])
   })
 })
 
