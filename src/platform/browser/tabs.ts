@@ -137,7 +137,8 @@ export class Tabs extends Context.Service<
             active: options.active,
             pinned: options.pinned,
             openerTabId: options.openerTabId,
-            splitWithTabId: options.splitWithTabId,
+            // 分割ビューの無い Chrome は、値が undefined でもこの名前の項目があるだけで呼び出しを拒む
+            ...(options.splitWithTabId !== undefined && { splitWithTabId: options.splitWithTabId }),
           }),
         )
         return yield* requirePresent("tabs.create", "the tab has no id")(fromChromeTab(raw))
