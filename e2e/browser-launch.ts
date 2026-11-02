@@ -6,16 +6,23 @@ import { join } from "node:path"
 /**
  * Launches Chrome with only the extension in `extensionDir`, on a throwaway profile.
  * Uses the executable in `KATIP_E2E_CHROME` when set.
+ *
+ * @param args - More command line switches for Chrome.
  */
 export const launchWithExtension = async (
   extensionDir: string,
+  args: ReadonlyArray<string> = [],
 ): Promise<{ readonly context: BrowserContext; readonly close: () => Promise<void> }> => {
   const userDataDir = await mkdtemp(join(tmpdir(), "katip-e2e-"))
   const executablePath = process.env.KATIP_E2E_CHROME
   const context = await chromium.launchPersistentContext(userDataDir, {
     ...(executablePath === undefined ? {} : { executablePath }),
     headless: true,
-    args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
+    args: [
+      `--disable-extensions-except=${extensionDir}`,
+      `--load-extension=${extensionDir}`,
+      ...args,
+    ],
   })
   return {
     context,

@@ -5,6 +5,7 @@ import { actions } from "./zh/actions"
 import { sidepanel } from "./zh/sidepanel"
 import { spotlight } from "./zh/spotlight"
 import { background } from "./zh/background"
+import { manifest } from "./zh/manifest"
 
 export const zh: Catalog = {
   ...common,
@@ -13,4 +14,5 @@ export const zh: Catalog = {
   ...sidepanel,
   ...spotlight,
   ...background,
+  ...manifest,
 }

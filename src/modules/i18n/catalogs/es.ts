@@ -5,6 +5,7 @@ import { actions } from "./es/actions"
 import { sidepanel } from "./es/sidepanel"
 import { spotlight } from "./es/spotlight"
 import { background } from "./es/background"
+import { manifest } from "./es/manifest"
 
 export const es: Catalog = {
   ...common,
@@ -13,4 +14,5 @@ export const es: Catalog = {
   ...sidepanel,
   ...spotlight,
   ...background,
+  ...manifest,
 }
