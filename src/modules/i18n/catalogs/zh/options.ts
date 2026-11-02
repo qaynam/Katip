@@ -56,4 +56,5 @@ export const options: CatalogSection<"options"> = {
   "options.data.exportFailed": "无法导出数据。请稍候片刻，然后重试。",
 
   "options.version.label": "版本",
+  "options.sourceCode.label": "源代码",
 }

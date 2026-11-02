@@ -63,4 +63,5 @@ export const options: CatalogSection<"options"> = {
     "No se han podido exportar los datos. Espera un momento y vuelve a intentarlo.",
 
   "options.version.label": "Versión",
+  "options.sourceCode.label": "Código fuente",
 }

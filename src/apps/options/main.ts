@@ -9,6 +9,7 @@ mount(App, {
   props: {
     runtime: makeOptionsRuntime(),
     version: chrome.runtime.getManifest().version,
+    repositoryUrl: chrome.runtime.getManifest().homepage_url ?? null,
     browserLanguages: navigator.languages,
     keyboardPlatform: os === "mac" ? "mac" : "other",
   },

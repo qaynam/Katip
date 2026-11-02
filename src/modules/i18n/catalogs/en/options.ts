@@ -57,4 +57,5 @@ export const options = {
   "options.data.exportFailed": "Couldn’t export your data. Wait a moment, then try again.",
 
   "options.version.label": "Version",
+  "options.sourceCode.label": "Source code",
 } as const satisfies Readonly<Record<`options.${string}`, Message>>

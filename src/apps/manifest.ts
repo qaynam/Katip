@@ -9,6 +9,7 @@ export const buildManifest = (mode: BuildMode): chrome.runtime.ManifestV3 => ({
   name: mode === "development" ? "Katip (dev)" : "Katip",
   version: "0.1.0",
   description: "サイドパネルで Space ごとにタブを整理する",
+  homepage_url: "https://github.com/qaynam/Katip",
   minimum_chrome_version: "120",
   permissions: [
     "tabs",

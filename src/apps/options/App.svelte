@@ -41,11 +41,13 @@
   let {
     runtime,
     version,
+    repositoryUrl,
     browserLanguages,
     keyboardPlatform,
   }: {
     runtime: OptionsRuntime
     version: string
+    repositoryUrl: string | null
     /** `navigator.languages` と同じく、優先する順に並んだ BCP 47 の言語タグ。 */
     browserLanguages: ReadonlyArray<string>
     keyboardPlatform: KeyboardPlatform
@@ -447,6 +449,21 @@
             <span {...control} class="value">{version}</span>
           {/snippet}
         </SettingRow>
+        {#if repositoryUrl !== null}
+          <SettingRow label={t("options.sourceCode.label")} labelsControl={false}>
+            {#snippet children(control)}
+              <a
+                {...control}
+                class="value link"
+                href={repositoryUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {repositoryUrl.replace(/^https?:\/\//, "")}
+              </a>
+            {/snippet}
+          </SettingRow>
+        {/if}
       </SettingsSection>
     {:else if loadFailed}
       <p class="load-problem" role="alert">{t("options.loadFailed")}</p>
@@ -538,6 +555,17 @@
     font-variant-numeric: tabular-nums;
     text-align: end;
     user-select: text;
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-color: var(--divider);
+    text-underline-offset: 3px;
+  }
+
+  .link:hover {
+    color: var(--text);
+    text-decoration-color: currentColor;
   }
 
   .keys {

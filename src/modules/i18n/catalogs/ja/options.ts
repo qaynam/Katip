@@ -58,4 +58,5 @@ export const options: CatalogSection<"options"> = {
   "options.data.exportFailed": "書き出せませんでした。少し待ってから、もう一度お試しください。",
 
   "options.version.label": "バージョン",
+  "options.sourceCode.label": "ソースコード",
 }

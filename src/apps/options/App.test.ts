@@ -12,6 +12,7 @@ import { FakeFileDownloads } from "./testing/fake-file-downloads"
 import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 
 const VERSION = "1.2.3"
+const REPOSITORY_URL = "https://git.example/katip"
 
 const runtimes: Array<{ dispose: () => Promise<void> }> = []
 
@@ -103,7 +104,15 @@ const renderOptions = async ({
   const update = (patch: SettingsPatch) =>
     runtime.runPromise(SettingsRepository.use((repository) => repository.update(patch)))
   if (runtimeOptions.rejectedStorageOperation === undefined) await update(saved)
-  render(App, { props: { runtime, version: VERSION, browserLanguages, keyboardPlatform } })
+  render(App, {
+    props: {
+      runtime,
+      version: VERSION,
+      repositoryUrl: REPOSITORY_URL,
+      browserLanguages,
+      keyboardPlatform,
+    },
+  })
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
     saveElsewhere: update,
@@ -172,6 +181,16 @@ describe("表示", () => {
     await renderLoaded()
 
     expect(screen.getByText(VERSION)).toBeTruthy()
+  })
+
+  it("ソースコードのリポジトリを、新しいタブで開けるリンクで示す", async () => {
+    await renderLoaded()
+
+    const link = screen.getByRole("link", { name: "git.example/katip" })
+    expect([link.getAttribute("href"), link.getAttribute("target")]).toStrictEqual([
+      REPOSITORY_URL,
+      "_blank",
+    ])
   })
 })
 
