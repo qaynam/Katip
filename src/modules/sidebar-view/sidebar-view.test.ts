@@ -252,7 +252,7 @@ describe("ピン留め", () => {
     expect([item.title, item.openTab?.hasNavigatedAway]).toStrictEqual(["メール", false])
   })
 
-  it("ピンから別のページへ移動していたら、ページのタイトルで表示して移動済みと示す", () => {
+  it("ピンから別のページへ移動しても名前はピンのままで、移動済みと今のページのタイトルを示す", () => {
     const view = project({
       workspace: boundWorkspace,
       windowTabs: [
@@ -265,7 +265,11 @@ describe("ピン留め", () => {
     })
     const item = pinnedNodesOf(view)[0] as PinnedItemView
 
-    expect([item.title, item.openTab?.hasNavigatedAway]).toStrictEqual(["設定", true])
+    expect([item.title, item.openTab?.hasNavigatedAway, item.openTab?.tab.title]).toStrictEqual([
+      "メール",
+      true,
+      "設定",
+    ])
   })
 
   it("バインド先のブックマークが無くなったタブは一時タブとして表示する", () => {

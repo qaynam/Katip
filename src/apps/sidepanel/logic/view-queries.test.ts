@@ -62,14 +62,18 @@ describe("pinnedItemDisplay", () => {
     expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "AtPinnedUrl", title: "議事録" })
   })
 
-  it("別のページへ移ったら、実際のページの名前で表示する", () => {
+  it("別のページへ移ってもピンの名前で表示し、今のページの名前も添える", () => {
     const tab = tabView(1, { title: "検索結果" })
     const item = pinnedItem("a", {
       title: "議事録",
       openTab: openPinnedTab(tab, { hasNavigatedAway: true }),
     })
 
-    expect(pinnedItemDisplay(item)).toStrictEqual({ _tag: "NavigatedAway", title: "検索結果" })
+    expect(pinnedItemDisplay(item)).toStrictEqual({
+      _tag: "NavigatedAway",
+      title: "議事録",
+      pageTitle: "検索結果",
+    })
   })
 })
 

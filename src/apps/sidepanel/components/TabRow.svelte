@@ -22,6 +22,8 @@
     isDiscarded?: boolean
     /** 指定すると favicon が「ピンした URL に戻る」ボタンになり、タイトルの前に「/」が付く */
     onReturnToPinnedUrl?: (() => void) | undefined
+    /** マウスを乗せたときに、名前の代わりに出す */
+    tooltipTitle?: string | undefined
     renameInitial: string
     onRename: (draft: string) => void
     onActivate: () => void
@@ -48,6 +50,7 @@
     isMuted = false,
     isDiscarded = false,
     onReturnToPinnedUrl,
+    tooltipTitle,
     renameInitial,
     onRename,
     onActivate,
@@ -124,7 +127,7 @@
   const scheduleTooltip = (event: PointerEvent) => {
     if (isEditing || ctx.drag.source !== null) return
     ctx.tooltip.schedule(
-      { title, hint: t("sidepanel.tab.renameHint") },
+      { title: tooltipTitle ?? title, hint: t("sidepanel.tab.renameHint") },
       { x: event.clientX, y: event.clientY },
     )
   }

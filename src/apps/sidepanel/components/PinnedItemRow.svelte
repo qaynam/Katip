@@ -76,6 +76,7 @@
   onReturnToPinnedUrl={display._tag === "NavigatedAway" && openTab !== null
     ? () => void ctx.run({ _tag: "ResetPinnedTab", tabId: openTab.tabId })
     : undefined}
+  tooltipTitle={display._tag === "NavigatedAway" ? display.pageTitle : undefined}
   renameInitial={item.title}
   onRename={rename}
   onActivate={activate}

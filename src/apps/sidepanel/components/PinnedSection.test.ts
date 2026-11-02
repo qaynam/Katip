@@ -235,7 +235,7 @@ describe("開いているピン", () => {
         }),
       ),
     )
-    const row = screen.getByRole("button", { name: "検索結果" }).closest("li") as HTMLElement
+    const row = screen.getByRole("button", { name: "ドキュメント" }).closest("li") as HTMLElement
 
     await fireEvent.click(within(row).getByRole("button", { name: "ピンした URL に戻る" }))
 
@@ -243,6 +243,27 @@ describe("開いているピン", () => {
     expect(connection.sentCommands).toStrictEqual<ReadonlyArray<SidebarCommand>>([
       { _tag: "ResetPinnedTab", tabId: TabId.make(5) },
     ])
+  })
+
+  it("ピンした URL から移動しても行にはピンの名前を出し、マウスを乗せると今のページの名前を出す", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    const tab = tabView(5, { title: "検索結果" })
+    await renderSidebar(
+      viewWithPins(
+        pinnedItem("pin", {
+          title: "ドキュメント",
+          openTab: openPinnedTab(tab, { hasNavigatedAway: true }),
+        }),
+      ),
+    )
+    const row = screen.getByRole("button", { name: "ドキュメント" }).closest("li") as HTMLElement
+
+    await fireEvent.pointerEnter(row, { clientX: 40, clientY: 60, pointerId: 1 })
+    vi.advanceTimersByTime(1_000)
+    await tick()
+    vi.useRealTimers()
+
+    expect(screen.getByRole("tooltip").textContent).toContain("検索結果")
   })
 
   it("ピンした URL にいる間は、元に戻すボタンを出さない", async () => {

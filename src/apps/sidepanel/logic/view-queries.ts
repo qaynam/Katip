@@ -43,22 +43,24 @@ export const hostOf = (url: string): Option.Option<string> =>
 export type PinnedItemDisplay =
   | { readonly _tag: "Closed"; readonly title: string }
   | { readonly _tag: "AtPinnedUrl"; readonly title: string }
-  | { readonly _tag: "NavigatedAway"; readonly title: string }
+  | { readonly _tag: "NavigatedAway"; readonly title: string; readonly pageTitle: string }
 
 const firstNonEmpty = (...candidates: ReadonlyArray<string>): string =>
   candidates.find((candidate) => candidate.trim() !== "") ?? ""
 
-// ピンした URL にいる間はピンに付けた名前を出し、別のページへ移ったら実際のページの名前を出す。
-// 移動先でもピンの名前のままだと、今どのページを見ているのか分からなくなるため
+// 別のページへ移っても、行にはピンの名前を出す。ページの名前に切り替えると、ピンの名前を変えても
+// 行が変わらない。別のページにいることは「ピンした URL に戻る」ボタンで分かるので、今のページの
+// 名前はマウスを乗せたときに出す
 export const pinnedItemDisplay = (item: PinnedItemView): PinnedItemDisplay => {
   const fallbackTitle = Option.getOrElse(hostOf(item.url), () => item.url)
   if (item.openTab === null) {
     return { _tag: "Closed", title: firstNonEmpty(item.title, fallbackTitle) }
   }
   const { tab, hasNavigatedAway } = item.openTab
+  const title = firstNonEmpty(item.title, tab.title, fallbackTitle)
   return hasNavigatedAway
-    ? { _tag: "NavigatedAway", title: firstNonEmpty(tab.title, tab.url) }
-    : { _tag: "AtPinnedUrl", title: firstNonEmpty(item.title, tab.title, fallbackTitle) }
+    ? { _tag: "NavigatedAway", title, pageTitle: firstNonEmpty(tab.title, tab.url) }
+    : { _tag: "AtPinnedUrl", title }
 }
 
 export const childPosition = (

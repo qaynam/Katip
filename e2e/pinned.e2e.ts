@@ -86,6 +86,29 @@ test("開いているピンの名前を変えると、行の名前が変わる",
   await expect(pinned.getByRole("button", { name: "Handbook" })).toBeVisible()
 })
 
+test("ピンした URL から別のページへ移ったピンも、名前を変えると行の名前が変わる", async ({
+  site,
+  sidebar,
+  background,
+}) => {
+  await seedPins(background, [{ title: "Docs", url: `${site}/docs` }])
+  const pinned = sidebar.getByRole("region", { name: "Pinned" })
+  await pinned.getByRole("button", { name: "Docs" }).click()
+  await expect(pinned.getByRole("button", { name: "Close Tab" })).toBeVisible()
+  await background.evaluate(async (site) => {
+    const tab = (await chrome.tabs.query({})).find(
+      (each) => (each.pendingUrl ?? each.url) === `${site}/docs`,
+    )
+    if (tab?.id === undefined) throw new Error("ピンのタブが開いていない")
+    await chrome.tabs.update(tab.id, { url: `${site}/elsewhere` })
+  }, site)
+  await expect(pinned.getByRole("button", { name: "Go back to the pinned URL" })).toBeVisible()
+
+  await renameRow(sidebar, pinned.getByRole("button", { name: "Docs" }), "Handbook")
+
+  await expect(pinned.getByRole("button", { name: "Handbook" })).toBeVisible()
+})
+
 test("別のピンや一時タブと同じ名前にも変えられる", async ({ site, sidebar, background }) => {
   await seedPins(background, [
     { title: "One", url: `${site}/one` },

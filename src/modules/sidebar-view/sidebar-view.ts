@@ -167,18 +167,16 @@ const pinnedItemView = (
       url: bookmark.url,
       openTab: null,
     }),
-    onSome: ({ tab, tracked }) => {
-      const navigatedAway = hasNavigatedAway(tracked.pinned?.pinnedUrl ?? bookmark.url, urlOf(tab))
-      // 別ページへ移動した後もピンの名前を出し続けると、今どのページを見ているか分からなくなる
-      const title = navigatedAway ? pageTitleOf(tab, projection.untitledTab) : bookmark.title
-      return {
-        _tag: "PinnedItem",
-        bookmarkId: bookmark.id,
-        title,
-        url: bookmark.url,
-        openTab: { tab: tabView(tab, title), hasNavigatedAway: navigatedAway },
-      }
-    },
+    onSome: ({ tab, tracked }) => ({
+      _tag: "PinnedItem",
+      bookmarkId: bookmark.id,
+      title: bookmark.title,
+      url: bookmark.url,
+      openTab: {
+        tab: tabView(tab, pageTitleOf(tab, projection.untitledTab)),
+        hasNavigatedAway: hasNavigatedAway(tracked.pinned?.pinnedUrl ?? bookmark.url, urlOf(tab)),
+      },
+    }),
   })
 }
 
