@@ -312,7 +312,7 @@ const pinnedPosition = Effect.fnUntraced(function* (
   }
 })
 
-const currentNestingRule = Effect.map(
+export const currentNestingRule = Effect.map(
   SettingsRepository.use((settings) => settings.get),
   (settings): FolderNestingRule => ({ isTabGroupSyncEnabled: settings.syncTabGroups }),
 )
