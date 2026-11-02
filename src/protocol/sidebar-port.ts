@@ -9,11 +9,12 @@ export const RequestId = Schema.Int.pipe(Schema.brand("RequestId"))
 export type RequestId = typeof RequestId.Type
 
 export const ClientMessage = Schema.Union([
-  // null は「最後にフォーカスされた通常ウィンドウ」を表す。自分のウィンドウを持たない
-  // 開発用ページからも購読できるようにするため
+  // null stands for the last focused normal window, so that a development page without a window
+  // of its own can subscribe too
   Schema.TaggedStruct("Subscribe", { windowId: Schema.NullOr(WindowId) }),
   Schema.TaggedStruct("Run", { requestId: RequestId, command: SidebarCommand }),
-  // service worker はメッセージが途絶えると停止し、Port も切れる。開いている間は定期的に送る
+  // The service worker stops once messages stop coming, and the Port goes with it. Sent
+  // periodically while the page is open
   Schema.TaggedStruct("KeepAlive", {}),
 ])
 export type ClientMessage = typeof ClientMessage.Type

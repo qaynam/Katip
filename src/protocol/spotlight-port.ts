@@ -7,12 +7,12 @@ import { RequestId } from "./sidebar-port"
 
 export const SPOTLIGHT_PORT_NAME = "katip/spotlight"
 
-/** 拡張のルートから見た Spotlight のページの位置。 */
+/** The Spotlight page's path from the extension's root. */
 export const SPOTLIGHT_PAGE_PATH = "spotlight/index.html"
 
 const CALLER_WINDOW_PARAM = "windowId"
 
-/** `callerWindowId` のウィンドウから開いた Spotlight のページの URL。 */
+/** The URL of the Spotlight page opened from the window `callerWindowId`. */
 export const spotlightPageUrl = (extensionOrigin: string, callerWindowId: WindowId): string => {
   const url = new URL(SPOTLIGHT_PAGE_PATH, extensionOrigin)
   url.searchParams.set(CALLER_WINDOW_PARAM, String(callerWindowId))
@@ -23,7 +23,7 @@ const decodeWindowIdParam = Schema.decodeUnknownOption(
   Schema.FiniteFromString.pipe(Schema.decodeTo(WindowId)),
 )
 
-/** Spotlight のページの URL から、開いたウィンドウを読み取る。URL が壊れていれば None。 */
+/** The window that opened Spotlight, read from the page's URL. None when the URL is malformed. */
 export const callerWindowOfSpotlight = (pageUrl: string): Option.Option<WindowId> =>
   URL.canParse(pageUrl)
     ? decodeWindowIdParam(new URL(pageUrl).searchParams.get(CALLER_WINDOW_PARAM))
@@ -35,30 +35,31 @@ export const SpotlightResult = Schema.TaggedUnion({
     title: Schema.String,
     url: Schema.String,
     favIconUrl: Schema.NullOr(Schema.String),
-    // null はどの Space にも属さないタブ（Favorites もここに入る）
+    // null for a tab in no Space, Favorites included
     spaceName: Schema.NullOr(SpaceName),
     isFavorite: Schema.Boolean,
     isInOtherWindow: Schema.Boolean,
   },
-  // 閉じているピン。開いているピンは OpenTab として届く
+  // A closed pin. An open pin arrives as an OpenTab
   Pin: {
     bookmarkId: BookmarkId,
     title: Schema.String,
     url: Schema.String,
     spaceName: SpaceName,
-    // Space 直下からピンの親フォルダまでのフォルダ名
+    // Folder names from the top level of the Space down to the pin's parent folder
     folderPath: Schema.Array(Schema.String),
     isSplit: Schema.Boolean,
   },
   Space: { spaceId: SpaceId, name: SpaceName, theme: SpaceTheme, isActive: Schema.Boolean },
   Bookmark: { bookmarkId: BookmarkId, title: Schema.String, url: Schema.String },
-  // 閲覧履歴のページ。開いているタブ・ピン・ブックマークと同じ URL のものは除いてある
+  // A page from the browsing history, leaving out URLs already among the open tabs, pins and
+  // bookmarks
   History: { title: Schema.String, url: Schema.String, lastVisitedAt: Schema.Number },
   Action: {
     action: Action,
-    // 表示する言語に訳した名前
+    // The name, translated into the display language
     title: Schema.String,
-    // 割り当てられているキーの書き方（「⇧⌘C」など）。割り当てが無ければ null
+    // The assigned keys as written for display, such as "⇧⌘C". null when no key is assigned
     shortcut: Schema.NullOr(Schema.String),
   },
   OpenUrl: { url: Schema.String },
@@ -73,13 +74,13 @@ export const SpotlightOutcome = Schema.TaggedUnion({
 export type SpotlightOutcome = typeof SpotlightOutcome.Type
 
 /**
- * `All` はタブ・ピン・履歴・コマンドなどをまとめて探す。`Actions` はコマンドだけを探し、
- * 入力が空ならすべてのコマンドを並べる。
+ * `All` searches tabs, pins, history, commands and more together. `Actions` searches only
+ * commands, and lists every command when the query is empty.
  */
 export const SpotlightMode = Schema.Literals(["All", "Actions"])
 export type SpotlightMode = typeof SpotlightMode.Type
 
-// windowId は Spotlight を開いたウィンドウ。Spotlight 自身のウィンドウではない
+// windowId is the window that opened Spotlight, not Spotlight's own window
 export const SpotlightClientMessage = Schema.TaggedUnion({
   Search: {
     requestId: RequestId,
@@ -94,9 +95,10 @@ export type SpotlightClientMessage = typeof SpotlightClientMessage.Type
 export const SpotlightServerMessage = Schema.TaggedUnion({
   SearchResults: {
     requestId: RequestId,
-    // 上から表示する順
+    // In display order, top first
     results: Schema.Array(SpotlightResult),
-    // 開いたウィンドウのアクティブな Space のテーマ。Spotlight の背景をほのかに染める
+    // The theme of the active Space in the window that opened Spotlight, which faintly tints
+    // Spotlight's background
     spaceTheme: Schema.NullOr(SpaceTheme),
   },
   ChoiceSettled: { requestId: RequestId, outcome: SpotlightOutcome },

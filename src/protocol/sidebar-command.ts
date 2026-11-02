@@ -7,8 +7,8 @@ import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 
-// 一時タブの並びは表示順（新しいタブを上に出す設定なら逆順）で指定させる。
-// UI に Chrome のタブ index への換算を持ち込むと、表示設定との組み合わせで取り違えるため
+// In display order (reversed when new tabs show at the top), not Chrome's tab index: converting to
+// the index in the UI gets mixed up with that display setting
 export const TemporaryPlacement = Schema.Union([
   Schema.TaggedStruct("Above", { tabId: TabId }),
   Schema.TaggedStruct("Below", { tabId: TabId }),
@@ -19,9 +19,10 @@ export type TemporaryPlacement = typeof TemporaryPlacement.Type
 
 export const PinnedPlacement = Schema.Struct({
   spaceId: SpaceId,
-  // null は Space 直下を表す
+  // null is the top level of the Space
   parentId: Schema.NullOr(BookmarkId),
-  // 移動・作成した後に親の中で占める位置。同じ親の中で後ろへ動かすなら、自分が抜けた分を詰めて数える
+  // The position in the parent once moved or created. Moving later within the same parent counts
+  // as if the item had already been taken out
   index: Schema.Int,
 })
 export type PinnedPlacement = typeof PinnedPlacement.Type
@@ -41,7 +42,7 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("OpenNewTab", { windowId: WindowId }),
   Schema.TaggedStruct("ActivateTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTab", { tabId: TabId }),
-  // 空文字はタブ名の上書きを解除する
+  // An empty title clears the tab's custom name
   Schema.TaggedStruct("RenameTab", { tabId: TabId, title: Schema.String }),
   Schema.TaggedStruct("MoveTabToSpace", { tabId: TabId, spaceId: SpaceId }),
   Schema.TaggedStruct("PlaceTabInTemporary", {
@@ -53,7 +54,7 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("PinTab", { tabId: TabId }),
   Schema.TaggedStruct("UnpinTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTemporaryTabs", { windowId: WindowId, spaceId: SpaceId }),
-  // tabId のタブを withTabId のタブの右に並べて分割ビューにする
+  // Puts tabId to the right of withTabId in a split view
   Schema.TaggedStruct("SplitTabs", { tabId: TabId, withTabId: TabId }),
   Schema.TaggedStruct("Unsplit", { splitViewId: SplitViewId }),
   Schema.TaggedStruct("PlaceSplitInTemporary", {
@@ -80,7 +81,7 @@ export const SidebarCommand = Schema.Union([
     parentId: Schema.NullOr(BookmarkId),
   }),
   Schema.TaggedStruct("SetFolderExpanded", { bookmarkId: BookmarkId, isExpanded: Schema.Boolean }),
-  // null はフォルダの絵に戻す
+  // null goes back to the folder glyph
   Schema.TaggedStruct("SetFolderIcon", { bookmarkId: BookmarkId, icon: Schema.NullOr(FolderIcon) }),
   Schema.TaggedStruct("DeleteFolder", { bookmarkId: BookmarkId }),
 
@@ -89,7 +90,7 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("UpdateAutoArchive", { enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
   Schema.TaggedStruct("OpenSettings", {}),
 
-  // 結果の createdBookmarkId に、置き場所にしたブックマークのフォルダの ID が入る
+  // The outcome's createdBookmarkId is the ID of the bookmark folder that holds the live folder
   Schema.TaggedStruct("CreateLiveFolder", {
     spaceId: SpaceId,
     parentId: Schema.NullOr(BookmarkId),
@@ -103,10 +104,10 @@ export const SidebarCommand = Schema.Union([
   }),
   Schema.TaggedStruct("MarkLiveFolderSeen", { bookmarkId: BookmarkId }),
   Schema.TaggedStruct("SetLiveFolderSort", { bookmarkId: BookmarkId, sort: LiveSort }),
-  // 取得元のログインページなど、ピンでもライブの項目でもないページを、そのウィンドウの
-  // アクティブな Space の一時タブとして開く
+  // Opens a page that is neither a pin nor a live item, such as a source's sign-in page, as a
+  // temporary tab in the window's active Space
   Schema.TaggedStruct("OpenUrl", { windowId: WindowId, url: Schema.String }),
-  // 空文字はトークンを消す。トークンは background だけが持ち、ビューには載せない
+  // An empty token deletes it. Only the background holds the token; it never goes into the view
   Schema.TaggedStruct("SetGitHubToken", { token: Schema.String }),
 
   Schema.TaggedStruct("OpenSpotlight", { windowId: WindowId }),

@@ -17,14 +17,15 @@ export const TabView = Schema.Struct({
   isAudible: Schema.Boolean,
   isMuted: Schema.Boolean,
   isDiscarded: Schema.Boolean,
-  // Chrome の分割ビューで、別のタブと並べて表示しているときだけ値を持つ
+  // Set only while Chrome shows the tab beside another one in a split view
   splitViewId: Schema.NullOr(SplitViewId),
 })
 export type TabView = typeof TabView.Type
 
 export const OpenPinnedTab = Schema.Struct({
   tab: TabView,
-  // ピン留めした URL から別のページへ移動したかどうか。クエリやハッシュだけの違いは移動とみなさない
+  // Whether the tab has left the pinned URL for another page. A different query or hash alone
+  // doesn't count
   hasNavigatedAway: Schema.Boolean,
 })
 export type OpenPinnedTab = typeof OpenPinnedTab.Type
@@ -38,8 +39,8 @@ export const PinnedItemView = Schema.TaggedStruct("PinnedItem", {
 export type PinnedItemView = typeof PinnedItemView.Type
 
 /**
- * 分割ビューとしてピン留めした 2 つのタブ。ブックマークでは 2 つのブックマークを入れたフォルダとして
- * 保存し、開くと分割ビューで並べる。並びは左、右の順。
+ * Two tabs pinned as a split view. Stored as a bookmark folder holding two bookmarks, and opened
+ * side by side in a split view. Ordered left, then right.
  */
 export const PinnedSplitView = Schema.TaggedStruct("PinnedSplit", {
   bookmarkId: BookmarkId,
@@ -50,7 +51,7 @@ export type PinnedSplitView = typeof PinnedSplitView.Type
 
 export const LiveItemView = Schema.Struct({
   ...LiveItem.fields,
-  /** まだ開いていない（Gmail なら未読、GitHub なら前回見た後に更新された）もの。 */
+  /** Not opened yet: unread in Gmail, updated since last seen on GitHub. */
   isUnseen: Schema.Boolean,
 })
 export type LiveItemView = typeof LiveItemView.Type
@@ -60,19 +61,19 @@ export const LiveFolderStatus = Schema.TaggedUnion({
   Refreshing: {},
   Failed: {
     reason: Schema.String,
-    // 取得元へのアクセスがまだ許可されていない。UI から許可を求めれば直る
+    // Access to the source isn't granted yet. Asking for it from the UI fixes this
     needsPermission: Schema.Boolean,
-    // GitHub のトークンが無いか無効。UI からトークンを入れ直せば直る
+    // The GitHub token is missing or invalid. Entering a token again from the UI fixes this
     needsToken: Schema.Boolean,
-    // 取得元にログインしていない。このページを開いてログインすれば直る
+    // Not signed in to the source. Opening this page and signing in fixes this
     signInUrl: Schema.NullOr(Schema.String),
   },
 })
 export type LiveFolderStatus = typeof LiveFolderStatus.Type
 
 /**
- * 取得元から中身を自動で取り込むフォルダ。ブックマークのフォルダを置き場所と名前に使い、
- * 中身はブックマークではなく取得した項目を並べる。
+ * A folder that fills itself from a source. A bookmark folder gives it its place and name, and it
+ * lists the fetched items instead of bookmarks.
  */
 export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
   bookmarkId: BookmarkId,
@@ -81,7 +82,7 @@ export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
   isExpanded: Schema.Boolean,
   status: LiveFolderStatus,
   sort: LiveSort,
-  // sort の順に並べ済み
+  // Already in the order of sort
   items: Schema.Array(LiveItemView),
 })
 export type PinnedLiveFolderView = typeof PinnedLiveFolderView.Type
@@ -121,14 +122,14 @@ type PinnedNodeViewEncoded =
 export const PinnedFolderView = Schema.TaggedStruct("PinnedFolder", {
   bookmarkId: BookmarkId,
   title: Schema.String,
-  // null はアイコンを選んでいない。フォルダの絵で表示する
+  // null means no icon was chosen, and the folder glyph shows
   icon: Schema.NullOr(FolderIcon),
   isExpanded: Schema.Boolean,
   canCreateSubfolder: Schema.Boolean,
   children: Schema.Array(
     Schema.suspend((): Schema.Codec<PinnedNodeView, PinnedNodeViewEncoded> => PinnedNodeView),
   ),
-  // 閉じたフォルダの見出しの下に覗かせて表示するアイテム。分割ピンは 2 つそろえて 1 行で出す
+  // Items that peek out under a collapsed folder's heading. A split pin shows both tabs on one row
   peekedItems: Schema.Array(Schema.Union([PinnedItemView, PinnedSplitView])),
 })
 
@@ -139,7 +140,7 @@ export const PinnedNodeView = Schema.Union([
   PinnedFolderView,
 ])
 
-/** 一時タブの一覧の 1 行。分割ビューの 2 つのタブは 1 行にまとめ、左、右の順に並べる。 */
+/** One row of the temporary tabs. A split view's two tabs share one row, left then right. */
 export const TemporaryEntry = Schema.Union([
   Schema.TaggedStruct("TemporaryTab", { tab: TabView }),
   Schema.TaggedStruct("TemporarySplit", {
@@ -153,7 +154,7 @@ export const SpaceView = Schema.Struct({
   id: SpaceId,
   name: SpaceName,
   theme: SpaceTheme,
-  // ブックマークが読めない間は、ピン留めが空なのか未取得なのかを区別して表示する
+  // Unavailable while bookmarks can't be read, so that pins not read yet don't look like no pins
   pinned: Schema.Union([
     Schema.TaggedStruct("Available", {
       nodes: Schema.Array(PinnedNodeView),
@@ -181,7 +182,7 @@ export const SidebarView = Schema.Struct({
   favorites: Schema.Array(FavoriteView),
   archive: Schema.Array(ArchiveEntry),
   autoArchive: Schema.Struct({ enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
-  // Chrome 155 より前には分割ビューを作る API が無いので、分割の操作を出さない
+  // Chrome before 155 has no API to create split views, so the split actions are hidden
   canSplit: Schema.Boolean,
 })
 export type SidebarView = typeof SidebarView.Type

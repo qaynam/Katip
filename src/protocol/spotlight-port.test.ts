@@ -5,24 +5,24 @@ import { callerWindowOfSpotlight, SPOTLIGHT_PAGE_PATH, spotlightPageUrl } from "
 
 const ORIGIN = "chrome-extension://katip-test/"
 
-describe("Spotlight のページの URL", () => {
-  it("拡張の Spotlight のページを指す", () => {
+describe("the Spotlight page's URL", () => {
+  it("points to the extension's Spotlight page", () => {
     const url = spotlightPageUrl(ORIGIN, WindowId.make(7))
 
     expect(url.startsWith(`${ORIGIN}${SPOTLIGHT_PAGE_PATH}?`)).toBe(true)
   })
 
-  it("開いたウィンドウを読み戻せる", () => {
+  it("gives back the window that opened Spotlight", () => {
     const url = spotlightPageUrl(ORIGIN, WindowId.make(7))
 
     expect(callerWindowOfSpotlight(url)).toStrictEqual(Option.some(WindowId.make(7)))
   })
 
   it.each([
-    ["ウィンドウの指定が無い", `${ORIGIN}${SPOTLIGHT_PAGE_PATH}`],
-    ["ウィンドウの指定が数でない", `${ORIGIN}${SPOTLIGHT_PAGE_PATH}?windowId=abc`],
-    ["URL として読めない", "not a url"],
-  ])("%s URL からは、開いたウィンドウを読み取れない", (_, url) => {
+    ["names no window", `${ORIGIN}${SPOTLIGHT_PAGE_PATH}`],
+    ["names a window that isn't a number", `${ORIGIN}${SPOTLIGHT_PAGE_PATH}?windowId=abc`],
+    ["can't be parsed as a URL", "not a url"],
+  ])("gives back no window when it %s", (_, url) => {
     expect(callerWindowOfSpotlight(url)).toStrictEqual(Option.none())
   })
 })

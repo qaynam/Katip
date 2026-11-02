@@ -8,8 +8,8 @@ export const ExportClientMessage = Schema.TaggedUnion({
 export type ExportClientMessage = typeof ExportClientMessage.Type
 
 export const ExportServerMessage = Schema.TaggedUnion({
-  // 文書ではなくファイルの中身の文字列を送る。設定画面はファイルの形を知らずに、受け取ったまま
-  // 保存すればよい
+  // The file's text rather than a document, so the settings page saves it as received without
+  // knowing the file's format
   Exported: { content: Schema.String },
   Failed: {},
 })
