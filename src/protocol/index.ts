@@ -1,3 +1,4 @@
+export { EXPORT_PORT_NAME, ExportClientMessage, ExportServerMessage } from "./export-port"
 export {
   ENABLED_PAGE_SHORTCUTS_KEY,
   PAGE_SHORTCUT_PORT_NAME,

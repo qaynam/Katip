@@ -47,5 +47,13 @@ export const options: CatalogSection<"options"> = {
   "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
   "options.spotlight.history.denied": "未获得访问浏览历史记录的权限。",
 
+  "options.data.heading": "数据",
+  "options.data.export.label": "导出数据",
+  "options.data.export.button": "导出",
+  "options.data.export.footnote":
+    "将空间、已固定的标签页、打开的标签页、收藏和设置保存为 JSON 文件。不包含 GitHub 令牌和归档。",
+  "options.data.exported": "已导出",
+  "options.data.exportFailed": "无法导出数据。请稍候片刻，然后重试。",
+
   "options.version.label": "版本",
 }

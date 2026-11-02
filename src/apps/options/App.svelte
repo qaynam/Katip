@@ -26,6 +26,7 @@
   } from "#modules/settings"
   import { appearanceOf, type ColorScheme, neutralTheme } from "#modules/theme"
   import { Tabs } from "#platform/browser"
+  import { downloadExportFile } from "./data-export"
   import { OptionalPermissions } from "./optional-permissions"
   import type { OptionsRuntime } from "./options-runtime"
   import PopUpButton, { type PopUpOption } from "./PopUpButton.svelte"
@@ -51,7 +52,13 @@
   } = $props()
 
   type Outcome =
-    "Saved" | "SaveFailed" | "ShortcutsUnavailable" | "AllSitesDenied" | "HistoryDenied"
+    | "Saved"
+    | "SaveFailed"
+    | "ShortcutsUnavailable"
+    | "AllSitesDenied"
+    | "HistoryDenied"
+    | "Exported"
+    | "ExportFailed"
 
   const outcomeNotes = {
     Saved: { message: "options.saved", tone: "Done" },
@@ -59,6 +66,8 @@
     ShortcutsUnavailable: { message: "options.shortcuts.openFailed", tone: "Alert" },
     AllSitesDenied: { message: "options.pageShortcuts.denied", tone: "Info" },
     HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
+    Exported: { message: "options.data.exported", tone: "Done" },
+    ExportFailed: { message: "options.data.exportFailed", tone: "Alert" },
   } as const satisfies Record<Outcome, { message: MessageKey; tone: Note["tone"] }>
 
   const pageShortcutSettings = {
@@ -89,7 +98,8 @@
   let searchesHistory = $state<boolean | null>(null)
   let systemScheme = $state<ColorScheme>(currentSystemScheme())
   let outcome = $state<Outcome | null>(null)
-  let hideSavedTimer: ReturnType<typeof setTimeout> | undefined
+  let isExporting = $state(false)
+  let hideDoneNoteTimer: ReturnType<typeof setTimeout> | undefined
 
   const translator = $derived(
     makeTranslator(resolveLocale(settings?.locale ?? "auto", browserLanguages)),
@@ -173,15 +183,15 @@
     )
     return () => {
       cancel()
-      clearTimeout(hideSavedTimer)
+      clearTimeout(hideDoneNoteTimer)
     }
   })
 
   const announce = (next: Outcome) => {
-    clearTimeout(hideSavedTimer)
+    clearTimeout(hideDoneNoteTimer)
     outcome = next
-    if (next === "Saved") {
-      hideSavedTimer = setTimeout(() => (outcome = null), 2000)
+    if (outcomeNotes[next].tone === "Done") {
+      hideDoneNoteTimer = setTimeout(() => (outcome = null), 2000)
     }
   }
 
@@ -243,6 +253,13 @@
   const openShortcutSettings = async () => {
     const opened = await runtime.runPromiseExit(openChromeShortcutSettings)
     if (Exit.isFailure(opened)) announce("ShortcutsUnavailable")
+  }
+
+  const exportData = async () => {
+    isExporting = true
+    const exported = await runtime.runPromiseExit(downloadExportFile)
+    isExporting = false
+    announce(Exit.isSuccess(exported) ? "Exported" : "ExportFailed")
   }
 </script>
 
@@ -406,6 +423,19 @@
           {#snippet children(control)}
             <PushButton {...control} onclick={openShortcutSettings}>
               {t("options.shortcuts.open")}
+            </PushButton>
+          {/snippet}
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection
+        heading={t("options.data.heading")}
+        footnote={t("options.data.export.footnote")}
+      >
+        <SettingRow label={t("options.data.export.label")} labelsControl={false}>
+          {#snippet children(control)}
+            <PushButton {...control} disabled={isExporting} onclick={exportData}>
+              {t("options.data.export.button")}
             </PushButton>
           {/snippet}
         </SettingRow>

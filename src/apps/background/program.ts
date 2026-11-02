@@ -20,10 +20,16 @@ import { takeSnapshot } from "#modules/workspace"
 import { Array, Order } from "effect"
 import { BrowserEvents, Tabs, type BrowserEvent, type BrowserTab } from "#platform/browser"
 import { Permissions } from "#platform/permissions"
-import { PAGE_SHORTCUT_PORT_NAME, SIDEBAR_PORT_NAME, SPOTLIGHT_PORT_NAME } from "#protocol"
+import {
+  EXPORT_PORT_NAME,
+  PAGE_SHORTCUT_PORT_NAME,
+  SIDEBAR_PORT_NAME,
+  SPOTLIGHT_PORT_NAME,
+} from "#protocol"
 import { AUTO_ARCHIVE_ALARM, runAutoArchive, scheduleAutoArchive } from "./auto-archive"
 import { pruneStaleBindings } from "./bindings"
 import { handleBrowserEvent, isBookmarkEvent } from "./browser-event-handler"
+import { exportFileContent, serveDataExport } from "./data-export"
 import { makeDebounced } from "./debounced"
 import { AcceptsExternalConnection } from "./external-connection"
 import { ExtensionInfo } from "./extension-info"
@@ -229,7 +235,9 @@ export const program = Effect.gen(function* () {
               )
             : port.name === PAGE_SHORTCUT_PORT_NAME
               ? Effect.forkScoped(servePageShortcut(port))
-              : port.disconnect,
+              : port.name === EXPORT_PORT_NAME
+                ? Effect.forkScoped(serveDataExport(port, serialize(exportFileContent)))
+                : port.disconnect,
     ),
     Effect.forkScoped(),
   )

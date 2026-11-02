@@ -49,5 +49,13 @@ export const options: CatalogSection<"options"> = {
     "オンにすると、閲覧履歴を読む許可を求めます。オフにすると、その許可を外します。",
   "options.spotlight.history.denied": "閲覧履歴へのアクセスが許可されませんでした",
 
+  "options.data.heading": "データ",
+  "options.data.export.label": "データを書き出す",
+  "options.data.export.button": "書き出す",
+  "options.data.export.footnote":
+    "Space・ピン留め・開いているタブ・Favorites・設定を JSON ファイルに保存します。GitHub のトークンとアーカイブは含みません。",
+  "options.data.exported": "書き出しました",
+  "options.data.exportFailed": "書き出せませんでした。少し待ってから、もう一度お試しください。",
+
   "options.version.label": "バージョン",
 }

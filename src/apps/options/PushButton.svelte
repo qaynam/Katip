@@ -4,15 +4,17 @@
 
   let {
     onclick,
+    disabled = false,
     children,
     ...control
   }: RowControlAttributes & {
     onclick: () => void
+    disabled?: boolean
     children: Snippet
   } = $props()
 </script>
 
-<button {...control} type="button" {onclick}>{@render children()}</button>
+<button {...control} type="button" {disabled} {onclick}>{@render children()}</button>
 
 <style>
   button {
@@ -28,5 +30,10 @@
 
   button:active {
     opacity: 0.7;
+  }
+
+  button:disabled {
+    color: var(--text-muted);
+    opacity: 0.6;
   }
 </style>

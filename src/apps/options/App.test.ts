@@ -1,12 +1,14 @@
 import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte"
-import { Effect, Layer, ManagedRuntime, Option } from "effect"
+import { Effect, Layer, ManagedRuntime, Option, Queue, Schema, Stream } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import type { KeyboardPlatform } from "#modules/page-shortcuts"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
-import { BrowserApiError, Storage, type StorageArea } from "#platform/browser"
+import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
+import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
 import App from "./App.svelte"
+import { FakeFileDownloads } from "./testing/fake-file-downloads"
 import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 
 const VERSION = "1.2.3"
@@ -33,6 +35,30 @@ const storageRejecting = (operation: "get" | "set") =>
     }),
   )
 
+/** background の代わりに、書き出しの求めに返す答え。`Disconnect` は答えずに接続を切る。 */
+type ExportAnswer = ExportServerMessage | { readonly _tag: "Disconnect" }
+
+const encodeExportAnswer = Schema.encodeSync(ExportServerMessage)
+
+const exportServerAnswering = (answers: Queue.Queue<ExportAnswer>) =>
+  Layer.effectDiscard(
+    BrowserEvents.use((events) =>
+      events.connections.pipe(
+        Stream.filter((port) => port.name === EXPORT_PORT_NAME),
+        Stream.runForEach((port) =>
+          Effect.gen(function* () {
+            yield* Stream.runHead(port.messages)
+            const answer = yield* Queue.take(answers)
+            yield* answer._tag === "Disconnect"
+              ? port.disconnect
+              : Effect.ignore(port.post(encodeExportAnswer(answer)))
+          }),
+        ),
+        Effect.forkScoped,
+      ),
+    ),
+  )
+
 interface RenderOptions {
   readonly saved?: SettingsPatch
   readonly browserLanguages?: ReadonlyArray<string>
@@ -41,10 +67,13 @@ interface RenderOptions {
   readonly keyboardPlatform?: KeyboardPlatform
 }
 
-const makeRuntime = ({
-  rejectedStorageOperation,
-  supportsSplitView = true,
-}: Pick<RenderOptions, "rejectedStorageOperation" | "supportsSplitView">) => {
+const makeRuntime = (
+  {
+    rejectedStorageOperation,
+    supportsSplitView = true,
+  }: Pick<RenderOptions, "rejectedStorageOperation" | "supportsSplitView">,
+  exportAnswers: Queue.Queue<ExportAnswer>,
+) => {
   const browser = FakeBrowser.layerWith({ supportsSplitView })
   const storage =
     rejectedStorageOperation === undefined
@@ -55,6 +84,8 @@ const makeRuntime = ({
       SettingsRepository.layer.pipe(Layer.provide(storage)),
       browser,
       FakeOptionalPermissions.layer,
+      FakeFileDownloads.layer,
+      exportServerAnswering(exportAnswers).pipe(Layer.provide(browser)),
     ),
   )
   runtimes.push(runtime)
@@ -67,7 +98,8 @@ const renderOptions = async ({
   keyboardPlatform = "mac",
   ...runtimeOptions
 }: RenderOptions = {}) => {
-  const runtime = makeRuntime(runtimeOptions)
+  const exportAnswers = Effect.runSync(Queue.unbounded<ExportAnswer>())
+  const runtime = makeRuntime(runtimeOptions, exportAnswers)
   const update = (patch: SettingsPatch) =>
     runtime.runPromise(SettingsRepository.use((repository) => repository.update(patch)))
   if (runtimeOptions.rejectedStorageOperation === undefined) await update(saved)
@@ -80,6 +112,8 @@ const renderOptions = async ({
     permissions: <A>(
       use: (permissions: FakeOptionalPermissions["Service"]) => Effect.Effect<A, unknown>,
     ) => runtime.runPromise(FakeOptionalPermissions.use(use)),
+    answerExport: (answer: ExportAnswer) => Effect.runSync(Queue.offer(exportAnswers, answer)),
+    downloaded: () => runtime.runPromise(FakeFileDownloads.use((downloads) => downloads.saved)),
   }
 }
 
@@ -506,5 +540,68 @@ describe("キーボードショートカット", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Chrome で変更" }))
 
     expect(await screen.findByText("Chrome のショートカット設定を開けませんでした。")).toBeTruthy()
+  })
+})
+
+describe("データの書き出し", () => {
+  const exportButton = () => screen.getByRole<HTMLButtonElement>("button", { name: "書き出す" })
+  const content = '{"format":"katip.export","version":1}'
+  const failureNote = "書き出せませんでした。少し待ってから、もう一度お試しください。"
+
+  it("書き出すと、background から届いた中身を、日付入りの名前の JSON ファイルとしてダウンロードさせる", async () => {
+    const { answerExport, downloaded } = await renderLoaded()
+    answerExport({ _tag: "Exported", content })
+
+    await fireEvent.click(exportButton())
+
+    await waitFor(async () => {
+      expect(await downloaded()).toStrictEqual([
+        {
+          name: expect.stringMatching(/^katip-export-\d{4}-\d{2}-\d{2}\.json$/),
+          type: "application/json",
+          content,
+        },
+      ])
+    })
+  })
+
+  it("書き出すと「書き出しました」と知らせる", async () => {
+    const { answerExport } = await renderLoaded()
+    answerExport({ _tag: "Exported", content })
+
+    await fireEvent.click(exportButton())
+
+    expect(await screen.findByText("書き出しました")).toBeTruthy()
+  })
+
+  it("background が書き出せなかったと返すと、ダウンロードさせずに失敗を知らせる", async () => {
+    const { answerExport, downloaded } = await renderLoaded()
+    answerExport({ _tag: "Failed" })
+
+    await fireEvent.click(exportButton())
+
+    expect(await screen.findByText(failureNote)).toBeTruthy()
+    expect(await downloaded()).toStrictEqual([])
+  })
+
+  it("返事の前に background との接続が切れると、ダウンロードさせずに失敗を知らせる", async () => {
+    const { answerExport, downloaded } = await renderLoaded()
+    answerExport({ _tag: "Disconnect" })
+
+    await fireEvent.click(exportButton())
+
+    expect(await screen.findByText(failureNote)).toBeTruthy()
+    expect(await downloaded()).toStrictEqual([])
+  })
+
+  it("書き出している間はボタンを押せず、書き出し終えると押せるようになる", async () => {
+    const { answerExport } = await renderLoaded()
+
+    await fireEvent.click(exportButton())
+    const disabledWhileExporting = exportButton().disabled
+    answerExport({ _tag: "Exported", content })
+    await screen.findByText("書き出しました")
+
+    expect([disabledWhileExporting, exportButton().disabled]).toStrictEqual([true, false])
   })
 })

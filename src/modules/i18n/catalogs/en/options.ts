@@ -48,5 +48,13 @@ export const options = {
     "Turning this on asks for permission to read your browsing history. Turning it off removes the permission.",
   "options.spotlight.history.denied": "Access to browsing history wasn’t allowed.",
 
+  "options.data.heading": "Data",
+  "options.data.export.label": "Export your data",
+  "options.data.export.button": "Export",
+  "options.data.export.footnote":
+    "Saves your Spaces, pinned tabs, open tabs, Favorites, and settings as a JSON file. Your GitHub token and archived tabs aren’t included.",
+  "options.data.exported": "Exported",
+  "options.data.exportFailed": "Couldn’t export your data. Wait a moment, then try again.",
+
   "options.version.label": "Version",
 } as const satisfies Readonly<Record<`options.${string}`, Message>>

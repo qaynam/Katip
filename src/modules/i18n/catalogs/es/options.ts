@@ -53,5 +53,14 @@ export const options: CatalogSection<"options"> = {
     "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",
   "options.spotlight.history.denied": "No se permitió el acceso al historial de navegación.",
 
+  "options.data.heading": "Datos",
+  "options.data.export.label": "Exportar tus datos",
+  "options.data.export.button": "Exportar",
+  "options.data.export.footnote":
+    "Guarda tus espacios, pestañas fijadas, pestañas abiertas, Favoritos y ajustes en un archivo JSON. No incluye el token de GitHub ni las pestañas archivadas.",
+  "options.data.exported": "Exportado",
+  "options.data.exportFailed":
+    "No se han podido exportar los datos. Espera un momento y vuelve a intentarlo.",
+
   "options.version.label": "Versión",
 }
