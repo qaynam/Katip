@@ -64,4 +64,70 @@ export const options: CatalogSection<"options"> = {
     "将空间、已固定的标签页、打开的标签页、收藏和设置保存为 JSON 文件。不包含 GitHub 令牌和归档。",
   "options.data.exported": "已导出",
   "options.data.exportFailed": "无法导出数据。请稍候片刻，然后重试。",
+
+  "options.data.import.heading": "导入",
+  "options.data.import.arc.label": "从 Arc 导入",
+  "options.data.import.arc.description":
+    "添加你在 Arc 中的空间及其中已固定的标签页、文件夹和分屏视图，以及收藏。",
+  "options.data.import.arc.file": "Arc 的侧边栏文件",
+  "options.data.import.katip.label": "导入 Katip 文件",
+  "options.data.import.katip.description": "添加从 Katip 导出的文件中的空间、固定标签页和收藏。",
+  "options.data.import.katip.file": "Katip 导出文件",
+  "options.data.import.choose": "选择文件…",
+  "options.data.import.footnote":
+    "文件只在本设备上读取，不会离开你的浏览器。导入的空间会添加在现有空间之后，现有的内容不会被更改或删除。",
+  "options.data.import.arcLocation.heading": "Arc 文件的位置",
+  "options.data.import.arcLocation.mac": "macOS",
+  "options.data.import.arcLocation.macTip": "在文件对话框中按 ⌘⇧G，然后粘贴此路径。",
+  "options.data.import.arcLocation.windows": "Windows",
+  "options.data.import.arcLocation.windowsTip":
+    "位于 Packages 下名称以 TheBrowserCompany.Arc_ 开头的文件夹中。",
+  "options.data.import.preview.arcHeading": "将从 Arc 导入",
+  "options.data.import.preview.katipHeading": "将从 Katip 文件导入",
+  "options.data.import.preview.added": "将添加",
+  "options.data.import.preview.adjusted": "为适应 Katip 而调整",
+  "options.data.import.preview.leftOut": "不导入",
+  "options.data.import.preview.spaces": { other: "{count} 个空间" },
+  "options.data.import.preview.pins": { other: "{count} 个固定标签页" },
+  "options.data.import.preview.folders": { other: "{count} 个文件夹" },
+  "options.data.import.preview.splits": { other: "{count} 个分屏视图" },
+  "options.data.import.preview.liveFolders": { other: "{count} 个实时文件夹" },
+  "options.data.import.preview.favorites": { other: "{count} 个收藏" },
+  "options.data.import.preview.flattenedFolders": {
+    other: "{count} 个文件夹的嵌套层级超过 Katip 允许的深度，其中的内容将放入上一级文件夹。",
+  },
+  "options.data.import.preview.widerSplits": {
+    other:
+      "{count} 个分屏视图包含两个以上的标签页。每个分屏视图的前两个标签页保持分屏，其余的成为紧随其后的固定标签页。",
+  },
+  "options.data.import.preview.temporaryTabs": {
+    other: "{count} 个未固定的标签页（未固定的标签页是临时的）",
+  },
+  "options.data.import.preview.favoritesAlreadyOpen": {
+    other: "{count} 个已在此窗口中打开的收藏",
+  },
+  "options.data.import.preview.nonWebLinks": {
+    other: "{count} 个不是网页的标签页（只导入 http 和 https 地址）",
+  },
+  "options.data.import.preview.unsupportedItems": {
+    other: "{count} 个 Katip 中没有对应功能的项目，例如笔记和画板",
+  },
+  "options.data.import.preview.settings": "文件中的设置。你的设置保持不变。",
+  "options.data.import.preview.nothing": "此文件中没有可导入的内容。",
+  "options.data.import.openFavorites.label": "将收藏作为固定标签页打开",
+  "options.data.import.openFavorites.description": "它们会在此窗口中现有的收藏之后打开。",
+  "options.data.import.confirm": "导入",
+  "options.data.import.cancel": "取消",
+  "options.data.import.problem.notArc": "这不是 Arc 的侧边栏文件。请选择 StorableSidebar.json。",
+  "options.data.import.problem.katipFileChosen":
+    "这是从 Katip 导出的文件。请改用“导入 Katip 文件”。",
+  "options.data.import.problem.notKatip": "这不是从 Katip 导出的文件。",
+  "options.data.import.problem.arcFileChosen": "这是 Arc 的侧边栏文件。请改用“从 Arc 导入”。",
+  "options.data.import.problem.newerVersion":
+    "此文件由更新版本的 Katip 导出。请更新 Katip，然后重试。",
+  "options.data.import.problem.malformed": "此 Katip 文件已损坏，无法读取。",
+  "options.data.import.problem.unreadable": "无法读取文件。",
+  "options.data.import.problem.unavailable": "无法准备导入。请稍候片刻，然后重试。",
+  "options.data.imported": "已导入",
+  "options.data.importFailed": "导入未能完成。停止前已添加的空间会保留。",
 }

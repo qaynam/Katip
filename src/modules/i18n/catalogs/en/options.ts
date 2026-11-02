@@ -65,4 +65,89 @@ export const options = {
     "Saves your Spaces, pinned tabs, open tabs, Favorites, and settings as a JSON file. Your GitHub token and archived tabs aren’t included.",
   "options.data.exported": "Exported",
   "options.data.exportFailed": "Couldn’t export your data. Wait a moment, then try again.",
+
+  "options.data.import.heading": "Import",
+  "options.data.import.arc.label": "Import from Arc",
+  "options.data.import.arc.description":
+    "Adds your Arc Spaces with their pinned tabs, folders, and split views, and your Favorites.",
+  "options.data.import.arc.file": "Arc’s sidebar file",
+  "options.data.import.katip.label": "Import a Katip file",
+  "options.data.import.katip.description":
+    "Adds the Spaces, pinned tabs, and Favorites from a file exported from Katip.",
+  "options.data.import.katip.file": "Katip export file",
+  "options.data.import.choose": "Choose File…",
+  "options.data.import.footnote":
+    "The file is read on this device and never leaves your browser. Imported Spaces are added after yours, and nothing you have now is changed or removed.",
+  "options.data.import.arcLocation.heading": "Where to find Arc’s file",
+  "options.data.import.arcLocation.mac": "macOS",
+  "options.data.import.arcLocation.macTip": "In the file dialog, press ⌘⇧G and paste this path.",
+  "options.data.import.arcLocation.windows": "Windows",
+  "options.data.import.arcLocation.windowsTip":
+    "In the folder under Packages whose name starts with TheBrowserCompany.Arc_.",
+  "options.data.import.preview.arcHeading": "Ready to import from Arc",
+  "options.data.import.preview.katipHeading": "Ready to import a Katip file",
+  "options.data.import.preview.added": "To be added",
+  "options.data.import.preview.adjusted": "Changed to fit Katip",
+  "options.data.import.preview.leftOut": "Not imported",
+  "options.data.import.preview.spaces": { one: "{count} Space", other: "{count} Spaces" },
+  "options.data.import.preview.pins": { one: "{count} pinned tab", other: "{count} pinned tabs" },
+  "options.data.import.preview.folders": { one: "{count} folder", other: "{count} folders" },
+  "options.data.import.preview.splits": {
+    one: "{count} split view",
+    other: "{count} split views",
+  },
+  "options.data.import.preview.liveFolders": {
+    one: "{count} live folder",
+    other: "{count} live folders",
+  },
+  "options.data.import.preview.favorites": { one: "{count} Favorite", other: "{count} Favorites" },
+  "options.data.import.preview.flattenedFolders": {
+    one: "{count} folder is nested deeper than Katip allows, so its contents go into the folder above it.",
+    other:
+      "{count} folders are nested deeper than Katip allows, so their contents go into the folder above them.",
+  },
+  "options.data.import.preview.widerSplits": {
+    one: "{count} split view has more than two tabs. The first two stay split, and the rest become pinned tabs right after them.",
+    other:
+      "{count} split views have more than two tabs. In each, the first two stay split, and the rest become pinned tabs right after them.",
+  },
+  "options.data.import.preview.temporaryTabs": {
+    one: "{count} unpinned tab, as unpinned tabs are temporary",
+    other: "{count} unpinned tabs, as unpinned tabs are temporary",
+  },
+  "options.data.import.preview.favoritesAlreadyOpen": {
+    one: "{count} Favorite already open in this window",
+    other: "{count} Favorites already open in this window",
+  },
+  "options.data.import.preview.nonWebLinks": {
+    one: "{count} tab that isn’t a web page, as only http and https addresses are imported",
+    other: "{count} tabs that aren’t web pages, as only http and https addresses are imported",
+  },
+  "options.data.import.preview.unsupportedItems": {
+    one: "{count} item Katip has nothing like, such as a note or an easel",
+    other: "{count} items Katip has nothing like, such as notes and easels",
+  },
+  "options.data.import.preview.settings": "The file’s settings. Yours stay as they are.",
+  "options.data.import.preview.nothing": "There’s nothing in this file to import.",
+  "options.data.import.openFavorites.label": "Open Favorites as pinned tabs",
+  "options.data.import.openFavorites.description":
+    "They open in this window, after the Favorites you have.",
+  "options.data.import.confirm": "Import",
+  "options.data.import.cancel": "Cancel",
+  "options.data.import.problem.notArc":
+    "This isn’t Arc’s sidebar file. Choose StorableSidebar.json.",
+  "options.data.import.problem.katipFileChosen":
+    "This is a file exported from Katip. Use Import a Katip file instead.",
+  "options.data.import.problem.notKatip": "This isn’t a file exported from Katip.",
+  "options.data.import.problem.arcFileChosen":
+    "This is Arc’s sidebar file. Use Import from Arc instead.",
+  "options.data.import.problem.newerVersion":
+    "This file was exported from a newer version of Katip. Update Katip, then try again.",
+  "options.data.import.problem.malformed": "This Katip file is damaged and can’t be read.",
+  "options.data.import.problem.unreadable": "Couldn’t read the file.",
+  "options.data.import.problem.unavailable":
+    "Couldn’t prepare the import. Wait a moment, then try again.",
+  "options.data.imported": "Imported",
+  "options.data.importFailed":
+    "Couldn’t finish the import. Any Spaces added before it stopped are kept.",
 } as const satisfies Readonly<Record<`options.${string}`, Message>>

@@ -65,4 +65,78 @@ export const options: CatalogSection<"options"> = {
     "Space・ピン留め・開いているタブ・Favorites・設定を JSON ファイルに保存します。GitHub のトークンとアーカイブは含みません。",
   "options.data.exported": "書き出しました",
   "options.data.exportFailed": "書き出せませんでした。少し待ってから、もう一度お試しください。",
+
+  "options.data.import.heading": "読み込み",
+  "options.data.import.arc.label": "Arc から読み込む",
+  "options.data.import.arc.description":
+    "Arc の Space と、そのピン留めタブ・フォルダ・分割ビュー、Favorites を追加します。",
+  "options.data.import.arc.file": "Arc のサイドバーのファイル",
+  "options.data.import.katip.label": "Katip のファイルを読み込む",
+  "options.data.import.katip.description":
+    "Katip から書き出したファイルの Space・ピン留め・Favorites を追加します。",
+  "options.data.import.katip.file": "Katip の書き出しファイル",
+  "options.data.import.choose": "ファイルを選択…",
+  "options.data.import.footnote":
+    "ファイルはこの端末の中で読み、ブラウザの外へは送りません。読み込んだ Space は今ある Space の後ろに追加し、今あるものは変更も削除もしません。",
+  "options.data.import.arcLocation.heading": "Arc のファイルの場所",
+  "options.data.import.arcLocation.mac": "macOS",
+  "options.data.import.arcLocation.macTip":
+    "ファイルを選ぶ画面で ⌘⇧G を押し、このパスを貼り付けます。",
+  "options.data.import.arcLocation.windows": "Windows",
+  "options.data.import.arcLocation.windowsTip":
+    "Packages の下の、名前が TheBrowserCompany.Arc_ で始まるフォルダの中にあります。",
+  "options.data.import.preview.arcHeading": "Arc から読み込む内容",
+  "options.data.import.preview.katipHeading": "Katip のファイルから読み込む内容",
+  "options.data.import.preview.added": "追加するもの",
+  "options.data.import.preview.adjusted": "Katip に合わせて変えるもの",
+  "options.data.import.preview.leftOut": "読み込まないもの",
+  "options.data.import.preview.spaces": { other: "{count} 個の Space" },
+  "options.data.import.preview.pins": { other: "{count} 個のピン留めタブ" },
+  "options.data.import.preview.folders": { other: "{count} 個のフォルダ" },
+  "options.data.import.preview.splits": { other: "{count} 個の分割ビュー" },
+  "options.data.import.preview.liveFolders": { other: "{count} 個のライブフォルダ" },
+  "options.data.import.preview.favorites": { other: "{count} 個の Favorites" },
+  "options.data.import.preview.flattenedFolders": {
+    other:
+      "{count} 個のフォルダは Katip で作れる深さを超えているため、中身を 1 つ上のフォルダに入れます。",
+  },
+  "options.data.import.preview.widerSplits": {
+    other:
+      "{count} 個の分割ビューには 3 つ以上のタブがあります。それぞれ最初の 2 つを分割ビューのままにし、残りはその直後のピン留めタブにします。",
+  },
+  "options.data.import.preview.temporaryTabs": {
+    other: "ピン留めしていない {count} 個のタブ（一時的なタブのため）",
+  },
+  "options.data.import.preview.favoritesAlreadyOpen": {
+    other: "このウィンドウで開いている {count} 個の Favorites",
+  },
+  "options.data.import.preview.nonWebLinks": {
+    other: "Web ページではない {count} 個のタブ（http と https のアドレスだけを読み込むため）",
+  },
+  "options.data.import.preview.unsupportedItems": {
+    other: "Katip に相当するものが無い {count} 個の項目（ノートやイーゼルなど）",
+  },
+  "options.data.import.preview.settings": "ファイルの設定。今の設定はそのままです。",
+  "options.data.import.preview.nothing": "このファイルには読み込めるものがありません。",
+  "options.data.import.openFavorites.label": "Favorites を固定タブとして開く",
+  "options.data.import.openFavorites.description":
+    "このウィンドウの、今ある Favorites の後ろに開きます。",
+  "options.data.import.confirm": "読み込む",
+  "options.data.import.cancel": "キャンセル",
+  "options.data.import.problem.notArc":
+    "Arc のサイドバーのファイルではありません。StorableSidebar.json を選んでください。",
+  "options.data.import.problem.katipFileChosen":
+    "Katip から書き出したファイルです。「Katip のファイルを読み込む」から読み込んでください。",
+  "options.data.import.problem.notKatip": "Katip から書き出したファイルではありません。",
+  "options.data.import.problem.arcFileChosen":
+    "Arc のサイドバーのファイルです。「Arc から読み込む」から読み込んでください。",
+  "options.data.import.problem.newerVersion":
+    "新しい版の Katip で書き出したファイルです。Katip を更新してから、もう一度お試しください。",
+  "options.data.import.problem.malformed": "この Katip のファイルは壊れていて読めません。",
+  "options.data.import.problem.unreadable": "ファイルを読めませんでした。",
+  "options.data.import.problem.unavailable":
+    "読み込みの準備ができませんでした。少し待ってから、もう一度お試しください。",
+  "options.data.imported": "読み込みました",
+  "options.data.importFailed":
+    "読み込みを最後まで終えられませんでした。止まるまでに追加した Space は残っています。",
 }

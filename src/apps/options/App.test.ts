@@ -7,8 +7,10 @@ import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#plat
 import { FakeBrowser } from "#platform/browser-testing"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
+import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
 import App from "./App.svelte"
 import { FakeFileDownloads } from "./testing/fake-file-downloads"
+import { type ApplyAnswer, FakeImportServer } from "./testing/fake-import-server"
 import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 
 const VERSION = "1.2.3"
@@ -114,6 +116,7 @@ const makeRuntime = (
       FakeFileDownloads.layer,
       keyboardShortcutsReporting(browserKeys),
       exportServerAnswering(exportAnswers).pipe(Layer.provide(browser)),
+      FakeImportServer.layer.pipe(Layer.provide(browser)),
     ),
   )
   runtimes.push(runtime)
@@ -148,6 +151,8 @@ const renderOptions = async ({
     },
     answerExport: (answer: ExportAnswer) => Effect.runSync(Queue.offer(exportAnswers, answer)),
     downloaded: () => runtime.runPromise(FakeFileDownloads.use((downloads) => downloads.saved)),
+    answerImportsWith: (answer: ApplyAnswer) =>
+      runtime.runPromise(FakeImportServer.use((server) => server.answerImportsWith(answer))),
   }
 }
 
@@ -858,5 +863,50 @@ describe("data export", () => {
     await screen.findByText("Exported")
 
     expect([disabledWhileExporting, exportButton().disabled]).toStrictEqual([true, false])
+  })
+})
+
+describe("data import", () => {
+  const renderData = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("Data")
+    return rendered
+  }
+  const importArcFile = async () => {
+    await fireEvent.change(screen.getByLabelText("Arc’s sidebar file"), {
+      target: { files: [new File([arcSidebar], "StorableSidebar.json")] },
+    })
+    await screen.findByRole("region", { name: "Ready to import from Arc" })
+    await fireEvent.click(screen.getByRole("button", { name: "Import" }))
+  }
+
+  it("the Data category offers importing from Arc and from a Katip file", async () => {
+    await renderData()
+
+    expect([
+      screen.getByText("Import from Arc") !== null,
+      screen.getByText("Import a Katip file") !== null,
+    ]).toStrictEqual([true, true])
+  })
+
+  it("says it imported", async () => {
+    await renderData()
+
+    await importArcFile()
+
+    expect(await screen.findByText("Imported")).toBeTruthy()
+  })
+
+  it("when the import doesn't finish, says the Spaces added so far are kept", async () => {
+    const { answerImportsWith } = await renderData()
+    await answerImportsWith("Failed")
+
+    await importArcFile()
+
+    expect(
+      await screen.findByText(
+        "Couldn’t finish the import. Any Spaces added before it stopped are kept.",
+      ),
+    ).toBeTruthy()
   })
 })

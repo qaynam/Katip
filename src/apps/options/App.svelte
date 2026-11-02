@@ -30,6 +30,7 @@
   } from "./categories"
   import CategoryTabs from "./CategoryTabs.svelte"
   import { downloadExportFile } from "./data-export"
+  import DataImport from "./DataImport.svelte"
   import FrameBackdrop from "./FrameBackdrop.svelte"
   import Glyph from "./Glyph.svelte"
   import { OptionalPermissions } from "./optional-permissions"
@@ -59,7 +60,14 @@
   } = $props()
 
   type Outcome =
-    "Saved" | "SaveFailed" | "ShortcutsUnavailable" | "HistoryDenied" | "Exported" | "ExportFailed"
+    | "Saved"
+    | "SaveFailed"
+    | "ShortcutsUnavailable"
+    | "HistoryDenied"
+    | "Exported"
+    | "ExportFailed"
+    | "Imported"
+    | "ImportFailed"
 
   const outcomeNotes = {
     Saved: { message: "options.saved", tone: "Done" },
@@ -68,6 +76,8 @@
     HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
     Exported: { message: "options.data.exported", tone: "Done" },
     ExportFailed: { message: "options.data.exportFailed", tone: "Alert" },
+    Imported: { message: "options.data.imported", tone: "Done" },
+    ImportFailed: { message: "options.data.importFailed", tone: "Alert" },
   } as const satisfies Record<Outcome, { message: MessageKey; tone: Note["tone"] }>
 
   const id = $props.id()
@@ -495,6 +505,11 @@
               {/snippet}
             </SettingRow>
           </SettingsSection>
+          <DataImport
+            {runtime}
+            {t}
+            onfinish={(finished) => announce(finished ? "Imported" : "ImportFailed")}
+          />
         {/if}
       {:else if loadFailed}
         <p class="load-problem" role="alert">{t("options.loadFailed")}</p>

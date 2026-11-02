@@ -71,4 +71,94 @@ export const options: CatalogSection<"options"> = {
   "options.data.exported": "Exportado",
   "options.data.exportFailed":
     "No se han podido exportar los datos. Espera un momento y vuelve a intentarlo.",
+
+  "options.data.import.heading": "Importar",
+  "options.data.import.arc.label": "Importar desde Arc",
+  "options.data.import.arc.description":
+    "Añade tus espacios de Arc con sus pestañas fijadas, carpetas y vistas divididas, y tus Favoritos.",
+  "options.data.import.arc.file": "Archivo de la barra lateral de Arc",
+  "options.data.import.katip.label": "Importar un archivo de Katip",
+  "options.data.import.katip.description":
+    "Añade los espacios, las pestañas fijadas y los Favoritos de un archivo exportado desde Katip.",
+  "options.data.import.katip.file": "Archivo exportado de Katip",
+  "options.data.import.choose": "Elegir archivo…",
+  "options.data.import.footnote":
+    "El archivo se lee en este dispositivo y nunca sale del navegador. Los espacios importados se añaden después de los tuyos, y no se cambia ni se elimina nada de lo que tienes.",
+  "options.data.import.arcLocation.heading": "Dónde encontrar el archivo de Arc",
+  "options.data.import.arcLocation.mac": "macOS",
+  "options.data.import.arcLocation.macTip":
+    "En el cuadro de diálogo de archivos, pulsa ⌘⇧G y pega esta ruta.",
+  "options.data.import.arcLocation.windows": "Windows",
+  "options.data.import.arcLocation.windowsTip":
+    "En la carpeta de Packages cuyo nombre empieza por TheBrowserCompany.Arc_.",
+  "options.data.import.preview.arcHeading": "Listo para importar desde Arc",
+  "options.data.import.preview.katipHeading": "Listo para importar un archivo de Katip",
+  "options.data.import.preview.added": "Se añadirá",
+  "options.data.import.preview.adjusted": "Se adaptará a Katip",
+  "options.data.import.preview.leftOut": "No se importará",
+  "options.data.import.preview.spaces": { one: "{count} espacio", other: "{count} espacios" },
+  "options.data.import.preview.pins": {
+    one: "{count} pestaña fijada",
+    other: "{count} pestañas fijadas",
+  },
+  "options.data.import.preview.folders": { one: "{count} carpeta", other: "{count} carpetas" },
+  "options.data.import.preview.splits": {
+    one: "{count} vista dividida",
+    other: "{count} vistas divididas",
+  },
+  "options.data.import.preview.liveFolders": {
+    one: "{count} carpeta en vivo",
+    other: "{count} carpetas en vivo",
+  },
+  "options.data.import.preview.favorites": { one: "{count} Favorito", other: "{count} Favoritos" },
+  "options.data.import.preview.flattenedFolders": {
+    one: "{count} carpeta está anidada a más profundidad de la que permite Katip, así que su contenido pasa a la carpeta superior.",
+    other:
+      "{count} carpetas están anidadas a más profundidad de la que permite Katip, así que su contenido pasa a la carpeta superior.",
+  },
+  "options.data.import.preview.widerSplits": {
+    one: "{count} vista dividida tiene más de dos pestañas. Las dos primeras siguen divididas y el resto pasan a ser pestañas fijadas justo después.",
+    other:
+      "{count} vistas divididas tienen más de dos pestañas. En cada una, las dos primeras siguen divididas y el resto pasan a ser pestañas fijadas justo después.",
+  },
+  "options.data.import.preview.temporaryTabs": {
+    one: "{count} pestaña sin fijar, porque las pestañas sin fijar son temporales",
+    other: "{count} pestañas sin fijar, porque las pestañas sin fijar son temporales",
+  },
+  "options.data.import.preview.favoritesAlreadyOpen": {
+    one: "{count} Favorito ya abierto en esta ventana",
+    other: "{count} Favoritos ya abiertos en esta ventana",
+  },
+  "options.data.import.preview.nonWebLinks": {
+    one: "{count} pestaña que no es una página web, porque solo se importan direcciones http y https",
+    other:
+      "{count} pestañas que no son páginas web, porque solo se importan direcciones http y https",
+  },
+  "options.data.import.preview.unsupportedItems": {
+    one: "{count} elemento sin equivalente en Katip, como una nota o un tablero",
+    other: "{count} elementos sin equivalente en Katip, como notas y tableros",
+  },
+  "options.data.import.preview.settings": "Los ajustes del archivo. Los tuyos no cambian.",
+  "options.data.import.preview.nothing": "No hay nada que importar en este archivo.",
+  "options.data.import.openFavorites.label": "Abrir los Favoritos como pestañas fijadas",
+  "options.data.import.openFavorites.description":
+    "Se abren en esta ventana, después de los Favoritos que ya tienes.",
+  "options.data.import.confirm": "Importar",
+  "options.data.import.cancel": "Cancelar",
+  "options.data.import.problem.notArc":
+    "Este no es el archivo de la barra lateral de Arc. Elige StorableSidebar.json.",
+  "options.data.import.problem.katipFileChosen":
+    "Este es un archivo exportado desde Katip. Usa Importar un archivo de Katip.",
+  "options.data.import.problem.notKatip": "Este no es un archivo exportado desde Katip.",
+  "options.data.import.problem.arcFileChosen":
+    "Este es el archivo de la barra lateral de Arc. Usa Importar desde Arc.",
+  "options.data.import.problem.newerVersion":
+    "Este archivo se exportó desde una versión más reciente de Katip. Actualiza Katip y vuelve a intentarlo.",
+  "options.data.import.problem.malformed": "Este archivo de Katip está dañado y no se puede leer.",
+  "options.data.import.problem.unreadable": "No se ha podido leer el archivo.",
+  "options.data.import.problem.unavailable":
+    "No se ha podido preparar la importación. Espera un momento y vuelve a intentarlo.",
+  "options.data.imported": "Importado",
+  "options.data.importFailed":
+    "No se ha podido terminar la importación. Los espacios añadidos antes de que se detuviera se conservan.",
 }
