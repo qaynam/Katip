@@ -8,7 +8,7 @@ const crossModuleMessage =
   "モジュールの外へは相対パスで出ず、#modules/<name> などの公開エントリ経由で参照する"
 
 export default ts.config(
-  { ignores: ["dist/", "node_modules/"] },
+  { ignores: ["dist/", "node_modules/", ".e2e/", ".claude/worktrees/"] },
   js.configs.recommended,
   ...ts.configs.strict,
   ...svelte.configs.recommended,

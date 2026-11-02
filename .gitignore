@@ -3,3 +3,5 @@ dist/
 *.zip
 .DS_Store
 coverage/
+.e2e/
+.claude/worktrees/
