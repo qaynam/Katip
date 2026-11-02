@@ -97,6 +97,13 @@ export const createSpotlightPortConnection = (
   ): Promise<SpotlightServerMessage | null> => {
     const requestId = RequestId.make(nextRequestId++)
     return new Promise((resolve) => {
+      // Not registered before posting: a post that fails on a stale port settles everything
+      // waiting on that port, and this request would be settled with null even though it then
+      // goes out on the new port. Replies arrive asynchronously, so registering after is in time
+      if (!post(message(requestId))) {
+        resolve(null)
+        return
+      }
       // A request the background can't read is dropped with neither a response nor a disconnect,
       // which would leave Spotlight loading forever
       const timer =
@@ -110,11 +117,6 @@ export const createSpotlightPortConnection = (
         clearTimeout(timer)
         resolve(reply)
       })
-      if (!post(message(requestId))) {
-        clearTimeout(timer)
-        pending.delete(requestId)
-        resolve(null)
-      }
     })
   }
 

@@ -148,6 +148,20 @@ describe("search", () => {
     expect(opened[1]?.sent.map((message) => message._tag)).toStrictEqual(["Search"])
   })
 
+  it("a search sent again on a new connection after the old one failed still resolves with its response", async () => {
+    const { openPort, opened } = portsOpenedBy([fakePort({ rejectsPosts: true }), fakePort()])
+    const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
+
+    const pending = connection.search("katip", "All")
+    const [request] = opened[1]?.sent ?? []
+    opened[1]?.deliver(searchResults(request?.requestId ?? -1, "katip"))
+
+    expect(await pending).toStrictEqual({
+      results: [{ _tag: "SearchWeb", query: "katip" }],
+      spaceTheme: null,
+    })
+  })
+
   describe("when no response comes", () => {
     afterEach(() => {
       vi.useRealTimers()

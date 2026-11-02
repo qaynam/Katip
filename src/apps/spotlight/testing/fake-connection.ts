@@ -54,8 +54,9 @@ export const createFakeConnection = (options: FakeConnectionOptions = {}): FakeC
     },
     answer: async (query, results, answerOptions = {}) => {
       const index = pending.findIndex((search) => search.query === query)
+      if (index === -1) throw new Error(`No search for "${query}"`)
       const [search] = pending.splice(index, 1)
-      if (index === -1 || search === undefined) throw new Error(`No search for "${query}"`)
+      if (search === undefined) throw new Error(`No search for "${query}"`)
       search.resolve(answerOptions.unreachable === true ? null : { results, spaceTheme: null })
       await Promise.resolve()
     },
