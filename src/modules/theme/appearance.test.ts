@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { appearanceOf, resolveScheme, swatchOf, themeColorOfSrgb } from "./appearance"
+import {
+  appearanceOf,
+  gradientStopPositions,
+  resolveScheme,
+  swatchOf,
+  themeColorOfSrgb,
+} from "./appearance"
 import type { Rgb } from "./oklch"
 import { themeOf, type SpaceTheme } from "./space-theme"
 
@@ -45,6 +51,19 @@ describe("appearanceOf", () => {
     ])
 
     expect(appearanceOf(gradient, "light").background).toMatch(/^linear-gradient\(/)
+  })
+
+  it("paints each gradient color where gradientStopPositions says, the first over a longer stretch", () => {
+    const threeColors = themeOf([
+      { hue: 90, chroma: 0.8 },
+      { hue: 200, chroma: 0.8 },
+      { hue: 300, chroma: 0.8 },
+    ])
+
+    expect({
+      positions: gradientStopPositions(3),
+      stops: appearanceOf(threeColors, "light").background.match(/\d+%/g),
+    }).toStrictEqual({ positions: [0.15, 0.7, 1], stops: ["15%", "70%", "100%"] })
   })
 
   it("gives a one-color theme a solid background", () => {

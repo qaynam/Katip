@@ -1,5 +1,6 @@
 export {
   appearanceOf,
+  gradientStopPositions,
   resolveScheme,
   swatchOf,
   themeColorOfSrgb,

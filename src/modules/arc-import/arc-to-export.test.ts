@@ -1,6 +1,7 @@
 import { Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { decodeExportFile, encodeExportFile } from "#modules/export"
+import { themeColorOfSrgb } from "#modules/theme"
 import { NotArcSidebar } from "./arc-sidebar"
 import { arcSidebarToExport, type ArcImport } from "./arc-to-export"
 import arcSidebar from "./fixtures/arc-sidebar.json?raw"
@@ -461,21 +462,74 @@ describe("arcSidebarToExport", () => {
   })
 
   describe("Space themes", () => {
-    it("takes the gradient's base colors, intensity and noise", () => {
+    const srgb = (red: number, green: number, blue: number, alpha = 1) => ({
+      red,
+      green,
+      blue,
+      alpha,
+      colorSpace: "extendedSRGB",
+    })
+    const transparent = srgb(0, 0, 0, 0)
+
+    const gradientTheme = ({
+      baseColors,
+      overlayColors = [],
+      modifiers = {},
+      translucencyStyle,
+      contentOverBackgroundAppearance,
+    }: {
+      baseColors: ReadonlyArray<unknown>
+      overlayColors?: ReadonlyArray<unknown>
+      modifiers?: Readonly<Record<string, unknown>>
+      translucencyStyle?: string
+      contentOverBackgroundAppearance?: string
+    }) => ({
+      windowTheme: {
+        background: {
+          single: {
+            _0: {
+              style: {
+                color: {
+                  _0: {
+                    blendedGradient: {
+                      _0: { baseColors, overlayColors, modifiers, translucencyStyle },
+                    },
+                  },
+                },
+              },
+              contentOverBackgroundAppearance,
+            },
+          },
+        },
+      },
+    })
+
+    const themeOfSpaceWith = (customInfo: unknown) =>
+      convert(
+        arcFile({
+          spaces: [space("home", "Home", { customInfo })],
+          items: [container("home-pinned", [])],
+        }),
+      ).document.spaces[0]?.theme
+
+    const red = srgb(0.9, 0.2, 0.2)
+    const blue = srgb(0.2, 0.3, 0.9)
+
+    it("takes the gradient's base colors, and the appearance Arc paints them with", () => {
       const [work] = convert(arcSidebar).document.spaces
 
       expect(work?.theme).toStrictEqual({
-        mode: "auto",
+        mode: "dark",
         colors: [
           { hue: expect.closeTo(264.57, 1), chroma: 1 },
           { hue: expect.closeTo(306.93, 1), chroma: expect.closeTo(0.477, 2) },
         ],
-        intensity: 0.5,
-        grain: 0.3,
+        intensity: 0.375,
+        grain: 0.15,
       })
     })
 
-    it("falls back to the palette's main color when there's no gradient", () => {
+    it("falls back to the palette's main color when there's no gradient, following the system's scheme", () => {
       const reading = convert(arcSidebar).document.spaces[1]
 
       expect(reading?.theme).toStrictEqual({
@@ -486,30 +540,138 @@ describe("arcSidebarToExport", () => {
       })
     })
 
-    it("keeps one color when the gradient repeats it", () => {
-      const color = { red: 0.9, green: 0.4, blue: 0.2, alpha: 1, colorSpace: "extendedSRGB" }
-      const content = arcFile({
-        spaces: [
-          space("home", "Home", {
-            customInfo: {
-              windowTheme: {
-                background: {
-                  single: {
-                    _0: {
-                      style: {
-                        color: { _0: { blendedGradient: { _0: { baseColors: [color, color] } } } },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          }),
+    it("lays an opaque overlay over the base colors, as Arc shows it from top to bottom", () => {
+      const theme = themeOfSpaceWith(
+        gradientTheme({
+          baseColors: [srgb(0.956863, 0.898039, 0.713725), srgb(0.694118, 0.894118, 0.952941)],
+          overlayColors: [transparent, srgb(0.807843, 0.733333, 0.964706)],
+          modifiers: { overlay: "sand", intensityFactor: 1, noiseFactor: 0.5 },
+          translucencyStyle: "light",
+          contentOverBackgroundAppearance: "light",
+        }),
+      )
+
+      expect(theme).toStrictEqual({
+        mode: "light",
+        colors: [
+          { hue: expect.closeTo(92.72, 1), chroma: expect.closeTo(0.188, 2) },
+          { hue: expect.closeTo(289.64, 1), chroma: expect.closeTo(0.328, 2) },
+          { hue: expect.closeTo(299.32, 1), chroma: expect.closeTo(0.493, 2) },
         ],
-        items: [container("home-pinned", [])],
+        intensity: 0.75,
+        grain: 0.25,
+      })
+    })
+
+    it("shows the overlay's own color where it's fully opaque, and the base color where it's clear", () => {
+      const green = srgb(0.2, 0.8, 0.3)
+
+      const theme = themeOfSpaceWith(
+        gradientTheme({ baseColors: [red, blue], overlayColors: [transparent, green] }),
+      )
+
+      expect({
+        top: theme?.colors[0]?.hue,
+        bottom: theme?.colors[2],
+      }).toStrictEqual({
+        top: expect.closeTo(themeColorOfSrgb(red).hue, -1),
+        bottom: {
+          hue: expect.closeTo(themeColorOfSrgb(green).hue, 2),
+          chroma: expect.closeTo(themeColorOfSrgb(green).chroma, 2),
+        },
+      })
+    })
+
+    it("keeps the base colors as they are when the overlay is fully transparent", () => {
+      const theme = themeOfSpaceWith(
+        gradientTheme({ baseColors: [red, blue], overlayColors: [transparent, transparent] }),
+      )
+
+      expect(theme?.colors).toHaveLength(2)
+    })
+
+    it("reads channels outside sRGB's range as the nearest color within it", () => {
+      const outOfRange = srgb(1.08, 0.42, -0.12)
+      const within = srgb(1, 0.42, 0)
+
+      expect([
+        themeOfSpaceWith(gradientTheme({ baseColors: [outOfRange, blue] }))?.colors,
+        themeOfSpaceWith(
+          gradientTheme({ baseColors: [red, blue], overlayColors: [transparent, outOfRange] }),
+        )?.colors,
+      ]).toStrictEqual([
+        themeOfSpaceWith(gradientTheme({ baseColors: [within, blue] }))?.colors,
+        themeOfSpaceWith(
+          gradientTheme({ baseColors: [red, blue], overlayColors: [transparent, within] }),
+        )?.colors,
+      ])
+    })
+
+    describe("light and dark", () => {
+      it.each([
+        ["light", "light"],
+        ["dark", "dark"],
+      ] as const)("follows Arc's %s appearance", (appearance, mode) => {
+        expect(
+          themeOfSpaceWith(
+            gradientTheme({ baseColors: [red], contentOverBackgroundAppearance: appearance }),
+          )?.mode,
+        ).toBe(mode)
       })
 
-      expect(convert(content).document.spaces[0]?.theme.colors).toHaveLength(1)
+      it("takes the appearance from the translucency style when the gradient doesn't say", () => {
+        expect(
+          themeOfSpaceWith(gradientTheme({ baseColors: [red], translucencyStyle: "dark" }))?.mode,
+        ).toBe("dark")
+      })
+
+      it("follows the system's scheme when Arc names neither light nor dark", () => {
+        expect(
+          themeOfSpaceWith(
+            gradientTheme({
+              baseColors: [red],
+              translucencyStyle: "regular",
+              contentOverBackgroundAppearance: "vibrant",
+            }),
+          )?.mode,
+        ).toBe("auto")
+      })
+    })
+
+    describe("intensity and grain", () => {
+      it.each([
+        [1, 0.5, { intensity: 0.75, grain: 0.25 }],
+        [0.8, 0.8, { intensity: 0.6, grain: 0.4 }],
+        [0, 0, { intensity: 0, grain: 0 }],
+      ])(
+        "scales Arc's intensity %d and noise %d to look alike in Katip",
+        (intensityFactor, noiseFactor, expected) => {
+          const theme = themeOfSpaceWith(
+            gradientTheme({ baseColors: [red], modifiers: { intensityFactor, noiseFactor } }),
+          )
+
+          expect({ intensity: theme?.intensity, grain: theme?.grain }).toStrictEqual(expected)
+        },
+      )
+
+      it("uses Katip's defaults when Arc's are missing or out of range", () => {
+        const theme = themeOfSpaceWith(
+          gradientTheme({ baseColors: [red], modifiers: { intensityFactor: 1.5 } }),
+        )
+
+        expect({ intensity: theme?.intensity, grain: theme?.grain }).toStrictEqual({
+          intensity: 0.7,
+          grain: 0.2,
+        })
+      })
+    })
+
+    it("keeps one color when the gradient repeats it", () => {
+      const color = srgb(0.9, 0.4, 0.2)
+
+      expect(themeOfSpaceWith(gradientTheme({ baseColors: [color, color] }))?.colors).toHaveLength(
+        1,
+      )
     })
 
     it("reports a Space without a theme, leaving a colorless placeholder in the document", () => {

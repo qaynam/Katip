@@ -46,17 +46,24 @@ const backgroundTone = (color: ThemeColor, scheme: ColorScheme, intensity: numbe
 
 const neutral: ThemeColor = { hue: 280, chroma: 0.1 }
 
+/**
+ * Where each of a theme's colors sits along the background's gradient, from 0 at the top to 1 at
+ * the bottom, for a theme of `count` colors.
+ */
+export const gradientStopPositions = (count: number): ReadonlyArray<number> =>
+  // The first color gets a longer stretch so the primary color covers more of the background
+  Array.makeBy(count, (index) =>
+    index === 0 ? 0.15 : Math.round(40 + (60 * index) / (count - 1)) / 100,
+  )
+
 // Not interpolated in sRGB: halfway between complementary colors sinks into grey or mud. The
-// gradient interpolates in perceptually uniform OKLab, and the first color gets a longer stretch so
-// the primary color covers more of it
+// gradient interpolates in perceptually uniform OKLab
 const gradientStops = (colors: ReadonlyArray<string>) =>
-  colors
-    .map((color, index) =>
-      index === 0
-        ? `${color} 15%`
-        : `${color} ${Math.round(40 + (60 * index) / (colors.length - 1))}%`,
-    )
-    .join(", ")
+  Array.zipWith(
+    colors,
+    gradientStopPositions(colors.length),
+    (color, position) => `${color} ${Math.round(position * 100)}%`,
+  ).join(", ")
 
 const white: Rgb = { red: 1, green: 1, blue: 1 }
 const ink: Rgb = { red: 0.11, green: 0.11, blue: 0.12 }
