@@ -790,6 +790,18 @@ const respondWithoutPeeks = (
         ),
       ),
       Match.tag("CreateFolder", ({ spaceId, parentId }) => createFolder(view, spaceId, parentId)),
+      Match.tag("SetFolderIcon", ({ bookmarkId, icon }) =>
+        succeeded(
+          mapSpaces(view, (space) =>
+            mapPinned(space, (nodes) =>
+              mapTree(nodes, {
+                onFolder: (folder) =>
+                  folder.bookmarkId === bookmarkId ? { ...folder, icon } : folder,
+              }),
+            ),
+          ),
+        ),
+      ),
       Match.tag("DeleteFolder", ({ bookmarkId }) => succeeded(removePinned(view, bookmarkId))),
       Match.tag("RemoveArchiveEntry", ({ entryId }) =>
         succeeded({ ...view, archive: view.archive.filter((entry) => entry.id !== entryId) }),

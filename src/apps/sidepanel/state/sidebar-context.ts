@@ -5,6 +5,7 @@ import type { OriginAccess } from "../connection/origin-access"
 import type { FaviconResolver } from "../logic/favicon"
 import type { DialogController } from "./dialog-controller.svelte"
 import type { DragSession } from "./drag-session.svelte"
+import type { FolderIconPickerController } from "./folder-icon-picker.svelte"
 import type { FolderSearchController } from "./folder-search.svelte"
 import type { LiveFolderDialogController } from "./live-folder-dialog.svelte"
 import type { MenuController } from "./menu-controller.svelte"
@@ -35,6 +36,7 @@ export interface SidebarContext {
   readonly originAccess: OriginAccess
   readonly liveFolderDialog: LiveFolderDialogController
   readonly folderSearch: FolderSearchController
+  readonly folderIconPicker: FolderIconPickerController
 }
 
 export const [getSidebarContext, setSidebarContext] = createContext<SidebarContext>()

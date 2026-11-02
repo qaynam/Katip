@@ -14,6 +14,7 @@
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderGlyph from "./FolderGlyph.svelte"
+  import FolderIconGlyph from "./FolderIconGlyph.svelte"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import { addLiveFolderMenu, createFolder } from "./menus"
   import PinnedItemRow from "./PinnedItemRow.svelte"
@@ -32,6 +33,7 @@
 
   let isEditing = $state(false)
   let headerRow = $state<HTMLDivElement>()
+  let header = $state<HTMLButtonElement>()
   const key = $derived(`folder:${folder.bookmarkId}`)
   const emptyKey = $derived(`folder-empty:${folder.bookmarkId}`)
   const dropZone = $derived(ctx.drag.zoneFor(key))
@@ -82,6 +84,15 @@
     if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
   }
 
+  const openIconPicker = () => {
+    if (headerRow === undefined || header === undefined) return
+    ctx.folderIconPicker.open({
+      bookmarkId: folder.bookmarkId,
+      anchor: headerRow.getBoundingClientRect(),
+      trigger: header,
+    })
+  }
+
   const openMenu = (event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
@@ -97,6 +108,7 @@
             ]
           : []),
         action(t("common.rename"), () => (isEditing = true)),
+        action(t("sidepanel.folder.changeIcon"), openIconPicker),
         action(t("sidepanel.folder.delete"), () => void confirmDeletion(), { tone: "danger" }),
       ],
     })
@@ -116,11 +128,21 @@
   }
 </script>
 
+{#snippet glyph()}
+  <span class="folder-icon">
+    {#if folder.icon === null}
+      <FolderGlyph isOpen={folder.isExpanded} />
+    {:else}
+      <FolderIconGlyph icon={folder.icon} />
+    {/if}
+  </span>
+{/snippet}
+
 <li class="folder" class:dragged={isDragged}>
   <div class="header-row" class:searchable={!folder.isExpanded} bind:this={headerRow}>
     {#if isEditing}
       <div class="header editing">
-        <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
+        {@render glyph()}
         <TitleEditor
           initial={folder.title}
           label={t("sidepanel.folder.nameLabel")}
@@ -130,6 +152,7 @@
       </div>
     {:else}
       <button
+        bind:this={header}
         class="header"
         class:drop-before={dropZone === "before"}
         class:drop-after={dropZone === "after"}
@@ -146,7 +169,7 @@
         ondragover={onHeaderDragOver}
         ondragleave={() => ctx.drag.cancelHover()}
       >
-        <span class="folder-icon"><FolderGlyph isOpen={folder.isExpanded} /></span>
+        {@render glyph()}
         <span class="title">{folder.title || t("sidepanel.folder.untitled")}</span>
       </button>
       {#if !folder.isExpanded && headerRow !== undefined}
@@ -237,6 +260,7 @@
     flex: none;
     place-items: center;
     width: 18px;
+    color: var(--accent);
   }
 
   .title {

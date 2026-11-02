@@ -112,6 +112,23 @@ describe("フィクスチャの素朴な応答", () => {
     expect(rootFolder(next, "design-docs")?.isExpanded).toBe(false)
   })
 
+  it("フォルダのアイコンを変えられ、フォルダの絵にも戻せる", () => {
+    const withIcon = viewAfter({
+      _tag: "SetFolderIcon",
+      bookmarkId: BookmarkId.make("design-docs"),
+      icon: "lightbulb",
+    })
+    const reverted = viewAfter(
+      { _tag: "SetFolderIcon", bookmarkId: BookmarkId.make("design-docs"), icon: null },
+      withIcon,
+    )
+
+    expect([
+      rootFolder(withIcon, "design-docs")?.icon,
+      rootFolder(reverted, "design-docs")?.icon,
+    ]).toStrictEqual(["lightbulb", null])
+  })
+
   it("ピン留めを別のフォルダの指定した位置へ動かせる", () => {
     const next = viewAfter({
       _tag: "MovePinnedItem",

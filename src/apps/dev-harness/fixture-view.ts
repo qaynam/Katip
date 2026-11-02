@@ -182,6 +182,7 @@ const splitPin = (
 
 const comparisons = pinnedFolder("comparisons", {
   title: "見比べ",
+  icon: "star",
   isExpanded: false,
   children: [
     splitPin(

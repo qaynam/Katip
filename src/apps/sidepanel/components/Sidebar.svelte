@@ -7,6 +7,7 @@
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
+  import { FolderIconPickerController } from "../state/folder-icon-picker.svelte"
   import { FolderSearchController } from "../state/folder-search.svelte"
   import { LiveFolderDialogController } from "../state/live-folder-dialog.svelte"
   import { MenuController } from "../state/menu-controller.svelte"
@@ -22,6 +23,7 @@
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
+  import FolderIconPicker from "./FolderIconPicker.svelte"
   import FolderSearch from "./FolderSearch.svelte"
   import LiveFolderDialog from "./LiveFolderDialog.svelte"
   import PinnedSection from "./PinnedSection.svelte"
@@ -57,6 +59,7 @@
   const tooltip = new TooltipController()
   const liveFolderDialog = new LiveFolderDialogController()
   const folderSearch = new FolderSearchController()
+  const folderIconPicker = new FolderIconPickerController()
   setSidebarContext({
     run: (command) => run(command),
     get view() {
@@ -87,6 +90,7 @@
     },
     liveFolderDialog,
     folderSearch,
+    folderIconPicker,
   })
 
   let isArchiveOpen = $state(false)
@@ -172,6 +176,7 @@
   <ThemePicker />
   <ContextMenu />
   <FolderSearch />
+  <FolderIconPicker />
   <LiveFolderDialog />
   <ConfirmDialog />
   <Tooltip />
