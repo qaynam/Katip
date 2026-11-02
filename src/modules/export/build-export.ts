@@ -10,7 +10,7 @@ import type { Settings } from "#modules/settings"
 import type { Space, SpaceId, SpaceList } from "#modules/space"
 import { displayOrder } from "#modules/tab-order"
 import type { SpaceTheme } from "#modules/theme"
-import { trackedTab, type Workspace } from "#modules/workspace"
+import { isNewTabPage, trackedTab, type Workspace } from "#modules/workspace"
 import type { BookmarkId, BrowserTab } from "#platform/browser"
 import { EXPORT_FORMAT, LATEST_EXPORT_VERSION, type LatestExport } from "./export-file"
 
@@ -167,8 +167,8 @@ const settingsOf = (settings: Settings): LatestExport["settings"] => ({
  *
  * @remarks
  * The GitHub token, what live folders fetched, which folders are open, the archive and the records
- * for restoring tabs aren't exported. Neither are tabs in incognito windows or tabs showing Katip's
- * own pages.
+ * for restoring tabs aren't exported. Neither are tabs in incognito windows, tabs showing Katip's
+ * own pages, or blank new tabs.
  *
  * @returns {@link PinnedTreeUnavailable} when any Space's pinned tree couldn't be read, so that no
  *   file is left with some Spaces' pins missing without anyone noticing.
@@ -183,7 +183,9 @@ export const buildExport = (
         !tab.incognito &&
         // Katip's own pages never join a Space, but a Space's tab that navigates to one stays in
         // the Space. Only pages that may join a Space are exported
-        !urlOf(tab).startsWith(sources.extensionOrigin),
+        !urlOf(tab).startsWith(sources.extensionOrigin) &&
+        // A blank new tab holds nothing worth keeping; importing it would only open an empty tab
+        !isNewTabPage(urlOf(tab)),
     ),
     byWindowThenIndex,
   )

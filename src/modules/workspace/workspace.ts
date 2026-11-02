@@ -89,9 +89,14 @@ export const forgetWindow = (workspace: Workspace, windowId: WindowId): Workspac
   windows: workspace.windows.filter((window) => window.windowId !== windowId),
 })
 
-// Not using the opener for a new tab page: Chrome sometimes gives even a tab opened with Cmd+T the
-// previous tab as its opener
-const isNewTabPage = (url: string) =>
+/**
+ * Whether `url` is a blank page that a new tab starts on, as opposed to a page the user opened.
+ *
+ * @remarks
+ * Decided by URL, not by the opener: Chrome sometimes gives even a tab opened with Cmd+T the
+ * previous tab as its opener.
+ */
+export const isNewTabPage = (url: string) =>
   url === "" ||
   url === "about:blank" ||
   url.startsWith("chrome://newtab") ||

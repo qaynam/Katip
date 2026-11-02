@@ -150,8 +150,8 @@ describe("data export", () => {
                 name: "Work",
                 theme,
                 pinned: [],
-                // Creating a Space opens a new tab in it
-                tabs: [{ title: "chrome://newtab/", url: "chrome://newtab/" }],
+                // Creating a Space opens a blank new tab in it, which is left out
+                tabs: [],
               },
             ],
             favorites: [{ title: "Calendar", url: "https://calendar.example.com/" }],

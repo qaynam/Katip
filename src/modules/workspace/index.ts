@@ -5,6 +5,7 @@ export {
   emptyWorkspace,
   forgetTab,
   forgetWindow,
+  isNewTabPage,
   moveTabToSpace,
   PinnedBinding,
   recordActivation,

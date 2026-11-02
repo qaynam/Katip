@@ -376,6 +376,18 @@ describe("temporary tabs", () => {
     ).toStrictEqual([])
   })
 
+  it("leave out blank new tabs, such as the one a new Space opens with", () => {
+    const tabs = [
+      browserTab(1, { url: "chrome://newtab/", title: "New Tab" }),
+      browserTab(2, { url: "about:blank", title: "" }),
+      browserTab(3, { url: "https://example.com/kept" }),
+    ]
+
+    expect(
+      homeOf(sourcesWith({ tabs, workspace: inSpace(HOME, tabs) })).tabs.map((tab) => tab.url),
+    ).toStrictEqual(["https://example.com/kept"])
+  })
+
   it("leave out a Space's tab that has navigated to a Katip page", () => {
     const settingsPage = browserTab(1, { url: `${EXTENSION_ORIGIN}options/index.html` })
 
