@@ -1013,7 +1013,7 @@ describe("Spotlight", () => {
   )
 })
 
-describe("URL のコピー", () => {
+describe("copy shortcuts", () => {
   const pageNoticesIn = (tabId: TabId) =>
     Effect.map(
       FakeScripting.use((scripting) => scripting.functionExecutions),
@@ -1027,6 +1027,10 @@ describe("URL のコピー", () => {
     yield* (yield* FakeBrowser).emit({ _tag: "CommandTriggered", command, tab: Option.some(tab) })
   })
 
+  /** Saves the copy shortcut settings the way the options page does, while Katip is running. */
+  const turnOn = (pageShortcuts: { readonly copyUrl?: true; readonly copyMarkdownLink?: true }) =>
+    Storage.use((storage) => storage.sync.set("katip/settings", { pageShortcuts }))
+
   const startWithPage = (page: TabSeed) =>
     Effect.gen(function* () {
       const fake = yield* FakeBrowser
@@ -1037,45 +1041,59 @@ describe("URL のコピー", () => {
       return { sidebar, tab: yield* (yield* Tabs).get(tabIds[0]) }
     })
 
-  it.live("ショートカットでアクティブなタブの URL がコピーされ、そのページの上に知らせが出る", () =>
-    inBackground(
-      Effect.gen(function* () {
-        const { tab } = yield* startWithPage({ url: "https://copy.example/page?q=1" })
+  const noticesShownIn = (tabId: TabId) =>
+    eventually(
+      Effect.map(
+        pageNoticesIn(tabId),
+        Option.liftPredicate((all) => all.length > 0),
+      ),
+    )
 
-        yield* pressShortcut("copy-current-url", tab)
-        const notices = yield* eventually(
-          Effect.map(
-            pageNoticesIn(tab.id),
-            Option.liftPredicate((all) => all.length > 0),
-          ),
-        )
+  // Commands run one at a time in the order pressed, so once a later pin toggle has pinned the
+  // tab, every shortcut pressed before it has finished
+  const pressPinToggleAndWait = Effect.fnUntraced(function* (tab: BrowserTab) {
+    yield* pressShortcut("quick-pin-toggle", tab)
+    yield* eventually(
+      Effect.map(
+        Bookmarks.use((bookmarks) => bookmarks.search({ url: Option.getOrThrow(tab.url) })),
+        Option.liftPredicate((found) => found.length > 0),
+      ),
+    )
+  })
 
-        expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
-          ["https://copy.example/page?q=1"],
-          ["URL をコピーしました"],
-        ])
-      }),
-    ),
+  it.live(
+    "copy-current-url, once turned on in the settings, copies the active tab's URL and shows a notice on that page",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { tab } = yield* startWithPage({ url: "https://copy.example/page?q=1" })
+          yield* turnOn({ copyUrl: true })
+
+          yield* pressShortcut("copy-current-url", tab)
+          const notices = yield* noticesShownIn(tab.id)
+
+          expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
+            ["https://copy.example/page?q=1"],
+            ["URL をコピーしました"],
+          ])
+        }),
+      ),
   )
 
-  it.live("ショートカットで Markdown のリンクとしてコピーすると、[タイトル](URL) の形で入る", () =>
+  it.live("copy-current-url-as-markdown, once turned on in the settings, copies [title](URL)", () =>
     inBackground(
       Effect.gen(function* () {
         const { tab } = yield* startWithPage({
           url: "https://copy.example/page",
-          title: "コピーするページ",
+          title: "Release notes",
         })
+        yield* turnOn({ copyMarkdownLink: true })
 
         yield* pressShortcut("copy-current-url-as-markdown", tab)
-        const notices = yield* eventually(
-          Effect.map(
-            pageNoticesIn(tab.id),
-            Option.liftPredicate((all) => all.length > 0),
-          ),
-        )
+        const notices = yield* noticesShownIn(tab.id)
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
-          ["[コピーするページ](https://copy.example/page)"],
+          ["[Release notes](https://copy.example/page)"],
           ["Markdown のリンクをコピーしました"],
         ])
       }),
@@ -1083,11 +1101,48 @@ describe("URL のコピー", () => {
   )
 
   it.live(
-    "ページの上に知らせを出せなければ（chrome:// のページなど）、サイドパネルに知らせる",
+    "with the default settings, neither copy shortcut copies anything or shows a notice",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { tab } = yield* startWithPage({ url: "https://copy.example/" })
+
+          yield* pressShortcut("copy-current-url", tab)
+          yield* pressShortcut("copy-current-url-as-markdown", tab)
+          yield* pressPinToggleAndWait(tab)
+
+          expect([
+            yield* (yield* ClipboardRecorder).written,
+            yield* pageNoticesIn(tab.id),
+          ]).toStrictEqual([[], []])
+        }),
+      ),
+  )
+
+  it.live("turning on one copy shortcut leaves the other one off", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { tab } = yield* startWithPage({ url: "https://copy.example/", title: "Docs" })
+        yield* turnOn({ copyMarkdownLink: true })
+
+        yield* pressShortcut("copy-current-url", tab)
+        yield* pressShortcut("copy-current-url-as-markdown", tab)
+        yield* pressPinToggleAndWait(tab)
+
+        expect(yield* (yield* ClipboardRecorder).written).toStrictEqual([
+          "[Docs](https://copy.example/)",
+        ])
+      }),
+    ),
+  )
+
+  it.live(
+    "shows the notice in the side panel when it can't be shown on the page (such as a chrome:// page)",
     () =>
       inBackground(
         Effect.gen(function* () {
           const { sidebar, tab } = yield* startWithPage({ url: "https://copy.example/" })
+          yield* turnOn({ copyUrl: true })
           yield* (yield* FakeScripting).failNextInjectionInto(tab.id)
 
           yield* pressShortcut("copy-current-url", tab)
@@ -1098,22 +1153,18 @@ describe("URL のコピー", () => {
       ),
   )
 
-  it.live("URL の無いタブでショートカットを押すと、コピーできなかったと知らされる", () =>
+  it.live("on a tab without a URL, copies nothing and says it couldn't copy", () =>
     inBackground(
       Effect.gen(function* () {
         const { tab } = yield* startWithPage({ url: "https://copy.example/" })
+        yield* turnOn({ copyUrl: true })
 
         yield* pressShortcut("copy-current-url", {
           ...tab,
           url: Option.none(),
           pendingUrl: Option.none(),
         })
-        const notices = yield* eventually(
-          Effect.map(
-            pageNoticesIn(tab.id),
-            Option.liftPredicate((all) => all.length > 0),
-          ),
-        )
+        const notices = yield* noticesShownIn(tab.id)
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           [],

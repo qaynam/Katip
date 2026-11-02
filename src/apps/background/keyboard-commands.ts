@@ -1,8 +1,9 @@
 import { Array, Effect, Match, Option, pipe } from "effect"
+import { SettingsRepository } from "#modules/settings"
 import { trackedTab } from "#modules/workspace"
 import { Tabs, Windows, type BrowserTab, type TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarView } from "#protocol"
-import { copyTabWithNotice } from "./copy-tab"
+import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
 import { buildSidebarView } from "./sidebar-view-source"
@@ -27,8 +28,7 @@ const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId
     }),
   )
 
-// 画面に見えている順で移動する。内部の並びで移動すると、新しいタブを上に出す設定では
-// 「次」が画面上で上に進むことになる
+// Not the internal order: with new tabs placed on top, "next" would move up the screen
 const tabsInDisplayOrder = (view: SidebarView): ReadonlyArray<TabId> =>
   pipe(
     Array.findFirst(view.spaces, (space) => space.id === view.activeSpaceId),
@@ -63,7 +63,15 @@ const togglePin = Effect.fnUntraced(function* (activeTab: BrowserTab) {
   )
 })
 
-// devtools などタブを持たないウィンドウで押されたときも、最後に使っていたウィンドウの上に開く
+// A copy shortcut turned off in the settings keeps its key: extensions cannot unassign the keys
+// Chrome gave their commands, so the command still arrives and is ignored here
+const copyIfTurnedOn = Effect.fnUntraced(function* (activeTab: BrowserTab, format: CopyFormat) {
+  const { pageShortcuts } = yield* (yield* SettingsRepository).get
+  const isTurnedOn = format === "Url" ? pageShortcuts.copyUrl : pageShortcuts.copyMarkdownLink
+  if (isTurnedOn) yield* copyTabWithNotice(activeTab, format)
+})
+
+// Also opens over the last focused window when pressed in a window without tabs, such as devtools
 const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
   Effect.flatMap(
     Option.match(activeTab, {
@@ -74,9 +82,12 @@ const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
   )
 
 /**
- * キーボードショートカットを実行する。サイドパネルが開いていなくても動く。
+ * Runs a keyboard shortcut. Works whether or not the side panel is open.
  *
- * @param activeTab - ショートカットを押したときにアクティブだったタブ。
+ * @remarks
+ * The copy shortcuts do nothing unless they are turned on in the settings.
+ *
+ * @param activeTab - The tab that was active when the shortcut was pressed.
  */
 export const runKeyboardCommand = (command: string, activeTab: Option.Option<BrowserTab>) =>
   Match.value(command).pipe(
@@ -89,9 +100,9 @@ export const runKeyboardCommand = (command: string, activeTab: Option.Option<Bro
             Match.when(KeyboardCommand.quickPinToggle, () => togglePin(tab)),
             Match.when(KeyboardCommand.nextTabInSpace, () => stepWithinSpace(tab, 1)),
             Match.when(KeyboardCommand.previousTabInSpace, () => stepWithinSpace(tab, -1)),
-            Match.when(KeyboardCommand.copyCurrentUrl, () => copyTabWithNotice(tab, "Url")),
+            Match.when(KeyboardCommand.copyCurrentUrl, () => copyIfTurnedOn(tab, "Url")),
             Match.when(KeyboardCommand.copyCurrentUrlAsMarkdown, () =>
-              copyTabWithNotice(tab, "MarkdownLink"),
+              copyIfTurnedOn(tab, "MarkdownLink"),
             ),
             Match.orElse(() => Effect.void),
           ),

@@ -32,9 +32,12 @@ export const AutoArchiveSettings = withDefaultsOfAllFields(
 export type AutoArchiveSettings = typeof AutoArchiveSettings.Type
 
 /**
- * Web ページの上で使うショートカット。すべてのサイトへのアクセスの許可が要るので、既定では使わない。
+ * Which keyboard shortcuts that copy the active tab's URL are turned on. Both are off by default.
+ * A shortcut that is off does nothing when pressed, although Chrome keeps its key assigned.
  */
 export const PageShortcutSettings = withDefaultsOfAllFields(
+  // Named after the in-page shortcuts these replaced. Stored settings and version 1 export files
+  // carry these names, so renaming them would turn existing choices back off
   Schema.Struct({
     copyUrl: withDefault(Schema.Boolean, false),
     copyMarkdownLink: withDefault(Schema.Boolean, false),

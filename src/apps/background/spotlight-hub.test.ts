@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option, Queue, Ref, Schema, type Scope, Stream } from "effect"
 import type { Action } from "#modules/actions"
+import { SettingsRepository } from "#modules/settings"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BookmarkId, type PortSender, Tabs, type WindowId, Windows } from "#platform/browser"
@@ -682,7 +683,35 @@ describe("Spotlight の操作の候補", () => {
     ),
   )
 
-  it.effect("Chrome でキーを割り当てた操作には、そのキーを添える", () =>
+  it.effect("shows the key assigned in Chrome next to the actions that have one", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        yield* (yield* SettingsRepository).update({ pageShortcuts: { copyUrl: true } })
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(
+          actions(results)
+            .slice(0, 4)
+            .map(({ action, shortcut }) => [action._tag, shortcut]),
+        ).toStrictEqual([
+          ["CopyUrl", "⌃⇧C"],
+          ["CopyMarkdownLink", null],
+          ["TogglePin", "⌥D"],
+          ["DuplicateTab", null],
+        ])
+      }),
+      KeyboardShortcuts.layerTest({
+        assigned: { "copy-current-url": "⌃⇧C", "quick-pin-toggle": "⌥D" },
+      }),
+    ),
+  )
+
+  it.effect("shows no key next to a copy action whose shortcut is turned off in the settings", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -694,17 +723,15 @@ describe("Spotlight の操作の候補", () => {
 
         expect(
           actions(results)
-            .slice(0, 4)
+            .filter(({ action }) => action._tag === "CopyUrl" || action._tag === "CopyMarkdownLink")
             .map(({ action, shortcut }) => [action._tag, shortcut]),
         ).toStrictEqual([
-          ["CopyUrl", "⇧⌘C"],
+          ["CopyUrl", null],
           ["CopyMarkdownLink", null],
-          ["TogglePin", "⌥D"],
-          ["DuplicateTab", null],
         ])
       }),
       KeyboardShortcuts.layerTest({
-        assigned: { "copy-current-url": "⇧⌘C", "quick-pin-toggle": "⌥D" },
+        assigned: { "copy-current-url": "⌃⇧C", "copy-current-url-as-markdown": "⌃⇧M" },
       }),
     ),
   )

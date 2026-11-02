@@ -7,6 +7,7 @@ import {
   type PinnedSplit,
   type PinnedTree,
 } from "#modules/pinned"
+import { type PageShortcutSettings, SettingsRepository } from "#modules/settings"
 import type { Space, SpaceId } from "#modules/space"
 import { type SearchCandidate, searchSpotlight, type SpotlightEntry } from "#modules/spotlight"
 import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
@@ -261,15 +262,21 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
 })
 
 interface ShortcutEnvironment {
-  /** 拡張のコマンドの名前ごとに割り当てられたキー。 */
+  /** The key assigned to each extension command, by command name. */
   readonly assigned: ReadonlyMap<string, string>
+  readonly pageShortcuts: PageShortcutSettings
 }
 
+// A copy shortcut turned off keeps its key in Chrome, but showing the key would suggest it works
 const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | null => {
   const assigned = (command: string) => environment.assigned.get(command) ?? null
   return Match.valueTags(action, {
-    CopyUrl: () => assigned(KeyboardCommand.copyCurrentUrl),
-    CopyMarkdownLink: () => assigned(KeyboardCommand.copyCurrentUrlAsMarkdown),
+    CopyUrl: () =>
+      environment.pageShortcuts.copyUrl ? assigned(KeyboardCommand.copyCurrentUrl) : null,
+    CopyMarkdownLink: () =>
+      environment.pageShortcuts.copyMarkdownLink
+        ? assigned(KeyboardCommand.copyCurrentUrlAsMarkdown)
+        : null,
     TogglePin: () => assigned(KeyboardCommand.quickPinToggle),
     DuplicateTab: () => null,
     CloseTab: () => null,
@@ -289,7 +296,8 @@ const shortcutEnvironment = Effect.gen(function* () {
       ),
     ),
   )
-  return { assigned } satisfies ShortcutEnvironment
+  const { pageShortcuts } = yield* (yield* SettingsRepository).get
+  return { assigned, pageShortcuts } satisfies ShortcutEnvironment
 })
 
 const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {
