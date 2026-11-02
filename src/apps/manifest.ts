@@ -60,24 +60,29 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
   options_page: "options/index.html",
   commands: {
     _execute_action: {
-      suggested_key: { default: "Alt+S" },
+      suggested_key: { default: "Alt+S", mac: "Command+MacCtrl+S" },
       description: "サイドパネルを開く",
-    },
-    "quick-pin-toggle": {
-      suggested_key: { default: "Alt+D" },
-      description: "アクティブなタブをピン留め／ピン解除する",
     },
     "open-spotlight": {
       suggested_key: { default: "Alt+T" },
       description: "Spotlight を開いてタブ・ピン・Space を検索する",
     },
-    // Chrome が既定のキーを割り当てるのは 4 つまでなので、使う頻度の低いものは各自で割り当てる
-    "next-tab-in-space": { description: "Space の中で次のタブへ移る" },
-    "previous-tab-in-space": { description: "Space の中で前のタブへ移る" },
-    "copy-current-url": { description: "アクティブなタブの URL をコピーする" },
+    // Not ⌘⇧C, Ctrl+Shift+C or Alt+Shift+C: Chrome keeps them for itself and silently leaves a
+    // suggested key it uses unassigned. Not ⌘⌃⇧C either: Chrome refuses to load a manifest that
+    // suggests three modifiers. People who want ⌘⇧C can still assign it themselves
+    "copy-current-url": {
+      suggested_key: { default: "Alt+C", mac: "MacCtrl+Shift+C" },
+      description: "アクティブなタブの URL をコピーする",
+    },
     "copy-current-url-as-markdown": {
+      suggested_key: { default: "Alt+M", mac: "MacCtrl+Shift+M" },
       description: "アクティブなタブの URL を Markdown のリンクとしてコピーする",
     },
+    // Chrome refuses to load a manifest that suggests keys for more than 4 commands, so these are
+    // left for people to assign themselves
+    "quick-pin-toggle": { description: "アクティブなタブをピン留め／ピン解除する" },
+    "next-tab-in-space": { description: "Space の中で次のタブへ移る" },
+    "previous-tab-in-space": { description: "Space の中で前のタブへ移る" },
   },
   // 拡張ページはブラウザ自動操作ツールから開けないため、開発ビルドに限り localhost の
   // 検証用ページから background へ接続できるようにする。接続先の ID を読み込んだ場所に
