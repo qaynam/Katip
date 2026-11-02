@@ -32,42 +32,42 @@ const selectLabels = (tabs: ReadonlyArray<LabeledTab>) =>
   selectAutoArchiveTargets(tabs, { now, idleMinutes }).map((target) => target.tab.label)
 
 describe("selectAutoArchiveTargets", () => {
-  it("Space に属し、最後に使ってから閾値を超えた一時タブが対象になる", () => {
+  it("selects a temporary tab in a Space last used longer ago than the threshold", () => {
     expect(selectLabels([tab("idle")])).toStrictEqual(["idle"])
   })
 
-  it("対象には所属する Space が添えられる", () => {
+  it("gives each target the Space it belongs to", () => {
     const targets = selectAutoArchiveTargets([tab("idle")], { now, idleMinutes })
 
     expect(targets.map((target) => target.spaceId)).toStrictEqual([work])
   })
 
-  it("最後に使ってからちょうど閾値の時間しか経っていないタブは対象にならない", () => {
+  it("doesn't select a tab last used exactly the threshold ago", () => {
     const justAtThreshold = tab("just", { lastActiveAt: now - minutes(idleMinutes) })
 
     expect(selectLabels([justAtThreshold])).toStrictEqual([])
   })
 
-  it("最後に使った時刻が現在より後のタブは対象にならない", () => {
+  it("doesn't select a tab last used later than now", () => {
     expect(selectLabels([tab("future", { lastActiveAt: now + minutes(1) })])).toStrictEqual([])
   })
 
-  it("どの Space にも属さないタブは対象にならない", () => {
+  it("doesn't select a tab that belongs to no Space", () => {
     expect(selectLabels([tab("loose", { spaceId: Option.none() })])).toStrictEqual([])
   })
 
-  describe("保護されたタブ", () => {
+  describe("protected tabs", () => {
     it.each([
-      ["アクティブなタブ", { isActive: true }],
-      ["音声を再生中のタブ", { isAudible: true }],
-      ["Chrome で固定したタブ", { isChromePinned: true }],
-      ["ピンにバインドされたタブ", { isBoundToPin: true }],
-    ] as const)("%s は閾値を超えていても対象にならない", (_, protection) => {
+      ["an active tab", { isActive: true }],
+      ["a tab playing audio", { isAudible: true }],
+      ["a tab pinned in Chrome", { isChromePinned: true }],
+      ["a tab bound to a pin", { isBoundToPin: true }],
+    ] as const)("%s isn't selected even past the threshold", (_, protection) => {
       expect(selectLabels([tab("protected", protection)])).toStrictEqual([])
     })
   })
 
-  it("対象になるタブだけが入力の順序のまま返る", () => {
+  it("returns only the selected tabs, in input order", () => {
     const tabs = [
       tab("idle-1"),
       tab("active", { isActive: true }),
@@ -78,21 +78,27 @@ describe("selectAutoArchiveTargets", () => {
     expect(selectLabels(tabs)).toStrictEqual(["idle-1", "idle-2"])
   })
 
-  it("タブが無ければ対象も無い", () => {
+  it("selects nothing when there are no tabs", () => {
     expect(selectLabels([])).toStrictEqual([])
   })
 })
 
 describe("autoArchiveCheckIntervalMinutes", () => {
-  it("閾値の 4 分の 1 の間隔で確認する", () => {
+  it("checks every quarter of the threshold", () => {
     expect(autoArchiveCheckIntervalMinutes(20)).toBe(5)
   })
 
-  it.each([1, 2, 4])("閾値が %i 分と短くても、1 分より頻繁には確認しない", (threshold) => {
-    expect(autoArchiveCheckIntervalMinutes(threshold)).toBe(1)
-  })
+  it.each([1, 2, 4])(
+    "doesn't check more often than every minute, even for a threshold as short as %i minutes",
+    (threshold) => {
+      expect(autoArchiveCheckIntervalMinutes(threshold)).toBe(1)
+    },
+  )
 
-  it.each([60, 360, 10_080])("閾値が %i 分と長くても、15 分より間隔を空けない", (threshold) => {
-    expect(autoArchiveCheckIntervalMinutes(threshold)).toBe(15)
-  })
+  it.each([60, 360, 10_080])(
+    "checks at least every 15 minutes, even for a threshold as long as %i minutes",
+    (threshold) => {
+      expect(autoArchiveCheckIntervalMinutes(threshold)).toBe(15)
+    },
+  )
 })

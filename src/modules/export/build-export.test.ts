@@ -32,7 +32,7 @@ const browserTab = (
     index: id,
     url: Option.some(url ?? `https://example.com/${id}`),
     pendingUrl: Option.none(),
-    title: Option.some(title ?? `タブ ${id}`),
+    title: Option.some(title ?? `Tab ${id}`),
     favIconUrl: Option.none(),
     status: Option.some("complete"),
     active: false,
@@ -63,7 +63,7 @@ const sourcesWith = (overrides: Partial<ExportSources> = {}): ExportSources => (
   exportedAt: Date.UTC(2026, 10, 2, 3, 4, 5),
   katipVersion: "1.2.3",
   extensionOrigin: EXTENSION_ORIGIN,
-  spaces: [space(HOME, "ホーム")],
+  spaces: [space(HOME, "Home")],
   pinnedTrees: new Map([[HOME, []]]),
   folderIcons: new Map(),
   liveSorts: new Map(),
@@ -77,14 +77,14 @@ const exported = (sources: ExportSources) => Result.getOrThrow(buildExport(sourc
 
 const homeOf = (sources: ExportSources) => {
   const home = exported(sources).spaces.find((exportedSpace) => exportedSpace.id === HOME)
-  if (home === undefined) throw new Error("ホームが書き出されていない")
+  if (home === undefined) throw new Error("Home wasn't exported")
   return home
 }
 
 const tabTitlesOf = (sources: ExportSources) => homeOf(sources).tabs.map((tab) => tab.title)
 
-describe("ファイルの印", () => {
-  it("最新の版の印と、書き出した時刻と、書き出した Katip のバージョンを書く", () => {
+describe("file marks", () => {
+  it("write the latest version's mark, the export time and the exporting Katip's version", () => {
     const document = exported(sourcesWith())
 
     expect([
@@ -102,11 +102,11 @@ describe("ファイルの印", () => {
 })
 
 describe("Space", () => {
-  it("Space を並び順のまま、ID・名前・テーマとともに書き出す", () => {
+  it("exports the Spaces in order, with their IDs, names and themes", () => {
     const theme = themeOf([{ hue: 145, chroma: 0.6 }])
     const document = exported(
       sourcesWith({
-        spaces: [space(WORK, "仕事"), { ...space(HOME, "ホーム"), theme }],
+        spaces: [space(WORK, "Work"), { ...space(HOME, "Home"), theme }],
         pinnedTrees: new Map([
           [HOME, []],
           [WORK, []],
@@ -115,12 +115,12 @@ describe("Space", () => {
     )
 
     expect(document.spaces.map(({ id, name, theme }) => ({ id, name, theme }))).toStrictEqual([
-      { id: "work", name: "仕事", theme: neutralTheme },
-      { id: "home", name: "ホーム", theme },
+      { id: "work", name: "Work", theme: neutralTheme },
+      { id: "home", name: "Home", theme },
     ])
   })
 
-  it("ピン留めツリーを読めない Space があれば、一部の Space が欠けたまま書き出さずに失敗する", () => {
+  it("fails rather than export with Spaces missing when a Space's pinned tree can't be read", () => {
     const result = buildExport(
       sourcesWith({
         spaces: [space(HOME), space(WORK)],
@@ -132,39 +132,39 @@ describe("Space", () => {
   })
 })
 
-describe("ピン留め", () => {
-  it("ピン・フォルダ・分割ピン・ライブフォルダを、ツリーの並び順のまま種類ごとの形で書き出す", () => {
+describe("pinned", () => {
+  it("exports pins, folders, split pins and live folders in tree order, each in its own shape", () => {
     const tree: PinnedTree = [
-      pin("1", "メール", "https://mail.example.com/"),
+      pin("1", "Mail", "https://mail.example.com/"),
       {
         _tag: "PinnedFolder",
         id: BookmarkId.make("2"),
-        title: "読みもの",
+        title: "Reading",
         children: [
-          pin("3", "記事", "https://news.example.com/a"),
+          pin("3", "Article", "https://news.example.com/a"),
           {
             _tag: "PinnedFolder",
             id: BookmarkId.make("4"),
-            title: "料理",
-            children: [pin("5", "献立", "https://recipes.example.com/")],
+            title: "Cooking",
+            children: [pin("5", "Meal plan", "https://recipes.example.com/")],
           },
         ],
       },
       {
         _tag: "PinnedSplit",
         id: BookmarkId.make("6"),
-        title: "設計 | 課題",
+        title: "Design | Issues",
         items: [
           {
             _tag: "PinnedBookmark",
             id: BookmarkId.make("7"),
-            title: "設計",
+            title: "Design",
             url: "https://docs.example.com/",
           },
           {
             _tag: "PinnedBookmark",
             id: BookmarkId.make("8"),
-            title: "課題",
+            title: "Issues",
             url: "https://tracker.example.com/",
           },
         ],
@@ -172,47 +172,47 @@ describe("ピン留め", () => {
       {
         _tag: "PinnedLiveFolder",
         id: BookmarkId.make("9"),
-        title: "受信トレイ",
-        source: { _tag: "Gmail", accountIndex: 1, label: "仕事" },
+        title: "Inbox",
+        source: { _tag: "Gmail", accountIndex: 1, label: "Work" },
       },
     ]
 
     expect(homeOf(sourcesWith({ pinnedTrees: new Map([[HOME, tree]]) })).pinned).toStrictEqual([
-      { type: "pin", title: "メール", url: "https://mail.example.com/" },
+      { type: "pin", title: "Mail", url: "https://mail.example.com/" },
       {
         type: "folder",
-        title: "読みもの",
+        title: "Reading",
         icon: null,
         children: [
-          { type: "pin", title: "記事", url: "https://news.example.com/a" },
+          { type: "pin", title: "Article", url: "https://news.example.com/a" },
           {
             type: "folder",
-            title: "料理",
+            title: "Cooking",
             icon: null,
-            children: [{ type: "pin", title: "献立", url: "https://recipes.example.com/" }],
+            children: [{ type: "pin", title: "Meal plan", url: "https://recipes.example.com/" }],
           },
         ],
       },
       {
         type: "split",
         items: [
-          { type: "pin", title: "設計", url: "https://docs.example.com/" },
-          { type: "pin", title: "課題", url: "https://tracker.example.com/" },
+          { type: "pin", title: "Design", url: "https://docs.example.com/" },
+          { type: "pin", title: "Issues", url: "https://tracker.example.com/" },
         ],
       },
       {
         type: "liveFolder",
-        title: "受信トレイ",
-        source: { kind: "gmail", accountIndex: 1, label: "仕事" },
+        title: "Inbox",
+        source: { kind: "gmail", accountIndex: 1, label: "Work" },
         sort: "newest",
       },
     ])
   })
 
-  it("フォルダには選んだアイコンを書く", () => {
+  it("writes the chosen icon for each folder", () => {
     const tree: PinnedTree = [
-      { _tag: "PinnedFolder", id: BookmarkId.make("1"), title: "星", children: [] },
-      { _tag: "PinnedFolder", id: BookmarkId.make("2"), title: "無印", children: [] },
+      { _tag: "PinnedFolder", id: BookmarkId.make("1"), title: "Starred", children: [] },
+      { _tag: "PinnedFolder", id: BookmarkId.make("2"), title: "Plain", children: [] },
     ]
 
     const home = homeOf(
@@ -223,16 +223,16 @@ describe("ピン留め", () => {
     )
 
     expect(
-      home.pinned.map((node) => (node.type === "folder" ? node.icon : "folder でない")),
+      home.pinned.map((node) => (node.type === "folder" ? node.icon : "not a folder")),
     ).toStrictEqual(["star", null])
   })
 
-  it("ライブフォルダには、変えた並べ方と GitHub の取得元を書く", () => {
+  it("writes a live folder's changed sort and its GitHub source", () => {
     const tree: PinnedTree = [
       {
         _tag: "PinnedLiveFolder",
         id: BookmarkId.make("1"),
-        title: "レビュー待ち",
+        title: "Awaiting review",
         source: { _tag: "GitHub", query: "review-requested" },
       },
     ]
@@ -247,7 +247,7 @@ describe("ピン留め", () => {
     expect(home.pinned).toStrictEqual([
       {
         type: "liveFolder",
-        title: "レビュー待ち",
+        title: "Awaiting review",
         source: { kind: "github", query: "review-requested" },
         sort: "source",
       },
@@ -255,10 +255,10 @@ describe("ピン留め", () => {
   })
 })
 
-describe("一時タブ", () => {
+describe("temporary tabs", () => {
   const tabs = [browserTab(1), browserTab(2), browserTab(3)]
 
-  it("新しいタブを上に表示する設定なら、サイドパネルと同じく Chrome の並びの逆順に書き出す", () => {
+  it("with new tabs on top, are exported in reverse Chrome order, as the side panel shows them", () => {
     expect(
       tabTitlesOf(
         sourcesWith({
@@ -267,10 +267,10 @@ describe("一時タブ", () => {
           settings: { ...defaultSettings, newTabsOnTop: true },
         }),
       ),
-    ).toStrictEqual(["タブ 3", "タブ 2", "タブ 1"])
+    ).toStrictEqual(["Tab 3", "Tab 2", "Tab 1"])
   })
 
-  it("新しいタブを下に追加する設定なら、Chrome の並びのまま書き出す", () => {
+  it("with new tabs at the bottom, are exported in Chrome order", () => {
     expect(
       tabTitlesOf(
         sourcesWith({
@@ -279,10 +279,10 @@ describe("一時タブ", () => {
           settings: { ...defaultSettings, newTabsOnTop: false },
         }),
       ),
-    ).toStrictEqual(["タブ 1", "タブ 2", "タブ 3"])
+    ).toStrictEqual(["Tab 1", "Tab 2", "Tab 3"])
   })
 
-  it("複数のウィンドウにあれば、ウィンドウごとにサイドパネルの表示順に並べてからつなぐ", () => {
+  it("across several windows, are ordered per window as each side panel shows them, then joined", () => {
     const spread = [
       browserTab(1, { windowId: WindowId.make(1), index: 0 }),
       browserTab(2, { windowId: WindowId.make(1), index: 1 }),
@@ -298,10 +298,10 @@ describe("一時タブ", () => {
           settings: { ...defaultSettings, newTabsOnTop: true },
         }),
       ),
-    ).toStrictEqual(["タブ 2", "タブ 1", "タブ 4", "タブ 3"])
+    ).toStrictEqual(["Tab 2", "Tab 1", "Tab 4", "Tab 3"])
   })
 
-  it("Space ごとに、その Space の一時タブだけを書き出す", () => {
+  it("are exported under their own Space only", () => {
     const home = browserTab(1)
     const work = browserTab(2)
 
@@ -318,12 +318,12 @@ describe("一時タブ", () => {
     )
 
     expect(document.spaces.map((exportedSpace) => exportedSpace.tabs)).toStrictEqual([
-      [{ title: "タブ 1", url: "https://example.com/1" }],
-      [{ title: "タブ 2", url: "https://example.com/2" }],
+      [{ title: "Tab 1", url: "https://example.com/1" }],
+      [{ title: "Tab 2", url: "https://example.com/2" }],
     ])
   })
 
-  it("ピンとして開いているタブは、ピンとして書くので一時タブには含めない", () => {
+  it("leave out a tab open as a pin, since it is written as the pin", () => {
     const pinnedTab = browserTab(1)
     const temporaryTab = browserTab(2)
     const workspace = bindPinned(inSpace(HOME, [pinnedTab, temporaryTab]), pinnedTab.id, {
@@ -336,24 +336,24 @@ describe("一時タブ", () => {
         sourcesWith({
           tabs: [pinnedTab, temporaryTab],
           workspace,
-          pinnedTrees: new Map([[HOME, [pin("10", "ピン", "https://example.com/1")]]]),
+          pinnedTrees: new Map([[HOME, [pin("10", "Pin", "https://example.com/1")]]]),
         }),
       ),
-    ).toStrictEqual(["タブ 2"])
+    ).toStrictEqual(["Tab 2"])
   })
 
-  it("名前を付け直したタブは、付け直した名前で書き出す", () => {
-    const renamed = browserTab(1, { title: "元の名前" })
+  it("are exported under the name they were renamed to", () => {
+    const renamed = browserTab(1, { title: "Original name" })
     const workspace = setTitleOverride(
       inSpace(HOME, [renamed]),
       renamed.id,
-      Option.some("新しい名前"),
+      Option.some("New name"),
     )
 
-    expect(tabTitlesOf(sourcesWith({ tabs: [renamed], workspace }))).toStrictEqual(["新しい名前"])
+    expect(tabTitlesOf(sourcesWith({ tabs: [renamed], workspace }))).toStrictEqual(["New name"])
   })
 
-  it("タイトルの無いタブは、URL を名前にする", () => {
+  it("are named by their URL when they have no title", () => {
     const untitled = {
       ...browserTab(1, { url: "https://example.com/blank" }),
       title: Option.none(),
@@ -364,11 +364,11 @@ describe("一時タブ", () => {
     ).toStrictEqual(["https://example.com/blank"])
   })
 
-  it("どの Space にも属さないタブは書き出さない", () => {
+  it("leave out tabs that belong to no Space", () => {
     expect(homeOf(sourcesWith({ tabs: [browserTab(1)] })).tabs).toStrictEqual([])
   })
 
-  it("シークレットウィンドウのタブは書き出さない", () => {
+  it("leave out tabs in incognito windows", () => {
     const incognito = browserTab(1, { incognito: true })
 
     expect(
@@ -376,7 +376,7 @@ describe("一時タブ", () => {
     ).toStrictEqual([])
   })
 
-  it("Space のタブが Katip 自身のページへ移っていても、そのタブは書き出さない", () => {
+  it("leave out a Space's tab that has navigated to a Katip page", () => {
     const settingsPage = browserTab(1, { url: `${EXTENSION_ORIGIN}options/index.html` })
 
     expect(
@@ -386,20 +386,20 @@ describe("一時タブ", () => {
 })
 
 describe("Favorites", () => {
-  it("Chrome の固定タブを、タブストリップの順に Favorites として書き出す", () => {
+  it("are Chrome's pinned tabs, exported in tab strip order", () => {
     const tabs = [
-      browserTab(1, { pinned: true, title: "カレンダー", url: "https://calendar.example.com/" }),
-      browserTab(2, { pinned: true, title: "音楽", url: "https://music.example.com/" }),
+      browserTab(1, { pinned: true, title: "Calendar", url: "https://calendar.example.com/" }),
+      browserTab(2, { pinned: true, title: "Music", url: "https://music.example.com/" }),
       browserTab(3),
     ]
 
     expect(exported(sourcesWith({ tabs })).favorites).toStrictEqual([
-      { title: "カレンダー", url: "https://calendar.example.com/" },
-      { title: "音楽", url: "https://music.example.com/" },
+      { title: "Calendar", url: "https://calendar.example.com/" },
+      { title: "Music", url: "https://music.example.com/" },
     ])
   })
 
-  it("Favorites のタブは、Space に記録が残っていても一時タブに含めない", () => {
+  it("aren't exported as temporary tabs even when a Space still records them", () => {
     const favorite = browserTab(1, { pinned: true })
 
     expect(
@@ -407,7 +407,7 @@ describe("Favorites", () => {
     ).toStrictEqual([])
   })
 
-  it("複数のウィンドウで固定している同じページは、1 つにまとめる", () => {
+  it("merge the same page pinned in several windows into one", () => {
     const tabs = [
       browserTab(1, {
         windowId: WindowId.make(1),
@@ -435,15 +435,15 @@ describe("Favorites", () => {
     ])
   })
 
-  it("シークレットウィンドウの固定タブは書き出さない", () => {
+  it("leave out pinned tabs in incognito windows", () => {
     const tabs = [browserTab(1, { pinned: true, incognito: true })]
 
     expect(exported(sourcesWith({ tabs })).favorites).toStrictEqual([])
   })
 })
 
-describe("設定", () => {
-  it("設定のすべての項目を書き出す", () => {
+describe("settings", () => {
+  it("are exported field by field, all of them", () => {
     const settings = {
       newTabsOnTop: false,
       showAllOpenTabsInCollapsedFolders: true,

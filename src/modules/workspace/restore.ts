@@ -20,15 +20,15 @@ export const RestoreQueue = Schema.Struct({
 })
 export type RestoreQueue = typeof RestoreQueue.Type
 
-// Chrome は起動直後にまとめてタブを復元する。消費されなかったレコードを残し続けると、
-// 後日たまたま同じ URL を開いたタブを古い Space へ誤って戻してしまうため、期限で打ち切る
+// Chrome restores tabs all at once right after startup. Records left unclaimed expire: kept
+// forever, they would send a tab that happens to open the same URL days later back to an old Space
 export const RESTORE_WINDOW_MS = 5 * 60 * 1000
 
 /**
- * 再起動後に URL で照合するための記録を作る。
+ * Records the tracked tabs by URL so they can be matched up again after a restart.
  *
- * @param liveTabs - ウィンドウ順・タブ index 順に並べた生存中のタブ。同じ URL のタブが
- *   複数あるとき、復元時はこの順に対応づける。
+ * @param liveTabs - The open tabs, ordered by window and then by tab index. When several tabs share
+ *   a URL, restoring matches them up in this order.
  */
 export const takeSnapshot = (
   workspace: Workspace,
@@ -53,9 +53,11 @@ export const startRestore = (snapshot: RestoreSnapshot, now: number): RestoreQue
 })
 
 /**
- * URL が完全一致する最初のレコードを取り出す。
+ * Takes out the first record whose URL matches exactly and whose Space still exists. Returns none
+ * once the queue has expired.
  *
- * クエリやハッシュの違いを許すと、同じサイトの別ページを取り違えるため完全一致に限る。
+ * Only exact matches: allowing a different query or hash would mistake another page of the same
+ * site for the tab.
  */
 export const claimRestoreRecord = (
   queue: RestoreQueue,

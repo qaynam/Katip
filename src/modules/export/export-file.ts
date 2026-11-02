@@ -1,44 +1,53 @@
 import { Result, Schema } from "effect"
 import { ExportV1 } from "./v1"
 
-/** 書き出しファイルの `format` に入れる、Katip の書き出しファイルであることの印。 */
+/** The mark in an export file's `format` that says it is a Katip export file. */
 export const EXPORT_FORMAT = "katip.export"
 
-/** 書き出しが書く版の文書。読み込んだ古い版の文書も、この版に移してから返す。 */
+/**
+ * The document of the version exports are written in. Documents read from older versions are
+ * migrated to this version before they are returned.
+ */
 export const LatestExport = ExportV1
 export type LatestExport = ExportV1
 
 /**
- * 書き出しが書く版。
+ * The version exports are written in.
  *
  * @remarks
- * 版は、古い Katip がファイルを読めなくなるか読み違える変更をするときだけ上げる。項目を消す・
- * 名前を変える・意味を変える・選択肢に値を足す、などがそれにあたる。省略してよい項目を足すだけなら
- * 上げない。読む側は知らない項目を読み捨てるので、古い Katip も新しい項目を飛ばして読める。
+ * The version goes up only for a change that would make an older Katip fail to read a file or
+ * misread it: removing a field, renaming it, changing its meaning, adding a value to a set of
+ * choices, and so on. Adding a field that may be left out doesn't need a new version. Readers drop
+ * fields they don't know, so an older Katip skips the new field and reads the rest.
  *
- * 版を上げるときは次のようにする。
+ * To raise the version:
  *
- * 1. 新しい版の Schema を `v<版>.ts` に、ほかの版にも内部の Schema にも頼らずに書く。書き終えた版の
- *    ファイルは、その後変えない。
- * 2. {@link LatestExport} とこの値を新しい版にし、`buildExport` が新しい版の文書を作るようにする。
- * 3. 1 つ前の版の文書を新しい版の文書に移す純粋な関数を書く。古い版の読み方は、その版の Schema で
- *    読んでから 1 版ずつ移して最新の版にする（`latestFromV1 = (v1) => latestFromV2(v1ToV2(v1))`）。
- *    新しい版の読み方も表に足す。
- * 4. 新しい版で書いたファイルの見本を `fixtures/` に足す。古い版の見本も消さず、最新の版の文書として
- *    読めることを確かめ続ける。
+ * 1. Write the new version's Schema in `v<version>.ts`, relying on neither other versions nor the
+ *    internal Schemas. A finished version's file never changes afterwards.
+ * 2. Move {@link LatestExport} and this value to the new version, and make `buildExport` build
+ *    documents of the new version.
+ * 3. Write a pure function that migrates a document of the previous version to the new version. An
+ *    old version is read with its own Schema and then migrated one version at a time up to the
+ *    latest (`latestFromV1 = (v1) => latestFromV2(v1ToV2(v1))`). Add the new version's reader to
+ *    the table too.
+ * 4. Add a sample file written in the new version to `fixtures/`. Keep the samples of older
+ *    versions, and keep checking that they read as documents of the latest version.
  */
 export const LATEST_EXPORT_VERSION: LatestExport["version"] = 1
 
-/** JSON でないか、`format` が Katip の書き出しファイルの印でない。 */
+/** The content isn't JSON, or its `format` isn't the Katip export file mark. */
 export class NotKatipExport extends Schema.TaggedError<NotKatipExport>()("NotKatipExport", {}) {}
 
-/** この Katip より新しい Katip が書いたファイル。読むには Katip を更新してもらう。 */
+/** A file written by a newer Katip than this one. Reading it takes an update of Katip. */
 export class NewerExportVersion extends Schema.TaggedError<NewerExportVersion>()(
   "NewerExportVersion",
   { version: Schema.Int, latestVersion: Schema.Int },
 ) {}
 
-/** Katip の書き出しファイルの印はあるが、版が読めないか、中身がその版の形に合わない。 */
+/**
+ * The file has the Katip export file mark, but its version can't be read or its content doesn't
+ * fit that version's shape.
+ */
 export class MalformedExport extends Schema.TaggedError<MalformedExport>()("MalformedExport", {
   issue: Schema.String,
 }) {}
@@ -72,12 +81,13 @@ const decodeVersion = Schema.decodeUnknownResult(
 const malformed = (error: Schema.SchemaError) => new MalformedExport({ issue: error.message })
 
 /**
- * 書き出しファイルの中身を読み、最新の版の文書にして返す。
+ * Reads an export file's content and returns it as a document of the latest version.
  *
  * @remarks
- * まず `format` と `version` だけを読む。印が無ければ {@link NotKatipExport}、この Katip が知る
- * 最新の版より新しければ {@link NewerExportVersion} で断る。それ以外は書かれた版の Schema で読み、
- * 1 版ずつ最新の版へ移す。知らない項目は読み捨てる。
+ * Only `format` and `version` are read first. Without the mark it fails with
+ * {@link NotKatipExport}, and with a version newer than the latest this Katip knows it fails with
+ * {@link NewerExportVersion}. Otherwise the content is read with the Schema of the version it was
+ * written in and migrated one version at a time to the latest. Unknown fields are dropped.
  */
 export const decodeExportFile = (content: string): Result.Result<LatestExport, ExportReadError> =>
   Result.gen(function* () {
@@ -96,9 +106,10 @@ export const decodeExportFile = (content: string): Result.Result<LatestExport, E
 const encodeLatest = Schema.encodeResult(Schema.fromJsonString(LatestExport, { space: 2 }))
 
 /**
- * 最新の版の文書を、書き出しファイルの中身にする。
+ * Turns a document of the latest version into an export file's content.
  *
- * 文書が版の形に合わない値（範囲を外れた数など）を持てば失敗する。
+ * Fails when the document holds a value that doesn't fit the version's shape, such as a number out
+ * of range.
  */
 export const encodeExportFile = (
   document: LatestExport,

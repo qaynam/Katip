@@ -22,7 +22,7 @@ const entry = (id: string, overrides: Partial<Omit<ArchiveEntry, "id">> = {}): A
 const idsOf = (archive: ArchiveList) => archive.map((e) => e.id)
 
 describe("addArchiveEntry", () => {
-  it("追加したエントリが先頭に来る", () => {
+  it("puts the added entry first", () => {
     const archive = [entry("older", { archivedAt: 100 })]
 
     const added = addArchiveEntry(archive, entry("newer", { archivedAt: 200 }))
@@ -30,7 +30,7 @@ describe("addArchiveEntry", () => {
     expect(idsOf(added)).toStrictEqual(["newer", "older"])
   })
 
-  it("既存より古い日時のエントリを追加しても、アーカイブ日時の新しい順に並ぶ", () => {
+  it("keeps the most recently archived first even when the added entry is older than existing ones", () => {
     const archive = [entry("b", { archivedAt: 300 }), entry("a", { archivedAt: 100 })]
 
     const added = addArchiveEntry(archive, entry("middle", { archivedAt: 200 }))
@@ -38,31 +38,36 @@ describe("addArchiveEntry", () => {
     expect(idsOf(added)).toStrictEqual(["b", "middle", "a"])
   })
 
-  it("同じ URL のエントリがあると、古いエントリは消えて新しい情報だけが残る", () => {
+  it("replaces an entry with the same URL, keeping only the new details", () => {
     const url = "https://example.com/same"
-    const archive = [entry("old", { url, title: "旧", archivedAt: 100 })]
-    const newer = entry("new", { url, title: "新", spaceId: SpaceId.make("home"), archivedAt: 200 })
+    const archive = [entry("old", { url, title: "Old", archivedAt: 100 })]
+    const newer = entry("new", {
+      url,
+      title: "New",
+      spaceId: SpaceId.make("home"),
+      archivedAt: 200,
+    })
 
     const added = addArchiveEntry(archive, newer)
 
     expect(added).toStrictEqual([newer])
   })
 
-  it("URL が違えば同じタイトルでも別のエントリとして残る", () => {
-    const archive = [entry("a", { title: "同名", archivedAt: 100 })]
+  it("keeps entries with different URLs apart even with the same title", () => {
+    const archive = [entry("a", { title: "Same title", archivedAt: 100 })]
 
-    const added = addArchiveEntry(archive, entry("b", { title: "同名", archivedAt: 200 }))
+    const added = addArchiveEntry(archive, entry("b", { title: "Same title", archivedAt: 200 }))
 
     expect(idsOf(added)).toStrictEqual(["b", "a"])
   })
 
-  it.each(["", "   "])("タイトルが空（%j）なら URL がタイトルになる", (title) => {
+  it.each(["", "   "])("makes the URL the title when the title is blank (%j)", (title) => {
     const added = addArchiveEntry([], entry("a", { url: "https://example.com/x", title }))
 
     expect(added[0]?.title).toBe("https://example.com/x")
   })
 
-  it(`${ARCHIVE_CAPACITY} 件を超えると、最も古いエントリから捨てられる`, () => {
+  it(`drops the oldest entries beyond ${ARCHIVE_CAPACITY}`, () => {
     const full = Array.makeBy(ARCHIVE_CAPACITY, (i) =>
       entry(`e${i}`, { archivedAt: ARCHIVE_CAPACITY - i }),
     )
@@ -74,7 +79,7 @@ describe("addArchiveEntry", () => {
     expect(added.some((e) => e.id === `e${ARCHIVE_CAPACITY - 1}`)).toBe(false)
   })
 
-  it(`${ARCHIVE_CAPACITY} 件ちょうどでも、同じ URL の置き換えなら他のエントリは捨てられない`, () => {
+  it(`drops no other entry when replacing one with the same URL at exactly ${ARCHIVE_CAPACITY}`, () => {
     const full = Array.makeBy(ARCHIVE_CAPACITY, (i) =>
       entry(`e${i}`, { archivedAt: ARCHIVE_CAPACITY - i }),
     )
@@ -91,7 +96,7 @@ describe("addArchiveEntry", () => {
 })
 
 describe("removeArchiveEntry", () => {
-  it("指定したエントリだけが消え、残りの順序は保たれる", () => {
+  it("removes only the given entry and keeps the rest in order", () => {
     const archive = [entry("a"), entry("b"), entry("c")]
 
     const removed = removeArchiveEntry(archive, ArchiveEntryId.make("b"))
@@ -99,7 +104,7 @@ describe("removeArchiveEntry", () => {
     expect(idsOf(removed)).toStrictEqual(["a", "c"])
   })
 
-  it("存在しないエントリを指定しても一覧は変わらない", () => {
+  it("leaves the list as it is for an entry that doesn't exist", () => {
     const archive = [entry("a")]
 
     const removed = removeArchiveEntry(archive, ArchiveEntryId.make("missing"))
@@ -109,7 +114,7 @@ describe("removeArchiveEntry", () => {
 })
 
 describe("archiveEntriesInSpace", () => {
-  it("指定した Space のエントリだけが、元の順序のまま残る", () => {
+  it("keeps only the given Space's entries, in their order", () => {
     const work = SpaceId.make("work")
     const home = SpaceId.make("home")
     const archive = [
@@ -121,7 +126,7 @@ describe("archiveEntriesInSpace", () => {
     expect(idsOf(archiveEntriesInSpace(archive, work))).toStrictEqual(["w2", "w1"])
   })
 
-  it("その Space のエントリが無ければ空になる", () => {
+  it("is empty when the Space has no entries", () => {
     const archive = [entry("a", { spaceId: SpaceId.make("work") })]
 
     expect(archiveEntriesInSpace(archive, SpaceId.make("home"))).toStrictEqual([])

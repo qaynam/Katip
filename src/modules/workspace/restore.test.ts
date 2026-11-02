@@ -24,8 +24,8 @@ const record = (url: string, overrides: Partial<RestoreRecord> = {}): RestoreRec
   ...overrides,
 })
 
-describe("スナップショット", () => {
-  it("所属しているタブを、渡された並び順のまま URL つきで記録する", () => {
+describe("snapshots", () => {
+  it("record the tabs that belong to a Space with their URLs, in the order given", () => {
     const workspace = assignTab(
       assignTab(emptyWorkspace, tabId(1), spaceId("home"), 0),
       tabId(2),
@@ -44,7 +44,7 @@ describe("スナップショット", () => {
     ])
   })
 
-  it("どの Space にも属さないタブと URL の無いタブは記録しない", () => {
+  it("leave out tabs that belong to no Space and tabs without a URL", () => {
     const workspace = assignTab(emptyWorkspace, tabId(1), spaceId("home"), 0)
 
     const snapshot = takeSnapshot(workspace, [
@@ -56,8 +56,8 @@ describe("スナップショット", () => {
   })
 })
 
-describe("復元レコードの照合", () => {
-  it("URL が完全に一致するレコードを消費する", () => {
+describe("claiming restore records", () => {
+  it("claims the record whose URL matches exactly", () => {
     const queue = startRestore([record("https://a.example/"), record("https://b.example/")], 0)
 
     const claimed = claimRestoreRecord(queue, "https://b.example/", 1, always)
@@ -67,7 +67,7 @@ describe("復元レコードの照合", () => {
     ).toStrictEqual(Option.some(["https://b.example/", ["https://a.example/"]]))
   })
 
-  it("同じ URL のレコードが複数あるときは記録順に 1 件ずつ消費する", () => {
+  it("claims records sharing a URL one at a time, in recorded order", () => {
     const first = record("https://same.example/", { spaceId: spaceId("home") })
     const second = record("https://same.example/", { spaceId: spaceId("work") })
     const queue = startRestore([first, second], 0)
@@ -79,7 +79,7 @@ describe("復元レコードの照合", () => {
     )
   })
 
-  it("クエリだけが違う URL には一致しない", () => {
+  it("doesn't match a URL that differs only in its query", () => {
     const queue = startRestore([record("https://a.example/?x=1")], 0)
 
     const claimed = claimRestoreRecord(queue, "https://a.example/?x=2", 1, always)
@@ -87,7 +87,7 @@ describe("復元レコードの照合", () => {
     expect(claimed).toStrictEqual(Option.none())
   })
 
-  it("復元期間を過ぎたレコードには一致しない", () => {
+  it("doesn't match once the restore window has passed", () => {
     const queue = startRestore([record("https://a.example/")], 0)
 
     const claimed = claimRestoreRecord(queue, "https://a.example/", RESTORE_WINDOW_MS + 1, always)
@@ -95,7 +95,7 @@ describe("復元レコードの照合", () => {
     expect(claimed).toStrictEqual(Option.none())
   })
 
-  it("Space が削除されたレコードには一致しない", () => {
+  it("doesn't match a record whose Space was deleted", () => {
     const queue = startRestore([record("https://a.example/", { spaceId: spaceId("gone") })], 0)
 
     const claimed = claimRestoreRecord(queue, "https://a.example/", 1, (id) => id !== "gone")
@@ -104,14 +104,14 @@ describe("復元レコードの照合", () => {
   })
 })
 
-describe("タブの復元", () => {
-  it("レコードの Space・ピンのバインディング・タブ名を新しいタブ ID が引き継ぐ", () => {
+describe("restoring a tab", () => {
+  it("gives the new tab ID the record's Space, pin binding and tab name", () => {
     const pinned = { bookmarkId: BookmarkId.make("b1"), pinnedUrl: "https://a.example/" }
 
     const workspace = restoreTab(
       emptyWorkspace,
       tabId(7),
-      record("https://a.example/next", { pinned, titleOverride: "メール" }),
+      record("https://a.example/next", { pinned, titleOverride: "Mail" }),
       500,
     )
 
@@ -120,18 +120,18 @@ describe("タブの復元", () => {
         tabId: tabId(7),
         spaceId: spaceId("work"),
         pinned,
-        titleOverride: "メール",
+        titleOverride: "Mail",
         lastActiveAt: 500,
       }),
     )
   })
 
-  it("記録時のピンとタブ名はスナップショットに含まれ、復元で元に戻る", () => {
+  it("brings back the pin and tab name the snapshot recorded", () => {
     const pinned = { bookmarkId: BookmarkId.make("b1"), pinnedUrl: "https://a.example/" }
     const before = setTitleOverride(
       bindPinned(assignTab(emptyWorkspace, tabId(1), spaceId("work"), 0), tabId(1), pinned),
       tabId(1),
-      Option.some("メール"),
+      Option.some("Mail"),
     )
 
     const saved = Option.getOrThrow(
@@ -141,6 +141,6 @@ describe("タブの復元", () => {
 
     expect(
       Option.map(trackedTab(after, tabId(9)), (t) => [t.pinned, t.titleOverride]),
-    ).toStrictEqual(Option.some([pinned, "メール"]))
+    ).toStrictEqual(Option.some([pinned, "Mail"]))
   })
 })

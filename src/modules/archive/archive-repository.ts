@@ -10,7 +10,8 @@ export type ArchiveDraft = Omit<ArchiveEntry, "id" | "archivedAt">
 const decodeStoredItems = Schema.decodeUnknownOption(Schema.Array(Schema.Unknown))
 const decodeEntry = Schema.decodeUnknownOption(ArchiveEntry)
 
-// 一覧をまとめて decode すると、1 件壊れただけで全件を失う。読めないエントリだけを捨てる
+// Not decoding the list as a whole: one broken entry would lose them all. Only unreadable entries
+// are dropped
 const decodeStored = (stored: Option.Option<unknown>): ArchiveList =>
   Option.match(Option.flatMap(stored, decodeStoredItems), {
     onNone: () => [],
@@ -21,7 +22,7 @@ const encodeForStorage = (archive: ArchiveList) =>
   Effect.orDie(Schema.encodeEffect(ArchiveList)(archive))
 
 const makeArchiveRepository = Effect.fnUntraced(function* (area: StorageArea) {
-  // 読んでから書くまでの間に別の書き込みが割り込むと、先に書いた側の変更が消える
+  // Another write slipping in between the read and the write would lose the earlier write
   const writeLock = yield* Semaphore.make(1)
 
   const list = Effect.map(area.get(ARCHIVE_KEY), decodeStored)
@@ -53,14 +54,14 @@ const makeArchiveRepository = Effect.fnUntraced(function* (area: StorageArea) {
 export class ArchiveRepository extends Context.Service<
   ArchiveRepository,
   {
-    /** アーカイブ日時の新しい順。保存値のうち読めないエントリは含めない。 */
+    /** Most recently archived first. Stored entries that can't be read are left out. */
     readonly list: Effect.Effect<ArchiveList, BrowserApiError>
     /**
-     * 現在時刻と新しい ID を付けて記録する。同じ URL の既存エントリは置き換え、上限を超えた分は
-     * 古いものから捨てる。
+     * Records the draft with the current time and a new ID. It replaces an existing entry with the
+     * same URL, and the oldest entries beyond the capacity are dropped.
      */
     add(draft: ArchiveDraft): Effect.Effect<void, BrowserApiError>
-    /** 削除したエントリを返す。該当が無ければ何も書き込まずに `None` を返す。 */
+    /** Returns the removed entry, or `None` without writing anything when there's no such entry. */
     remove(id: ArchiveEntryId): Effect.Effect<Option.Option<ArchiveEntry>, BrowserApiError>
   }
 >()("katip/archive/ArchiveRepository") {

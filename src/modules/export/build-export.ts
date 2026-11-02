@@ -21,21 +21,21 @@ type ExportedPin = Extract<ExportedNode, { readonly type: "pin" }>
 type ExportedLiveSource = Extract<ExportedNode, { readonly type: "liveFolder" }>["source"]
 
 export interface ExportSources {
-  /** エポックミリ秒。 */
+  /** In epoch milliseconds. */
   readonly exportedAt: number
-  /** 書き出す Katip 自身のバージョン。 */
+  /** The version of the Katip doing the export. */
   readonly katipVersion: string
-  /** `chrome-extension://<id>/` の形。Katip 自身のページのタブは書き出さない。 */
+  /** In the form `chrome-extension://<id>/`. Tabs showing Katip's own pages aren't exported. */
   readonly extensionOrigin: string
   readonly spaces: SpaceList
-  /** 読めた Space のピン留めツリー。含まれない Space があれば書き出さない。 */
+  /** The pinned trees of the Spaces that could be read. Missing any Space fails the export. */
   readonly pinnedTrees: ReadonlyMap<SpaceId, PinnedTree>
-  /** 含まれないフォルダはアイコンを選んでいない。 */
+  /** A folder missing here has no icon chosen. */
   readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
-  /** 含まれないライブフォルダは既定の並べ方。 */
+  /** A live folder missing here uses the default sort. */
   readonly liveSorts: ReadonlyMap<BookmarkId, LiveSort>
   readonly workspace: Workspace
-  /** すべてのウィンドウのタブ。並び順は問わない。 */
+  /** The tabs of every window, in any order. */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly settings: Settings
 }
@@ -110,9 +110,9 @@ const pinIdsIn = (tree: PinnedTree): ReadonlyArray<BookmarkId> =>
     }),
   )
 
-// 同じピンに結びついたタブが複数あると、サイドパネルは 2 つ目以降を一時タブとして見せる。
-// 書き出しではそれも含めない。ピンとして書くページを一時タブとしても書くと、読み込んだときに
-// 同じページが二重に開く
+// When several tabs are bound to the same pin, the side panel shows all but the first as temporary
+// tabs. The export leaves those out too: a page written as a pin and also as a temporary tab would
+// open twice on import
 const temporaryTabsOf = (
   space: Space,
   tree: PinnedTree,
@@ -136,7 +136,8 @@ const temporaryTabsOf = (
       ),
     ),
   )
-  // 表示順はウィンドウごとのサイドパネルでの並びなので、全体をまとめて並べ替えると食い違う
+  // Not sorted as a whole: the display order is each window's side panel order, which a single
+  // sort across windows would contradict
   return Array.dedupe(spaceTabs.map(({ windowId }) => windowId)).flatMap((windowId) =>
     displayOrder(
       spaceTabs.filter((spaceTab) => spaceTab.windowId === windowId).map(({ link }) => link),
@@ -162,14 +163,15 @@ const settingsOf = (settings: Settings): LatestExport["settings"] => ({
 })
 
 /**
- * Katip の状態を、最新の版の書き出しファイルの文書にする。
+ * Turns Katip's state into a document of the latest export file version.
  *
  * @remarks
- * GitHub のトークン、ライブフォルダが取得した中身、フォルダの開閉、アーカイブ、復元のための記録は
- * 書き出さない。シークレットウィンドウのタブと、Katip 自身のページのタブも書き出さない。
+ * The GitHub token, what live folders fetched, which folders are open, the archive and the records
+ * for restoring tabs aren't exported. Neither are tabs in incognito windows or tabs showing Katip's
+ * own pages.
  *
- * @returns ピン留めツリーを読めなかった Space があれば {@link PinnedTreeUnavailable}。
- *   一部の Space のピンが欠けたファイルを、欠けたと気付かれないまま残させない。
+ * @returns {@link PinnedTreeUnavailable} when any Space's pinned tree couldn't be read, so that no
+ *   file is left with some Spaces' pins missing without anyone noticing.
  */
 export const buildExport = (
   sources: ExportSources,
@@ -177,10 +179,10 @@ export const buildExport = (
   const openTabs = Array.sort(
     sources.tabs.filter(
       (tab) =>
-        // シークレットウィンドウで開いたページは、書き出したファイルに残すと閲覧の跡になる
+        // Pages opened in an incognito window would leave a browsing trail in the exported file
         !tab.incognito &&
-        // Katip 自身のページは Space に入れない決まりだが、Space のタブがそのページへ移ると
-        // Space に残る。書き出すのは Space に入れるページだけにする
+        // Katip's own pages never join a Space, but a Space's tab that navigates to one stays in
+        // the Space. Only pages that may join a Space are exported
         !urlOf(tab).startsWith(sources.extensionOrigin),
     ),
     byWindowThenIndex,
@@ -207,7 +209,7 @@ export const buildExport = (
       exportedAt: new Date(sources.exportedAt).toISOString(),
       generator: { name: "Katip", version: sources.katipVersion },
       spaces,
-      // Favorites はウィンドウごとの固定タブで、同じページをウィンドウの数だけ持っていることが多い
+      // Favorites are each window's pinned tabs, so the same page often appears once per window
       favorites: Array.dedupeWith(
         openTabs
           .filter((tab) => tab.pinned)

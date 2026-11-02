@@ -27,7 +27,7 @@ const storedEntry = (id: string): typeof ArchiveEntry.Encoded =>
   })
 
 describe("list", () => {
-  it.effect("何も保存されていなければ空", () =>
+  it.effect("is empty when nothing is stored", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
 
@@ -35,7 +35,7 @@ describe("list", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存値の中に読めないエントリがあっても、残りのエントリは読める", () =>
+  it.effect("reads the remaining entries even when some stored entries can't be read", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
       yield* (yield* FakeBrowser).seedStorage("local", {
@@ -48,7 +48,7 @@ describe("list", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存値が配列でなければ空の一覧として読める", () =>
+  it.effect("reads a stored value that isn't an array as an empty list", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
       yield* (yield* FakeBrowser).seedStorage("local", { [ARCHIVE_KEY]: "corrupted" })
@@ -59,7 +59,7 @@ describe("list", () => {
 })
 
 describe("add", () => {
-  it.effect("追加したエントリが、追加した時刻とともに一覧の先頭に入る", () =>
+  it.effect("puts the added entry first in the list, with the time it was added", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
       yield* repository.add(draft("older"))
@@ -72,7 +72,7 @@ describe("add", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("追加するたびに別の ID が振られる", () =>
+  it.effect("gives every added entry a different ID", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
 
@@ -84,21 +84,21 @@ describe("add", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("同じ URL を追加すると、古いエントリは新しい情報で置き換わる", () =>
+  it.effect("replaces the old entry with the new details when the same URL is added", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
-      yield* repository.add(draft("same", { title: "旧" }))
+      yield* repository.add(draft("same", { title: "Old" }))
       yield* TestClock.setTime(1_000)
 
-      yield* repository.add(draft("same", { title: "新", spaceId: SpaceId.make("home") }))
+      yield* repository.add(draft("same", { title: "New", spaceId: SpaceId.make("home") }))
 
       const archive = yield* repository.list
       expect(archive).toHaveLength(1)
-      expect(archive[0]).toMatchObject({ title: "新", spaceId: "home", archivedAt: 1_000 })
+      expect(archive[0]).toMatchObject({ title: "New", spaceId: "home", archivedAt: 1_000 })
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("同時に追加しても、どの追加も失われない", () =>
+  it.effect("loses none of several concurrent additions", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
 
@@ -112,7 +112,7 @@ describe("add", () => {
 })
 
 describe("remove", () => {
-  it.effect("削除したエントリが返り、一覧から消える", () =>
+  it.effect("returns the removed entry and drops it from the list", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
       yield* repository.add(draft("keep"))
@@ -128,7 +128,7 @@ describe("remove", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("存在しないエントリを指定すると None が返り、一覧は変わらない", () =>
+  it.effect("returns None for an entry that doesn't exist and leaves the list as it is", () =>
     Effect.gen(function* () {
       const repository = yield* ArchiveRepository
       yield* repository.add(draft("keep"))

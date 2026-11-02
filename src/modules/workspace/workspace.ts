@@ -4,7 +4,8 @@ import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
 export const PinnedBinding = Schema.Struct({
   bookmarkId: BookmarkId,
-  // ブックマークの URL ではなく、ピン留めした時点の URL。ここから移動したかを判定する基準
+  // Not the bookmark's URL but the URL when pinned: whether the tab has moved away is judged from
+  // this
   pinnedUrl: Schema.String,
 })
 export type PinnedBinding = typeof PinnedBinding.Type
@@ -88,8 +89,8 @@ export const forgetWindow = (workspace: Workspace, windowId: WindowId): Workspac
   windows: workspace.windows.filter((window) => window.windowId !== windowId),
 })
 
-// Chrome は Cmd+T で開いたタブにも直前のタブを opener として付けることがあるため、
-// 新しいタブページについては opener を所属の手がかりにしない
+// Not using the opener for a new tab page: Chrome sometimes gives even a tab opened with Cmd+T the
+// previous tab as its opener
 const isNewTabPage = (url: string) =>
   url === "" ||
   url === "about:blank" ||
@@ -131,10 +132,10 @@ export const trackTab = (
 }
 
 /**
- * タブを指定した Space の一時タブとして所属させる。既に所属していれば移す。
+ * Puts the tab in the given Space as a temporary tab, moving it if it already belongs to one.
  *
- * 所属の判定（固定タブや自拡張のページを除外する規則）は行わないので、
- * 由来の分かっているタブにだけ使う。
+ * It skips the rules that decide whether a tab belongs anywhere (leaving out Chrome-pinned tabs and
+ * Katip's own pages), so use it only for tabs whose origin is known.
  */
 export const assignTab = (
   workspace: Workspace,
@@ -203,9 +204,9 @@ export const setTitleOverride = (
 ) => updateTab(workspace, tabId, (tab) => ({ ...tab, titleOverride: Option.getOrNull(title) }))
 
 /**
- * 削除される Space から、タブとウィンドウのアクティブ指定を引き継ぎ先へ移す。
+ * Moves the tabs of a Space being deleted, and the windows that had it active, to the successor.
  *
- * Space と一緒にブックマークも消えるため、ピンのバインディングは外す。
+ * The Space's bookmarks go with it, so the moved tabs lose their pin bindings.
  */
 export const releaseSpace = (
   workspace: Workspace,
@@ -223,10 +224,11 @@ export const releaseSpace = (
 const byLastActive = Order.mapInput(Order.Number, (tab: TrackedTab) => tab.lastActiveAt)
 
 /**
- * Space に切り替えたときに前面へ出すタブを選ぶ。その Space で最後に使っていたタブを優先する。
+ * Picks the tab to bring forward on switching to a Space: the one last used in that Space.
  *
- * @param candidates - 切り替えるウィンドウに今あるタブ。他のウィンドウのタブは選ばない。
- * @returns 該当するタブが無ければ none（呼び出し側で新しいタブを開く）。
+ * @param candidates - The tabs now in the window being switched. Tabs in other windows are never
+ *   picked.
+ * @returns None when no candidate belongs to the Space (the caller opens a new tab).
  */
 export const tabToFocus = (
   workspace: Workspace,

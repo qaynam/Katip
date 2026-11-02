@@ -2,15 +2,15 @@ import { Array, Number, Option } from "effect"
 import type { SpaceId } from "#modules/space"
 
 export interface AutoArchiveTab {
-  /** None はどの Space にも属さないタブ。 */
+  /** None for a tab that belongs to no Space. */
   readonly spaceId: Option.Option<SpaceId>
   readonly isActive: boolean
   readonly isAudible: boolean
   readonly isChromePinned: boolean
   readonly isBoundToPin: boolean
   /**
-   * 最後にアクティブになった時刻（エポックミリ秒）。まだ一度もアクティブになっていないタブは、
-   * 作成時刻かブラウザの起動時刻で埋めてから渡す。
+   * When the tab last became active, in epoch milliseconds. For a tab that has never been active,
+   * pass its creation time or the browser's startup time instead.
    */
   readonly lastActiveAt: number
 }
@@ -21,13 +21,13 @@ export interface AutoArchiveTarget<T extends AutoArchiveTab> {
 }
 
 export interface AutoArchiveCriteria {
-  /** エポックミリ秒。 */
+  /** In epoch milliseconds. */
   readonly now: number
   readonly idleMinutes: number
 }
 
-// URL がピンと一致するかでは保護しない。ピンと同じページを一時タブで開いただけで、
-// そのタブまでアーカイブされなくなるため
+// Not protected by matching a pin's URL: merely opening a pin's page in a temporary tab would keep
+// that tab from ever being archived
 const isProtected = (tab: AutoArchiveTab) =>
   tab.isActive || tab.isAudible || tab.isChromePinned || tab.isBoundToPin
 
@@ -43,20 +43,22 @@ const toTarget = <T extends AutoArchiveTab>(
     : Option.map(tab.spaceId, (spaceId) => ({ tab, spaceId }))
 
 /**
- * 自動アーカイブで閉じるべきタブを、入力の順序のまま返す。
+ * Returns the tabs auto archive should close, in input order.
  *
- * 対象は Space に属する一時タブのうち、保護されておらず、最後にアクティブになってから
- * 閾値を超えて経過したもの。
+ * Those are the temporary tabs that belong to a Space, aren't protected, and were last active
+ * longer ago than the threshold.
  */
 export const selectAutoArchiveTargets = <T extends AutoArchiveTab>(
   tabs: ReadonlyArray<T>,
   criteria: AutoArchiveCriteria,
 ): ReadonlyArray<AutoArchiveTarget<T>> => Array.getSomes(tabs.map((tab) => toTarget(tab, criteria)))
 
-// アーカイブが閾値から遅れる時間は最大で確認間隔 1 回分になる。閾値に比例させるだけだと
-// 長い閾値で遅れが何時間にも伸び、固定の短い間隔だと長い閾値のあいだ service worker を
-// 無駄に起こし続けるため、比例させたうえで上下を切る。
-// 下限は Chrome が許す 30 秒ではなく 1 分にする。分単位の設定に対して 30 秒は細かすぎる
+// Archiving can lag the threshold by up to one check interval. An interval only proportional to the
+// threshold would stretch the lag to hours for long thresholds, and a short fixed one would keep
+// waking the service worker for nothing through a long threshold, so it is proportional and
+// clamped at both ends.
+// The floor is 1 minute, not the 30 seconds Chrome allows: 30 seconds is finer than a setting in
+// minutes needs
 const CHECKS_PER_THRESHOLD = 4
 const SHORTEST_CHECK_INTERVAL_MINUTES = 1
 const LONGEST_CHECK_INTERVAL_MINUTES = 15

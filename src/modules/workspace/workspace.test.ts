@@ -56,8 +56,8 @@ const track = (workspace: Workspace, tab: NewTab, overrides = {}) =>
 
 const withActiveSpace = (id: string) => switchSpace(emptyWorkspace, WINDOW, spaceId(id))
 
-describe("新しいタブの所属先", () => {
-  it("opener のタブが属する Space に入る", () => {
+describe("where a new tab goes", () => {
+  it("joins the Space its opener belongs to", () => {
     const base = track(withActiveSpace("home"), newTab(10))
     const moved = moveTabToSpace(base, tabId(10), spaceId("work"))
 
@@ -67,11 +67,11 @@ describe("新しいタブの所属先", () => {
   })
 
   it.each([
-    ["URL が空", ""],
+    ["empty URL", ""],
     ["chrome://newtab/", "chrome://newtab/"],
     ["chrome://new-tab-page/", "chrome://new-tab-page/"],
     ["about:blank", "about:blank"],
-  ])("新しいタブページ（%s）は opener を無視してウィンドウのアクティブ Space に入る", (_, url) => {
+  ])("a new tab page (%s) ignores its opener and joins the window's active Space", (_, url) => {
     const base = track(withActiveSpace("home"), newTab(10))
     const opener = moveTabToSpace(base, tabId(10), spaceId("work"))
 
@@ -80,13 +80,13 @@ describe("新しいタブの所属先", () => {
     expect(spaceOf(workspace, tabId(11))).toStrictEqual(Option.some(spaceId("home")))
   })
 
-  it("opener が無ければウィンドウのアクティブ Space に入る", () => {
+  it("joins the window's active Space when it has no opener", () => {
     const workspace = track(withActiveSpace("fun"), newTab(10))
 
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.some(spaceId("fun")))
   })
 
-  it("アクティブ Space が決まっていないウィンドウでは既定の Space に入る", () => {
+  it("joins the default Space in a window without an active Space", () => {
     const workspace = track(emptyWorkspace, newTab(10), {
       defaultSpaceId: Option.some(spaceId("work")),
     })
@@ -94,7 +94,7 @@ describe("新しいタブの所属先", () => {
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.some(spaceId("work")))
   })
 
-  it("既定の Space が削除済みなら先頭の Space に入る", () => {
+  it("joins the first Space when the default Space was deleted", () => {
     const workspace = track(emptyWorkspace, newTab(10), {
       defaultSpaceId: Option.some(spaceId("deleted")),
     })
@@ -102,13 +102,13 @@ describe("新しいタブの所属先", () => {
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.some(spaceId("home")))
   })
 
-  it("Chrome で固定されたタブはどの Space にも入らない", () => {
+  it("a tab pinned in Chrome joins no Space", () => {
     const workspace = track(withActiveSpace("home"), newTab(10, { isChromePinned: true }))
 
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.none())
   })
 
-  it("自拡張のページはどの Space にも入らない", () => {
+  it("Katip's own pages join no Space", () => {
     const workspace = track(
       withActiveSpace("home"),
       newTab(10, { url: `${EXTENSION_ORIGIN}options/index.html` }),
@@ -117,7 +117,7 @@ describe("新しいタブの所属先", () => {
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.none())
   })
 
-  it("既に所属しているタブは、もう一度追跡しても所属が変わらない", () => {
+  it("tracking a tab that already belongs to a Space again leaves it there", () => {
     const tracked = track(withActiveSpace("home"), newTab(10))
     const switched = switchSpace(tracked, WINDOW, spaceId("work"))
 
@@ -126,15 +126,15 @@ describe("新しいタブの所属先", () => {
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.some(spaceId("home")))
   })
 
-  it("Space が 1 つも無いときは所属させない", () => {
+  it("joins nothing when there are no Spaces", () => {
     const workspace = track(emptyWorkspace, newTab(10), { spaces: [] })
 
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.none())
   })
 })
 
-describe("タブのアクティブ化", () => {
-  it("別の Space のタブがアクティブになると、ウィンドウのアクティブ Space がそちらに切り替わる", () => {
+describe("activating a tab", () => {
+  it("switches the window's active Space to the Space of the activated tab", () => {
     const tracked = track(withActiveSpace("home"), newTab(10))
     const moved = moveTabToSpace(tracked, tabId(10), spaceId("work"))
 
@@ -143,7 +143,7 @@ describe("タブのアクティブ化", () => {
     expect(activeSpaceOf(workspace, WINDOW)).toStrictEqual(Option.some(spaceId("work")))
   })
 
-  it("どの Space にも属さないタブがアクティブになっても、アクティブ Space は変わらない", () => {
+  it("leaves the active Space as it is when the activated tab belongs to no Space", () => {
     const base = withActiveSpace("home")
 
     const workspace = recordActivation(base, { tabId: tabId(99), windowId: WINDOW, now: 2_000 })
@@ -152,8 +152,8 @@ describe("タブのアクティブ化", () => {
   })
 })
 
-describe("タブ ID の置き換え", () => {
-  it("所属とピンのバインディングが新しいタブ ID に引き継がれる", () => {
+describe("replacing a tab ID", () => {
+  it("carries the Space and pin binding over to the new tab ID", () => {
     const tracked = track(withActiveSpace("work"), newTab(10))
     const bound = bindPinned(tracked, tabId(10), {
       bookmarkId: BookmarkId.make("b1"),
@@ -174,8 +174,8 @@ describe("タブ ID の置き換え", () => {
   })
 })
 
-describe("タブを閉じたとき", () => {
-  it("所属の記録が消える", () => {
+describe("closing a tab", () => {
+  it("forgets which Space it belonged to", () => {
     const tracked = track(withActiveSpace("home"), newTab(10))
 
     const workspace = forgetTab(tracked, tabId(10))
@@ -184,8 +184,8 @@ describe("タブを閉じたとき", () => {
   })
 })
 
-describe("Space を手放すとき", () => {
-  it("その Space のタブは引き継ぎ先の Space へ移り、ピンのバインディングは外れる", () => {
+describe("releasing a Space", () => {
+  it("moves its tabs to the successor Space and unbinds their pins", () => {
     const tracked = track(withActiveSpace("work"), newTab(10))
     const bound = bindPinned(tracked, tabId(10), {
       bookmarkId: BookmarkId.make("b1"),
@@ -200,18 +200,18 @@ describe("Space を手放すとき", () => {
     }).toStrictEqual({ space: Option.some(spaceId("home")), pinned: null })
   })
 
-  it("その Space をアクティブにしていたウィンドウは引き継ぎ先の Space に切り替わる", () => {
+  it("switches windows that had it active to the successor Space", () => {
     const workspace = releaseSpace(withActiveSpace("work"), spaceId("work"), spaceId("home"))
 
     expect(activeSpaceOf(workspace, WINDOW)).toStrictEqual(Option.some(spaceId("home")))
   })
 })
 
-describe("Space へ切り替えたときに前面へ出すタブ", () => {
+describe("the tab brought forward on switching to a Space", () => {
   const activate = (workspace: Workspace, id: number, now: number) =>
     recordActivation(workspace, { tabId: tabId(id), windowId: WINDOW, now })
 
-  it("その Space で最後に使っていたタブが選ばれる", () => {
+  it("is the one last used in that Space", () => {
     const tracked = [10, 11, 12].reduce(
       (workspace, id) => track(workspace, newTab(id)),
       withActiveSpace("home"),
@@ -223,7 +223,7 @@ describe("Space へ切り替えたときに前面へ出すタブ", () => {
     expect(focused).toStrictEqual(Option.some(tabId(10)))
   })
 
-  it("候補に無い（別のウィンドウにある）タブは選ばれない", () => {
+  it("is never a tab outside the candidates (in another window)", () => {
     const tracked = track(track(withActiveSpace("home"), newTab(10)), newTab(11))
     const used = activate(activate(tracked, 11, 2_000), 10, 3_000)
 
@@ -232,7 +232,7 @@ describe("Space へ切り替えたときに前面へ出すタブ", () => {
     expect(focused).toStrictEqual(Option.some(tabId(11)))
   })
 
-  it("その Space のタブが候補に 1 つも無ければ何も選ばれない", () => {
+  it("is none when no candidate belongs to that Space", () => {
     const tracked = track(withActiveSpace("home"), newTab(10))
 
     const focused = tabToFocus(tracked, spaceId("work"), [tabId(10)])

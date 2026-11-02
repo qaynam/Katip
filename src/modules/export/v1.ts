@@ -1,8 +1,8 @@
 import { Schema } from "effect"
 
-// この版で書かれたファイルを後の Katip も読み続けるため、ここは書き換えない。形を変えるときは
-// 新しい版のファイルを足す。内部の Schema を使わないのは、内部の作り替えでファイルの形が黙って
-// 変わらないようにするため
+// Never rewritten, so that later versions of Katip keep reading files written in this version. A
+// change of shape gets a new version's file instead. Not built from the internal Schemas, so that
+// reworking the internals can't silently change the file's shape
 
 const unitInterval = Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 1 })))
 
@@ -29,7 +29,7 @@ export type PinV1 = typeof PinV1.Type
 
 export const SplitV1 = Schema.Struct({
   type: Schema.Literal("split"),
-  /** 左、右の順。 */
+  /** Left, then right. */
   items: Schema.Tuple([PinV1, PinV1]),
 })
 export type SplitV1 = typeof SplitV1.Type
@@ -45,7 +45,7 @@ export const LiveSourceV1 = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("gmail"),
     accountIndex: Schema.Int,
-    /** null は受信トレイ。 */
+    /** null is the inbox. */
     label: Schema.NullOr(Schema.String),
   }),
   Schema.Struct({ kind: Schema.Literal("github"), query: GitHubQuery }),
@@ -72,8 +72,8 @@ export type PinnedNodeV1 = PinV1 | FolderV1 | SplitV1 | LiveFolderV1
 export const FolderV1: Schema.Codec<FolderV1> = Schema.Struct({
   type: Schema.Literal("folder"),
   title: Schema.String,
-  // アイコンの名前を一覧に閉じると、アイコンを足すたびに版を上げることになる。知らない名前は
-  // 読む側でアイコン無しとして扱う
+  // Not a closed list of icon names: every new icon would then need a new version. A reader treats
+  // a name it doesn't know as no icon
   icon: Schema.NullOr(Schema.String),
   children: Schema.Array(Schema.suspend((): Schema.Codec<PinnedNodeV1> => PinnedNodeV1)),
 })
@@ -89,9 +89,9 @@ export const SpaceV1 = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   theme: Theme,
-  /** 表示する順。 */
+  /** In display order. */
   pinned: Schema.Array(PinnedNodeV1),
-  /** 書き出したときに開いていた一時タブ。表示する順。 */
+  /** The temporary tabs open at the time of export, in display order. */
   tabs: Schema.Array(Link),
 })
 export type SpaceV1 = typeof SpaceV1.Type
@@ -104,25 +104,25 @@ export const SettingsV1 = Schema.Struct({
     enabled: Schema.Boolean,
     idleMinutes: Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1))),
   }),
-  /** `spaces` の `id` のどれか。null は指定なし。 */
+  /** One of the `id`s in `spaces`. null means none chosen. */
   defaultSpaceId: Schema.NullOr(Schema.String),
-  // 言語を一覧に閉じると、対応する言語を足すたびに版を上げることになる。知らない言語は
-  // 読む側で自動として扱う
+  // Not a closed list of languages: every newly supported language would then need a new version.
+  // A reader treats a language it doesn't know as automatic
   locale: Schema.String,
   pageShortcuts: Schema.Struct({ copyUrl: Schema.Boolean, copyMarkdownLink: Schema.Boolean }),
 })
 export type SettingsV1 = typeof SettingsV1.Type
 
-/** 版 1 の書き出しファイル。 */
+/** An export file of version 1. */
 export const ExportV1 = Schema.Struct({
   format: Schema.Literal("katip.export"),
   version: Schema.Literal(1),
-  /** ISO 8601 の UTC 時刻。 */
+  /** A UTC time in ISO 8601. */
   exportedAt: Schema.String,
   generator: Schema.Struct({ name: Schema.String, version: Schema.String }),
-  /** 並べる順。 */
+  /** In display order. */
   spaces: Schema.Array(SpaceV1),
-  /** Favorites に並べる順。 */
+  /** In the order shown in Favorites. */
   favorites: Schema.Array(Link),
   settings: SettingsV1,
 })

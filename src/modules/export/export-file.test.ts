@@ -115,8 +115,8 @@ const withChanges = (change: (json: Record<string, unknown>) => unknown) =>
 const failureOf = <A, E>(result: Result.Result<A, E>) =>
   Result.isFailure(result) ? result.failure : undefined
 
-describe("書き出し", () => {
-  it("最新の版の印を付け、ノードの種類を type で示した JSON を書く", () => {
+describe("writing", () => {
+  it("writes JSON marked with the latest version, with each node's kind in type", () => {
     const written = JSON.parse(encoded(exportV1Document)) as LatestExport
 
     expect([
@@ -126,19 +126,19 @@ describe("書き出し", () => {
     ]).toStrictEqual(["katip.export", 1, ["pin", "folder", "split", "liveFolder"]])
   })
 
-  it("人が開いても読めるよう、2 文字ずつ字下げした JSON で書く", () => {
+  it("indents the JSON by two spaces so people can read it too", () => {
     const written = encoded(exportV1Document)
 
     expect(written).toBe(JSON.stringify(JSON.parse(written), null, 2))
   })
 
-  it("書いたファイルを読むと、書く前の文書に戻る", () => {
+  it("reads a written file back into the document it was written from", () => {
     expect(decodeExportFile(encoded(exportV1Document))).toStrictEqual(
       Result.succeed(exportV1Document),
     )
   })
 
-  it("版の形に合わない値を持つ文書は書かずに失敗する", () => {
+  it("fails without writing a document holding a value that doesn't fit the version's shape", () => {
     const outOfRange: LatestExport = {
       ...exportV1Document,
       spaces: exportV1Document.spaces.map((space) => ({
@@ -151,15 +151,15 @@ describe("書き出し", () => {
   })
 })
 
-describe("読み込み", () => {
-  it("v1 で書いた見本のファイルを、最新の版の文書として読める", () => {
+describe("reading", () => {
+  it("reads the sample file written in v1 as a document of the latest version", () => {
     expect(decodeExportFile(exportV1)).toStrictEqual(Result.succeed(exportV1Document))
   })
 
-  it("知らない項目が増えていても、知っている項目だけを読む", () => {
+  it("reads only the known fields of a file with unknown ones added", () => {
     const withUnknownFields = withChanges((json) => ({
       ...json,
-      archive: [{ title: "閉じたタブ", url: "https://example.com/" }],
+      archive: [{ title: "Closed tab", url: "https://example.com/" }],
       spaces: (json["spaces"] as ReadonlyArray<Record<string, unknown>>).map((space) => ({
         ...space,
         emoji: "🏠",
@@ -174,8 +174,8 @@ describe("読み込み", () => {
     expect(decodeExportFile(withUnknownFields)).toStrictEqual(Result.succeed(exportV1Document))
   })
 
-  it("この Katip より新しい版のファイルは、Katip の更新を促すエラーで断る", () => {
-    const fromFuture = withChanges((json) => ({ ...json, version: 2, spaces: "形が変わった" }))
+  it("rejects a file of a newer version than this Katip with an error that asks for an update", () => {
+    const fromFuture = withChanges((json) => ({ ...json, version: 2, spaces: "a changed shape" }))
 
     expect(failureOf(decodeExportFile(fromFuture))).toStrictEqual(
       new NewerExportVersion({ version: 2, latestVersion: 1 }),
@@ -183,20 +183,23 @@ describe("読み込み", () => {
   })
 
   it.each([
-    ["format が別のアプリのもの", JSON.stringify({ format: "other.backup", version: 1 })],
-    ["format が無い", JSON.stringify({ version: 1, spaces: [] })],
-    ["JSON の配列", "[]"],
-    ["JSON でない", "<html></html>"],
-  ])("%s ファイルは、Katip の書き出しファイルではないとして断る", (_, content) => {
+    ["whose format is another app's", JSON.stringify({ format: "other.backup", version: 1 })],
+    ["without a format", JSON.stringify({ version: 1, spaces: [] })],
+    ["that is a JSON array", "[]"],
+    ["that isn't JSON", "<html></html>"],
+  ])("rejects a file %s as not a Katip export file", (_, content) => {
     expect(failureOf(decodeExportFile(content))).toStrictEqual(new NotKatipExport())
   })
 
   it.each([
-    ["版が無い", withChanges(({ version: _, ...json }) => json)],
-    ["版が整数でない", withChanges((json) => ({ ...json, version: "1" }))],
-    ["版が 1 より小さい", withChanges((json) => ({ ...json, version: 0 }))],
-    ["中身が版の形に合わない", withChanges((json) => ({ ...json, spaces: [{ name: "Home" }] }))],
-  ])("%s ファイルは、壊れた書き出しファイルとして断る", (_, content) => {
+    ["without a version", withChanges(({ version: _, ...json }) => json)],
+    ["whose version isn't an integer", withChanges((json) => ({ ...json, version: "1" }))],
+    ["whose version is below 1", withChanges((json) => ({ ...json, version: 0 }))],
+    [
+      "whose content doesn't fit the version's shape",
+      withChanges((json) => ({ ...json, spaces: [{ name: "Home" }] })),
+    ],
+  ])("rejects a file %s as a malformed export file", (_, content) => {
     expect(failureOf(decodeExportFile(content))).toBeInstanceOf(MalformedExport)
   })
 })
