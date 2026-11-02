@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { contrastRatio, relativeLuminance, rgbCss, toSrgb } from "./oklch"
+import { contrastRatio, fromSrgb, relativeLuminance, rgbCss, toSrgb } from "./oklch"
 
 const white = { red: 1, green: 1, blue: 1 }
 const black = { red: 0, green: 0, blue: 0 }
@@ -33,5 +33,32 @@ describe("relativeLuminance and contrastRatio", () => {
 
   it("give white and black a contrast ratio of 21, in either argument order", () => {
     expect([contrastRatio(white, black), contrastRatio(black, white)]).toStrictEqual([21, 21])
+  })
+})
+
+describe("fromSrgb", () => {
+  it("reads white as full lightness with no chroma", () => {
+    const color = fromSrgb(white)
+
+    expect([color.lightness, color.chroma]).toStrictEqual([
+      expect.closeTo(1, 4),
+      expect.closeTo(0, 4),
+    ])
+  })
+
+  it("undoes toSrgb for a color sRGB can show", () => {
+    const back = fromSrgb(toSrgb({ lightness: 0.62, chroma: 0.12, hue: 250 }))
+
+    expect([back.lightness, back.chroma, back.hue]).toStrictEqual([
+      expect.closeTo(0.62, 3),
+      expect.closeTo(0.12, 3),
+      expect.closeTo(250, 1),
+    ])
+  })
+
+  it("clamps channels outside 0 to 1, as extended sRGB colors have", () => {
+    expect(fromSrgb({ red: 1.2, green: -0.1, blue: 0 })).toStrictEqual(
+      fromSrgb({ red: 1, green: 0, blue: 0 }),
+    )
   })
 })

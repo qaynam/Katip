@@ -2,9 +2,11 @@ export {
   appearanceOf,
   resolveScheme,
   swatchOf,
+  themeColorOfSrgb,
   type ColorScheme,
   type ThemeAppearance,
 } from "./appearance"
+export type { Rgb } from "./oklch"
 export {
   addHarmonyColor,
   colorAtPoint,

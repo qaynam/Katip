@@ -83,3 +83,21 @@ export const rgbCss = (rgb: Rgb, alpha = 1) =>
   alpha === 1
     ? `rgb(${toByte(rgb.red)} ${toByte(rgb.green)} ${toByte(rgb.blue)})`
     : `rgb(${toByte(rgb.red)} ${toByte(rgb.green)} ${toByte(rgb.blue)} / ${alpha})`
+
+const normalizeDegrees = (degrees: number) => ((degrees % 360) + 360) % 360
+
+/** Converts an sRGB color (gamma-encoded, each channel 0 to 1) to OKLCH. Channels outside 0 to 1 are clamped. */
+export const fromSrgb = (rgb: Rgb): Oklch => {
+  const linear = (channel: number) => decodeGamma(Number.clamp(channel, { minimum: 0, maximum: 1 }))
+  const [red, green, blue] = [linear(rgb.red), linear(rgb.green), linear(rgb.blue)]
+  const l = Math.cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue)
+  const m = Math.cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue)
+  const s = Math.cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue)
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+  const b = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  return {
+    lightness: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    chroma: Math.hypot(a, b),
+    hue: normalizeDegrees((Math.atan2(b, a) * 180) / Math.PI),
+  }
+}

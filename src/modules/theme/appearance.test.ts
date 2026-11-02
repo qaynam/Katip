@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { appearanceOf, resolveScheme } from "./appearance"
+import { appearanceOf, resolveScheme, swatchOf, themeColorOfSrgb } from "./appearance"
+import type { Rgb } from "./oklch"
 import { themeOf, type SpaceTheme } from "./space-theme"
 
 const yellow = themeOf([{ hue: 90, chroma: 0.8 }])
@@ -63,5 +64,31 @@ describe("appearanceOf", () => {
     const opacityAt = (grain: number) => appearanceOf({ ...yellow, grain }, "light").grainOpacity
 
     expect(opacityAt(0) < opacityAt(0.5) && opacityAt(0.5) < opacityAt(1)).toBe(true)
+  })
+})
+
+describe("themeColorOfSrgb", () => {
+  const rgbOfCss = (css: string): Rgb => {
+    const [red = 0, green = 0, blue = 0] = (css.match(/\d+/g) ?? []).map(Number)
+    return { red: red / 255, green: green / 255, blue: blue / 255 }
+  }
+
+  it("reads a swatch back as the theme color it shows", () => {
+    const color = themeColorOfSrgb(rgbOfCss(swatchOf({ hue: 150, chroma: 0.6 })))
+
+    expect([color.hue, color.chroma]).toStrictEqual([
+      expect.closeTo(150, 0),
+      expect.closeTo(0.6, 1),
+    ])
+  })
+
+  it("reads gray as a color with no chroma", () => {
+    expect(themeColorOfSrgb({ red: 0.5, green: 0.5, blue: 0.5 }).chroma).toBeCloseTo(0, 3)
+  })
+
+  it("reads a color more vivid than any swatch as the most vivid color of its hue", () => {
+    const color = themeColorOfSrgb({ red: 1, green: 0, blue: 0 })
+
+    expect([color.hue, color.chroma]).toStrictEqual([expect.closeTo(29, 0), 1])
   })
 })

@@ -1,5 +1,5 @@
-import { Array, Match } from "effect"
-import { contrastRatio, rgbCss, toSrgb, type Rgb } from "./oklch"
+import { Array, Match, Number } from "effect"
+import { contrastRatio, fromSrgb, rgbCss, toSrgb, type Rgb } from "./oklch"
 import type { SpaceTheme, ThemeColor, ThemeMode } from "./space-theme"
 
 export type ColorScheme = "light" | "dark"
@@ -109,6 +109,22 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
   }
 }
 
+/** The OKLCH chroma of a swatch for a theme color of chroma 1. */
+const SWATCH_FULL_CHROMA = 0.17
+
 /** A swatch that shows a theme color itself, such as a picker dot or a switcher mark. */
 export const swatchOf = (color: ThemeColor): string =>
-  rgbCss(toSrgb({ lightness: 0.74, chroma: color.chroma * 0.17, hue: color.hue }))
+  rgbCss(toSrgb({ lightness: 0.74, chroma: color.chroma * SWATCH_FULL_CHROMA, hue: color.hue }))
+
+/**
+ * The theme color whose swatch has `rgb`'s hue and colorfulness. Colors more vivid than a swatch
+ * can show get the most vivid theme color of their hue.
+ *
+ * @remarks
+ * Lightness is dropped: a theme color has none, as the scheme and intensity decide how light it's
+ * painted.
+ */
+export const themeColorOfSrgb = (rgb: Rgb): ThemeColor => {
+  const { chroma, hue } = fromSrgb(rgb)
+  return { hue, chroma: Number.clamp(chroma / SWATCH_FULL_CHROMA, { minimum: 0, maximum: 1 }) }
+}
