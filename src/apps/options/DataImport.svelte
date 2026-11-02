@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Cause, Effect, Exit, Option } from "effect"
-  import { wholeSidebar } from "#modules/arc-import"
+  import { Cause, type Effect, Exit, Option } from "effect"
+  import { type ArcImportChoice, profileGroupsOf, wholeSidebar } from "#modules/arc-import"
   import type { Translator } from "#modules/i18n"
   import type { Ports } from "#platform/browser"
+  import ArcSpacePicker from "./ArcSpacePicker.svelte"
   import {
+    type ArcFile,
     confirmImport,
     type ImportCandidate,
     type ImportSource,
@@ -48,56 +50,93 @@
   const adjustedHeadingId = `${id}-adjusted`
   const leftOutHeadingId = `${id}-left-out`
 
+  /** Arc's file in the preview, and what of it is chosen to import. */
+  interface ArcChoosing {
+    readonly file: ArcFile
+    readonly choice: ArcImportChoice
+  }
+
   let phase = $state<Phase>({ _tag: "Idle" })
+  let arc = $state.raw<ArcChoosing | null>(null)
+  /** Whether the preview is being redone for a new choice, so its counts are out of date. */
+  let isUpdating = $state(false)
   let opensFavorites = $state(true)
   let arcInput = $state<HTMLInputElement>()
   let katipInput = $state<HTMLInputElement>()
+  // Choices can change faster than the background answers, so an answer is shown only while it's
+  // for the latest request
+  let latestRequest = 0
 
   const candidate = $derived(
     phase._tag === "Previewing" || phase._tag === "Importing" ? phase.candidate : null,
   )
   const isBusy = $derived(phase._tag === "Reading" || phase._tag === "Importing")
 
-  const preparationOf = (
-    source: ImportSource,
-    file: File,
-  ): Effect.Effect<ImportCandidate, PreparationError, Ports> =>
-    source === "Arc"
-      ? Effect.flatMap(readArcFile(file), (arc) =>
-          previewArcImport(arc, wholeSidebar(arc.conversion)),
-        )
-      : prepareKatipImport(file)
+  const unpreviewable = (cause: Cause.Cause<PreparationError>): Phase => ({
+    _tag: "Unpreviewable",
+    problem: Option.match(Cause.findErrorOption(cause), {
+      onNone: (): PlainMessageKey => "options.data.import.problem.unavailable",
+      onSome: problemMessageOf,
+    }),
+  })
+
+  const show = async (
+    request: number,
+    preparation: Effect.Effect<ImportCandidate, PreparationError, Ports>,
+  ) => {
+    const prepared = await runtime.runPromiseExit(preparation)
+    if (request !== latestRequest) return
+    isUpdating = false
+    if (Exit.isSuccess(prepared)) {
+      phase = { _tag: "Previewing", candidate: prepared.value }
+      return
+    }
+    arc = null
+    phase = unpreviewable(prepared.cause)
+  }
 
   const choose = async (source: ImportSource, input: HTMLInputElement) => {
     const file = input.files?.[0]
     // Cleared so that choosing the same file again, after fixing it or cancelling, is a change
     input.value = ""
     if (file === undefined) return
+    const request = ++latestRequest
     phase = { _tag: "Reading" }
-    const prepared = await runtime.runPromiseExit(preparationOf(source, file))
-    if (Exit.isSuccess(prepared)) {
-      opensFavorites = true
-      phase = { _tag: "Previewing", candidate: prepared.value }
+    arc = null
+    isUpdating = false
+    opensFavorites = true
+    if (source === "Katip") return show(request, prepareKatipImport(file))
+    const read = await runtime.runPromiseExit(readArcFile(file))
+    if (request !== latestRequest) return
+    if (Exit.isFailure(read)) {
+      phase = unpreviewable(read.cause)
       return
     }
-    phase = {
-      _tag: "Unpreviewable",
-      problem: Option.match(Cause.findErrorOption(prepared.cause), {
-        onNone: (): PlainMessageKey => "options.data.import.problem.unavailable",
-        onSome: problemMessageOf,
-      }),
-    }
+    const choosing = { file: read.value, choice: wholeSidebar(read.value.conversion) }
+    arc = choosing
+    return show(request, previewArcImport(choosing.file, choosing.choice))
+  }
+
+  const rechoose = (choosing: ArcChoosing, choice: ArcImportChoice) => {
+    arc = { ...choosing, choice }
+    isUpdating = true
+    return show(++latestRequest, previewArcImport(choosing.file, choice))
   }
 
   const confirm = async (chosen: ImportCandidate) => {
+    latestRequest++
     phase = { _tag: "Importing", candidate: chosen }
     const imported = await runtime.runPromiseExit(confirmImport(chosen, opensFavorites))
     phase = { _tag: "Idle" }
+    arc = null
     onfinish(Exit.isSuccess(imported))
   }
 
   const cancel = () => {
+    latestRequest++
     phase = { _tag: "Idle" }
+    arc = null
+    isUpdating = false
   }
 </script>
 
@@ -154,6 +193,10 @@
   {@const current = candidate}
   {@const lines = previewLinesOf(current, opensFavorites)}
   {@const hasContent = current.summary.spaces > 0 || current.summary.favorites > 0}
+  {@const choosing = current.source === "Arc" ? arc : null}
+  {@const arcSpaces = choosing?.file.conversion.spaces ?? []}
+  {@const noneChosen = arcSpaces.length > 0 && choosing?.choice.spaceIds.size === 0}
+  {@const spansProfiles = profileGroupsOf(arcSpaces).length > 1}
   <section class="preview" aria-labelledby={previewHeadingId}>
     <header>
       <h3 id={previewHeadingId}>
@@ -166,7 +209,19 @@
       <span class="file-name">{current.fileName}</span>
     </header>
 
-    {#if hasContent}
+    {#if choosing !== null && arcSpaces.length > 1}
+      <ArcSpacePicker
+        conversion={choosing.file.conversion}
+        choice={choosing.choice}
+        disabled={phase._tag === "Importing"}
+        {t}
+        onchange={(choice) => rechoose(choosing, choice)}
+      />
+    {/if}
+
+    {#if noneChosen}
+      <p>{t("options.data.import.preview.noneChosen")}</p>
+    {:else if hasContent}
       <h4 id={addedHeadingId}>{t("options.data.import.preview.added")}</h4>
       <ul aria-labelledby={addedHeadingId}>
         {#each lines.added as line (line.key)}
@@ -176,7 +231,11 @@
       {#if current.summary.favorites > 0}
         <SettingRow
           label={t("options.data.import.openFavorites.label")}
-          description={t("options.data.import.openFavorites.description")}
+          description={t(
+            spansProfiles
+              ? "options.data.import.openFavorites.descriptionByProfile"
+              : "options.data.import.openFavorites.description",
+          )}
           disabled={phase._tag === "Importing"}
         >
           {#snippet children(control)}
@@ -213,13 +272,18 @@
       </ul>
     {/if}
 
+    <p class="add-only">{t("options.data.import.preview.addOnly")}</p>
+
     <div class="actions">
       <PushButton onclick={cancel} disabled={phase._tag === "Importing"}>
         {t("options.data.import.cancel")}
       </PushButton>
       <PushButton
         onclick={() => confirm(current)}
-        disabled={phase._tag === "Importing" || lines.added.length === 0}
+        disabled={phase._tag === "Importing" ||
+          isUpdating ||
+          noneChosen ||
+          lines.added.length === 0}
       >
         {t("options.data.import.confirm")}
       </PushButton>
@@ -345,6 +409,12 @@
   .preview p {
     margin: 4px 0 0;
     font-weight: 400;
+  }
+
+  .preview .add-only {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 12.5px;
   }
 
   .actions {

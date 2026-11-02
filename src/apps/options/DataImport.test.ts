@@ -102,6 +102,52 @@ const importButton = () => screen.getByRole<HTMLButtonElement>("button", { name:
 const applyRequests = async (requests: () => Promise<ReadonlyArray<ImportClientMessage>>) =>
   (await requests()).filter((request) => request._tag === "Apply")
 
+/** The document the import sent, with the Spaces it named for Katip to number. */
+const appliedDocument = async (requests: () => Promise<ReadonlyArray<ImportClientMessage>>) => {
+  const [apply] = await applyRequests(requests)
+  if (apply?._tag !== "Apply") throw new Error("nothing was imported")
+  return {
+    document: Result.getOrThrow(decodeExportFile(apply.content)),
+    spacesNamedByImport: apply.spacesNamedByImport,
+  }
+}
+
+const checkboxesIn = (element: HTMLElement) =>
+  within(element)
+    .getAllByRole<HTMLInputElement>("checkbox")
+    .map((box) => ({ name: box.closest("label")?.textContent?.trim(), checked: box.checked }))
+
+const checkbox = (name: string) => screen.getByRole<HTMLInputElement>("checkbox", { name })
+
+/** An Arc sidebar file of Spaces in the default profile, each with one pinned tab. */
+const defaultProfileFile = (titles: ReadonlyArray<string>) =>
+  JSON.stringify({
+    sidebar: {
+      containers: [
+        {
+          spaces: titles.map((title) => ({
+            id: title,
+            title,
+            profile: { default: true },
+            containerIDs: ["pinned", `${title}-pinned`],
+          })),
+          items: titles.flatMap((title) => [
+            {
+              id: `${title}-pinned`,
+              childrenIds: [`${title}-tab`],
+              data: { itemContainer: { containerType: { spaceItems: { _0: title } } } },
+            },
+            {
+              id: `${title}-tab`,
+              childrenIds: [],
+              data: { tab: { savedURL: `https://${title.toLowerCase()}.example/` } },
+            },
+          ]),
+        },
+      ],
+    },
+  })
+
 describe("choosing a file", () => {
   it("offers importing from Arc and from a Katip file, each choosing its own file", () => {
     renderImport()
@@ -279,6 +325,248 @@ describe("previewing Arc's file", () => {
       expect(screen.queryByRole("region", { name: "Ready to import from Arc" })).toBeNull()
     },
   )
+})
+
+describe("choosing what to import from Arc", () => {
+  const ready = () => preview("Ready to import from Arc")
+
+  it("lists the Arc Spaces by profile, all chosen, when the file has more than one profile", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    expect({
+      defaultProfile: checkboxesIn(within(region).getByRole("group", { name: "Default profile" })),
+      profile1: checkboxesIn(within(region).getByRole("group", { name: "Profile 1" })),
+    }).toStrictEqual({
+      defaultProfile: [
+        { name: "Default profile", checked: true },
+        { name: "Work", checked: true },
+        { name: "Reading", checked: true },
+        { name: "Untitled Space", checked: true },
+      ],
+      profile1: [
+        { name: "Profile 1", checked: true },
+        { name: "Personal", checked: true },
+      ],
+    })
+  })
+
+  it("leaving a Space out updates the counts, and leaves it and its profile's Favorites out of the import", async () => {
+    const { requests, finished } = renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    await fireEvent.click(checkbox("Personal"))
+
+    await waitFor(() =>
+      expect(listedUnder(region, "To be added")).toStrictEqual([
+        "3 Spaces",
+        "7 pinned tabs",
+        "2 folders",
+        "2 split views",
+        "2 Favorites",
+      ]),
+    )
+    await fireEvent.click(importButton())
+    await waitFor(() => expect(finished).toStrictEqual([true]))
+    const { document } = await appliedDocument(requests)
+    expect({
+      spaces: document.spaces.map(({ name }) => name),
+      favorites: document.favorites.map(({ url }) => url),
+    }).toStrictEqual({
+      spaces: ["Work", "Reading", ""],
+      favorites: ["https://calendar.example.com/", "https://music.example.com/"],
+    })
+  })
+
+  it("leaving out a whole profile leaves out each of its Spaces", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    await fireEvent.click(checkbox("Default profile"))
+
+    await waitFor(() =>
+      expect(listedUnder(region, "To be added")).toStrictEqual([
+        "1 Space",
+        "2 pinned tabs",
+        "1 folder",
+        "2 Favorites",
+      ]),
+    )
+    expect(
+      ["Work", "Reading", "Untitled Space", "Personal"].map((name) => checkbox(name).checked),
+    ).toStrictEqual([false, false, false, true])
+  })
+
+  it("shows a profile with some of its Spaces left out as partly chosen, and choosing it chooses them all again", async () => {
+    renderImport()
+    await chooseArcFile()
+    await ready()
+
+    await fireEvent.click(checkbox("Work"))
+    const partly = {
+      checked: checkbox("Default profile").checked,
+      indeterminate: checkbox("Default profile").indeterminate,
+    }
+    await fireEvent.click(checkbox("Default profile"))
+
+    expect({
+      partly,
+      again: ["Default profile", "Work", "Reading", "Untitled Space"].map((name) => ({
+        checked: checkbox(name).checked,
+        indeterminate: checkbox(name).indeterminate,
+      })),
+    }).toStrictEqual({
+      partly: { checked: false, indeterminate: true },
+      again: Array.from({ length: 4 }, () => ({ checked: true, indeterminate: false })),
+    })
+  })
+
+  it("with no Space chosen, asks for one and can't import", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    await fireEvent.click(checkbox("Default profile"))
+    await fireEvent.click(checkbox("Profile 1"))
+
+    await waitFor(() =>
+      expect(within(region).getByText("Choose at least one Space to import.")).toBeTruthy(),
+    )
+    expect([
+      within(region).queryByRole("list", { name: "To be added" }),
+      importButton().disabled,
+    ]).toStrictEqual([null, true])
+  })
+
+  it("offers separate Spaces, chosen at first, or combining them into one Space named Arc", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    const arrangement = within(region).getByRole("group", { name: "How to add them" })
+    const radio = (name: string) =>
+      within(arrangement).getByRole<HTMLInputElement>("radio", { name })
+
+    expect({
+      separate: radio("Separate Spaces").checked,
+      combined: radio("Combine into one Space").checked,
+    }).toStrictEqual({ separate: true, combined: false })
+    expect(
+      within(arrangement).getByRole("radio", {
+        name: "Combine into one Space",
+        description:
+          "Adds one Space named Arc, with a folder for each Arc Space. If you already have a Space named Arc, the new one gets a number.",
+      }),
+    ).toBe(radio("Combine into one Space"))
+  })
+
+  it("combining counts one Space with a folder for each Arc Space, and the folders flattened to fit, and imports one Space named Arc", async () => {
+    const { requests, finished } = renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    await fireEvent.click(screen.getByRole("radio", { name: "Combine into one Space" }))
+
+    await waitFor(() =>
+      expect(listedUnder(region, "To be added")).toStrictEqual([
+        "1 Space",
+        "9 pinned tabs",
+        "6 folders",
+        "2 split views",
+        "3 Favorites",
+      ]),
+    )
+    expect(listedUnder(region, "Changed to fit Katip")[0]).toBe(
+      "2 folders are nested deeper than Katip allows, so their contents go into the folder above them.",
+    )
+    await fireEvent.click(importButton())
+    await waitFor(() => expect(finished).toStrictEqual([true]))
+    const { document, spacesNamedByImport } = await appliedDocument(requests)
+    expect({
+      spaces: document.spaces.map(({ name }) => name),
+      folders: document.spaces[0]?.pinned.map((node) => node.type === "folder" && node.title),
+      spacesNamedByImport,
+    }).toStrictEqual({
+      spaces: ["Arc"],
+      folders: ["Work", "Reading", "", "Personal"],
+      spacesNamedByImport: [document.spaces[0]?.id],
+    })
+  })
+
+  it("keeps opening Favorites as set when the choice changes", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    await fireEvent.click(screen.getByRole("switch", { name: "Open Favorites as pinned tabs" }))
+    await fireEvent.click(checkbox("Work"))
+    await waitFor(() => expect(listedUnder(region, "To be added")[0]).toBe("3 Spaces"))
+
+    expect(
+      screen.getByRole<HTMLInputElement>("switch", { name: "Open Favorites as pinned tabs" })
+        .checked,
+    ).toBe(false)
+  })
+
+  it("says the Favorites opened are only those of the chosen Spaces' profiles", async () => {
+    renderImport()
+    await chooseArcFile()
+    await ready()
+
+    expect(
+      screen.getByRole("switch", {
+        description:
+          "They open in this window, after the Favorites you have. Only Favorites from the profiles of the Spaces you chose are opened.",
+      }),
+    ).toBeTruthy()
+  })
+
+  it("says only new Spaces are added, and nothing already there is renamed, merged into, or removed", async () => {
+    renderImport()
+    await chooseArcFile()
+    const region = await ready()
+
+    expect(
+      within(region).getByText(
+        "Only new Spaces are added. None of your Spaces are renamed, merged into, or removed.",
+      ),
+    ).toBeTruthy()
+  })
+
+  it("lists the Spaces of a file with a single profile without grouping them", async () => {
+    renderImport()
+    await chooseArcFile(defaultProfileFile(["Home", "Work"]))
+    const region = await ready()
+
+    expect({
+      profileGroup: within(region).queryByRole("group", { name: "Default profile" }),
+      spaces: checkboxesIn(within(region).getByRole("group", { name: "Spaces to import" })),
+    }).toStrictEqual({
+      profileGroup: null,
+      spaces: [
+        { name: "Home", checked: true },
+        { name: "Work", checked: true },
+      ],
+    })
+  })
+
+  it.each([
+    ["Arc's file with a single Space", () => chooseArcFile(defaultProfileFile(["Home"]))],
+    ["a Katip file", () => chooseKatipFile()],
+  ])("offers no choice of Spaces for %s", async (_, chooseFile) => {
+    renderImport()
+
+    await chooseFile()
+    const region = await preview(/^Ready to import/)
+
+    expect([
+      within(region).queryByRole("group", { name: "Spaces to import" }),
+      within(region).queryByRole("group", { name: "How to add them" }),
+    ]).toStrictEqual([null, null])
+  })
 })
 
 describe("previewing a Katip file", () => {

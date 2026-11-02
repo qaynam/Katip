@@ -84,6 +84,16 @@ export const options = {
   "options.data.import.arcLocation.windows": "Windows",
   "options.data.import.arcLocation.windowsTip":
     "In the folder under Packages whose name starts with TheBrowserCompany.Arc_.",
+  "options.data.import.arc.spaces": "Spaces to import",
+  "options.data.import.arc.untitledSpace": "Untitled Space",
+  "options.data.import.arc.profile.default": "Default profile",
+  "options.data.import.arc.profile.other": "Other profile",
+  "options.data.import.arc.arrangement": "How to add them",
+  "options.data.import.arc.separate.label": "Separate Spaces",
+  "options.data.import.arc.separate.description": "Each Arc Space becomes a Space of its own.",
+  "options.data.import.arc.combined.label": "Combine into one Space",
+  "options.data.import.arc.combined.description":
+    "Adds one Space named {name}, with a folder for each Arc Space. If you already have a Space named {name}, the new one gets a number.",
   "options.data.import.preview.arcHeading": "Ready to import from Arc",
   "options.data.import.preview.katipHeading": "Ready to import a Katip file",
   "options.data.import.preview.added": "To be added",
@@ -129,9 +139,14 @@ export const options = {
   },
   "options.data.import.preview.settings": "The file’s settings. Yours stay as they are.",
   "options.data.import.preview.nothing": "There’s nothing in this file to import.",
+  "options.data.import.preview.noneChosen": "Choose at least one Space to import.",
+  "options.data.import.preview.addOnly":
+    "Only new Spaces are added. None of your Spaces are renamed, merged into, or removed.",
   "options.data.import.openFavorites.label": "Open Favorites as pinned tabs",
   "options.data.import.openFavorites.description":
     "They open in this window, after the Favorites you have.",
+  "options.data.import.openFavorites.descriptionByProfile":
+    "They open in this window, after the Favorites you have. Only Favorites from the profiles of the Spaces you chose are opened.",
   "options.data.import.confirm": "Import",
   "options.data.import.cancel": "Cancel",
   "options.data.import.problem.notArc":

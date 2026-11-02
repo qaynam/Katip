@@ -91,6 +91,17 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.arcLocation.windows": "Windows",
   "options.data.import.arcLocation.windowsTip":
     "En la carpeta de Packages cuyo nombre empieza por TheBrowserCompany.Arc_.",
+  "options.data.import.arc.spaces": "Espacios que importar",
+  "options.data.import.arc.untitledSpace": "Espacio sin nombre",
+  "options.data.import.arc.profile.default": "Perfil predeterminado",
+  "options.data.import.arc.profile.other": "Otro perfil",
+  "options.data.import.arc.arrangement": "Cómo añadirlos",
+  "options.data.import.arc.separate.label": "Espacios separados",
+  "options.data.import.arc.separate.description":
+    "Cada espacio de Arc pasa a ser un espacio propio.",
+  "options.data.import.arc.combined.label": "Combinar en un solo espacio",
+  "options.data.import.arc.combined.description":
+    "Añade un espacio llamado {name}, con una carpeta para cada espacio de Arc. Si ya tienes un espacio llamado {name}, el nuevo lleva un número.",
   "options.data.import.preview.arcHeading": "Listo para importar desde Arc",
   "options.data.import.preview.katipHeading": "Listo para importar un archivo de Katip",
   "options.data.import.preview.added": "Se añadirá",
@@ -140,9 +151,14 @@ export const options: CatalogSection<"options"> = {
   },
   "options.data.import.preview.settings": "Los ajustes del archivo. Los tuyos no cambian.",
   "options.data.import.preview.nothing": "No hay nada que importar en este archivo.",
+  "options.data.import.preview.noneChosen": "Elige al menos un espacio que importar.",
+  "options.data.import.preview.addOnly":
+    "Solo se añaden espacios nuevos. Ninguno de tus espacios se renombra, se combina con otro ni se elimina.",
   "options.data.import.openFavorites.label": "Abrir los Favoritos como pestañas fijadas",
   "options.data.import.openFavorites.description":
     "Se abren en esta ventana, después de los Favoritos que ya tienes.",
+  "options.data.import.openFavorites.descriptionByProfile":
+    "Se abren en esta ventana, después de los Favoritos que ya tienes. Solo se abren los Favoritos de los perfiles de los espacios que elegiste.",
   "options.data.import.confirm": "Importar",
   "options.data.import.cancel": "Cancelar",
   "options.data.import.problem.notArc":

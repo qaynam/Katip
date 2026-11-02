@@ -85,6 +85,16 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.arcLocation.windows": "Windows",
   "options.data.import.arcLocation.windowsTip":
     "Packages の下の、名前が TheBrowserCompany.Arc_ で始まるフォルダの中にあります。",
+  "options.data.import.arc.spaces": "読み込む Space",
+  "options.data.import.arc.untitledSpace": "名前のない Space",
+  "options.data.import.arc.profile.default": "デフォルトのプロファイル",
+  "options.data.import.arc.profile.other": "その他のプロファイル",
+  "options.data.import.arc.arrangement": "追加のしかた",
+  "options.data.import.arc.separate.label": "別々の Space にする",
+  "options.data.import.arc.separate.description": "Arc の Space をそれぞれ 1 つの Space にします。",
+  "options.data.import.arc.combined.label": "1 つの Space にまとめる",
+  "options.data.import.arc.combined.description":
+    "{name} という名前の Space を 1 つ追加し、Arc の Space ごとにフォルダを作って入れます。{name} という Space がすでにあるときは、新しい Space の名前に番号を付けます。",
   "options.data.import.preview.arcHeading": "Arc から読み込む内容",
   "options.data.import.preview.katipHeading": "Katip のファイルから読み込む内容",
   "options.data.import.preview.added": "追加するもの",
@@ -118,9 +128,14 @@ export const options: CatalogSection<"options"> = {
   },
   "options.data.import.preview.settings": "ファイルの設定。今の設定はそのままです。",
   "options.data.import.preview.nothing": "このファイルには読み込めるものがありません。",
+  "options.data.import.preview.noneChosen": "読み込む Space を 1 つ以上選んでください。",
+  "options.data.import.preview.addOnly":
+    "新しい Space を追加するだけです。今ある Space の名前の変更、統合、削除はしません。",
   "options.data.import.openFavorites.label": "Favorites を固定タブとして開く",
   "options.data.import.openFavorites.description":
     "このウィンドウの、今ある Favorites の後ろに開きます。",
+  "options.data.import.openFavorites.descriptionByProfile":
+    "このウィンドウの、今ある Favorites の後ろに開きます。開くのは、選んだ Space のプロファイルの Favorites だけです。",
   "options.data.import.confirm": "読み込む",
   "options.data.import.cancel": "キャンセル",
   "options.data.import.problem.notArc":
