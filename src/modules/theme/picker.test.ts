@@ -7,8 +7,8 @@ const rounded = (color: ThemeColor) => ({
   chroma: Math.round(color.chroma * 100) / 100,
 })
 
-describe("ピッカーの位置と色", () => {
-  it("中心から右へ向かう方向が色相 0 度、上が 90 度になる", () => {
+describe("picker points and colors", () => {
+  it("put hue 0 degrees to the right of the center and 90 degrees above it", () => {
     expect([colorAtPoint({ x: 1, y: 0 }), colorAtPoint({ x: 0, y: 1 })].map(rounded)).toStrictEqual(
       [
         { hue: 0, chroma: 1 },
@@ -17,23 +17,23 @@ describe("ピッカーの位置と色", () => {
     )
   })
 
-  it("中心からの距離が彩度になる", () => {
+  it("take the distance from the center as the chroma", () => {
     expect(rounded(colorAtPoint({ x: 0, y: -0.5 }))).toStrictEqual({ hue: 270, chroma: 0.5 })
   })
 
-  it("円の外を指すと、同じ方向の縁の色になる", () => {
+  it("give a point outside the circle the edge color in the same direction", () => {
     expect(rounded(colorAtPoint({ x: 3, y: 0 }))).toStrictEqual({ hue: 0, chroma: 1 })
   })
 
-  it("色から求めた位置を色に戻すと元の色になる", () => {
+  it("round-trip from a color to a point and back to the same color", () => {
     const color = { hue: 123, chroma: 0.42 }
 
     expect(rounded(colorAtPoint(pointOfColor(color)))).toStrictEqual(color)
   })
 })
 
-describe("色の追加と削除", () => {
-  it("色を足すと、主色から色相をずらした同じ彩度の色が加わる", () => {
+describe("adding and removing colors", () => {
+  it("adding a color adds one of the same chroma, its hue shifted from the primary color", () => {
     const added = addHarmonyColor([{ hue: 90, chroma: 0.6 }])
 
     expect(added).toStrictEqual([
@@ -42,23 +42,23 @@ describe("色の追加と削除", () => {
     ])
   })
 
-  it("3 色目は主色の反対側へずらす", () => {
+  it("shifts the third color to the other side of the primary color", () => {
     const added = addHarmonyColor(addHarmonyColor([{ hue: 90, chroma: 0.6 }]))
 
     expect(added.map((c) => c.hue)).toStrictEqual([90, 130, 50])
   })
 
-  it(`${MAX_THEME_COLORS} 色を超えては足せない`, () => {
+  it(`can't add more than ${MAX_THEME_COLORS} colors`, () => {
     const full = addHarmonyColor(addHarmonyColor([{ hue: 90, chroma: 0.6 }]))
 
     expect(addHarmonyColor(full)).toBe(full)
   })
 
-  it("色の無いテーマに足すと、1 色目が加わる", () => {
+  it("adding to a theme without colors adds a first color", () => {
     expect(addHarmonyColor([])).toHaveLength(1)
   })
 
-  it("最後に足した色から取り除かれ、主色は残る", () => {
+  it("removes the last added color first and keeps the primary color", () => {
     const primary = { hue: 90, chroma: 0.6 }
     const colors = [primary, { hue: 130, chroma: 0.6 }]
 

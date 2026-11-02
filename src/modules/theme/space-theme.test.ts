@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { settleTheme, themeEquivalence, themeOf } from "./space-theme"
 
 describe("settleTheme", () => {
-  it("色・強さ・グレインを小数第 3 位までに丸める", () => {
+  it("rounds colors, intensity and grain to three decimal places", () => {
     const settled = settleTheme({
       ...themeOf([{ hue: 123.45678, chroma: 0.987654 }]),
       intensity: 0.976812,
@@ -16,7 +16,7 @@ describe("settleTheme", () => {
     ])
   })
 
-  it("色相が 360 度に丸まったときは 0 度として扱う", () => {
+  it("treats a hue rounded up to 360 degrees as 0 degrees", () => {
     expect(settleTheme(themeOf([{ hue: 359.9996, chroma: 0.5 }])).colors).toStrictEqual([
       { hue: 0, chroma: 0.5 },
     ])
@@ -24,7 +24,7 @@ describe("settleTheme", () => {
 })
 
 describe("themeEquivalence", () => {
-  it("同じ値のテーマは、別のオブジェクトでも等しい", () => {
+  it("treats themes with the same values as equal even as different objects", () => {
     const colors = [{ hue: 10, chroma: 0.5 }]
 
     expect(themeEquivalence(themeOf(colors), themeOf([...colors]))).toBe(true)

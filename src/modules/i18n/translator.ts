@@ -2,7 +2,10 @@ import { catalogs, type EnglishMessage, type MessageKey } from "./catalog"
 import { languageTagOf, type Locale } from "./locale"
 import type { Message, MessageParams, PlaceholderNames } from "./message"
 
-/** 差し込む値の無い文言はキーだけで呼び、ある文言は英語の文言にある名前の値をすべて渡す。 */
+/**
+ * A message without placeholders takes only the key; one with placeholders takes a value for every
+ * name in the English message.
+ */
 export type MessageArgs<K extends MessageKey> = [PlaceholderNames<EnglishMessage<K>>] extends [
   never,
 ]
@@ -27,17 +30,17 @@ const durationMessages = {
 
 export interface Translator {
   readonly locale: Locale
-  /** `<html lang>` や `lang` 属性に入れる言語タグ。 */
+  /** The language tag for `<html lang>` and `lang` attributes. */
   readonly languageTag: string
   t<K extends MessageKey>(key: K, ...args: MessageArgs<K>): string
   /**
-   * `value` が負なら過去、正なら未来を表す。「昨日」「今」のように数を使わない言い方がある場合は、
-   * そちらになる。
+   * A negative `value` is in the past, a positive one in the future. Where the language has a
+   * wording without a number, such as "yesterday" or "now", that wording is used.
    */
   relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit): string
-  /** 「6 時間」「6 hours」のように、数と単位で書いた時間の長さ。 */
+  /** A length of time written as a number and a unit, such as "6 hours". */
   duration(duration: Duration): string
-  /** `locale` の言語の名前を、この Translator の言語で書いたもの。 */
+  /** The name of `locale`'s language, written in this translator's language. */
   languageName(locale: Locale): string
 }
 

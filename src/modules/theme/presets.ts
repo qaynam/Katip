@@ -3,7 +3,7 @@ import { themeOf, type SpaceTheme, type ThemeColor } from "./space-theme"
 
 const color = (hue: number, chroma: number): ThemeColor => ({ hue, chroma })
 
-/** ピッカーの下に並べるプリセット。1 ページ目が単色、2 ページ目がグラデーション。 */
+/** The presets under the picker. The first page holds single colors, the second gradients. */
 export const presetPages: ReadonlyArray<ReadonlyArray<ReadonlyArray<ThemeColor>>> = [
   [
     [color(90, 0.05)],
@@ -29,8 +29,8 @@ export const presetPages: ReadonlyArray<ReadonlyArray<ReadonlyArray<ThemeColor>>
   ],
 ]
 
-// Chrome のタブグループの色名と、その見た目に近い色相。グループ同期で Space の色を
-// 最も近いグループ色に丸めるために使う
+// Chrome's tab group color names and the hues that look closest to them, so that group sync can
+// round a Space's color to the nearest group color
 const groupHues: ReadonlyArray<readonly [Exclude<TabGroupColor, "grey">, number]> = [
   ["red", 25],
   ["orange", 55],
@@ -42,7 +42,7 @@ const groupHues: ReadonlyArray<readonly [Exclude<TabGroupColor, "grey">, number]
   ["pink", 350],
 ]
 
-// これより彩度の低い色は、どの色相のグループ色に寄せても見た目が合わない
+// Below this chroma a color doesn't look like any hue's group color
 const ACHROMATIC_CHROMA = 0.15
 
 const hueDistance = (a: number, b: number) => {
@@ -50,7 +50,7 @@ const hueDistance = (a: number, b: number) => {
   return Math.min(difference, 360 - difference)
 }
 
-/** テーマの主色に最も近い Chrome タブグループの色を返す。 */
+/** Returns the Chrome tab group color nearest the theme's primary color. */
 export const groupColorOf = (theme: SpaceTheme): TabGroupColor => {
   const primary = theme.colors[0]
   if (primary === undefined || primary.chroma < ACHROMATIC_CHROMA) return "grey"
@@ -60,7 +60,7 @@ export const groupColorOf = (theme: SpaceTheme): TabGroupColor => {
   return nearest?.[0] ?? "grey"
 }
 
-/** Chrome タブグループの色から、その色を主色にしたテーマを作る。 */
+/** Makes a theme whose primary color is the given Chrome tab group color. */
 export const themeOfGroupColor = (groupColor: TabGroupColor): SpaceTheme => {
   const hue = groupHues.find(([name]) => name === groupColor)?.[1]
   return hue === undefined ? themeOf([]) : themeOf([color(hue, 0.7)])

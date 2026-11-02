@@ -10,18 +10,18 @@ describe("groupColorOf", () => {
     [250, "blue"],
     [355, "pink"],
     [5, "pink"],
-  ] as const)("色相 %d 度の主色は %s のグループになる", (hue, expected) => {
+  ] as const)("puts a primary color of hue %d degrees in the %s group", (hue, expected) => {
     expect(groupColorOf(themeOf([{ hue, chroma: 0.8 }]))).toBe(expected)
   })
 
-  it("彩度の低い主色や色の無いテーマは grey のグループになる", () => {
+  it("puts a low-chroma primary color or a theme without colors in the grey group", () => {
     expect([
       groupColorOf(themeOf([{ hue: 90, chroma: 0.05 }])),
       groupColorOf(themeOf([])),
     ]).toStrictEqual(["grey", "grey"])
   })
 
-  it("グラデーションでは主色だけでグループの色が決まる", () => {
+  it("decides a gradient's group color by its primary color alone", () => {
     const theme = themeOf([
       { hue: 255, chroma: 0.8 },
       { hue: 25, chroma: 0.8 },
@@ -32,7 +32,7 @@ describe("groupColorOf", () => {
 })
 
 describe("themeOfGroupColor", () => {
-  it("グループの色から作ったテーマは、同じグループの色に戻る", () => {
+  it("makes a theme that maps back to the same group color", () => {
     const colors = [
       "red",
       "orange",
@@ -50,11 +50,11 @@ describe("themeOfGroupColor", () => {
 })
 
 describe("presetPages", () => {
-  it("1 ページ目には単色が 9 個並ぶ", () => {
+  it("puts nine single colors on the first page", () => {
     expect(presetPages[0]?.map((colors) => colors.length)).toStrictEqual(Array(9).fill(1))
   })
 
-  it("2 ページ目には 2 色のグラデーションが 9 個並ぶ", () => {
+  it("puts nine two-color gradients on the second page", () => {
     expect(presetPages[1]?.map((colors) => colors.length)).toStrictEqual(Array(9).fill(2))
   })
 })

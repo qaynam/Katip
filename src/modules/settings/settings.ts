@@ -2,8 +2,9 @@ import { Effect, Option, Schema } from "effect"
 import { LocalePreference } from "#modules/i18n"
 import { SpaceId } from "#modules/space"
 
-// Struct 全体の検証だけに頼ると、1 項目が壊れただけで全項目が既定値に戻ってしまう。
-// 項目ごとに既定値へ倒すことで、古い版の保存値や将来の項目追加にも耐える
+// Not validation of the whole Struct alone: one broken field would reset every field to its
+// default. Falling back per field also copes with values saved by older versions and with fields
+// added later
 const withDefault = <S extends Schema.Top>(schema: S, defaultValue: S["Type"]) => {
   const recovering = Schema.catchDecoding<S>(() => Effect.succeed(Option.some(defaultValue)))(
     schema,
@@ -46,10 +47,10 @@ export const PageShortcutSettings = withDefaultsOfAllFields(
 export type PageShortcutSettings = typeof PageShortcutSettings.Type
 
 /**
- * ユーザー設定。
+ * The user's settings.
  *
- * decode は失敗しない。値が無い・オブジェクトでない場合は全体を、欠けた項目や壊れた項目は
- * その項目だけを既定値で補う。知らない項目は読み捨てる。
+ * Decoding never fails. A missing value or one that isn't an object becomes the defaults as a
+ * whole; a missing or broken field falls back to its own default alone. Unknown fields are dropped.
  */
 export const Settings = withDefaultsOfAllFields(
   Schema.Struct({
@@ -57,7 +58,7 @@ export const Settings = withDefaultsOfAllFields(
     showAllOpenTabsInCollapsedFolders: withDefault(Schema.Boolean, false),
     syncTabGroups: withDefault(Schema.Boolean, false),
     autoArchive: AutoArchiveSettings,
-    // null は「指定なし」。新しいタブの行き先が決まらないときの扱いは呼び出し側が決める
+    // null means none chosen. What happens to a new tab with nowhere else to go is up to the caller
     defaultSpaceId: withDefault(Schema.NullOr(SpaceId), null),
     locale: withDefault(LocalePreference, "auto"),
     pageShortcuts: PageShortcutSettings,

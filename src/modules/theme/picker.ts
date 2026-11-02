@@ -1,7 +1,7 @@
 import { Array, Number } from "effect"
 import { MAX_THEME_COLORS, type ThemeColor } from "./space-theme"
 
-/** ピッカーの円の中の位置。中心が (0, 0)、半径 1。y は上向き。 */
+/** A point in the picker's circle. The center is (0, 0), the radius 1, and y points up. */
 export interface PickerPoint {
   readonly x: number
   readonly y: number
@@ -9,7 +9,7 @@ export interface PickerPoint {
 
 const normalizeHue = (degrees: number) => ((degrees % 360) + 360) % 360
 
-/** 円の外を指した場合は、同じ方向の縁の色として扱う。 */
+/** A point outside the circle gives the color on the edge in the same direction. */
 export const colorAtPoint = ({ x, y }: PickerPoint): ThemeColor => ({
   hue: normalizeHue((Math.atan2(y, x) * 180) / Math.PI),
   chroma: Number.clamp(Math.hypot(x, y), { minimum: 0, maximum: 1 }),
@@ -20,14 +20,14 @@ export const pointOfColor = ({ hue, chroma }: ThemeColor): PickerPoint => {
   return { x: chroma * Math.cos(radians), y: chroma * Math.sin(radians) }
 }
 
-// 新しく足す色は、主色から色相を一定量ずらした調和色にする。ユーザーが位置を
-// 選ぶ前でもグラデーションとして破綻しない色から始められる
+// A new color is a harmony color, a fixed hue step away from the primary color, so the gradient
+// starts from colors that work together even before the user picks a point
 const HARMONY_STEP_DEGREES = 40
 
 /**
- * グラデーションに色を 1 つ足す。上限に達していれば何もしない。
+ * Adds one color to the gradient. Returns the colors unchanged when they're already at the limit.
  *
- * 無彩色のテーマには、目立ちすぎない中程度の彩度の色を足す。
+ * A theme without colors gets one of moderate chroma, so it doesn't stand out too much.
  */
 export const addHarmonyColor = (colors: ReadonlyArray<ThemeColor>): ReadonlyArray<ThemeColor> => {
   if (colors.length >= MAX_THEME_COLORS) return colors
@@ -46,6 +46,6 @@ export const addHarmonyColor = (colors: ReadonlyArray<ThemeColor>): ReadonlyArra
   })
 }
 
-/** 最後に足した色を取り除く。主色だけになったら、それ以上は取り除かない。 */
+/** Removes the last added color. The primary color is never removed. */
 export const removeLastColor = (colors: ReadonlyArray<ThemeColor>): ReadonlyArray<ThemeColor> =>
   colors.length <= 1 ? colors : colors.slice(0, -1)

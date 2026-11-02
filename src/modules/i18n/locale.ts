@@ -3,7 +3,7 @@ import { Array, Option, pipe, Schema } from "effect"
 export const Locale = Schema.Literals(["en", "ja", "zh", "es"])
 export type Locale = typeof Locale.Type
 
-/** `auto` はブラウザの言語に合わせる。 */
+/** `auto` follows the browser's language. */
 export const LocalePreference = Schema.Literals(["auto", ...Locale.literals])
 export type LocalePreference = typeof LocalePreference.Type
 
@@ -12,15 +12,19 @@ const FALLBACK_LOCALE: Locale = "en"
 const languageTags: { readonly [L in Locale]: string } = {
   en: "en",
   ja: "ja",
-  // zh だけでは文字体系を示さない。簡体字と明示し、読み上げや漢字のフォント選びを簡体字に合わせる
+  // Not plain zh: it doesn't say which script. Naming Simplified makes speech and the choice of Han
+  // fonts match Simplified Chinese
   zh: "zh-Hans",
   es: "es",
 }
 
-/** `<html lang>` や `Intl` に渡す BCP 47 の言語タグ。 */
+/** The BCP 47 language tag for `<html lang>` and `Intl`. */
 export const languageTagOf = (locale: Locale): string => languageTags[locale]
 
-/** 言語の選択肢に出す名前。読めない言語に切り替えてしまっても戻れるよう、その言語自身で書く。 */
+/**
+ * The names shown in the language options, each written in that language itself so that someone who
+ * switched to a language they can't read can still find their way back.
+ */
 export const nativeLanguageNames: { readonly [L in Locale]: string } = {
   en: "English",
   ja: "日本語",
@@ -35,14 +39,16 @@ const parseLanguageTag = Option.liftThrowable((tag: string) => new Intl.Locale(t
 const supportedLocaleOf = (tag: string): Option.Option<Locale> =>
   pipe(
     parseLanguageTag(tag),
-    // 用意しているのは簡体字だけ。繁体字を読む人には、簡体字より次に好む言語を出す
+    // Only Simplified Chinese is provided. Readers of Traditional Chinese get their next preferred
+    // language rather than Simplified
     Option.filter((locale) => locale.language !== "zh" || locale.script === "Hans"),
     Option.map((locale) => locale.language),
     Option.filter(isLocale),
   )
 
 /**
- * @param browserLanguages - `navigator.languages` と同じく、優先する順に並んだ BCP 47 の言語タグ。
+ * @param browserLanguages - BCP 47 language tags, most preferred first, as in
+ *   `navigator.languages`.
  */
 export const resolveLocale = (
   preference: LocalePreference,

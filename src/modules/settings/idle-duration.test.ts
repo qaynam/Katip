@@ -10,21 +10,24 @@ describe("idleDurationOf", () => {
     [1440, { value: 1, unit: "day" }],
     [4320, { value: 3, unit: "day" }],
     [10080, { value: 1, unit: "week" }],
-  ] as const)("%d 分は、割り切れる最も大きい単位で表す", (minutes, expected) => {
-    expect(idleDurationOf(IdleMinutes.make(minutes))).toStrictEqual(expected)
-  })
+  ] as const)(
+    "expresses %d minutes in the largest unit that divides them evenly",
+    (minutes, expected) => {
+      expect(idleDurationOf(IdleMinutes.make(minutes))).toStrictEqual(expected)
+    },
+  )
 
-  it("時間で割り切れない分数は分のまま表す", () => {
+  it("keeps minutes that hours don't divide evenly in minutes", () => {
     expect(idleDurationOf(IdleMinutes.make(90))).toStrictEqual({ value: 90, unit: "minute" })
   })
 })
 
 describe("idleMinutesChoicesWith", () => {
-  it("選択肢に含まれる値なら、選択肢をそのまま返す", () => {
+  it("returns the choices as they are when the value is one of them", () => {
     expect(idleMinutesChoicesWith(IdleMinutes.make(360))).toStrictEqual(IDLE_MINUTES_CHOICES)
   })
 
-  it("選択肢に無い保存値は、失わないよう短い順の位置に加える", () => {
+  it("adds a stored value that isn't a choice in its place, shortest first, so it isn't lost", () => {
     const choices = idleMinutesChoicesWith(IdleMinutes.make(90))
 
     expect(choices.slice(0, 3)).toStrictEqual([30, 60, 90])

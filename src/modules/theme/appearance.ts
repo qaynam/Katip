@@ -4,21 +4,21 @@ import type { SpaceTheme, ThemeColor, ThemeMode } from "./space-theme"
 
 export type ColorScheme = "light" | "dark"
 
-/** テーマを画面に塗るための値。CSS にそのまま渡せる文字列で持つ。 */
+/** The values that paint a theme on screen, as strings ready to hand to CSS. */
 export interface ThemeAppearance {
   readonly scheme: ColorScheme
-  /** サイドバー全体の背景。2 色以上ならグラデーション。 */
+  /** The background of the whole sidebar. A gradient with two or more colors. */
   readonly background: string
-  /** 背景の明るさから選んだ文字色。 */
+  /** The text color, picked from how light the background is. */
   readonly text: string
   readonly mutedText: string
-  /** 行にマウスを乗せたときの面。 */
+  /** The surface of a row under the mouse. */
   readonly hoverSurface: string
-  /** アクティブなタブの行や Favorites のタイルなど、背景から浮かせる面。 */
+  /** A surface raised from the background, such as the active tab's row or a Favorites tile. */
   readonly raisedSurface: string
   readonly activeSurface: string
   readonly divider: string
-  /** フォルダのアイコンなど、テーマの色そのものを見せる小さな要素の色。 */
+  /** The color of small elements that show the theme's color itself, such as folder icons. */
   readonly accent: string
   readonly grainOpacity: number
 }
@@ -26,8 +26,9 @@ export interface ThemeAppearance {
 export const resolveScheme = (mode: ThemeMode, system: ColorScheme): ColorScheme =>
   mode === "auto" ? system : mode
 
-// 明るさは背景として文字が読める範囲に固定し、強さでは主に彩度を動かす。
-// 強さで明るさまで大きく動かすと、同じテーマでも文字色が白黒で入れ替わってしまう
+// Lightness stays in a range where text on the background is readable, and intensity mostly moves
+// chroma. Letting intensity move lightness far too would flip the text between black and white
+// within one theme
 const backgroundTone = (color: ThemeColor, scheme: ColorScheme, intensity: number) =>
   Match.value(scheme).pipe(
     Match.when("light", () => ({
@@ -45,8 +46,9 @@ const backgroundTone = (color: ThemeColor, scheme: ColorScheme, intensity: numbe
 
 const neutral: ThemeColor = { hue: 280, chroma: 0.1 }
 
-// sRGB のまま補間すると、補色どうしの中間が灰色や泥色に沈む。知覚的に均一な OKLab で
-// 補間し、主色が広く見えるよう先頭の色の範囲を長めに取る
+// Not interpolated in sRGB: halfway between complementary colors sinks into grey or mud. The
+// gradient interpolates in perceptually uniform OKLab, and the first color gets a longer stretch so
+// the primary color covers more of it
 const gradientStops = (colors: ReadonlyArray<string>) =>
   colors
     .map((color, index) =>
@@ -66,13 +68,13 @@ const averageRgb = (colors: Array.NonEmptyReadonlyArray<Rgb>): Rgb => ({
 })
 
 /**
- * テーマから、サイドバーを塗る色一式を求める。
+ * Works out the full set of colors that paint the sidebar for a theme.
  *
- * @param system - OS のライト／ダーク。テーマのモードが auto のときだけ使う。
+ * @param system - The OS's light or dark scheme. Used only when the theme's mode is auto.
  *
  * @remarks
- * 文字色はモードではなく実際の背景の明るさから選ぶ（コントラスト比の高いほう）。
- * ライトモードでも濃い色を選べば白い文字になる。
+ * The text color is picked from the actual lightness of the background, not from the mode
+ * (whichever has the higher contrast ratio). A deep color gives white text even in light mode.
  */
 export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppearance => {
   const scheme = resolveScheme(theme.mode, system)
@@ -102,11 +104,11 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
         hue: accentColor.hue,
       }),
     ),
-    // ダイヤルを最大にしても、薄い色の文字が粒に埋もれて読めなくならない強さで頭打ちにする
+    // Capped so that even at the dial's maximum, faint text doesn't drown in the grain
     grainOpacity: theme.grain * 0.6,
   }
 }
 
-/** ピッカーの点やスイッチャーの印など、テーマの色そのものを見せる見本の色。 */
+/** A swatch that shows a theme color itself, such as a picker dot or a switcher mark. */
 export const swatchOf = (color: ThemeColor): string =>
   rgbCss(toSrgb({ lightness: 0.74, chroma: color.chroma * 0.17, hue: color.hue }))

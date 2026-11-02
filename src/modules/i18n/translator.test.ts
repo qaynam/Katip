@@ -2,62 +2,62 @@ import { describe, expect, it } from "vitest"
 import { Locale } from "./locale"
 import { makeTranslator } from "./translator"
 
-describe("文言", () => {
-  it("言語ごとの文言になる", () => {
+describe("messages", () => {
+  it("are in each language's wording", () => {
     expect(
       Locale.literals.map((locale) => makeTranslator(locale).t("common.newFolder")),
     ).toStrictEqual(["New Folder", "新しいフォルダ", "新建文件夹", "Nueva carpeta"])
   })
 })
 
-describe("差し込み", () => {
-  it("渡した値が差し込まれる", () => {
+describe("placeholders", () => {
+  it("are filled with the values passed", () => {
     expect(makeTranslator("es").t("common.spaceNumbered", { n: 3 })).toBe("Espacio 3")
   })
 
-  it("差し込む数値は、その言語の桁区切りで書かれる", () => {
+  it("write numbers with the language's digit grouping", () => {
     expect(makeTranslator("en").t("common.tabCount", { count: 1440 })).toBe("1,440 tabs")
   })
 
-  it("差し込む値を渡さないと型検査で落ち、実行しても差し込む箇所がそのまま残る", () => {
-    // @ts-expect-error -- 差し込む値を渡していない
+  it("fail the type check when no values are passed, and stay as they are when run", () => {
+    // @ts-expect-error -- no values passed
     expect(makeTranslator("en").t("common.spaceNumbered")).toBe("Space {n}")
   })
 
-  it("英語の文言に無い名前の値を渡すと型検査で落ちる", () => {
-    // @ts-expect-error -- 英語の文言で差し込む値の名前は n
+  it("fail the type check when passed a name the English message doesn't have", () => {
+    // @ts-expect-error -- the English message's placeholder is named n
     expect(makeTranslator("en").t("common.spaceNumbered", { index: 2 })).toBe("Space {n}")
   })
 
-  it("件数に数値以外を渡すと型検査で落ちる", () => {
-    // @ts-expect-error -- 件数は数値で渡す必要がある
+  it("fail the type check when the count isn't a number", () => {
+    // @ts-expect-error -- the count must be a number
     expect(makeTranslator("en").t("common.tabCount", { count: "2" })).toBe("2 tabs")
   })
 
-  it("差し込む文字列は、そのまま差し込まれる", () => {
-    expect(makeTranslator("ja").t("options.language.automatic", { language: "{英語}" })).toBe(
-      "自動（{英語}）",
+  it("insert a string value as it is, without filling placeholders inside it", () => {
+    expect(makeTranslator("en").t("options.language.automatic", { language: "{language}" })).toBe(
+      "Automatic ({language})",
     )
   })
 })
 
-describe("件数による語形", () => {
+describe("plural forms", () => {
   it.each([
     [1, "1 tab"],
     [2, "2 tabs"],
     [0, "0 tabs"],
-  ])("英語では %i 件が「%s」になる", (count, text) => {
+  ])('in English, a count of %i is "%s"', (count, text) => {
     expect(makeTranslator("en").t("common.tabCount", { count })).toBe(text)
   })
 
   it.each([
     [1, "1 pestaña"],
     [3, "3 pestañas"],
-  ])("スペイン語では %i 件が「%s」になる", (count, text) => {
+  ])('in Spanish, a count of %i is "%s"', (count, text) => {
     expect(makeTranslator("es").t("common.tabCount", { count })).toBe(text)
   })
 
-  it("単数と複数を区別しない言語では、件数によらず同じ語形になる", () => {
+  it("are the same whatever the count in a language that doesn't tell singular from plural", () => {
     const translator = makeTranslator("ja")
 
     expect([1, 2].map((count) => translator.t("common.tabCount", { count }))).toStrictEqual([
@@ -66,14 +66,14 @@ describe("件数による語形", () => {
     ])
   })
 
-  it("その言語の規則が選ぶ語形が訳に無ければ、other の語形になる", () => {
+  it("fall back to the other form when the translation lacks the form the language's rules pick", () => {
     expect(makeTranslator("es").t("common.tabCount", { count: 1_000_000 })).toBe(
       "1.000.000 pestañas",
     )
   })
 })
 
-describe("時間の長さ", () => {
+describe("lengths of time", () => {
   it.each([
     ["en", { value: 6, unit: "hour" }, "6 hours"],
     ["en", { value: 1, unit: "day" }, "1 day"],
@@ -84,32 +84,32 @@ describe("時間の長さ", () => {
     ["zh", { value: 3, unit: "day" }, "3 天"],
     ["es", { value: 6, unit: "hour" }, "6 horas"],
     ["es", { value: 1, unit: "week" }, "1 semana"],
-  ] as const)("%s では %o が「%s」になる", (locale, duration, text) => {
+  ] as const)('in %s, %o is "%s"', (locale, duration, text) => {
     expect(makeTranslator(locale).duration(duration)).toBe(text)
   })
 })
 
-describe("相対時刻", () => {
+describe("relative time", () => {
   it.each([
     ["en", "2 hours ago"],
     ["ja", "2 時間前"],
     ["zh", "2小时前"],
     ["es", "hace 2 horas"],
-  ] as const)("%s では 2 時間前が「%s」になる", (locale, text) => {
+  ] as const)('in %s, 2 hours ago is "%s"', (locale, text) => {
     expect(makeTranslator(locale).relativeTime(-2, "hour")).toBe(text)
   })
 
-  it("0 秒後は「今」を表す言い方になる", () => {
-    expect(makeTranslator("ja").relativeTime(0, "second")).toBe("今")
+  it("0 seconds from now is worded as now", () => {
+    expect(makeTranslator("en").relativeTime(0, "second")).toBe("now")
   })
 })
 
-describe("言語の名前", () => {
-  it("その言語で書いた言語の名前になる", () => {
-    expect(makeTranslator("ja").languageName("es")).toBe("スペイン語")
+describe("language names", () => {
+  it("are written in the translator's language", () => {
+    expect(makeTranslator("es").languageName("ja")).toBe("japonés")
   })
 
-  it("中国語は簡体字の中国語として名指す", () => {
+  it("name Chinese as Simplified Chinese", () => {
     expect(makeTranslator("en").languageName("zh")).toBe("Simplified Chinese")
   })
 })

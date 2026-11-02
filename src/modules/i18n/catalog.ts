@@ -12,16 +12,17 @@ export type MessageKey = keyof EnglishCatalog
 export type EnglishMessage<K extends MessageKey> = EnglishCatalog[K]
 
 /**
- * 英語のカタログと同じキーをすべて持ち、英語で件数により語形が変わる文言は訳でも語形を持つ。
- * キーが欠けても余分にあっても型検査で落ちる。
+ * Has every key of the English catalog, and gives plural forms wherever the English message has
+ * them. A missing or extra key fails the type check.
  */
 export type Catalog = {
   readonly [K in MessageKey]: EnglishMessage<K> extends string ? string : PluralForms
 }
 
 /**
- * カタログのうち、キーが `namespace.` で始まる部分。画面ごとにファイルを分けても、
- * 英語のカタログと比べたキーの過不足は、その画面のファイルで型検査に落ちる。
+ * The part of a catalog whose keys start with `namespace.`. With a catalog split into one file per
+ * screen, a key missing from or extra to the English catalog fails the type check in that screen's
+ * file.
  */
 export type CatalogSection<Namespace extends string> = {
   readonly [

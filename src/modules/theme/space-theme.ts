@@ -2,13 +2,14 @@ import { Schema } from "effect"
 
 const unitInterval = Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 1 })))
 
-/** auto は OS のライト／ダークに従う。 */
+/** auto follows the OS's light or dark scheme. */
 export const ThemeMode = Schema.Literals(["auto", "light", "dark"])
 export type ThemeMode = typeof ThemeMode.Type
 
 /**
- * テーマを構成する 1 色。ピッカーの円の中の位置そのもので、角度が色相、中心からの距離が彩度になる。
- * 実際に塗る明るさや濃さは、ライト／ダークと強さから決まる。
+ * One color of a theme. It is the point in the picker's circle itself: the angle is the hue and the
+ * distance from the center the chroma. The lightness and depth actually painted come from the light
+ * or dark scheme and the intensity.
  */
 export const ThemeColor = Schema.Struct({
   hue: Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 360 }))),
@@ -20,11 +21,11 @@ export const MAX_THEME_COLORS = 3
 
 export const SpaceTheme = Schema.Struct({
   mode: ThemeMode,
-  /** 空なら無彩色。2 色以上ならグラデーションになる。先頭が主色。 */
+  /** Empty means achromatic; two or more colors make a gradient. The first is the primary color. */
   colors: Schema.Array(ThemeColor).pipe(Schema.check(Schema.isMaxLength(MAX_THEME_COLORS))),
-  /** 色の濃さ。0 でほぼ無彩色、1 で最も鮮やか。 */
+  /** How deep the colors are. 0 is nearly achromatic, 1 the most vivid. */
   intensity: unitInterval,
-  /** 背景に重ねる粒状のノイズの強さ。 */
+  /** The strength of the grainy noise laid over the background. */
   grain: unitInterval,
 })
 export type SpaceTheme = typeof SpaceTheme.Type
@@ -44,8 +45,8 @@ export const neutralTheme: SpaceTheme = themeOf([])
 const roundToThousandths = (value: number) => Math.round(value * 1000) / 1000
 
 /**
- * 保存する前に値を丸める。スライダーやドラッグで得た値は桁数が長く、同じ見た目でも
- * 保存値が毎回変わってしまう。
+ * Rounds the values before saving. Values from sliders and drags have many digits, so the stored
+ * value would change every time even when the look doesn't.
  */
 export const settleTheme = (theme: SpaceTheme): SpaceTheme => ({
   ...theme,
@@ -57,5 +58,5 @@ export const settleTheme = (theme: SpaceTheme): SpaceTheme => ({
   grain: roundToThousandths(theme.grain),
 })
 
-/** 見た目が同じテーマかどうか。 */
+/** Whether two themes look the same. */
 export const themeEquivalence = Schema.toEquivalence(SpaceTheme)

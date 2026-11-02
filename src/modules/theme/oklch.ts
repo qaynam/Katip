@@ -1,10 +1,10 @@
 import { Number } from "effect"
 
 export interface Oklch {
-  /** 知覚的な明るさ。0（黒）〜 1（白）。 */
+  /** Perceived lightness, from 0 (black) to 1 (white). */
   readonly lightness: number
   readonly chroma: number
-  /** 度。 */
+  /** In degrees. */
   readonly hue: number
 }
 
@@ -14,7 +14,7 @@ export interface Rgb {
   readonly blue: number
 }
 
-// 変換式は Björn Ottosson による OKLab の定義（https://bottosson.github.io/posts/oklab/）
+// Conversion as defined for OKLab by Björn Ottosson (https://bottosson.github.io/posts/oklab/)
 const toLinearRgb = ({ lightness, chroma, hue }: Oklch): Rgb => {
   const radians = (hue * Math.PI) / 180
   const a = chroma * Math.cos(radians)
@@ -32,8 +32,8 @@ const toLinearRgb = ({ lightness, chroma, hue }: Oklch): Rgb => {
 const isInGamut = (rgb: Rgb) =>
   [rgb.red, rgb.green, rgb.blue].every((channel) => channel >= -1e-4 && channel <= 1 + 1e-4)
 
-// 彩度が高すぎて sRGB で表せない色は、各チャンネルを切り詰めると色相がずれる。
-// 明るさと色相を保ったまま、表せるところまで彩度だけを下げる
+// Not clipping each channel: for a color too saturated for sRGB, that shifts the hue. Only chroma
+// is lowered, as far as needed, keeping lightness and hue
 const intoGamut = (color: Oklch): Rgb => {
   if (isInGamut(toLinearRgb(color))) return toLinearRgb(color)
   const search = (low: number, high: number, step: number): number =>
@@ -50,7 +50,10 @@ const encodeGamma = (channel: number) => {
   return clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055
 }
 
-/** sRGB（ガンマ補正済み、各 0〜1）に変換する。表せない彩度は明るさと色相を保って下げる。 */
+/**
+ * Converts to sRGB (gamma-encoded, each channel 0 to 1). Chroma that sRGB can't show is lowered,
+ * keeping lightness and hue.
+ */
 export const toSrgb = (color: Oklch): Rgb => {
   const linear = intoGamut(color)
   return {
@@ -63,11 +66,11 @@ export const toSrgb = (color: Oklch): Rgb => {
 const decodeGamma = (channel: number) =>
   channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
 
-/** WCAG 2 の相対輝度。 */
+/** WCAG 2 relative luminance. */
 export const relativeLuminance = ({ red, green, blue }: Rgb) =>
   0.2126 * decodeGamma(red) + 0.7152 * decodeGamma(green) + 0.0722 * decodeGamma(blue)
 
-/** WCAG 2 のコントラスト比（1〜21）。 */
+/** WCAG 2 contrast ratio, from 1 to 21. */
 export const contrastRatio = (a: Rgb, b: Rgb) => {
   const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x)
   return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05)

@@ -6,8 +6,8 @@ import { applySettingsPatch, defaultSettings, IdleMinutes, Settings } from "./se
 const decodeStored = Schema.decodeUnknownSync(Settings)
 const encodeForStorage = Schema.encodeSync(Settings)
 
-describe("既定値", () => {
-  it("新しいタブを上に表示し、それ以外の機能は OFF、言語はブラウザに合わせる設定で始まる", () => {
+describe("defaults", () => {
+  it("start with new tabs on top, every other feature off, and the browser's language", () => {
     expect(defaultSettings).toStrictEqual({
       newTabsOnTop: true,
       showAllOpenTabsInCollapsedFolders: false,
@@ -20,8 +20,8 @@ describe("既定値", () => {
   })
 })
 
-describe("保存値の読み込み", () => {
-  it("保存したときの値がそのまま読める", () => {
+describe("reading stored settings", () => {
+  it("reads back the values as they were saved", () => {
     const saved: Settings = {
       newTabsOnTop: false,
       showAllOpenTabsInCollapsedFolders: true,
@@ -35,40 +35,40 @@ describe("保存値の読み込み", () => {
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)
   })
 
-  it("何も保存されていなければ既定値になる", () => {
+  it("gives the defaults when nothing is stored", () => {
     expect(decodeStored(undefined)).toStrictEqual(defaultSettings)
   })
 
-  it("保存値がオブジェクトでなければ既定値になる", () => {
+  it("gives the defaults when the stored value isn't an object", () => {
     expect(decodeStored("corrupted")).toStrictEqual(defaultSettings)
   })
 
-  it("欠けている項目だけが既定値で補われる", () => {
+  it("fills in only the missing fields with defaults", () => {
     const settings = decodeStored({ syncTabGroups: true })
 
     expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
   })
 
-  it("型の合わない項目だけが既定値になり、他の項目は保存値のまま読める", () => {
+  it("resets only a field of the wrong type to its default, reading the others as stored", () => {
     const settings = decodeStored({ newTabsOnTop: "yes", syncTabGroups: true })
 
     expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
   })
 
-  it("自動アーカイブの片方の項目が壊れていても、もう片方は保存値のまま読める", () => {
+  it("reads one auto archive field as stored even when the other is broken", () => {
     const settings = decodeStored({ autoArchive: { enabled: true, idleMinutes: 0 } })
 
     expect(settings.autoArchive).toStrictEqual({ enabled: true, idleMinutes: 360 })
   })
 
-  it("自動アーカイブの設定がオブジェクトでなければ自動アーカイブだけが既定値になる", () => {
+  it("resets only auto archive to its defaults when it isn't an object", () => {
     const settings = decodeStored({ autoArchive: true, newTabsOnTop: false })
 
     expect(settings).toStrictEqual({ ...defaultSettings, newTabsOnTop: false })
   })
 
   it.each(["fr", "zh-CN", 1, null])(
-    "対応していない言語 %j が保存されていると、言語だけがブラウザに合わせる設定になる",
+    "with an unsupported language %j stored, only the language goes back to following the browser",
     (locale) => {
       const settings = decodeStored({ locale, syncTabGroups: true })
 
@@ -76,7 +76,7 @@ describe("保存値の読み込み", () => {
     },
   )
 
-  it("知らない項目が含まれていても読める", () => {
+  it("reads settings that contain unknown fields", () => {
     const settings = decodeStored({ syncTabGroups: true, addedInFutureVersion: 1 })
 
     expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
@@ -86,23 +86,23 @@ describe("保存値の読み込み", () => {
 describe("IdleMinutes", () => {
   const decode = Schema.decodeUnknownResult(IdleMinutes)
 
-  it("1 分を受け付ける", () => {
+  it("accepts 1 minute", () => {
     expect(Result.isSuccess(decode(1))).toBe(true)
   })
 
-  it.each([0, -5, 1.5, Number.NaN])("%s は受け付けない", (minutes) => {
+  it.each([0, -5, 1.5, Number.NaN])("rejects %s", (minutes) => {
     expect(Result.isFailure(decode(minutes))).toBe(true)
   })
 })
 
 describe("applySettingsPatch", () => {
-  it("指定した項目だけが変わる", () => {
+  it("changes only the given fields", () => {
     const patched = applySettingsPatch(defaultSettings, { syncTabGroups: true })
 
     expect(patched).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
   })
 
-  it("自動アーカイブの片方だけを指定すると、もう片方は元の値のまま残る", () => {
+  it("giving one auto archive field keeps the other as it was", () => {
     const current: Settings = {
       ...defaultSettings,
       autoArchive: { enabled: true, idleMinutes: IdleMinutes.make(45) },
@@ -113,7 +113,7 @@ describe("applySettingsPatch", () => {
     expect(patched.autoArchive).toStrictEqual({ enabled: false, idleMinutes: 45 })
   })
 
-  it("ページ上のショートカットの片方だけを有効にすると、もう片方は元の値のまま残る", () => {
+  it("turning on one copy shortcut keeps the other as it was", () => {
     const current: Settings = {
       ...defaultSettings,
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
@@ -124,7 +124,7 @@ describe("applySettingsPatch", () => {
     expect(patched.pageShortcuts).toStrictEqual({ copyUrl: true, copyMarkdownLink: true })
   })
 
-  it("既定の Space を null に戻せる", () => {
+  it("can set the default Space back to null", () => {
     const current: Settings = { ...defaultSettings, defaultSpaceId: SpaceId.make("work") }
 
     const patched = applySettingsPatch(current, { defaultSpaceId: null })
@@ -132,13 +132,13 @@ describe("applySettingsPatch", () => {
     expect(patched.defaultSpaceId).toBeNull()
   })
 
-  it("言語だけを変えられる", () => {
+  it("can change the language alone", () => {
     const patched = applySettingsPatch(defaultSettings, { locale: "es" })
 
     expect(patched).toStrictEqual({ ...defaultSettings, locale: "es" })
   })
 
-  it("空の変更では何も変わらない", () => {
+  it("changes nothing with an empty patch", () => {
     expect(applySettingsPatch(defaultSettings, {})).toStrictEqual(defaultSettings)
   })
 })

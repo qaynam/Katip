@@ -30,7 +30,7 @@ const changesWhile = <E>(
   })
 
 describe("get", () => {
-  it.effect("何も保存されていなければ既定値になる", () =>
+  it.effect("returns the defaults when nothing is stored", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
 
@@ -38,22 +38,24 @@ describe("get", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存値の一部が壊れていても、その項目だけを既定値で補って読める", () =>
-    Effect.gen(function* () {
-      const repository = yield* SettingsRepository
-      yield* (yield* FakeBrowser).seedStorage(SETTINGS_AREA, {
-        [SETTINGS_KEY]: { newTabsOnTop: "yes", syncTabGroups: true },
-      })
+  it.effect(
+    "reads stored settings with a broken field by falling back to that field's default",
+    () =>
+      Effect.gen(function* () {
+        const repository = yield* SettingsRepository
+        yield* (yield* FakeBrowser).seedStorage(SETTINGS_AREA, {
+          [SETTINGS_KEY]: { newTabsOnTop: "yes", syncTabGroups: true },
+        })
 
-      const settings = yield* repository.get
+        const settings = yield* repository.get
 
-      expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
-    }).pipe(Effect.provide(testLayer)),
+        expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
+      }).pipe(Effect.provide(testLayer)),
   )
 })
 
 describe("update", () => {
-  it.effect("変更した項目だけが保存され、次に読むときに反映されている", () =>
+  it.effect("saves only the changed fields, and the next read reflects them", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
 
@@ -66,7 +68,7 @@ describe("update", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存した設定を返す", () =>
+  it.effect("returns the saved settings", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
 
@@ -76,7 +78,7 @@ describe("update", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("自動アーカイブの片方だけを変えても、もう片方の保存値は残る", () =>
+  it.effect("changing one auto archive field keeps the other's stored value", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
       yield* repository.update({ autoArchive: { idleMinutes: IdleMinutes.make(30) } })
@@ -87,7 +89,7 @@ describe("update", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("同時に変更しても、どちらの変更も失われない", () =>
+  it.effect("concurrent changes are both kept", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
 
@@ -103,7 +105,7 @@ describe("update", () => {
 })
 
 describe("changes", () => {
-  it.effect("購読すると、まず現在の設定が流れる", () =>
+  it.effect("emits the current settings first on subscribing", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
       yield* repository.update({ syncTabGroups: true })
@@ -114,7 +116,7 @@ describe("changes", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存するたびに、保存後の設定が流れる", () =>
+  it.effect("emits the saved settings on every save", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
 
@@ -137,7 +139,7 @@ describe("changes", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("他のページが保存した設定も流れる", () =>
+  it.effect("emits settings saved by another page too", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
       const storage = yield* Storage
@@ -153,7 +155,7 @@ describe("changes", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("設定以外の保存値が変わっても流れない", () =>
+  it.effect("doesn't emit when a stored value other than the settings changes", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
       const storage = yield* Storage
@@ -171,7 +173,7 @@ describe("changes", () => {
     }).pipe(Effect.provide(testLayer)),
   )
 
-  it.effect("保存値が消されると既定値が流れる", () =>
+  it.effect("emits the defaults when the stored value is removed", () =>
     Effect.gen(function* () {
       const repository = yield* SettingsRepository
       const storage = yield* Storage

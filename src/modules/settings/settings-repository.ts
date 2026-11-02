@@ -8,11 +8,12 @@ const decodeStored = (stored: Option.Option<unknown>): Settings =>
   Schema.decodeUnknownSync(Settings)(Option.getOrUndefined(stored))
 
 const encodeForStorage = (settings: Settings) =>
-  // 型を通った Settings は encode に失敗しない。失敗するなら不正な値を作った側の誤り
+  // A Settings that passed the type check can't fail to encode; if it does, whoever built the
+  // invalid value is at fault
   Effect.orDie(Schema.encodeEffect(Settings)(settings))
 
 const makeSettingsRepository = Effect.fnUntraced(function* (area: StorageArea) {
-  // 読んでから書くまでの間に別の update が割り込むと、先に書いた側の変更が消える
+  // Another update slipping in between the read and the write would lose the earlier write
   const writeLock = yield* Semaphore.make(1)
 
   const get = Effect.map(area.get(SETTINGS_KEY), decodeStored)
@@ -28,7 +29,8 @@ const makeSettingsRepository = Effect.fnUntraced(function* (area: StorageArea) {
     Stream.map((change) => decodeStored(change.newValue)),
   )
 
-  // 読んでから購読すると、その間に他のページが保存した変更を取りこぼす。先に購読を始めておく
+  // Subscribing before reading: the other way round would miss a change another page saves in
+  // between
   const changes = Stream.unwrap(
     Effect.gen(function* () {
       const pending = yield* Queue.unbounded<Settings, Cause.Done>()
@@ -46,13 +48,16 @@ const makeSettingsRepository = Effect.fnUntraced(function* (area: StorageArea) {
 export class SettingsRepository extends Context.Service<
   SettingsRepository,
   {
-    /** 保存値が無い・壊れている場合も失敗せず、その項目を既定値で補った設定を返す。 */
+    /** Doesn't fail on a missing or broken stored value; those fields fall back to defaults. */
     readonly get: Effect.Effect<Settings, BrowserApiError>
-    /** 最新の保存値に変更を重ねて保存し、保存した設定を返す。同時に呼ばれても直列に処理する。 */
+    /**
+     * Saves the patch applied over the latest stored settings, and returns the saved settings.
+     * Concurrent calls are applied one at a time.
+     */
     update(patch: SettingsPatch): Effect.Effect<Settings, BrowserApiError>
     /**
-     * 購読した時点の設定を最初に流し、以降は保存値が変わるたびに新しい設定を流す。
-     * 他のページ（background、サイドパネルなど）からの保存も流れる。
+     * Emits the settings as of subscribing first, then the new settings whenever the stored value
+     * changes, including saves from other pages (the background, the side panel, and so on).
      */
     readonly changes: Stream.Stream<Settings, BrowserApiError>
   }
