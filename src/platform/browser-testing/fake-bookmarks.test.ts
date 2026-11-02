@@ -20,7 +20,7 @@ const childrenOf = (node: BookmarkNode) =>
 layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
   describe("最初の状態", () => {
     it.effect(
-      "ルートの下にブックマークバー・その他のブックマーク・モバイルのブックマークがある",
+      "ルートの下には、新しいプロファイルと同じくブックマークバーとその他のブックマークだけがある",
       () =>
         Effect.gen(function* () {
           const bookmarks = yield* Bookmarks
@@ -33,11 +33,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
                 child._tag === "BookmarkFolder" ? child.folderType : Option.none(),
               ),
             ),
-            Option.some([
-              Option.some("bookmarks-bar"),
-              Option.some("other"),
-              Option.some("mobile"),
-            ]),
+            Option.some([Option.some("bookmarks-bar"), Option.some("other")]),
           )
         }),
     )
@@ -291,7 +287,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
     )
 
     it.effect(
-      "removeTree は中身ごと消し、子を含むノードを持つ BookmarkRemoved を 1 回だけ発火する",
+      "removeTree は中身ごと消し、親と位置を持たず子を含むノードの BookmarkRemoved を 1 回だけ発火する",
       () =>
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
@@ -306,7 +302,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Bookmarks の fake", (it) => {
           assert.deepStrictEqual(tagsOf(events), ["BookmarkRemoved"])
           assert.deepStrictEqual(
             events.map((event) => (event._tag === "BookmarkRemoved" ? event.node : event)),
-            [folder],
+            [{ ...folder, parentId: Option.none(), index: Option.none() }],
           )
           assert.deepStrictEqual(yield* childIdsOf(bookmarksBar), [])
         }),

@@ -211,6 +211,18 @@ export const clampMove = (
   return pinned ? clamp(index, 0, boundary - 1) : clamp(index, boundary, tabs.length - 1)
 }
 
+/** `gap` の位置（その index のタブの直前）に差し込むと、同じ分割ビューの 2 つのタブの間に入るか。 */
+export const splitsGap = (tabs: ReadonlyArray<TabRecord>, gap: number): boolean => {
+  const left = Option.flatMap(Array.get(tabs, gap - 1), (tab) => tab.splitViewId)
+  return (
+    Option.isSome(left) &&
+    Option.contains(
+      Option.flatMap(Array.get(tabs, gap), (tab) => tab.splitViewId),
+      left.value,
+    )
+  )
+}
+
 export const groupAt = (tabs: ReadonlyArray<TabRecord>, index: number): Option.Option<TabGroupId> =>
   Option.flatMap(Array.get(tabs, index), (tab) => tab.groupId)
 
@@ -304,22 +316,6 @@ export const successorOfActiveTab = (
       Option.map((tab) => tab.id),
     )
   })
-
-/** グループを折りたたむとき、その中のアクティブなタブの代わりにアクティブにするタブ。 */
-export const successorOutsideGroup = (
-  state: BrowsingState,
-  tabs: ReadonlyArray<TabRecord>,
-  activeIndex: number,
-  groupId: TabGroupId,
-): Option.Option<TabId> =>
-  Option.map(
-    searchAround(
-      tabs,
-      activeIndex,
-      (tab) => !Option.contains(tab.groupId, groupId) && !isInCollapsedGroup(state)(tab),
-    ),
-    (tab) => tab.id,
-  )
 
 /**
  * 新しいグループの置き場所（その位置に差し込む）。先頭のタブの直後から探し、

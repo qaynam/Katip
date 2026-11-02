@@ -1,15 +1,18 @@
-import { Effect, Option, Ref } from "effect"
+import { Array, Effect, Option, Ref } from "effect"
 import { WindowId, Windows } from "#platform/browser"
 import { DEFAULT_WINDOW_BOUNDS, focusedWindowId, issueId, toBrowserWindow } from "./browsing-state"
 import {
+  assignGroup,
   blurWindow,
   closeWindowIfEmpty,
   createTab,
   detachTab,
+  emitTabUpdated,
   focusWindow,
   NEW_TAB_URL,
-  removeGroupIfEmpty,
   requireWindow,
+  unsplitTabs,
+  updateTab,
 } from "./browsing-steps"
 import { type BrowsingTx, chromeCall, type FakeWorld, transact } from "./fake-world"
 
@@ -18,18 +21,39 @@ const snapshotOf = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: Window
   return toBrowserWindow(yield* tx.state, window)
 })
 
-/** ウィンドウを閉じる。タブは `isWindowClosing: true` で閉じ、閉じている途中で別のタブをアクティブにしない。 */
+/**
+ * ウィンドウを閉じる。Chrome は先に分割を左から、グループとピン留めを右から解き、
+ * 右のタブから順に `isWindowClosing: true` で閉じる。閉じている途中で別のタブをアクティブにしない。
+ */
 export const closeWindowWithTabs = Effect.fnUntraced(function* (
   tx: BrowsingTx,
   windowId: WindowId,
 ) {
-  const window = yield* requireWindow(tx, windowId)
+  const { tabs } = yield* requireWindow(tx, windowId)
+  const fromRight = Array.reverse(tabs)
   yield* Effect.forEach(
-    window.tabs,
+    Array.dedupe(tabs.flatMap((tab) => Option.toArray(tab.splitViewId))),
+    (splitViewId) => unsplitTabs(tx, splitViewId),
+    { discard: true },
+  )
+  yield* Effect.forEach(
+    fromRight.filter((tab) => Option.isSome(tab.groupId)),
+    (tab) => assignGroup(tx, tab.id, Option.none()),
+    { discard: true },
+  )
+  yield* Effect.forEach(
+    fromRight.filter((tab) => tab.pinned),
+    Effect.fnUntraced(function* (tab) {
+      yield* updateTab(tx, tab.id, (record) => ({ ...record, pinned: false }))
+      yield* emitTabUpdated(tx, tab.id, { pinned: false })
+    }),
+    { discard: true },
+  )
+  yield* Effect.forEach(
+    fromRight,
     Effect.fnUntraced(function* (tab) {
       yield* detachTab(tx, tab.id)
       yield* tx.emit({ _tag: "TabRemoved", tabId: tab.id, windowId, isWindowClosing: true })
-      yield* removeGroupIfEmpty(tx, tab.groupId, windowId)
     }),
     { discard: true },
   )

@@ -72,13 +72,13 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
   })
 
   describe("アクティブなタブを含むグループを折りたたんだとき", () => {
-    it.effect("グループの外の右のタブがアクティブになってから、TabGroupUpdated が発火する", () =>
+    it.effect("アクティブなタブは変わらず、TabGroupUpdated だけが発火する", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const groups = yield* TabGroups
+        const tabs = yield* Tabs
         const {
-          windowId,
-          tabIds: [, , right],
+          tabIds: [, active],
           groupIds,
         } = yield* fake.seedWindow({
           tabs: [{}, { group: "work", active: true }, {}],
@@ -87,47 +87,8 @@ layer(FakeBrowser.layer, { buildPerTest: true })("TabGroups の fake", (it) => {
 
         yield* groups.update(groupIds.work, { collapsed: true })
 
-        const events = yield* fake.takeEmittedEvents
-        assert.deepStrictEqual(tagsOf(events), ["TabActivated", "TabGroupUpdated"])
-        assert.deepStrictEqual(events[0], { _tag: "TabActivated", tabId: right, windowId })
-      }),
-    )
-
-    it.effect("右にグループの外のタブが無ければ、左のタブがアクティブになる", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const groups = yield* TabGroups
-        const tabs = yield* Tabs
-        const {
-          tabIds: [left],
-          groupIds,
-        } = yield* fake.seedWindow({
-          tabs: [{}, { group: "work", active: true }],
-          groups: { work: {} },
-        })
-
-        yield* groups.update(groupIds.work, { collapsed: true })
-
-        assert.isTrue((yield* tabs.get(left)).active)
-      }),
-    )
-
-    it.effect("グループの外にタブが無ければ、新しいタブを開いてアクティブにする", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const groups = yield* TabGroups
-        const { groupIds } = yield* fake.seedWindow({
-          tabs: [{ group: "work", active: true }],
-          groups: { work: {} },
-        })
-
-        yield* groups.update(groupIds.work, { collapsed: true })
-
-        assert.deepStrictEqual(tagsOf(yield* fake.takeEmittedEvents), [
-          "TabCreated",
-          "TabActivated",
-          "TabGroupUpdated",
-        ])
+        assert.deepStrictEqual(tagsOf(yield* fake.takeEmittedEvents), ["TabGroupUpdated"])
+        assert.isTrue((yield* tabs.get(active)).active)
       }),
     )
   })

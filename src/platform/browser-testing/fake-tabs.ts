@@ -4,7 +4,7 @@ import {
   type BrowserTab,
   type TabCreateOptions,
   TabGroupId,
-  type TabId,
+  TabId,
   type TabQuery,
   Tabs,
   type WindowId,
@@ -19,6 +19,7 @@ import {
   leastUsedColor,
   locateTab,
   newGroupDestination,
+  replaceWindow,
   sameGroup,
   splitViewMembers,
   splitViewProblems,
@@ -28,8 +29,10 @@ import {
 } from "./browsing-state"
 import {
   activateTab,
+  assignGroup,
   createTab,
   emitTabUpdated,
+  leaveSplitView,
   moveTab,
   moveTabsAndSetGroup,
   NEW_TAB_URL,
@@ -80,7 +83,9 @@ const createGroup = Effect.fnUntraced(function* (tx: BrowsingTx, windowId: Windo
     collapsed: false,
   }
   yield* tx.setState({ ...issued, groups: [...issued.groups, group] })
+  // Chrome は作ったばかりのグループについて、変わっていない見た目の更新も続けて送る
   yield* tx.emit({ _tag: "TabGroupCreated", group: toBrowserTabGroup(group, windowId) })
+  yield* tx.emit({ _tag: "TabGroupUpdated", group: toBrowserTabGroup(group, windowId) })
   return group.id
 })
 
@@ -167,44 +172,27 @@ const createSplitWith = Effect.fnUntraced(function* (
     active: options.active ?? true,
     pinned: partner.tab.pinned,
     openerTabId: Option.fromUndefinedOr(options.openerTabId),
-    groupId: partner.tab.groupId,
+    groupId: Option.none(),
   })
+  yield* assignGroup(tx, tabId, partner.tab.groupId)
   yield* splitTabs(tx, [partnerId, tabId])
   return tabId
 })
 
-const areSplitPartners = (state: BrowsingState, a: TabId, b: TabId) => {
-  const splitViewOf = (tabId: TabId) =>
-    Option.flatMap(locateTab(state, tabId), ({ tab }) => tab.splitViewId)
-  return Option.exists(splitViewOf(a), (splitViewId) =>
-    Option.contains(splitViewOf(b), splitViewId),
-  )
-}
-
-/**
- * `tabs.move` の 1 回の操作で動かすタブのまとまり。続けて指定された分割ビューの 2 つのタブを 1 つにまとめる。
- *
- * @remarks
- * 両方を一緒に動かしても分割が残るのは推測。1 タブずつ別の操作にすると、先に動かしたタブが
- * 隣から離れた時点で分割が解けてしまうので、まとめて動かしてから条件を判定させる。
- */
-const moveUnits = (
-  state: BrowsingState,
-  tabIds: ReadonlyArray<TabId>,
-): ReadonlyArray<Array.NonEmptyReadonlyArray<TabId>> =>
-  tabIds.reduce<ReadonlyArray<Array.NonEmptyReadonlyArray<TabId>>>(
-    (units, tabId) =>
+const withSplitPartners = (state: BrowsingState, tabIds: ReadonlyArray<TabId>) =>
+  Array.dedupe(
+    tabIds.flatMap((tabId) =>
       Option.match(
-        Option.filter(
-          Array.last(units),
-          (unit) => unit.length === 1 && areSplitPartners(state, unit[0], tabId),
-        ),
+        Option.flatMap(locateTab(state, tabId), ({ tab }) => tab.splitViewId),
         {
-          onNone: () => [...units, [tabId]],
-          onSome: (single) => [...units.slice(0, -1), [...single, tabId]],
+          onNone: () => [tabId],
+          onSome: (splitViewId) => [
+            tabId,
+            ...splitViewMembers(state, splitViewId).map(({ tab }) => tab.id),
+          ],
         },
       ),
-    [],
+    ),
   )
 
 export interface FakeTabsOptions {
@@ -281,6 +269,7 @@ export const makeFakeTabs = (
         world,
         "tabs.duplicate",
         Effect.fnUntraced(function* (tx) {
+          yield* leaveSplitView(tx, tabId)
           const { window, index, tab } = yield* requireTab(tx, tabId)
           const duplicateId = yield* createTab(tx, {
             windowId: window.id,
@@ -288,7 +277,8 @@ export const makeFakeTabs = (
             url: Option.getOrElse(tab.url, () => NEW_TAB_URL),
             active: true,
             pinned: tab.pinned,
-            openerTabId: Option.some(tabId),
+            // 複製元ではなく、複製した時点でアクティブだったタブが opener になる
+            openerTabId: window.activeTabId,
             groupId: tab.groupId,
           })
           yield* updateTab(tx, duplicateId, (record) => ({ ...record, title: tab.title }))
@@ -303,33 +293,48 @@ export const makeFakeTabs = (
         { discard: true },
       ),
 
+    // 動かし終えてからまとめて読み直さない。Chrome は 1 つずつ動かし、それぞれを動かした
+    // 時点のタブを返す
     move: (tabIds, options) =>
-      Effect.gen(function* () {
-        const windowId = Option.fromUndefinedOr(options.windowId)
-        yield* Effect.reduce(
-          moveUnits(yield* Ref.get(world.browsing), tabIds),
-          (): number | "end" => options.index,
-          (unitTarget, unit) =>
-            transact(world, "tabs.move", (tx) =>
-              Effect.reduce(
-                unit,
-                () => unitTarget,
-                (target, tabId) =>
-                  Effect.map(moveTab(tx, tabId, target, windowId), (placed) => placed + 1),
-              ),
+      Effect.map(
+        Effect.reduce(
+          tabIds,
+          (): { readonly target: number | "end"; readonly moved: ReadonlyArray<BrowserTab> } => ({
+            target: options.index,
+            moved: [],
+          }),
+          ({ target, moved }, tabId) =>
+            transact(
+              world,
+              "tabs.move",
+              Effect.fnUntraced(function* (tx) {
+                const placed = yield* moveTab(
+                  tx,
+                  tabId,
+                  target,
+                  Option.fromUndefinedOr(options.windowId),
+                )
+                const snapshot = yield* requireTabSnapshot(tx, tabId)
+                return {
+                  target: target === "end" ? target : placed + 1,
+                  moved: [...moved, snapshot],
+                }
+              }),
             ),
-        )
-        const state = yield* Ref.get(world.browsing)
-        return Array.getSomes(tabIds.map((tabId) => tabSnapshot(state, tabId)))
-      }),
+        ),
+        ({ moved }) => moved,
+      ),
 
     group: (options) =>
       transact(
         world,
         "tabs.group",
         Effect.fnUntraced(function* (tx) {
-          const tabIds = Array.dedupe(options.tabIds)
-          yield* Effect.forEach(tabIds, (tabId) => requireTab(tx, tabId), { discard: true })
+          yield* Effect.forEach(options.tabIds, (tabId) => requireTab(tx, tabId), {
+            discard: true,
+          })
+          // 分割ビューの片方だけを入れても、Chrome はもう片方も一緒に入れて分割を保つ
+          const tabIds = withSplitPartners(yield* tx.state, options.tabIds)
           const windowId =
             options.groupId === undefined
               ? (options.windowId ?? (yield* requireFocusedWindow(tx)))
@@ -373,8 +378,10 @@ export const makeFakeTabs = (
         world,
         "tabs.ungroup",
         Effect.fnUntraced(function* (tx) {
-          const locations = yield* Effect.forEach(Array.dedupe(tabIds), (tabId) =>
-            requireTab(tx, tabId),
+          yield* Effect.forEach(tabIds, (tabId) => requireTab(tx, tabId), { discard: true })
+          const locations = yield* Effect.forEach(
+            withSplitPartners(yield* tx.state, tabIds),
+            (tabId) => requireTab(tx, tabId),
           )
           const grouped = locations.flatMap(({ tab }) =>
             Option.toArray(Option.map(tab.groupId, (groupId) => ({ tabId: tab.id, groupId }))),
@@ -405,15 +412,25 @@ export const makeFakeTabs = (
           if (Option.contains(window.activeTabId, tabId)) {
             return yield* tx.reject(`Cannot discard tab with id: ${tabId}.`)
           }
-          if (!tab.discarded) {
-            yield* updateTab(tx, tabId, (record) => ({
-              ...record,
-              discarded: true,
-              status: "unloaded",
-            }))
-            yield* emitTabUpdated(tx, tabId, { discarded: true, status: "unloaded" })
-          }
-          return yield* requireTabSnapshot(tx, tabId)
+          if (tab.discarded) return yield* requireTabSnapshot(tx, tabId)
+          // Chrome は破棄したタブを新しい ID のタブに置き換える。分割やグループは置き換えた先に残る
+          const [id, issued] = issueId(yield* tx.state)
+          const replacement = TabId.make(id)
+          yield* tx.setState(
+            replaceWindow(issued, {
+              ...window,
+              tabs: window.tabs.map((other) =>
+                other.id === tabId
+                  ? { ...other, id: replacement, discarded: true, status: "unloaded" }
+                  : Option.contains(other.openerTabId, tabId)
+                    ? { ...other, openerTabId: Option.some(replacement) }
+                    : other,
+              ),
+            }),
+          )
+          yield* tx.emit({ _tag: "TabReplaced", addedTabId: replacement, removedTabId: tabId })
+          yield* emitTabUpdated(tx, replacement, { discarded: true, status: "unloaded" })
+          return yield* requireTabSnapshot(tx, replacement)
         }),
       ),
 

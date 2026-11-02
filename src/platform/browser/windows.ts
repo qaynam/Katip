@@ -34,7 +34,12 @@ export class Windows extends Context.Service<
       windowId: WindowId,
       options: WindowUpdateOptions,
     ): Effect.Effect<BrowserWindow, BrowserApiError>
-    /** ウィンドウを中のタブごと閉じる。タブは `isWindowClosing: true` で閉じる。 */
+    /**
+     * ウィンドウを中のタブごと閉じる。タブは右から順に `isWindowClosing: true` で閉じる。
+     *
+     * @remarks
+     * タブを閉じる前に、分割ビュー・グループ・ピン留めが解け、その変化のイベントが先に届く。
+     */
     remove(windowId: WindowId): Effect.Effect<void, BrowserApiError>
   }
 >()("katip/platform/browser/Windows") {

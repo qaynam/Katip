@@ -1,5 +1,5 @@
 import { assert, describe, layer } from "@effect/vitest"
-import { Effect, Option } from "effect"
+import { Effect, Match, Option } from "effect"
 import { type BrowserEvent, Tabs, WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "./fake-browser"
 
@@ -190,26 +190,41 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Windows の fake", (it) => {
   })
 
   describe("ユーザーがウィンドウを閉じたとき", () => {
-    it.effect("各タブが isWindowClosing で閉じた後に、グループと WindowRemoved が続く", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        yield* fake.seedWindow({ tabs: [{}] })
-        const closing = yield* fake.seedWindow({
-          tabs: [{ group: "work" }, {}],
-          groups: { work: {} },
-        })
+    it.effect(
+      "グループとピン留めを右から解いてから、右のタブから順に isWindowClosing で閉じ、WindowRemoved が続く",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          yield* fake.seedWindow({ tabs: [{}] })
+          const {
+            windowId,
+            tabIds: [pinned, grouped, plain],
+          } = yield* fake.seedWindow({
+            tabs: [{ pinned: true }, { group: "work" }, {}],
+            groups: { work: {} },
+          })
 
-        yield* fake.closeWindow(closing.windowId)
+          yield* fake.closeWindow(windowId)
 
-        const events = yield* fake.takeEmittedEvents
-        assert.deepStrictEqual(tagsOf(events), [
-          "TabRemoved",
-          "TabGroupRemoved",
-          "TabRemoved",
-          "WindowRemoved",
-        ])
-        assert.isTrue(events.every((event) => event._tag !== "TabRemoved" || event.isWindowClosing))
-      }),
+          assert.deepStrictEqual(
+            (yield* fake.takeEmittedEvents).map((event) =>
+              Match.value(event).pipe(
+                Match.tag("TabUpdated", ({ tabId, changes }) => [tabId, changes]),
+                Match.tag("TabRemoved", ({ tabId, isWindowClosing }) => [tabId, isWindowClosing]),
+                Match.orElse(({ _tag }) => _tag),
+              ),
+            ),
+            [
+              [grouped, { groupId: Option.none() }],
+              "TabGroupRemoved",
+              [pinned, { pinned: false }],
+              [plain, true],
+              [grouped, true],
+              [pinned, true],
+              "WindowRemoved",
+            ],
+          )
+        }),
     )
 
     it.effect("フォーカスしていたウィンドウなら、直前のウィンドウへフォーカスが移る", () =>

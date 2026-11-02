@@ -79,21 +79,24 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("グループの最後のタブなら、TabRemoved の後に TabGroupRemoved が発火する", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const tabs = yield* Tabs
-        const {
-          tabIds: [, grouped],
-        } = yield* fake.seedWindow({ tabs: [{}, { group: "work" }], groups: { work: {} } })
+    it.effect(
+      "グループの最後のタブなら、グループを抜けてグループが消えてから TabRemoved が発火する",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const {
+            tabIds: [, grouped],
+          } = yield* fake.seedWindow({ tabs: [{}, { group: "work" }], groups: { work: {} } })
 
-        yield* tabs.remove([grouped])
+          yield* tabs.remove([grouped])
 
-        assert.deepStrictEqual(tagsOf(yield* fake.takeEmittedEvents), [
-          "TabRemoved",
-          "TabGroupRemoved",
-        ])
-      }),
+          assert.deepStrictEqual(tagsOf(yield* fake.takeEmittedEvents), [
+            "TabUpdated",
+            "TabGroupRemoved",
+            "TabRemoved",
+          ])
+        }),
     )
 
     it.effect(
@@ -566,33 +569,31 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
         }),
     )
 
-    it.effect(
-      "ピン留めするとピン留めの領域の末尾へ動き、TabMoved の後に TabUpdated が発火する",
-      () =>
-        Effect.gen(function* () {
-          const fake = yield* FakeBrowser
-          const tabs = yield* Tabs
-          const {
-            windowId,
-            tabIds: [, , pinning],
-          } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}, {}] })
+    it.effect("ピン留めすると、ピン留めの変化が発火してからピン留めの領域の末尾へ動く", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          windowId,
+          tabIds: [, , pinning],
+        } = yield* fake.seedWindow({ tabs: [{ pinned: true }, {}, {}] })
 
-          const updated = yield* tabs.update(pinning, { pinned: true })
+        const updated = yield* tabs.update(pinning, { pinned: true })
 
-          assert.strictEqual(updated.index, 1)
-          assert.deepStrictEqual(
-            (yield* fake.takeEmittedEvents).map((event) =>
-              event._tag === "TabUpdated" ? event.changes : event,
-            ),
-            [
-              { _tag: "TabMoved", tabId: pinning, windowId, fromIndex: 2, toIndex: 1 },
-              { pinned: true },
-            ],
-          )
-        }),
+        assert.strictEqual(updated.index, 1)
+        assert.deepStrictEqual(
+          (yield* fake.takeEmittedEvents).map((event) =>
+            event._tag === "TabUpdated" ? event.changes : event,
+          ),
+          [
+            { pinned: true },
+            { _tag: "TabMoved", tabId: pinning, windowId, fromIndex: 2, toIndex: 1 },
+          ],
+        )
+      }),
     )
 
-    it.effect("グループのタブをピン留めすると、グループを抜けてから動く", () =>
+    it.effect("グループのタブをピン留めすると、ピン留めしてからグループを抜けて動く", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -606,11 +607,12 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
         const updated = yield* tabs.update(pinning, { pinned: true })
 
         assert.deepStrictEqual([updated.groupId, updated.index], [Option.none(), 0])
-        assert.deepStrictEqual(tagsOf(yield* fake.takeEmittedEvents), [
-          "TabUpdated",
-          "TabMoved",
-          "TabUpdated",
-        ])
+        assert.deepStrictEqual(
+          (yield* fake.takeEmittedEvents).map((event) =>
+            event._tag === "TabUpdated" ? event.changes : event._tag,
+          ),
+          [{ pinned: true }, { groupId: Option.none() }, "TabMoved"],
+        )
       }),
     )
 
@@ -679,28 +681,28 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
   })
 
   describe("タブをグループにまとめたとき", () => {
-    it.effect("TabGroupCreated の後に、まとめたタブの変化がタブストリップの順に発火する", () =>
-      Effect.gen(function* () {
-        const fake = yield* FakeBrowser
-        const tabs = yield* Tabs
-        const {
-          tabIds: [first, , third],
-        } = yield* fake.seedWindow({ tabs: [{}, {}, {}] })
+    it.effect(
+      "グループの作成と見た目の更新が発火し、まとめたタブの変化はタブストリップの順に発火する",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const {
+            tabIds: [first, , third],
+          } = yield* fake.seedWindow({ tabs: [{}, {}, {}] })
 
-        yield* tabs.group({ tabIds: [third, first] })
+          yield* tabs.group({ tabIds: [third, first] })
 
-        const events = yield* fake.takeEmittedEvents
-        assert.deepStrictEqual(tagsOf(events), [
-          "TabGroupCreated",
-          "TabUpdated",
-          "TabMoved",
-          "TabUpdated",
-        ])
-        assert.deepStrictEqual(
-          events.flatMap((event) => (event._tag === "TabUpdated" ? [event.tabId] : [])),
-          [first, third],
-        )
-      }),
+          const events = yield* fake.takeEmittedEvents
+          assert.deepStrictEqual(
+            tagsOf(events).filter((tag) => tag.startsWith("TabGroup")),
+            ["TabGroupCreated", "TabGroupUpdated"],
+          )
+          assert.deepStrictEqual(
+            events.flatMap((event) => (event._tag === "TabUpdated" ? [event.tabId] : [])),
+            [first, third],
+          )
+        }),
     )
 
     it.effect("離れたタブは、先頭のタブの直後に寄せて並ぶ", () =>
@@ -926,7 +928,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("discarded の変化を持つ TabUpdated が発火する", () =>
+    it.effect("新しい ID のタブに置き換わってから、discarded の変化が発火する", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -937,13 +939,33 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
         const discarded = yield* tabs.discard(background)
 
         assert.isTrue(discarded.discarded)
+        assert.notStrictEqual(discarded.id, background)
         assert.deepStrictEqual(
           (yield* fake.takeEmittedEvents).map((event) =>
             event._tag === "TabUpdated" ? event.changes : event,
           ),
-          [{ discarded: true, status: "unloaded" }],
+          [
+            { _tag: "TabReplaced", addedTabId: discarded.id, removedTabId: background },
+            { discarded: true, status: "unloaded" },
+          ],
         )
       }),
+    )
+
+    it.effect(
+      "置き換わる前のタブを opener にしていたタブは、置き換わった後のタブを opener にする",
+      () =>
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const {
+            tabIds: [, opener, child],
+          } = yield* fake.seedWindow({ tabs: [{ active: true }, {}, { openerIndex: 1 }] })
+
+          const discarded = yield* tabs.discard(opener)
+
+          assert.deepStrictEqual((yield* tabs.get(child)).openerTabId, Option.some(discarded.id))
+        }),
     )
 
     it.effect("破棄したタブをアクティブにすると、アクティブになってから読み込み直される", () =>
@@ -1166,7 +1188,7 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
   })
 
   describe("分割ビューのタブを閉じたとき", () => {
-    it.effect("TabRemoved の後に、残ったタブが分割ビューから外れる", () =>
+    it.effect("閉じるタブも含めて両方が分割ビューから外れてから、TabRemoved が発火する", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
@@ -1177,19 +1199,34 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
         yield* tabs.remove([closing])
 
         const emitted = yield* fake.takeEmittedEvents
-        assert.deepStrictEqual(tagsOf(emitted), ["TabRemoved", "TabUpdated"])
-        assert.deepStrictEqual(splitViewChangesOf(emitted), [[remaining, Option.none()]])
+        assert.deepStrictEqual(tagsOf(emitted), ["TabUpdated", "TabUpdated", "TabRemoved"])
+        assert.deepStrictEqual(splitViewChangesOf(emitted), [
+          [closing, Option.none()],
+          [remaining, Option.none()],
+        ])
       }),
     )
 
-    it.effect("ウィンドウごと閉じると、分割ビューの変化は発火しない", () =>
+    it.effect("ウィンドウごと閉じると、タブを閉じる前に両方が分割ビューから外れる", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
-        const { windowId } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
+        const {
+          windowId,
+          tabIds: [left, right],
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
 
         yield* fake.closeWindow(windowId)
 
-        assert.deepStrictEqual(splitViewChangesOf(yield* fake.takeEmittedEvents), [])
+        const emitted = yield* fake.takeEmittedEvents
+        assert.deepStrictEqual(splitViewChangesOf(emitted), [
+          [left, Option.none()],
+          [right, Option.none()],
+        ])
+        assert.deepStrictEqual(tagsOf(emitted).slice(0, 3), [
+          "TabUpdated",
+          "TabUpdated",
+          "TabRemoved",
+        ])
       }),
     )
   })
@@ -1212,19 +1249,36 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("両方を続けて指定して動かすと、分割ビューのまま並ぶ", () =>
+    it.effect("両方を一緒に動かしても、両方が分割ビューから外れる", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
         const {
           windowId,
           tabIds: [left, right, other],
-          splitViewIds,
         } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
 
         yield* tabs.move([left, right], { index: "end" })
 
         assert.deepStrictEqual(yield* tabOrderIn(windowId), [other, left, right])
+        assert.deepStrictEqual(
+          [yield* splitViewOf(left), yield* splitViewOf(right)],
+          [Option.none(), Option.none()],
+        )
+      }),
+    )
+
+    it.effect("両方を今の位置へ動かすと、分割ビューのまま", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+          splitViewIds,
+        } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }, {}] })
+
+        yield* tabs.move([left, right], { index: 0 })
+
         assert.deepStrictEqual(
           [yield* splitViewOf(left), yield* splitViewOf(right)],
           [Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
@@ -1286,19 +1340,45 @@ layer(FakeBrowser.layer, { buildPerTest: true })("Tabs の fake", (it) => {
       }),
     )
 
-    it.effect("片方だけをグループに入れると、両方が分割ビューから外れる", () =>
+    it.effect("片方だけをグループに入れると、もう片方も同じグループに入り、分割ビューのまま", () =>
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
         const tabs = yield* Tabs
         const {
           tabIds: [grouping, other],
+          splitViewIds,
         } = yield* fake.seedWindow({ tabs: [{ split: "a" }, { split: "a" }] })
 
-        yield* tabs.group({ tabIds: [grouping] })
+        const groupId = yield* tabs.group({ tabIds: [grouping] })
 
         assert.deepStrictEqual(
-          [yield* splitViewOf(grouping), yield* splitViewOf(other)],
-          [Option.none(), Option.none()],
+          [
+            (yield* tabs.get(other)).groupId,
+            yield* splitViewOf(grouping),
+            yield* splitViewOf(other),
+          ],
+          [Option.some(groupId), Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
+        )
+      }),
+    )
+
+    it.effect("片方だけをグループから外すと、もう片方も外れ、分割ビューのまま", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const tabs = yield* Tabs
+        const {
+          tabIds: [left, right],
+          splitViewIds,
+        } = yield* fake.seedWindow({
+          tabs: [{ split: "a", group: "work" }, { split: "a", group: "work" }, {}],
+          groups: { work: {} },
+        })
+
+        yield* tabs.ungroup([right])
+
+        assert.deepStrictEqual(
+          [(yield* tabs.get(left)).groupId, yield* splitViewOf(left), yield* splitViewOf(right)],
+          [Option.none(), Option.some(splitViewIds.a), Option.some(splitViewIds.a)],
         )
       }),
     )

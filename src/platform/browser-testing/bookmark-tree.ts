@@ -51,6 +51,10 @@ const permanentFolder = (
   childIds: [],
 })
 
+/**
+ * 新しいプロファイルの Chrome と同じく、ブックマークバーとその他のブックマークだけを持つ。
+ * モバイルのブックマークは同期した端末にブックマークがあるときだけ現れる。
+ */
 export const initialBookmarkTree = (now: number): BookmarkTree => ({
   nodes: [
     {
@@ -60,13 +64,13 @@ export const initialBookmarkTree = (now: number): BookmarkTree => ({
       url: Option.none(),
       dateAdded: now,
       folderType: Option.none(),
-      childIds: ["1", "2", "3"].map((id) => BookmarkId.make(id)),
+      childIds: ["1", "2"].map((id) => BookmarkId.make(id)),
     },
-    permanentFolder("1", "Bookmarks bar", "bookmarks-bar", now),
-    permanentFolder("2", "Other bookmarks", "other", now),
-    permanentFolder("3", "Mobile bookmarks", "mobile", now),
+    permanentFolder("1", "Bookmarks Bar", "bookmarks-bar", now),
+    permanentFolder("2", "Other Bookmarks", "other", now),
   ],
-  lastIssuedId: 3,
+  // 3 と 4 は Chrome がモバイルと管理対象のフォルダのために取っておく
+  lastIssuedId: 4,
 })
 
 const isPermanent = (record: BookmarkRecord) =>
@@ -223,8 +227,11 @@ export const createNode = (
   Result.gen(function* () {
     const parent = yield* requireParentFolder(tree, options.parentId ?? OTHER_BOOKMARKS_ID)
     const index = yield* requireIndexWithin(parent, options.index)
+    // Chrome は空の URL をフォルダの指定として扱う
     const url =
-      options.url === undefined ? Option.none() : Option.some(yield* requireValidUrl(options.url))
+      options.url === undefined || options.url === ""
+        ? Option.none()
+        : Option.some(yield* requireValidUrl(options.url))
     const id = BookmarkId.make(String(tree.lastIssuedId + 1))
     const record: BookmarkRecord = {
       id,
@@ -367,7 +374,12 @@ export const removeNode = (
           id,
           parentId: parent.id,
           index: parent.childIds.indexOf(id),
-          node: describeNode(tree, record, true),
+          // Chrome は消したノード自身の親と位置を node に入れない（子には入れる）
+          node: {
+            ...describeNode(tree, record, true),
+            parentId: Option.none(),
+            index: Option.none(),
+          },
         },
       ],
       value: undefined,

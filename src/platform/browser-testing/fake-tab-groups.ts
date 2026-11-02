@@ -13,14 +13,9 @@ import {
   groupSnapshot,
   pinnedCount,
   sameGroup,
-  successorOutsideGroup,
-  windowOfGroup,
 } from "./browsing-state"
 import {
-  activateTab,
-  createTab,
   moveWithinWindow,
-  NEW_TAB_URL,
   requireGroup,
   requireWindow,
   transferTab,
@@ -48,30 +43,6 @@ const requireGroupSnapshot = Effect.fnUntraced(function* (
   return group.value
 })
 
-/** 折りたたむグループにアクティブなタブがあれば、グループの外のタブへアクティブを移す。 */
-const moveActivationOutOf = Effect.fnUntraced(function* (tx: BrowsingTx, groupId: TabGroupId) {
-  const state = yield* tx.state
-  const window = windowOfGroup(state, groupId)
-  if (Option.isNone(window)) return
-  const { tabs, activeTabId, id: windowId } = window.value
-  const activeIndex = tabs.findIndex((tab) => Option.contains(activeTabId, tab.id))
-  const activeIsInGroup = tabs.some(
-    (tab) => Option.contains(activeTabId, tab.id) && Option.contains(tab.groupId, groupId),
-  )
-  if (!activeIsInGroup) return
-  const successor = successorOutsideGroup(state, tabs, activeIndex, groupId)
-  if (Option.isSome(successor)) return yield* activateTab(tx, successor.value)
-  // 外に移れるタブが無ければ、Chrome は新しいタブを開いてそこへ移る
-  yield* createTab(tx, {
-    windowId,
-    index: "end",
-    url: NEW_TAB_URL,
-    active: true,
-    pinned: false,
-    openerTabId: Option.none(),
-  })
-})
-
 export const makeFakeTabGroups = (world: FakeWorld): TabGroups["Service"] =>
   TabGroups.of({
     query: (query) =>
@@ -90,10 +61,7 @@ export const makeFakeTabGroups = (world: FakeWorld): TabGroups["Service"] =>
         world,
         "tabGroups.update",
         Effect.fnUntraced(function* (tx) {
-          const before = yield* requireGroup(tx, groupId)
-          if (options.collapsed === true && !before.collapsed) {
-            yield* moveActivationOutOf(tx, groupId)
-          }
+          // 折りたたむグループにアクティブなタブがあっても、Chrome はアクティブなタブを変えない
           const current = yield* requireGroup(tx, groupId)
           const next: GroupRecord = {
             ...current,

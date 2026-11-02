@@ -28,7 +28,7 @@ export class TabGroups extends Context.Service<
   {
     query(query: TabGroupQuery): Effect.Effect<ReadonlyArray<BrowserTabGroup>, BrowserApiError>
     get(groupId: TabGroupId): Effect.Effect<BrowserTabGroup, BrowserApiError>
-    /** アクティブなタブを含むグループを折りたたむと、グループの外のタブがアクティブになる。 */
+    /** アクティブなタブを含むグループを折りたたんでも、アクティブなタブは変わらない。 */
     update(
       groupId: TabGroupId,
       options: TabGroupUpdateOptions,

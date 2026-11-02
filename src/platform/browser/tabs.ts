@@ -26,6 +26,7 @@ export interface TabCreateOptions {
   readonly openerTabId?: TabId
   /**
    * 開いたタブをこのタブと分割ビューにする。`index` を省略するとこのタブの右隣に開く。
+   * このタブがグループに入っていれば、開いたタブもグループに入ってから分割される。
    *
    * @remarks
    * このタブが分割済みのとき、`windowId` がこのタブのウィンドウと違うとき、
@@ -63,26 +64,49 @@ export class Tabs extends Context.Service<
     get(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     create(options: TabCreateOptions): Effect.Effect<BrowserTab, BrowserApiError>
     update(tabId: TabId, options: TabUpdateOptions): Effect.Effect<BrowserTab, BrowserApiError>
-    /** 元のタブの右隣に、同じページを開いた新しいタブを作ってアクティブにする。 */
-    duplicate(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
-    /** 先頭から順に閉じる。存在しない ID に当たるとそこで失敗し、それより前のタブは閉じたままになる。 */
-    remove(tabIds: ReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
     /**
-     * タブを `index` から順に並べて置く。
+     * 元のタブの右隣に、同じページを開いた新しいタブを作ってアクティブにする。
      *
      * @remarks
+     * 複製したタブの `openerTabId` は、元のタブではなく複製した時点でアクティブだったタブになる。
+     * 元のタブが分割ビューに入っていれば、先に分割が解ける。
+     */
+    duplicate(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
+    /**
+     * 先頭から順に閉じる。存在しない ID に当たるとそこで失敗し、それより前のタブは閉じたままになる。
+     *
+     * @remarks
+     * 閉じる前に、分割ビュー・ピン留め・グループが解け、その変化のイベントが `TabRemoved` より先に届く。
+     */
+    remove(tabIds: ReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
+    /**
+     * タブを `index` から順に並べて置き、それぞれを動かした時点のタブを返す。
+     *
+     * @remarks
+     * 後のタブは、前のタブを実際に置いた位置の次に置く。
      * ピン留めされたタブとそうでないタブの境界は越えられず、境界に寄せられる。
      * グループの途中に置いたタブはそのグループに入り、グループから離れたタブはグループを抜ける。
-     * 分割ビューのタブを片方だけ動かすと分割が解ける。
+     * 分割ビューのタブを動かすと、2 つを一緒に動かしても分割が解ける。2 つの間へ別のタブを
+     * 動かし入れても解ける。今の位置から動かないタブでは解けない。
+     * 別のウィンドウへ動かすと、先にピン留めとグループが解ける。
      */
     move(
       tabIds: ReadonlyArray<TabId>,
       options: TabMoveOptions,
     ): Effect.Effect<ReadonlyArray<BrowserTab>, BrowserApiError>
-    /** タブをグループにまとめ、そのグループの ID を返す。ピン留めされたタブは外される。 */
+    /**
+     * タブをグループにまとめ、そのグループの ID を返す。ピン留めされたタブは外される。
+     * 分割ビューの片方を渡すと、もう片方も一緒に入り、分割は保たれる。
+     */
     group(options: TabGroupOptions): Effect.Effect<TabGroupId, BrowserApiError>
+    /** 分割ビューの片方を渡すと、もう片方も一緒にグループを抜け、分割は保たれる。 */
     ungroup(tabIds: Array.NonEmptyReadonlyArray<TabId>): Effect.Effect<void, BrowserApiError>
-    /** アクティブなタブは破棄できず失敗する。 */
+    /**
+     * 破棄したタブを、新しい ID のタブとして返す。アクティブなタブは破棄できず失敗する。
+     *
+     * @remarks
+     * 元の ID は使えなくなり、`TabReplaced` が届く。分割ビューやグループは置き換わったタブに残る。
+     */
     discard(tabId: TabId): Effect.Effect<BrowserTab, BrowserApiError>
     /**
      * 分割ビューを作る・解く API（Chrome 155 以降）があるか。
