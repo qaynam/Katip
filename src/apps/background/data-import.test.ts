@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, type Layer, Option, Result, Schema, type Scope, Stream } from "effect"
+import { arcImportOf, convertArcSidebar, type ArcArrangement } from "#modules/arc-import"
+import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
 import {
   decodeExportFile,
   encodeExportFile,
@@ -98,6 +100,7 @@ const apply = (
   options: {
     readonly openFavorites?: boolean
     readonly spacesWithoutTheme?: ReadonlyArray<string>
+    readonly spacesNamedByImport?: ReadonlyArray<string>
   } = {},
   sender?: PortSender,
 ) =>
@@ -107,6 +110,7 @@ const apply = (
       content,
       openFavorites: options.openFavorites ?? true,
       spacesWithoutTheme: options.spacesWithoutTheme ?? [],
+      spacesNamedByImport: options.spacesNamedByImport ?? [],
     },
     sender,
   )
@@ -317,6 +321,105 @@ describe("data import", () => {
       ),
   )
 
+  describe("Arc's Spaces combined into one", () => {
+    const arc = Result.getOrThrow(convertArcSidebar(arcSidebar, Date.UTC(2026, 10, 2)))
+
+    /** Applies the chosen Arc Spaces, arranged as asked, as the settings page sends them. */
+    const applyArc = (
+      arrangement: ArcArrangement,
+      spaceIds: ReadonlyArray<string> = arc.spaces.map(({ space }) => space.id),
+    ) => {
+      const { document, report } = arcImportOf(arc, { spaceIds: new Set(spaceIds), arrangement })
+      return apply(Result.getOrThrow(encodeExportFile(document)), {
+        openFavorites: false,
+        spacesWithoutTheme: report.spacesWithoutTheme,
+        spacesNamedByImport: report.spacesNamedByImport,
+      })
+    }
+
+    it.live(
+      "add exactly one Space, with a folder for each Arc Space, and change nothing already there",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            yield* startWithHomePin
+            const before = yield* exported
+            const tabsBefore = (yield* fake.snapshot).tabs
+
+            const answer = yield* applyArc("Combined", ["space-reading", "space-personal"])
+            const after = yield* exported
+
+            expect({
+              answer,
+              existing: after.spaces.slice(0, before.spaces.length),
+              added: after.spaces
+                .slice(before.spaces.length)
+                .map(({ name, pinned }) => ({ name, pinned })),
+              settings: after.settings,
+              tabs: (yield* fake.snapshot).tabs,
+            }).toStrictEqual({
+              answer: { _tag: "Applied" },
+              existing: before.spaces,
+              added: [
+                {
+                  name: "Arc",
+                  pinned: [
+                    {
+                      type: "folder",
+                      title: "Reading",
+                      icon: null,
+                      children: [pin("Long Read", "https://blog.example.com/long-read")],
+                    },
+                    {
+                      type: "folder",
+                      title: "Personal",
+                      icon: null,
+                      children: [
+                        pin("Recipes", "https://recipes.example.com/"),
+                        {
+                          type: "folder",
+                          title: "Trips",
+                          icon: null,
+                          children: [pin("Packing List", "https://packing.example.com/list")],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              settings: before.settings,
+              tabs: tabsBefore,
+            })
+          }),
+        ),
+    )
+
+    it.live(
+      "are named Arc with the next free number when a Space already has the name, which keeps it",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            yield* startWithHomePin
+            yield* apply(fileWith([fileSpace("Arc", [pin("Mine", "https://mine.example/")])]))
+            const before = yield* exported
+
+            yield* applyArc("Combined")
+            yield* applyArc("Combined")
+            const after = yield* exported
+
+            expect({
+              existing: after.spaces.slice(0, before.spaces.length),
+              names: after.spaces.map(({ name }) => name),
+            }).toStrictEqual({
+              existing: before.spaces,
+              names: ["Home", "Arc", "Arc 2", "Arc 3"],
+            })
+          }),
+        ),
+    )
+  })
+
   it.live("settings in the file are left out", () =>
     inBackground(
       Effect.gen(function* () {
@@ -515,6 +618,7 @@ describe("data import", () => {
             content: fileWith([nestedSpace]),
             openFavorites: true,
             spacesWithoutTheme: [],
+            spacesNamedByImport: [],
           }),
         )
 

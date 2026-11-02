@@ -138,6 +138,10 @@ export const confirmImport = (candidate: ImportCandidate, openFavorites: boolean
           onNone: () => [],
           onSome: (report) => report.spacesWithoutTheme,
         }),
+        spacesNamedByImport: Option.match(candidate.arcReport, {
+          onNone: () => [],
+          onSome: (report) => report.spacesNamedByImport,
+        }),
       },
       // Adding hundreds of pins takes a while; the limit is only for an answer that never comes
       "5 minutes",

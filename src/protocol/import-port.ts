@@ -17,6 +17,11 @@ export const ImportClientMessage = Schema.TaggedUnion({
      * for a new Space instead.
      */
     spacesWithoutTheme: Schema.Array(Schema.String),
+    /**
+     * IDs of the file's Spaces that the import named rather than the user. One whose name another
+     * Space already has gets a number after it.
+     */
+    spacesNamedByImport: Schema.Array(Schema.String),
   },
 })
 export type ImportClientMessage = typeof ImportClientMessage.Type

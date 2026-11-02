@@ -18,7 +18,7 @@ import {
   type PinnedNodeNotFound,
 } from "#modules/pinned"
 import type { SettingsRepository } from "#modules/settings"
-import { addSpace, nextSpaceName, SpaceName } from "#modules/space"
+import { addSpace, nextSpaceName, SpaceName, unusedSpaceName } from "#modules/space"
 import { settleTheme } from "#modules/theme"
 import {
   type BrowserApiError,
@@ -89,14 +89,24 @@ export const previewImport = Effect.fnUntraced(function* (
 
 const decodeSpaceName = Schema.decodeUnknownOption(SpaceName)
 
-const addPlannedSpace = Effect.fnUntraced(function* (planned: PlannedSpace, picksTheme: boolean) {
+interface SpaceAdding {
+  /** Whether Katip picks the theme, as for a new Space, instead of taking the file's. */
+  readonly picksTheme: boolean
+  /** Whether the name is the import's suggestion, to number when a Space already has it. */
+  readonly isNamedByImport: boolean
+}
+
+const addPlannedSpace = Effect.fnUntraced(function* (planned: PlannedSpace, adding: SpaceAdding) {
   const id = yield* newSpaceId
   const numbered = yield* numberedSpaceName
   const spaces = yield* (yield* KatipState).spaces.update((current) =>
     addSpace(current, {
       id,
-      name: Option.getOrElse(decodeSpaceName(planned.name), () => nextSpaceName(current, numbered)),
-      ...(!picksTheme && { theme: settleTheme(planned.theme) }),
+      name: Option.match(decodeSpaceName(planned.name), {
+        onNone: () => nextSpaceName(current, numbered),
+        onSome: (name) => (adding.isNamedByImport ? unusedSpaceName(current, name) : name),
+      }),
+      ...(!adding.picksTheme && { theme: settleTheme(planned.theme) }),
     }),
   )
   const space = yield* Effect.fromOption(Array.findFirst(spaces, (added) => added.id === id))
@@ -144,14 +154,14 @@ const createNode = (
 // Space's top level is a step of its own instead
 const addFileSpace = Effect.fnUntraced(function* (
   space: FileSpace,
-  picksTheme: boolean,
+  adding: SpaceAdding,
   serialize: Serialize,
 ) {
   const { planned, created, rule } = yield* serialize(
     Effect.gen(function* () {
       const rule = yield* currentNestingRule
       const planned = planSpace(space, rule)
-      return { planned, created: yield* addPlannedSpace(planned, picksTheme), rule }
+      return { planned, created: yield* addPlannedSpace(planned, adding), rule }
     }),
   )
   const root = PinnedParent.SpaceRoot({ space: created })
@@ -186,9 +196,10 @@ const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
  *
  * @remarks
  * Only adds: each Space in the content becomes a new Space after the existing ones, and no
- * existing Space, pin or setting changes. Favorites already open where they'd open are skipped.
- * Temporary tabs and settings in the content aren't imported. When a step fails, the Spaces added
- * before it are kept.
+ * existing Space, pin or setting changes. A name the import suggested gets a number when a Space
+ * already has it; a name from the file is kept as it is. Favorites already open where they'd open
+ * are skipped. Temporary tabs and settings in the content aren't imported. When a step fails, the
+ * Spaces added before it are kept.
  */
 export const applyImport = Effect.fnUntraced(function* (
   request: Extract<ImportClientMessage, { readonly _tag: "Apply" }>,
@@ -197,8 +208,13 @@ export const applyImport = Effect.fnUntraced(function* (
 ) {
   const document = yield* readDocument(request.content)
   const withoutTheme = new Set(request.spacesWithoutTheme)
+  const namedByImport = new Set(request.spacesNamedByImport)
   const added = yield* Effect.forEach(document.spaces, (space) =>
-    addFileSpace(space, withoutTheme.has(space.id), serialize),
+    addFileSpace(
+      space,
+      { picksTheme: withoutTheme.has(space.id), isNamedByImport: namedByImport.has(space.id) },
+      serialize,
+    ),
   )
   if (request.openFavorites) yield* serialize(openFavorites(document.favorites, sender))
   if (added.some((space) => hasLiveFolder(space.pinned))) {

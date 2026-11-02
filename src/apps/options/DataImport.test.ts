@@ -297,7 +297,7 @@ describe("previewing a Katip file", () => {
     ])
   })
 
-  it("importing sends the file as it is, with no Spaces left for Katip to pick a theme for", async () => {
+  it("importing sends the file as it is, with no Spaces left for Katip to pick a theme or a name for", async () => {
     const { requests, finished } = renderImport()
     await chooseKatipFile()
     await preview("Ready to import a Katip file")
@@ -306,7 +306,13 @@ describe("previewing a Katip file", () => {
     await waitFor(() => expect(finished).toStrictEqual([true]))
 
     expect(await applyRequests(requests)).toStrictEqual([
-      { _tag: "Apply", content: homeFile, openFavorites: true, spacesWithoutTheme: [] },
+      {
+        _tag: "Apply",
+        content: homeFile,
+        openFavorites: true,
+        spacesWithoutTheme: [],
+        spacesNamedByImport: [],
+      },
     ])
   })
 

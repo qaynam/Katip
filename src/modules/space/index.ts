@@ -10,4 +10,5 @@ export {
   setSpaceTheme,
   SpaceList,
   SpaceNotFound,
+  unusedSpaceName,
 } from "./space-list"

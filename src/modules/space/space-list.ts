@@ -16,21 +16,39 @@ export class LastSpaceRemoval extends Schema.TaggedError<LastSpaceRemoval>()("La
 /** Names a Space created without a name after a number. Numbers start at 1. */
 export type NumberedSpaceName = (number: number) => string
 
-/**
- * A numbered name no existing Space has. The search starts at the number after the count of Spaces.
- */
-export const nextSpaceName = (spaces: SpaceList, numbered: NumberedSpaceName): SpaceName => {
+// Given more candidates than there are Spaces, one is always free and the fallback is never reached
+const firstFreeName = (
+  spaces: SpaceList,
+  candidates: Array.NonEmptyReadonlyArray<SpaceName>,
+): SpaceName => {
   const taken = new Set<string>(spaces.map((space) => space.name))
-  const candidates = Array.makeBy(spaces.length + 1, (offset) =>
-    SpaceName.make(numbered(spaces.length + 1 + offset)),
-  )
-  // There is one more candidate than there are Spaces, so one is always free and the fallback is
-  // never reached
   return pipe(
     Array.findFirst(candidates, (name) => !taken.has(name)),
     Option.getOrElse(() => Array.headNonEmpty(candidates)),
   )
 }
+
+/**
+ * A numbered name no existing Space has. The search starts at the number after the count of Spaces.
+ */
+export const nextSpaceName = (spaces: SpaceList, numbered: NumberedSpaceName): SpaceName =>
+  firstFreeName(
+    spaces,
+    Array.makeBy(spaces.length + 1, (offset) =>
+      SpaceName.make(numbered(spaces.length + 1 + offset)),
+    ),
+  )
+
+/**
+ * `name` when no existing Space has it, else `name` followed by the lowest number from 2 that makes
+ * a name no Space has, such as `Arc 2`.
+ */
+export const unusedSpaceName = (spaces: SpaceList, name: SpaceName): SpaceName =>
+  firstFreeName(spaces, [
+    name,
+    // A number after a name reads the same in every language Katip speaks, so this isn't translated
+    ...Array.makeBy(spaces.length, (offset) => SpaceName.make(`${name} ${offset + 2}`)),
+  ])
 
 // The first preset on the first page is neutral, so it isn't one of the themes handed out
 // automatically

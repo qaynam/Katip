@@ -10,6 +10,7 @@ import {
   renameSpace,
   setSpaceTheme,
   type SpaceList,
+  unusedSpaceName,
 } from "./space-list"
 
 const spaceId = (value: string) => SpaceId.make(value)
@@ -51,6 +52,30 @@ describe("the name of a Space created without one", () => {
 
   it("starts at 1 when there are no Spaces", () => {
     expect(nextSpaceName([], numbered)).toBe("Space 1")
+  })
+})
+
+describe("a suggested name kept apart from the existing Spaces' names", () => {
+  const arc = spaceName("Arc")
+
+  it("is the name itself when no Space has it", () => {
+    expect(unusedSpaceName([space("Work"), space("Arcade")], arc)).toBe("Arc")
+  })
+
+  it("gets the number 2 when a Space has the name", () => {
+    expect(unusedSpaceName([space("Arc")], arc)).toBe("Arc 2")
+  })
+
+  it("gets the lowest number from 2 that no Space has", () => {
+    const spaces = [space("Arc"), space("Arc 2"), space("Arc 4")]
+
+    expect(unusedSpaceName(spaces, arc)).toBe("Arc 3")
+  })
+
+  it("finds a free number however many numbered names are taken", () => {
+    const spaces = [space("Arc"), ...Array.makeBy(5, (index) => space(`Arc ${index + 2}`))]
+
+    expect(unusedSpaceName(spaces, arc)).toBe("Arc 7")
   })
 })
 
