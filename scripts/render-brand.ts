@@ -1,24 +1,33 @@
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { chromium } from "@playwright/test"
 import { iconSvg } from "./brand/icon.ts"
+import { horizontalLogoSvg, stackedLogoSvg, wordmarkSvg } from "./brand/logo.ts"
 
 const fromRoot = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url))
 
 const BRAND_DIR = fromRoot("assets/brand")
+const PNG_DIR = `${BRAND_DIR}/png`
 const EXTENSION_ICON_DIR = fromRoot("src/apps/public/icons")
 
-const gridIcon = iconSvg({ layout: "grid" })
-const bleedIcon = iconSvg({ layout: "bleed" })
+const svgs = {
+  icon: iconSvg({ layout: "grid" }),
+  "icon-small": iconSvg({ layout: "bleed" }),
+  logo: stackedLogoSvg("light"),
+  "logo-dark": stackedLogoSvg("dark"),
+  "logo-horizontal": horizontalLogoSvg("light"),
+  "logo-horizontal-dark": horizontalLogoSvg("dark"),
+  wordmark: wordmarkSvg("light"),
+  "wordmark-dark": wordmarkSvg("dark"),
+}
 
-mkdirSync(BRAND_DIR, { recursive: true })
+rmSync(PNG_DIR, { recursive: true, force: true })
+mkdirSync(PNG_DIR, { recursive: true })
 mkdirSync(EXTENSION_ICON_DIR, { recursive: true })
-writeFileSync(`${BRAND_DIR}/icon.svg`, gridIcon)
-writeFileSync(`${BRAND_DIR}/icon-small.svg`, bleedIcon)
+for (const [name, svg] of Object.entries(svgs)) writeFileSync(`${BRAND_DIR}/${name}.svg`, svg)
 
-// Not rasterized with a library: the icon relies on SVG filters and the lockup on a web font,
-// which only a browser renders faithfully. The PNGs are committed, so this runs only when the
-// artwork changes
+// Not rasterized with a library: the icon relies on SVG filters (drop shadows), which only a
+// browser renders faithfully. The PNGs are committed, so this runs only when the artwork changes
 const executablePath = process.env.KATIP_E2E_CHROME
 const browser = await chromium.launch({
   ...(executablePath === undefined ? {} : { executablePath }),
@@ -26,42 +35,36 @@ const browser = await chromium.launch({
 })
 const page = await browser.newPage({ deviceScaleFactor: 1 })
 
-const renderSvg = async (svg: string, size: number, path: string) => {
-  await page.setViewportSize({ width: size, height: size })
+const render = async (svg: string, width: number, path: string) => {
+  const source = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+  await page.setViewportSize({ width: width + 16, height: 2048 })
   await page.setContent(
-    `<style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${svg}`,
+    `<style>html,body{margin:0;background:transparent}img{display:block}</style><img src="${source}" width="${width}">`,
   )
-  await page.screenshot({ path, omitBackground: true })
+  await page.locator("img").evaluate((image: HTMLImageElement) => image.decode())
+  await page.locator("img").screenshot({ path, omitBackground: true })
 }
 
-for (const size of [16, 32]) {
-  await renderSvg(bleedIcon, size, `${EXTENSION_ICON_DIR}/icon-${size}.png`)
-}
-for (const size of [48, 128]) {
-  await renderSvg(gridIcon, size, `${EXTENSION_ICON_DIR}/icon-${size}.png`)
-}
-await renderSvg(gridIcon, 512, `${BRAND_DIR}/icon-512.png`)
+// The small artwork fills the canvas and drops the tab rows, which blur away below 48 px
+const iconFor = (size: number) => (size <= 32 ? svgs["icon-small"] : svgs.icon)
 
-const renderLockup = async (textColor: string, path: string) => {
-  const lockupPage = await browser.newPage({ deviceScaleFactor: 2 })
-  await lockupPage.setViewportSize({ width: 320, height: 300 })
-  await lockupPage.setContent(`
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=block">
-    <style>
-      html, body { margin: 0; background: transparent; }
-      .lockup { display: grid; justify-items: center; gap: 14px; padding: 24px; width: fit-content; margin: 0 auto; }
-      svg { width: 168px; height: 168px; display: block; }
-      span { font-family: "Inter", sans-serif; font-weight: 600; font-size: 52px; letter-spacing: -0.035em; line-height: 1; color: ${textColor}; }
-    </style>
-    <div class="lockup">${gridIcon}<span>Katip</span></div>`)
-  await lockupPage.evaluate(() => document.fonts.ready)
-  const fontLoaded = await lockupPage.evaluate(() => document.fonts.check('600 52px "Inter"'))
-  if (!fontLoaded) throw new Error("Inter did not load; the lockup would fall back to another face")
-  await lockupPage.locator(".lockup").screenshot({ path, omitBackground: true })
-  await lockupPage.close()
+for (const size of [16, 32, 48, 64, 128, 256, 512, 1024]) {
+  await render(iconFor(size), size, `${PNG_DIR}/icon-${size}.png`)
 }
-
-await renderLockup("#1d1d1f", `${BRAND_DIR}/lockup-light.png`)
-await renderLockup("#f0f6fc", `${BRAND_DIR}/lockup-dark.png`)
+for (const size of [16, 32, 48, 128]) {
+  await render(iconFor(size), size, `${EXTENSION_ICON_DIR}/icon-${size}.png`)
+}
+for (const [name, widths] of [
+  ["logo", [256, 512, 1024]],
+  ["logo-dark", [256, 512, 1024]],
+  ["logo-horizontal", [480, 960, 1920]],
+  ["logo-horizontal-dark", [480, 960, 1920]],
+  ["wordmark", [240, 480, 960]],
+  ["wordmark-dark", [240, 480, 960]],
+] as const) {
+  for (const width of widths) {
+    await render(svgs[name], width, `${PNG_DIR}/${name}-${width}w.png`)
+  }
+}
 
 await browser.close()
