@@ -67,3 +67,29 @@ jobs:
           # Hidden directories are skipped by default, which would upload .e2e/ empty
           include-hidden-files: true
           retention-days: 14
+
+  # Every push to main deploys rather than only changes under apps/web/: the site is also built from
+  # the store screenshots, the brand assets and PRIVACY.md, and wrangler uploads only what changed
+  deploy-web:
+    needs: check
+    # Skipped until the repository names a Cloudflare account, so forks don't fail here
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CLOUDFLARE_ACCOUNT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: website
+      url: https://katip.qaynam.dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No dependency cache in a job holding the Cloudflare token: a cache saved by another run must
+      # not run code here
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      - run: pnpm deploy:web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
