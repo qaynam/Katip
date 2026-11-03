@@ -137,7 +137,7 @@ Katip does not collect or transmit any user data. Leave every data type unchecke
 - I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
 - I do not use or transfer user data to determine creditworthiness or for lending purposes.
 
-**Privacy policy URL:** https://github.com/qaynam/Katip/blob/main/PRIVACY.md
+**Privacy policy URL:** https://katip.qaynam.dev/en/privacy/
 
 ## Distribution
 
