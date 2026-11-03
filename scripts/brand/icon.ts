@@ -16,7 +16,8 @@ const squircle = (x: number, y: number, size: number, exponent = 5, steps = 180)
 }
 
 const BLUE_TOP = "#68C6FF"
-const BLUE_BOTTOM = "#1F74F0"
+/** The brand blue, at the bottom of the squircle's gradient. */
+export const BLUE_BOTTOM = "#1F74F0"
 
 export interface IconOptions {
   /**

@@ -5,8 +5,8 @@ import { wordmark } from "./wordmark.ts"
 export const INK = { light: "#1d1d1f", dark: "#f0f6fc" } as const
 export type Ink = keyof typeof INK
 
-// The icon's own 1024-unit grid leaves a 100-unit margin around the squircle
-const ICON_MARGIN = 100 / 1024
+/** The share of the icon's width left empty around the squircle by its 1024-unit grid. */
+export const ICON_MARGIN = 100 / 1024
 
 const nestedIcon = (x: number, y: number, size: number) =>
   iconSvg({ layout: "grid" }).replace(
