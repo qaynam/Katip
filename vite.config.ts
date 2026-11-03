@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig, type Plugin, runnerImport } from "vite"
 import type * as Manifest from "./src/apps/manifest"
+import { packageRootOf, thirdPartyNotices } from "./scripts/third-party-notices.ts"
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
@@ -39,6 +40,27 @@ const emitManifest = (mode: BuildMode): Plugin => ({
 
 // The development build's background reloads itself when this value changes. Written after every
 // other file, so it never loads a half-written build
+// Only modules that made it into the output count; a package imported but tree-shaken away isn't
+// distributed
+const emitThirdPartyNotices = (): Plugin => ({
+  name: "katip:third-party-notices",
+  generateBundle(_, bundle) {
+    const roots = Object.values(bundle).flatMap((output) =>
+      output.type === "chunk"
+        ? Object.entries(output.modules).flatMap(([id, module]) => {
+            const root = module.renderedLength > 0 ? packageRootOf(id) : null
+            return root === null ? [] : [root]
+          })
+        : [],
+    )
+    this.emitFile({
+      type: "asset",
+      fileName: "THIRD_PARTY_NOTICES.txt",
+      source: thirdPartyNotices(roots),
+    })
+  },
+})
+
 const stampDevBuild = (): Plugin => ({
   name: "katip:stamp-dev-build",
   closeBundle() {
@@ -53,6 +75,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       svelte({ configFile: fromRoot("./svelte.config.js") }),
       emitManifest(buildMode),
+      emitThirdPartyNotices(),
       ...(buildMode === "development" ? [stampDevBuild()] : []),
     ],
     build: {

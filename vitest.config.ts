@@ -9,7 +9,7 @@ export default defineConfig({
         test: {
           name: "core",
           environment: "node",
-          include: ["src/**/*.test.ts"],
+          include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
           exclude: ["src/apps/sidepanel/**", "src/apps/options/**", "src/apps/spotlight/**"],
         },
       },
