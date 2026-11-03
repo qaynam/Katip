@@ -59,7 +59,7 @@
           draggable="true"
           ondragstart={(event) =>
             ctx.drag.begin(event, key, { _tag: "Favorite", tabId: favorite.tabId, index })}
-          ondragend={() => ctx.drag.end()}
+          ondragend={(event) => ctx.drag.finish(event)}
           ondragover={(event) => onTileDragOver(event, key, index)}
         >
           <button

@@ -5,7 +5,15 @@ import { themeOf } from "#modules/theme"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeScripting } from "#platform/scripting"
 import { OperationTimeLimit } from "./program"
-import { Alarms, Bookmarks, type BrowserTab, Storage, Tabs, TabId } from "#platform/browser"
+import {
+  Alarms,
+  Bookmarks,
+  type BrowserTab,
+  Storage,
+  Tabs,
+  TabId,
+  type WindowId,
+} from "#platform/browser"
 import type {
   CommandOutcome,
   PinnedItemView,
@@ -777,6 +785,89 @@ describe("split view", () => {
         }),
       ),
   )
+
+  describe("letting a tab go over the page", () => {
+    // The fake's window is 1280 px wide at the left of the screen, with a 300 px side panel on its
+    // right, so the page spans x = 0 to 980
+    const letGoOverPage = (tabId: TabId, windowId: WindowId, x: number) =>
+      ({
+        _tag: "SplitWithShownTab",
+        tabId,
+        windowId,
+        x,
+        y: 400,
+        panelLeft: 980,
+        panelRight: 1280,
+      }) as const
+
+    it.live("on the left of the page, splits it to the left of the shown tab", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => entriesShape(v).length === 3)
+
+          const outcome = yield* sidebar.run(letGoOverPage(tabIds[2], windowId, 100))
+          const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+          expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["C", "A"]]])
+        }),
+      ),
+    )
+
+    it.live("on the right of the page, splits it to the right of the shown tab", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => entriesShape(v).length === 3)
+
+          const outcome = yield* sidebar.run(letGoOverPage(tabIds[2], windowId, 900))
+          const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+          expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["A", "C"]]])
+        }),
+      ),
+    )
+
+    it.live("in the middle of the page, splits nothing", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => entriesShape(v).length === 3)
+
+          const outcome = yield* sidebar.run(letGoOverPage(tabIds[2], windowId, 490))
+          const anySplit = (yield* (yield* Tabs).query({ windowId })).some((tab) =>
+            Option.isSome(tab.splitViewId),
+          )
+
+          expect([outcome._tag, anySplit]).toStrictEqual(["Succeeded", false])
+        }),
+      ),
+    )
+
+    it.live("with the shown tab itself, splits nothing", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => entriesShape(v).length === 3)
+
+          const outcome = yield* sidebar.run(letGoOverPage(tabIds[0], windowId, 100))
+          const anySplit = (yield* (yield* Tabs).query({ windowId })).some((tab) =>
+            Option.isSome(tab.splitViewId),
+          )
+
+          expect([outcome._tag, anySplit]).toStrictEqual(["Succeeded", false])
+        }),
+      ),
+    )
+  })
 
   it.live(
     "dropping while another tab is shown brings the dragged tab to the front, so the split view shows",

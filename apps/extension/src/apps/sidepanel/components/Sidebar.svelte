@@ -4,6 +4,7 @@
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { OriginAccess } from "../connection/origin-access"
   import type { FaviconResolver } from "../logic/favicon"
+  import { openTabOf } from "../logic/drag-drop"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
@@ -51,7 +52,10 @@
 
   const menu = new MenuController()
   const dialog = new DialogController()
-  const drag = new DragSession(() => ({ spaceId: activeSpace.id, canSplit: view.canSplit }))
+  const drag = new DragSession(() => ({ spaceId: activeSpace.id, canSplit: view.canSplit }), {
+    windowId: () => view.windowId,
+    run: (command) => void run(command),
+  })
   const themePicker = new ThemePickerController()
   const themeDraft = new ThemeDraft((draft) =>
     run({ _tag: "SetSpaceTheme", spaceId: draft.spaceId, theme: draft.theme }),
@@ -164,6 +168,9 @@
 
     <div class="bottom">
       <Toasts {toasts} {translator} />
+      {#if view.canSplit && drag.source !== null && openTabOf(drag.source) !== null}
+        <p class="page-drop-hint">{translator.t("sidepanel.split.pageDropHint")}</p>
+      {/if}
       <BottomBar
         spaces={view.spaces}
         activeSpaceId={activeSpace.id}
@@ -213,6 +220,14 @@
   .bottom {
     position: relative;
     flex: none;
+  }
+
+  .page-drop-hint {
+    margin: 0 8px 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: center;
   }
 
   @keyframes space-in {

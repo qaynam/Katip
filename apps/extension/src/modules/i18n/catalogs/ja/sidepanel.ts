@@ -10,6 +10,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.toast.dismiss": "通知を閉じる",
 
   "sidepanel.spotlight.button": "検索",
+  "sidepanel.split.pageDropHint": "ページの左か右で離すと、表示中のタブと画面分割します",
   "sidepanel.split.unsupported":
     "このブラウザは分割ビューに対応していません（Chrome 155 以降で使えます）",
 

@@ -1,9 +1,10 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId } from "#modules/space"
-import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
+import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import {
   commandForDrop,
+  commandForPageDrop,
   dropOutcome,
   edgeAt,
   folderDropTarget,
@@ -502,6 +503,63 @@ describe("Hovering over a folder header", () => {
   it("inserts at the start inside an expanded folder when over its bottom edge", () => {
     expect(folderDropTarget(folder, folderZoneAt(30, 32, true))).toStrictEqual(
       pinnedTarget("folder", 0),
+    )
+  })
+})
+
+describe("Letting go outside the side panel", () => {
+  const windowId = WindowId.make(1)
+  // A 300 × 800 side panel whose top left is at (1100, 80) on screen
+  const panel = { origin: { x: 1100, y: 80 }, size: { width: 300, height: 800 } }
+  const overThePage = { at: { x: 400, y: 300 }, dropEffect: "none" }
+
+  it("asks to split an open tab with the shown tab, with where it was let go and the panel's edges", () => {
+    expect(commandForPageDrop(temporaryTab(1), overThePage, panel, windowId)).toStrictEqual(
+      Option.some({
+        _tag: "SplitWithShownTab",
+        tabId: tabId(1),
+        windowId,
+        x: 400,
+        y: 300,
+        panelLeft: 1100,
+        panelRight: 1400,
+      }),
+    )
+  })
+
+  it.each([
+    ["an open pin", pinnedItem("p", { openTabId: 2 }), 2],
+    ["a Favorite", favorite(3, 0), 3],
+  ])("asks the same for %s", (_, source, expectedTabId) => {
+    expect(
+      Option.map(commandForPageDrop(source, overThePage, panel, windowId), (command) =>
+        command._tag === "SplitWithShownTab" ? command.tabId : null,
+      ),
+    ).toStrictEqual(Option.some(tabId(expectedTabId)))
+  })
+
+  it.each([
+    ["a closed pin", pinnedItem("p")],
+    ["a split view", temporarySplit(1, 2, 3)],
+    ["a folder", pinnedFolderSource("f")],
+    ["a Space mark", spaceMark("s", 0)],
+  ])("asks nothing for %s, which has no single open tab", (_, source) => {
+    expect(commandForPageDrop(source, overThePage, panel, windowId)).toStrictEqual(Option.none())
+  })
+
+  it("asks nothing when the pointer is still over the side panel", () => {
+    const overThePanel = { at: { x: 1200, y: 300 }, dropEffect: "none" }
+
+    expect(commandForPageDrop(temporaryTab(1), overThePanel, panel, windowId)).toStrictEqual(
+      Option.none(),
+    )
+  })
+
+  it("asks nothing when the page took the drop", () => {
+    const takenByThePage = { at: { x: 400, y: 300 }, dropEffect: "move" }
+
+    expect(commandForPageDrop(temporaryTab(1), takenByThePage, panel, windowId)).toStrictEqual(
+      Option.none(),
     )
   })
 })

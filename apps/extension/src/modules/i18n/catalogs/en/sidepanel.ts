@@ -9,6 +9,8 @@ export const sidepanel = {
   "sidepanel.toast.dismiss": "Dismiss",
 
   "sidepanel.spotlight.button": "Search",
+  "sidepanel.split.pageDropHint":
+    "Let go on the left or right of the page to split it with the tab shown there",
   "sidepanel.split.unsupported":
     "This browser doesn’t support split view (requires Chrome 155 or later)",
 

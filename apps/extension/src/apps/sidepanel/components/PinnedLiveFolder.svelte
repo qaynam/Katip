@@ -122,7 +122,7 @@
         ondblclick={startRename}
         oncontextmenu={openMenu}
         ondragstart={(event) => ctx.drag.begin(event, key, dragSource)}
-        ondragend={() => ctx.drag.end()}
+        ondragend={(event) => ctx.drag.finish(event)}
         ondragover={onHeaderDragOver}
       >
         <span class="glyph"><LiveSourceGlyph kind={folder.source._tag} /></span>

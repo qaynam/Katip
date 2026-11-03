@@ -9,6 +9,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.toast.dismiss": "关闭通知",
 
   "sidepanel.spotlight.button": "搜索",
+  "sidepanel.split.pageDropHint": "在页面左侧或右侧松开，即可与当前显示的标签页分屏",
   "sidepanel.split.unsupported": "此浏览器不支持分屏视图（需要 Chrome 155 或更高版本）",
 
   "sidepanel.favorites.region": "收藏",

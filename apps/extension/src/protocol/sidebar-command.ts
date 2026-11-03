@@ -56,6 +56,16 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("CloseTemporaryTabs", { windowId: WindowId, spaceId: SpaceId }),
   // Puts tabId to the right of withTabId in a split view
   Schema.TaggedStruct("SplitTabs", { tabId: TabId, withTabId: TabId }),
+  // A tab let go over the page, outside the side panel. In screen coordinates, with the side
+  // panel's left and right edges
+  Schema.TaggedStruct("SplitWithShownTab", {
+    tabId: TabId,
+    windowId: WindowId,
+    x: Schema.Number,
+    y: Schema.Number,
+    panelLeft: Schema.Number,
+    panelRight: Schema.Number,
+  }),
   Schema.TaggedStruct("Unsplit", { splitViewId: SplitViewId }),
   Schema.TaggedStruct("PlaceSplitInTemporary", {
     splitViewId: SplitViewId,

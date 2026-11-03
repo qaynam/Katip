@@ -1,11 +1,15 @@
 import { Option } from "effect"
+import type { WindowId } from "#platform/browser"
+import type { SidebarCommand } from "#protocol"
 import {
+  commandForPageDrop,
   dropOutcome,
   type DragSource,
   type DropContext,
   type DropOutcome,
   type DropTarget,
   type FolderZone,
+  type PanelBounds,
   type RowZone,
 } from "../logic/drag-drop"
 
@@ -16,6 +20,11 @@ export interface DropIndicator {
   readonly zone: DropZone
 }
 
+export interface PageDropHandler {
+  readonly windowId: () => WindowId
+  readonly run: (command: SidebarCommand) => void
+}
+
 // Native drag and drop doesn't let drop targets read the dataTransfer contents, so the drag
 // source is kept here. External drags (links, files) leave source null and can be ignored
 export class DragSession {
@@ -24,10 +33,13 @@ export class DragSession {
   indicator = $state.raw<DropIndicator | null>(null)
   #outcome: DropOutcome | null = null
   #hover: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null
+  #panel: PanelBounds | null = null
   readonly #context: () => DropContext
+  readonly #pageDrop: PageDropHandler
 
-  constructor(context: () => DropContext) {
+  constructor(context: () => DropContext, pageDrop: PageDropHandler) {
     this.#context = context
+    this.#pageDrop = pageDrop
   }
 
   begin(event: DragEvent, key: string, source: DragSource) {
@@ -38,6 +50,34 @@ export class DragSession {
     }
     this.source = source
     this.sourceKey = key
+    // Taken while the pointer is still over the panel: the drag's end may be anywhere on screen
+    this.#panel = {
+      origin: { x: event.screenX - event.clientX, y: event.screenY - event.clientY },
+      size: { width: window.innerWidth, height: window.innerHeight },
+    }
+  }
+
+  /**
+   * Ends the drag on its `dragend`. An open tab let go over the page, where nothing took the drop,
+   * is handed to the background to split with the shown tab.
+   */
+  finish(event: DragEvent) {
+    const source = this.source
+    const panel = this.#panel
+    this.end()
+    // A drag cancelled with Escape over the page ends just like one let go there, with nothing
+    // taking the drop, so it splits too: dragend tells the two apart in no browser
+    if (source === null || panel === null) return
+    const command = commandForPageDrop(
+      source,
+      {
+        at: { x: event.screenX, y: event.screenY },
+        dropEffect: event.dataTransfer?.dropEffect ?? "none",
+      },
+      panel,
+      this.#pageDrop.windowId(),
+    )
+    if (Option.isSome(command)) this.#pageDrop.run(command.value)
   }
 
   /** Calls preventDefault, which lets the browser drop, only on targets that accept the drop. */
@@ -93,6 +133,7 @@ export class DragSession {
   end() {
     this.cancelHover()
     this.#outcome = null
+    this.#panel = null
     this.indicator = null
     this.source = null
     this.sourceKey = null

@@ -57,6 +57,7 @@ import {
   type SplitViewId,
   type TabId,
   type WindowId,
+  Windows,
 } from "#platform/browser"
 import type { CommandOutcome, PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
 import { pruneStaleBindings } from "./bindings"
@@ -67,6 +68,7 @@ import { openSpotlight } from "./spotlight-window"
 import { refreshLiveFoldersWhere, scheduleLiveFolderRefresh } from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
 import { byIndex, moveAmongTemporary } from "./temporary-order"
+import { pageSideOfDrop, type PageSide } from "./page-drop"
 import {
   currentTranslator,
   numberedSpaceName,
@@ -428,55 +430,64 @@ const pinSplit = Effect.fnUntraced(function* (
   )
 })
 
-const splitCommands = {
-  SplitTabs: Effect.fnUntraced(function* ({
-    tabId,
-    withTabId,
-  }: {
-    tabId: TabId
-    withTabId: TabId
-  }) {
-    yield* requireSplitSupport
-    if (tabId === withTabId) return
-    const state = yield* KatipState
-    const tabs = yield* Tabs
-    const target = yield* tabs.get(withTabId)
-    const dragged = yield* tabs.get(tabId)
-    if (target.pinned) return yield* reject("background.split.withFavorite")
-    if (Option.isSome(target.splitViewId)) return yield* reject("background.split.alreadySplit")
-    if (dragged.windowId !== target.windowId) {
-      return yield* reject("background.split.otherWindow")
-    }
-    if (Option.isSome(dragged.splitViewId)) yield* tabs.unsplit(dragged.splitViewId.value)
-    yield* unpinFromChrome(dragged)
-    yield* Option.match(trackedTab(yield* state.workspace.get, tabId), {
-      onNone: () => Effect.void,
-      onSome: removePin,
-    })
-    const targetSpace = spaceOf(yield* state.workspace.get, withTabId)
-    const now = yield* Clock.currentTimeMillis
-    if (Option.isSome(targetSpace)) {
-      yield* state.workspace.update((workspace) =>
-        assignTab(workspace, tabId, targetSpace.value, now),
-      )
-    }
-    // Only tabs in the same group can form a split view, so the groups are matched first
-    const current = yield* tabs.get(tabId)
-    if (!Equal.equals(current.groupId, target.groupId)) {
-      yield* Option.match(target.groupId, {
-        onSome: (groupId) => tabs.group({ tabIds: [tabId], groupId }),
-        onNone: () => tabs.ungroup([tabId]),
-      })
-    }
-    const remaining = Array.sort(yield* tabs.query({ windowId: target.windowId }), byIndex).filter(
-      (tab) => tab.id !== tabId,
+/** Splits the tab with another, on the given side of it. Chrome puts the lower index on the left. */
+const splitTabs = Effect.fnUntraced(function* (tabId: TabId, withTabId: TabId, side: PageSide) {
+  yield* requireSplitSupport
+  if (tabId === withTabId) return
+  const state = yield* KatipState
+  const tabs = yield* Tabs
+  const target = yield* tabs.get(withTabId)
+  const dragged = yield* tabs.get(tabId)
+  if (target.pinned) return yield* reject("background.split.withFavorite")
+  if (Option.isSome(target.splitViewId)) return yield* reject("background.split.alreadySplit")
+  if (dragged.windowId !== target.windowId) {
+    return yield* reject("background.split.otherWindow")
+  }
+  if (Option.isSome(dragged.splitViewId)) yield* tabs.unsplit(dragged.splitViewId.value)
+  yield* unpinFromChrome(dragged)
+  yield* Option.match(trackedTab(yield* state.workspace.get, tabId), {
+    onNone: () => Effect.void,
+    onSome: removePin,
+  })
+  const targetSpace = spaceOf(yield* state.workspace.get, withTabId)
+  const now = yield* Clock.currentTimeMillis
+  if (Option.isSome(targetSpace)) {
+    yield* state.workspace.update((workspace) =>
+      assignTab(workspace, tabId, targetSpace.value, now),
     )
-    const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
-    yield* tabs.move([tabId], { index: targetPosition + 1 })
-    yield* tabs.createSplit([withTabId, tabId])
-    // A split view is only on screen while one of its tabs is shown. The dragged tab is brought to
-    // the front so the split is visible even when it was dropped while another tab was shown
-    yield* tabs.update(tabId, { active: true })
+  }
+  // Only tabs in the same group can form a split view, so the groups are matched first
+  const current = yield* tabs.get(tabId)
+  if (!Equal.equals(current.groupId, target.groupId)) {
+    yield* Option.match(target.groupId, {
+      onSome: (groupId) => tabs.group({ tabIds: [tabId], groupId }),
+      onNone: () => tabs.ungroup([tabId]),
+    })
+  }
+  const remaining = Array.sort(yield* tabs.query({ windowId: target.windowId }), byIndex).filter(
+    (tab) => tab.id !== tabId,
+  )
+  const targetPosition = remaining.findIndex((tab) => tab.id === withTabId)
+  yield* tabs.move([tabId], { index: side === "Left" ? targetPosition : targetPosition + 1 })
+  yield* tabs.createSplit([withTabId, tabId])
+  // A split view is only on screen while one of its tabs is shown. The dragged tab is brought to
+  // the front so the split is visible even when it was dropped while another tab was shown
+  yield* tabs.update(tabId, { active: true })
+})
+
+const splitCommands = {
+  SplitTabs: ({ tabId, withTabId }: { tabId: TabId; withTabId: TabId }) =>
+    splitTabs(tabId, withTabId, "Right"),
+
+  SplitWithShownTab: Effect.fnUntraced(function* (
+    command: Extract<SidebarCommand, { _tag: "SplitWithShownTab" }>,
+  ) {
+    const window = yield* (yield* Windows).get(command.windowId)
+    const side = Option.flatMap(window.bounds, (bounds) => pageSideOfDrop(command, bounds))
+    if (Option.isNone(side)) return
+    const [shown] = yield* (yield* Tabs).query({ windowId: command.windowId, active: true })
+    if (shown === undefined || shown.id === command.tabId) return
+    yield* splitTabs(command.tabId, shown.id, side.value)
   }),
 
   Unsplit: ({ splitViewId }: { splitViewId: SplitViewId }) =>

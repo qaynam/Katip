@@ -11,6 +11,8 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.toast.dismiss": "Descartar",
 
   "sidepanel.spotlight.button": "Buscar",
+  "sidepanel.split.pageDropHint":
+    "Suelta a la izquierda o a la derecha de la página para dividirla con la pestaña que se muestra",
   "sidepanel.split.unsupported":
     "Este navegador no admite la vista dividida (requiere Chrome 155 o posterior)",
 

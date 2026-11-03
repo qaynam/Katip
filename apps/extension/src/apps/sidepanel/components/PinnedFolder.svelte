@@ -165,7 +165,7 @@
         ondblclick={() => (isEditing = true)}
         oncontextmenu={openMenu}
         ondragstart={(event) => ctx.drag.begin(event, key, dragSource)}
-        ondragend={() => ctx.drag.end()}
+        ondragend={(event) => ctx.drag.finish(event)}
         ondragover={onHeaderDragOver}
         ondragleave={() => ctx.drag.cancelHover()}
       >

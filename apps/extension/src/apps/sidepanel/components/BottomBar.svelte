@@ -117,7 +117,7 @@
           draggable="true"
           ondragstart={(event) =>
             ctx.drag.begin(event, key, { _tag: "SpaceMark", spaceId: space.id, index })}
-          ondragend={() => ctx.drag.end()}
+          ondragend={(event) => ctx.drag.finish(event)}
           ondragover={(event) => onMarkDragOver(event, key, index)}
         >
           <button

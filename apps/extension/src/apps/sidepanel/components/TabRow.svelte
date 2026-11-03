@@ -153,7 +153,7 @@
   data-tab-id={tabId}
   draggable={!isEditing}
   ondragstart={(event) => ctx.drag.begin(event, rowKey, dragSource)}
-  ondragend={() => ctx.drag.end()}
+  ondragend={(event) => ctx.drag.finish(event)}
   ondragover={onDragOver}
   oncontextmenu={openMenu}
   onauxclick={closeOnMiddleClick}

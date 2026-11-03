@@ -1,6 +1,6 @@
 import { Match, Option } from "effect"
 import type { SpaceId } from "#modules/space"
-import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
+import type { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import type { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
 import type { Point, Size } from "./menu-position"
 
@@ -305,3 +305,60 @@ export const dropOutcome = (
         : Option.none(),
     ),
   )
+
+/** How a drag ended, as its `dragend` event tells. */
+export interface DragEnd {
+  /** The pointer on screen. */
+  readonly at: Point
+  /** `none` when nothing took the drop. */
+  readonly dropEffect: string
+}
+
+/** Where the side panel is on screen. */
+export interface PanelBounds {
+  readonly origin: Point
+  readonly size: Size
+}
+
+/** The one open tab a drag carries, if it carries exactly one. */
+export const openTabOf = (source: DragSource): TabId | null => {
+  switch (source._tag) {
+    case "TemporaryTab":
+    case "Favorite":
+      return source.tabId
+    case "PinnedItem":
+      return source.openTabId
+    default:
+      return null
+  }
+}
+
+const isInside = (point: Point, panel: PanelBounds) =>
+  point.x >= panel.origin.x &&
+  point.x <= panel.origin.x + panel.size.width &&
+  point.y >= panel.origin.y &&
+  point.y <= panel.origin.y + panel.size.height
+
+/**
+ * The command for an open tab let go outside the side panel, where nothing took the drop: the
+ * background splits it with the shown tab when it was let go over the page's left or right side.
+ */
+export const commandForPageDrop = (
+  source: DragSource,
+  end: DragEnd,
+  panel: PanelBounds,
+  windowId: WindowId,
+): Option.Option<SidebarCommand> => {
+  const tabId = openTabOf(source)
+  return tabId === null || end.dropEffect !== "none" || isInside(end.at, panel)
+    ? Option.none()
+    : Option.some({
+        _tag: "SplitWithShownTab",
+        tabId,
+        windowId,
+        x: end.at.x,
+        y: end.at.y,
+        panelLeft: panel.origin.x,
+        panelRight: panel.origin.x + panel.size.width,
+      })
+}
