@@ -64,6 +64,30 @@ describe("The sidebar", () => {
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenSpotlight", windowId: 1 }])
   })
+
+  it("shows on the Search button the key the browser assigned to Spotlight", async () => {
+    await renderSidebar(sidebarView({ spotlightShortcut: "⌥T" }))
+
+    expect(screen.getByRole("button", { name: "Search" }).textContent).toContain("⌥T")
+  })
+
+  it("shows no key on the Search button while none is assigned", async () => {
+    await renderSidebar(sidebarView({ spotlightShortcut: null }))
+
+    const button = screen.getByRole("button", { name: "Search" })
+    expect([button.querySelector("kbd"), button.getAttribute("aria-keyshortcuts")]).toStrictEqual([
+      null,
+      null,
+    ])
+  })
+
+  it("announces a key written with modifier names, such as Alt+T", async () => {
+    await renderSidebar(sidebarView({ spotlightShortcut: "Alt+T" }))
+
+    expect(screen.getByRole("button", { name: "Search" }).getAttribute("aria-keyshortcuts")).toBe(
+      "Alt+T",
+    )
+  })
 })
 
 describe("Space themes", () => {

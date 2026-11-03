@@ -174,6 +174,7 @@ export const sidebarView = (
     archive: [],
     autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) },
     canSplit: true,
+    spotlightShortcut: "Alt+T",
     ...overrides,
     spaces,
   }

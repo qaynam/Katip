@@ -8,15 +8,7 @@ import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
 import { buildSidebarView } from "./sidebar-view-source"
 import { openSpotlight } from "./spotlight-window"
-
-export const KeyboardCommand = {
-  quickPinToggle: "quick-pin-toggle",
-  nextTabInSpace: "next-tab-in-space",
-  previousTabInSpace: "previous-tab-in-space",
-  copyCurrentUrl: "copy-current-url",
-  copyCurrentUrlAsMarkdown: "copy-current-url-as-markdown",
-  openSpotlight: "open-spotlight",
-} as const
+import { KeyboardCommand } from "./keyboard-command"
 
 const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId> =>
   nodes.flatMap((node): ReadonlyArray<TabId> =>
@@ -89,6 +81,8 @@ const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
  *
  * @param activeTab - The tab that was active when the shortcut was pressed.
  */
+export { KeyboardCommand }
+
 export const runKeyboardCommand = (command: string, activeTab: Option.Option<BrowserTab>) =>
   Match.value(command).pipe(
     Match.when(KeyboardCommand.openSpotlight, () => openSpotlightFrom(activeTab)),

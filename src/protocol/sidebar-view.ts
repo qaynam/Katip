@@ -184,5 +184,7 @@ export const SidebarView = Schema.Struct({
   autoArchive: Schema.Struct({ enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
   // Chrome before 155 has no API to create split views, so the split actions are hidden
   canSplit: Schema.Boolean,
+  // The key assigned to open Spotlight, as the browser writes it (such as ⌥T); null when unassigned
+  spotlightShortcut: Schema.NullOr(Schema.String),
 })
 export type SidebarView = typeof SidebarView.Type

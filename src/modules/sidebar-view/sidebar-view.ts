@@ -64,6 +64,8 @@ export interface SidebarSources {
   readonly autoArchive: SidebarView["autoArchive"]
   readonly archive: ReadonlyArray<ArchiveEntry>
   readonly canSplit: boolean
+  /** The key the browser assigned to open Spotlight, written as the browser shows it; null if none. */
+  readonly spotlightShortcut: string | null
 }
 
 const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
@@ -388,5 +390,6 @@ export const projectSidebarView = (sources: SidebarSources): Option.Option<Sideb
     archive: sources.archive,
     autoArchive: sources.autoArchive,
     canSplit: sources.canSplit,
+    spotlightShortcut: sources.spotlightShortcut,
   }))
 }

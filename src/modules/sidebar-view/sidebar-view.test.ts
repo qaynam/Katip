@@ -92,6 +92,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   autoArchive: defaultSettings.autoArchive,
   archive: [],
   canSplit: true,
+  spotlightShortcut: null,
   ...overrides,
 })
 
@@ -526,6 +527,13 @@ describe("split view", () => {
 
   it("carries whether split views can be created", () => {
     expect(project({ canSplit: false }).canSplit).toBe(false)
+  })
+
+  it("carries the key the browser assigned to open Spotlight, or none", () => {
+    expect([
+      project({ spotlightShortcut: "⌥T" }).spotlightShortcut,
+      project({ spotlightShortcut: null }).spotlightShortcut,
+    ]).toStrictEqual(["⌥T", null])
   })
 })
 

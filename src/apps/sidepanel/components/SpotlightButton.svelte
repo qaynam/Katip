@@ -4,20 +4,26 @@
 
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
-  // Written the way Chrome writes shortcuts, and untranslated in every language
-  const SHORTCUT = "Alt+T"
+  const shortcut = $derived(ctx.view.spotlightShortcut)
+  // aria-keyshortcuts takes names such as "Alt+T"; the symbols Chrome writes on macOS (⌥T) aren't
+  // valid there, so those are shown but not announced
+  const announcedShortcut = $derived(
+    shortcut !== null && /^[\w ]+(\+[\w ]+)+$/.test(shortcut) ? shortcut : undefined,
+  )
 </script>
 
 <div class="spotlight-bar">
   <button
     class="spotlight"
     type="button"
-    aria-keyshortcuts={SHORTCUT}
+    aria-keyshortcuts={announcedShortcut}
     onclick={() => void ctx.run({ _tag: "OpenSpotlight", windowId: ctx.view.windowId })}
   >
     <Icon name="search" size={14} />
     <span class="label">{t("sidepanel.spotlight.button")}</span>
-    <kbd class="shortcut" aria-hidden="true">{SHORTCUT}</kbd>
+    {#if shortcut !== null}
+      <kbd class="shortcut" aria-hidden="true">{shortcut}</kbd>
+    {/if}
   </button>
 </div>
 
