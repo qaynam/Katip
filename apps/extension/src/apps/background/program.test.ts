@@ -527,6 +527,197 @@ describe("tabs", () => {
   )
 })
 
+describe("tabs opened from another tab", () => {
+  const temporaryUrls = (view: SidebarView) =>
+    Option.map(spaceNamed(view, "Home"), (space) => temporaryTabsIn(space).map((tab) => tab.url))
+
+  const showsTemporaryTabs = (count: number) => (view: SidebarView) =>
+    Option.exists(temporaryUrls(view), (urls) => urls.length === count)
+
+  const showNewTabsAtTheBottom = Storage.use((storage) =>
+    storage.sync.set("katip/settings", { newTabsOnTop: false }),
+  )
+
+  it.live("a link opened from a temporary tab shows right below it", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [
+            { url: "https://a.example/" },
+            { url: "https://b.example/" },
+            { url: "https://c.example/" },
+          ],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+        yield* fake.openLink(tabIds[1], "https://link.example/")
+        const view = yield* sidebar.viewWhere(showsTemporaryTabs(4))
+
+        expect(temporaryUrls(view)).toStrictEqual(
+          Option.some([
+            "https://c.example/",
+            "https://b.example/",
+            "https://link.example/",
+            "https://a.example/",
+          ]),
+        )
+      }),
+    ),
+  )
+
+  it.live(
+    "links opened one after another from a temporary tab show right below it, the latest first",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId, tabIds } = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://a.example/" },
+              { url: "https://b.example/" },
+              { url: "https://c.example/" },
+            ],
+          })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+          yield* fake.openLink(tabIds[1], "https://first.example/")
+          yield* sidebar.viewWhere(showsTemporaryTabs(4))
+          yield* fake.openLink(tabIds[1], "https://second.example/")
+          const view = yield* sidebar.viewWhere(showsTemporaryTabs(5))
+
+          expect(temporaryUrls(view)).toStrictEqual(
+            Option.some([
+              "https://c.example/",
+              "https://b.example/",
+              "https://second.example/",
+              "https://first.example/",
+              "https://a.example/",
+            ]),
+          )
+        }),
+      ),
+  )
+
+  it.live("a link opened from a pin shows at the top of the temporary tabs", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [
+            { url: "https://a.example/" },
+            { url: "https://mail.example/" },
+            { url: "https://b.example/" },
+          ],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere(showsTemporaryTabs(3))
+        yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[1] })
+        yield* sidebar.viewWhere(showsTemporaryTabs(2))
+
+        yield* fake.openLink(tabIds[1], "https://link.example/")
+        const view = yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+        expect(temporaryUrls(view)).toStrictEqual(
+          Option.some(["https://link.example/", "https://b.example/", "https://a.example/"]),
+        )
+      }),
+    ),
+  )
+
+  it.live(
+    "with new tabs shown at the bottom, a link opened from a temporary tab still shows right below it",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId, tabIds } = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://a.example/" },
+              { url: "https://b.example/" },
+              { url: "https://c.example/" },
+            ],
+          })
+          yield* showNewTabsAtTheBottom
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+          yield* fake.openLink(tabIds[1], "https://first.example/")
+          yield* sidebar.viewWhere(showsTemporaryTabs(4))
+          yield* fake.openLink(tabIds[1], "https://second.example/")
+          const view = yield* sidebar.viewWhere(showsTemporaryTabs(5))
+
+          expect(temporaryUrls(view)).toStrictEqual(
+            Option.some([
+              "https://a.example/",
+              "https://b.example/",
+              "https://second.example/",
+              "https://first.example/",
+              "https://c.example/",
+            ]),
+          )
+        }),
+      ),
+  )
+
+  it.live(
+    "with new tabs shown at the bottom, a link opened from a pin still shows at the top",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId, tabIds } = yield* fake.seedWindow({
+            tabs: [
+              { url: "https://a.example/" },
+              { url: "https://mail.example/" },
+              { url: "https://b.example/" },
+            ],
+          })
+          yield* showNewTabsAtTheBottom
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere(showsTemporaryTabs(3))
+          yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[1] })
+          yield* sidebar.viewWhere(showsTemporaryTabs(2))
+
+          yield* fake.openLink(tabIds[1], "https://link.example/")
+          const view = yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+          expect(temporaryUrls(view)).toStrictEqual(
+            Option.some(["https://link.example/", "https://a.example/", "https://b.example/"]),
+          )
+        }),
+      ),
+  )
+
+  it.live("a new tab page Chrome opens with an opener stays where new tabs show", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://a.example/" }, { url: "https://b.example/" }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere(showsTemporaryTabs(2))
+
+        yield* (yield* Tabs).create({ windowId, url: "chrome://newtab/", openerTabId: tabIds[0] })
+        const view = yield* sidebar.viewWhere(showsTemporaryTabs(3))
+
+        expect(temporaryUrls(view)).toStrictEqual(
+          Option.some(["chrome://newtab/", "https://b.example/", "https://a.example/"]),
+        )
+      }),
+    ),
+  )
+})
+
 describe("split view", () => {
   const entriesShape = (view: SidebarView) =>
     Option.match(spaceNamed(view, "Home"), {

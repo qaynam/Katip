@@ -5,7 +5,11 @@ import { extensionWorkerOf, launchWithExtension } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 
 interface KatipFixtures {
-  /** URL of a local web server whose pages are titled after their path, e.g. `${site}/a` is "Page /a". */
+  /**
+   * URL of a local web server whose pages are titled after their path, e.g. `${site}/a` is
+   * "Page /a". A page links to the paths in its `links` parameter, each opening in a new tab:
+   * `${site}/a?links=/x,/y`.
+   */
   site: string
   context: BrowserContext
   /** The extension's service worker. Calls chrome.* directly to arrange and inspect browser state. */
@@ -18,9 +22,16 @@ export const test = base.extend<KatipFixtures>({
   // eslint-disable-next-line no-empty-pattern -- Playwright reads dependencies from the destructured argument
   site: async ({}, use) => {
     const server = createServer((request, response) => {
-      const path = new URL(request.url ?? "/", "http://localhost").pathname
+      const url = new URL(request.url ?? "/", "http://localhost")
+      const links = (url.searchParams.get("links") ?? "")
+        .split(",")
+        .filter((path) => path !== "")
+        .map((path) => `<a href="${path}" target="_blank">${path}</a>`)
+        .join(" ")
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" })
-      response.end(`<!doctype html><title>Page ${path}</title><p>${path}</p>`)
+      response.end(
+        `<!doctype html><title>Page ${url.pathname}</title><p>${url.pathname}</p>${links}`,
+      )
     })
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
     await use(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)

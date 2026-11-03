@@ -1,7 +1,13 @@
 import { Clock, Effect, Match } from "effect"
 import { forgetTab, forgetWindow, recordActivation, replaceTab } from "#modules/workspace"
 import type { BrowserEvent } from "#platform/browser"
-import { admitTab, forgetProvisionalTab, settleProvisionalTab } from "./tab-admission"
+import {
+  admitCreatedTab,
+  admitTab,
+  forgetPendingTab,
+  placeOnceUrlIsKnown,
+  settleProvisionalTab,
+} from "./tab-admission"
 import { KatipState } from "./katip-state"
 
 const handleTabUpdated = Effect.fnUntraced(function* (
@@ -16,6 +22,7 @@ const handleTabUpdated = Effect.fnUntraced(function* (
   }
   if (changes.url !== undefined) yield* settleProvisionalTab(tab)
   if (changes.pinned === false || changes.url !== undefined) yield* admitTab(tab)
+  if (changes.url !== undefined) yield* placeOnceUrlIsKnown(tab)
 })
 
 /**
@@ -28,11 +35,11 @@ export const handleBrowserEvent = (event: BrowserEvent) =>
     const state = yield* KatipState
     yield* Match.value(event).pipe(
       Match.tagsExhaustive({
-        TabCreated: ({ tab }) => admitTab(tab),
+        TabCreated: ({ tab }) => admitCreatedTab(tab),
         TabUpdated: handleTabUpdated,
         TabRemoved: ({ tabId }) =>
           Effect.andThen(
-            forgetProvisionalTab(tabId),
+            forgetPendingTab(tabId),
             state.workspace.update((workspace) => forgetTab(workspace, tabId)),
           ),
         TabReplaced: ({ addedTabId, removedTabId }) =>
