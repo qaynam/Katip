@@ -1,0 +1,12 @@
+{
+  "extends": "astro/tsconfigs/strictest",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": {
+      "@brand/*": ["../../assets/brand/*"],
+      "@store/*": ["../extension/store/*"]
+    }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist", "generated", ".wrangler"]
+}
