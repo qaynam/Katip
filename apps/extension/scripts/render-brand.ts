@@ -6,7 +6,8 @@ import { horizontalLogoSvg, stackedLogoSvg, wordmarkSvg } from "./brand/logo.ts"
 
 const fromRoot = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url))
 
-const BRAND_DIR = fromRoot("assets/brand")
+// The brand belongs to the whole repository (the website uses it too), so it lives at the root
+const BRAND_DIR = fromRoot("../../assets/brand")
 const PNG_DIR = `${BRAND_DIR}/png`
 const EXTENSION_ICON_DIR = fromRoot("src/apps/public/icons")
 

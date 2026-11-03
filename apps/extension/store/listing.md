@@ -14,12 +14,12 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field.
 
 **Graphic assets**
 
-| Field                         | File                                                                  |
-| ----------------------------- | --------------------------------------------------------------------- |
-| Store icon (128×128)          | `assets/brand/png/icon-128.png`                                       |
-| Screenshots (1280×800)        | `store/screenshots/en/` (English), `store/screenshots/ja/` (Japanese) |
-| Small promo tile (440×280)    | `store/promo/small-tile.png`                                          |
-| Marquee promo tile (1400×560) | `store/promo/marquee.png`                                             |
+| Field                         | File                                                                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| Store icon (128×128)          | `assets/brand/png/icon-128.png`                                                                     |
+| Screenshots (1280×800)        | `apps/extension/store/screenshots/en/` (English), `apps/extension/store/screenshots/ja/` (Japanese) |
+| Small promo tile (440×280)    | `apps/extension/store/promo/small-tile.png`                                                         |
+| Marquee promo tile (1400×560) | `apps/extension/store/promo/marquee.png`                                                            |
 
 ### English (default)
 
@@ -147,4 +147,4 @@ Katip does not collect or transmit any user data. Leave every data type unchecke
 
 ## Notes for reviewers
 
-> Click the toolbar icon (or press ⌃⌘S on macOS, Alt+S elsewhere) to open Katip in the side panel. Open a few tabs and they appear under the current Space; drag a tab into the pinned area to pin it, or onto another tab to open a split view (Chrome 155+). Press Alt+T for Spotlight. Live folders need an account signed in to Gmail or GitHub and are optional. Settings → Data has export and import; a sample Arc file for testing import is at https://github.com/qaynam/Katip/blob/main/src/modules/arc-import/fixtures/arc-sidebar.json
+> Click the toolbar icon (or press ⌃⌘S on macOS, Alt+S elsewhere) to open Katip in the side panel. Open a few tabs and they appear under the current Space; drag a tab into the pinned area to pin it, or onto another tab to open a split view (Chrome 155+). Press Alt+T for Spotlight. Live folders need an account signed in to Gmail or GitHub and are optional. Settings → Data has export and import; a sample Arc file for testing import is at https://github.com/qaynam/Katip/blob/main/apps/extension/src/modules/arc-import/fixtures/arc-sidebar.json

@@ -5,4 +5,5 @@ pnpm-lock.yaml
 .claude/worktrees/
 # Export samples stay exactly as Katip wrote them. Reformatted, they would no longer show what that
 # version of Katip writes
-src/modules/export/fixtures/
+apps/extension/src/modules/export/fixtures/
+.turbo/

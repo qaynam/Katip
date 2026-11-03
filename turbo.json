@@ -1,0 +1,12 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "dev": { "cache": false, "persistent": true },
+    "build": { "outputs": ["dist/**"] },
+    "package": { "cache": false, "outputs": [".release/**"] },
+    "typecheck": {},
+    "lint": {},
+    "test": {},
+    "test:e2e": { "cache": false, "passThroughEnv": ["KATIP_E2E_CHROME"] }
+  }
+}

@@ -6,3 +6,4 @@ coverage/
 .e2e/
 .release/
 .claude/worktrees/
+.turbo/

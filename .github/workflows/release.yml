@@ -18,11 +18,11 @@ jobs:
         with:
           persist-credentials: false
       - id: version
-        name: Check the tag against the package.json version
+        name: Check the tag against the extension's version
         run: |
-          version=$(node -p 'require("./package.json").version')
+          version=$(node -p 'require("./apps/extension/package.json").version')
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match the package.json version $version"
+            echo "::error::Tag $GITHUB_REF_NAME does not match the extension's version $version"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -51,5 +51,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
         run: >-
-          gh release create "$GITHUB_REF_NAME" ".release/katip-$VERSION.zip"
+          gh release create "$GITHUB_REF_NAME" "apps/extension/.release/katip-$VERSION.zip"
           --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
