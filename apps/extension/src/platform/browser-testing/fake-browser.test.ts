@@ -286,6 +286,47 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
     )
   })
 
+  describe("when the user opens a link in a new tab", () => {
+    it.effect("opens it after the tab and the tabs it already opened next to it", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          tabIds: [, page],
+        } = yield* fake.seedWindow({ tabs: [{}, {}, { openerIndex: 1 }, {}] })
+
+        const link = yield* fake.openLink(page, "https://link.example/")
+
+        const tab = yield* (yield* Tabs).get(link)
+        assert.deepStrictEqual([tab.index, tab.openerTabId], [3, Option.some(page)])
+      }),
+    )
+
+    it.effect("creates the tab with no URL, then starts loading the link's URL", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          tabIds: [page],
+        } = yield* fake.seedWindow({ tabs: [{ active: true }] })
+
+        yield* fake.openLink(page, "https://link.example/")
+
+        assert.deepStrictEqual(
+          (yield* fake.takeEmittedEvents).map((event) =>
+            event._tag === "TabCreated"
+              ? { created: event.tab.url, active: event.tab.active }
+              : event._tag === "TabUpdated"
+                ? { updated: event.changes }
+                : event._tag,
+          ),
+          [
+            { created: Option.none(), active: false },
+            { updated: { url: "https://link.example/", status: "loading" } },
+          ],
+        )
+      }),
+    )
+  })
+
   describe("injecting a failure", () => {
     it.effect("fails only the next call to that API, leaving the state and events unchanged", () =>
       Effect.gen(function* () {

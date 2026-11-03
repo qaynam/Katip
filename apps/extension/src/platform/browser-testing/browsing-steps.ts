@@ -391,6 +391,7 @@ export const moveTabsAndSetGroup = Effect.fnUntraced(function* (
 export interface NewTab {
   readonly windowId: WindowId
   readonly index: number | "end"
+  /** Empty while the URL isn't known yet, as Chrome reports it. */
   readonly url: string
   readonly active: boolean
   readonly pinned: boolean
@@ -412,7 +413,7 @@ export const createTab = Effect.fnUntraced(function* (
   yield* tx.setState(issued)
   yield* insertTab(tx, window.id, index, {
     id: tabId,
-    url: Option.some(spec.url),
+    url: spec.url === "" ? Option.none() : Option.some(spec.url),
     title: Option.none(),
     favIconUrl: Option.none(),
     status: "complete",

@@ -36,7 +36,7 @@ import {
   type TabRecord,
   toBrowserWindow,
 } from "./browsing-state"
-import { emitTabUpdated, NEW_TAB_URL, requireTab, updateTab } from "./browsing-steps"
+import { createTab, emitTabUpdated, NEW_TAB_URL, requireTab, updateTab } from "./browsing-steps"
 import { makeFakeAlarms } from "./fake-alarms"
 import { type BookmarkSeed, makeFakeBookmarks, type SeededBookmarks } from "./fake-bookmarks"
 import { makePortPair } from "./fake-port"
@@ -377,6 +377,16 @@ export class FakeBrowser extends Context.Service<
     closeWindow(windowId: WindowId): Effect.Effect<void, BrowserApiError>
     /** Plays a change made by the page, such as loading or a new title. */
     updatePage(tabId: TabId, update: PageUpdate): Effect.Effect<BrowserTab, BrowserApiError>
+    /**
+     * Plays the user opening a link of the tab in a new tab, in the background unless `active`. As
+     * in Chrome, the tab opens after that tab and the tabs it already opened right next to it, is
+     * created with no URL, and then starts loading `url`.
+     */
+    openLink(
+      fromTabId: TabId,
+      url: string,
+      options?: { readonly active?: boolean },
+    ): Effect.Effect<TabId, BrowserApiError>
     fireAlarm(name: string): Effect.Effect<void, BrowserApiError>
     /**
      * Makes the next call to `api` do nothing and fail with {@link BrowserApiError}. Calling this
@@ -435,6 +445,30 @@ export class FakeBrowser extends Context.Service<
                   yield* emitTabUpdated(tx, tabId, changes)
                 }
                 return yield* requireTabSnapshot(tx, tabId)
+              }),
+            ),
+          openLink: (fromTabId, url, options = {}) =>
+            transact(
+              world,
+              "tabs.onCreated",
+              Effect.fnUntraced(function* (tx) {
+                const opener = yield* requireTab(tx, fromTabId)
+                const openedBefore = Array.takeWhile(
+                  opener.window.tabs.slice(opener.index + 1),
+                  (tab) => Option.contains(tab.openerTabId, fromTabId),
+                )
+                const tabId = yield* createTab(tx, {
+                  windowId: opener.window.id,
+                  index: opener.index + 1 + openedBefore.length,
+                  url: "",
+                  active: options.active ?? false,
+                  pinned: false,
+                  openerTabId: Option.some(fromTabId),
+                })
+                const changes: TabChanges = { url, status: "loading" }
+                yield* updateTab(tx, tabId, (record) => applyPageChanges(record, changes))
+                yield* emitTabUpdated(tx, tabId, changes)
+                return tabId
               }),
             ),
           fireAlarm: alarms.fire,
