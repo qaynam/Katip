@@ -1,0 +1,89 @@
+---
+import GitHubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg"
+import { COPY } from "../copy"
+import type { Language } from "../languages.ts"
+import { CHROME_WEB_STORE_URL, GITHUB_URL } from "../site.ts"
+
+interface Props {
+  readonly lang: Language
+}
+
+const copy = COPY[Astro.props.lang]
+---
+
+<div class="cta">
+  {CHROME_WEB_STORE_URL === null ? (
+    <p class="soon">
+      <span class="dot" aria-hidden="true" />
+      {copy.cta.comingSoon}
+    </p>
+  ) : (
+    <a class="button primary" href={CHROME_WEB_STORE_URL}>
+      {copy.cta.addToChrome}
+    </a>
+  )}
+  <a class="button secondary" href={GITHUB_URL}>
+    <GitHubLogo width={20} height={20} aria-hidden="true" />
+    {copy.cta.github}
+  </a>
+</div>
+
+<style>
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .button,
+  .soon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.875rem;
+    padding: 0.625rem 1.375rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .button:hover {
+    text-decoration: none;
+  }
+
+  .primary {
+    background: var(--button);
+    color: #fff;
+  }
+
+  .primary:hover {
+    background: var(--button-hover);
+  }
+
+  .secondary {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--card-shadow);
+  }
+
+  .secondary:hover {
+    color: var(--accent);
+  }
+
+  .soon {
+    padding-inline: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: linear-gradient(#68c6ff, #1f74f0);
+    box-shadow: 0 0 0 3px rgb(31 116 240 / 0.15);
+  }
+</style>

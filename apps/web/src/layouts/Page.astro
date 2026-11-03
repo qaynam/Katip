@@ -1,0 +1,90 @@
+---
+import marquee from "@store/promo/marquee.png"
+import Footer from "../components/Footer.astro"
+import Header from "../components/Header.astro"
+import { COPY } from "../copy"
+import { DEFAULT_LANGUAGE, LANGUAGES, OPEN_GRAPH_LOCALES, type Language } from "../languages.ts"
+import { absoluteUrl, otherLanguages, pathOf, type Page } from "../routes.ts"
+import Document from "./Document.astro"
+
+interface Props {
+  readonly lang: Language
+  readonly page: Page
+  readonly title: string
+  readonly description: string
+}
+
+const { lang, page, title, description } = Astro.props
+const copy = COPY[lang]
+const canonical = absoluteUrl(pathOf(lang, page))
+// The root picks a language for the visitor, which is what x-default means; it exists only for
+// the home page, so the other pages fall back to their English version
+const languageNeutral =
+  page === "home" ? absoluteUrl("/") : absoluteUrl(pathOf(DEFAULT_LANGUAGE, page))
+const image = absoluteUrl(marquee.src)
+---
+
+<Document lang={lang} title={title} description={description}>
+  <Fragment slot="head">
+    <link rel="canonical" href={canonical} />
+    {LANGUAGES.map((language) => (
+      <link rel="alternate" hreflang={language} href={absoluteUrl(pathOf(language, page))} />
+    ))}
+    <link rel="alternate" hreflang="x-default" href={languageNeutral} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Katip" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={OPEN_GRAPH_LOCALES[lang]} />
+    {otherLanguages(lang).map((language) => (
+      <meta property="og:locale:alternate" content={OPEN_GRAPH_LOCALES[language]} />
+    ))}
+    <meta property="og:image" content={image} />
+    <meta property="og:image:width" content={String(marquee.width)} />
+    <meta property="og:image:height" content={String(marquee.height)} />
+    <meta property="og:image:alt" content={copy.meta.imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+    <meta name="twitter:image:alt" content={copy.meta.imageAlt} />
+  </Fragment>
+  <a class="skip-link" href="#content">
+    {copy.skipToContent}
+  </a>
+  <Header lang={lang} page={page} />
+  <main id="content" tabindex="-1">
+    <slot />
+  </main>
+  <Footer lang={lang} page={page} />
+</Document>
+
+<style>
+  .skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 100;
+    padding: 0.625rem 1rem;
+    border-radius: 0.75rem;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+    font-weight: 600;
+    transform: translateY(-200%);
+  }
+
+  .skip-link:focus-visible {
+    transform: none;
+  }
+
+  main {
+    /* The glows behind the screenshots reach past the gutters. Not hidden, which would also make
+       main a scroll container */
+    overflow-x: clip;
+  }
+
+  main:focus {
+    outline: none;
+  }
+</style>

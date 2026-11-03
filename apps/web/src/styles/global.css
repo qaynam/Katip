@@ -1,0 +1,175 @@
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+
+:root {
+  color-scheme: light dark;
+
+  --backdrop: #f5f5f7;
+  --surface: #ffffff;
+  --ink: #1d1d1f;
+  --ink-secondary: #6e6e73;
+  --hairline: rgb(0 0 0 / 0.09);
+  /* The brand blue, darkened just enough to pass 4.5:1 as text and under white text */
+  --accent: #1a68d9;
+  --button: #1a68d9;
+  --button-hover: #1559bd;
+  --accent-soft: rgb(31 116 240 / 0.09);
+  --code-background: rgb(0 0 0 / 0.05);
+  --focus: #1f74f0;
+  --window-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.07), 0 24px 60px rgb(0 0 0 / 0.13), 0 6px 16px rgb(0 0 0 / 0.05);
+  --card-shadow: 0 0 0 1px rgb(0 0 0 / 0.05), 0 12px 32px rgb(0 0 0 / 0.05);
+  --icon-shadow: 0 10px 24px rgb(31 116 240 / 0.22);
+
+  /* How strongly the Space colors glow behind the screenshots */
+  --glow-strength: 0.75;
+
+  --font-sans:
+    Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo,
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --page-width: 68rem;
+  --text-width: 40rem;
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --section-space: clamp(6rem, 3.5rem + 8vw, 10rem);
+  --radius-card: 1.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --backdrop: #0b0b0d;
+    --surface: #1c1c1e;
+    --ink: #f5f5f7;
+    --ink-secondary: #a1a1a6;
+    --hairline: rgb(255 255 255 / 0.12);
+    --accent: #5aa2ff;
+    --button-hover: #2f7be6;
+    --accent-soft: rgb(90 162 255 / 0.14);
+    --code-background: rgb(255 255 255 / 0.08);
+    --focus: #5aa2ff;
+    --window-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.1), 0 24px 60px rgb(0 0 0 / 0.55), 0 6px 16px rgb(0 0 0 / 0.3);
+    --card-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+    --icon-shadow: 0 10px 28px rgb(31 116 240 / 0.3);
+    --glow-strength: 0.45;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 4.5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--backdrop);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body:lang(ja) {
+  line-height: 1.8;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+:lang(ja) :is(h1, h2, h3) {
+  /* Full-width kana and punctuation look gappy at display sizes; palt sets them proportionally */
+  font-feature-settings: "palt";
+  word-break: auto-phrase;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:lang(ja) p {
+  word-break: auto-phrase;
+}
+
+img,
+svg,
+picture {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 0.375rem;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.container {
+  width: min(100% - 2 * var(--gutter), var(--page-width));
+  margin-inline: auto;
+}

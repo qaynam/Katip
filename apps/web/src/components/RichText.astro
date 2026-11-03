@@ -1,0 +1,21 @@
+---
+import type { RichText } from "../copy"
+
+interface Props {
+  readonly text: RichText
+}
+
+const { text } = Astro.props
+---
+
+{text.map((inline) =>
+  typeof inline === "string" ? (
+    inline
+  ) : "strong" in inline ? (
+    <strong>{inline.strong}</strong>
+  ) : "code" in inline ? (
+    <code>{inline.code}</code>
+  ) : (
+    <a href={inline.href}>{inline.link}</a>
+  ),
+)}

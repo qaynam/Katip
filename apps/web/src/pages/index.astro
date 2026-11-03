@@ -1,0 +1,62 @@
+---
+// In production the Worker answers / with a redirect to the visitor's language before this page
+// is ever served. It is here for `astro dev` and for anything that serves the build without the
+// Worker, where it lets the visitor choose
+import icon from "@brand/icon.svg"
+import { LANGUAGE_NAMES, LANGUAGES } from "../languages.ts"
+import Document from "../layouts/Document.astro"
+import { absoluteUrl, pathOf } from "../routes.ts"
+---
+
+<Document lang="en" title="Katip">
+  <Fragment slot="head">
+    {LANGUAGES.map((language) => (
+      <link rel="alternate" hreflang={language} href={absoluteUrl(pathOf(language, "home"))} />
+    ))}
+  </Fragment>
+  <main class="choose">
+    <img src={icon.src} width="96" height="96" alt="Katip" />
+    <ul>
+      {LANGUAGES.map((language) => (
+        <li>
+          <a href={pathOf(language, "home")} hreflang={language} lang={language}>
+            {LANGUAGE_NAMES[language]}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</Document>
+
+<style>
+  .choose {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  ul {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    display: block;
+    padding: 0.625rem 1.375rem;
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  a:hover {
+    color: var(--accent);
+    text-decoration: none;
+  }
+</style>

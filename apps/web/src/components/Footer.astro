@@ -1,0 +1,120 @@
+---
+import { COPY } from "../copy"
+import { LANGUAGE_NAMES, LANGUAGES, type Language } from "../languages.ts"
+import { pathOf, type Page } from "../routes.ts"
+import { GITHUB_URL, LICENSE_URL } from "../site.ts"
+
+interface Props {
+  readonly lang: Language
+  readonly page: Page
+}
+
+const { lang, page } = Astro.props
+const copy = COPY[lang]
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <nav class="links" aria-label={copy.footer.links}>
+      <ul>
+        <li>
+          <a href={GITHUB_URL}>{copy.footer.github}</a>
+        </li>
+        <li>
+          <a href={pathOf(lang, "privacy")}>{copy.footer.privacy}</a>
+        </li>
+        <li>
+          <a href={LICENSE_URL}>{copy.footer.license}</a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="languages" aria-label={copy.footer.language}>
+      <ul>
+        {LANGUAGES.map((language) => (
+          <li>
+            <a
+              href={pathOf(language, page)}
+              hreflang={language}
+              lang={language}
+              aria-current={language === lang ? "page" : undefined}
+            >
+              {LANGUAGE_NAMES[language]}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <p class="fine-print">© 2026 qaynam · {copy.footer.trademark}</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--hairline);
+    padding-block: 2.5rem 3rem;
+    color: var(--ink-secondary);
+    font-size: 0.875rem;
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.25rem 2rem;
+    align-items: center;
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.75rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    color: var(--ink-secondary);
+  }
+
+  a:hover {
+    color: var(--ink);
+  }
+
+  .languages ul {
+    gap: 0.25rem;
+    padding: 0.1875rem;
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+  }
+
+  .languages a {
+    display: block;
+    padding: 0.25rem 0.875rem;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+
+  .languages a:hover {
+    text-decoration: none;
+  }
+
+  .languages a[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  .fine-print {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+  }
+
+  @media (max-width: 35.99rem) {
+    .container {
+      grid-template-columns: 1fr;
+    }
+
+    .languages {
+      justify-self: start;
+    }
+  }
+</style>

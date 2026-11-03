@@ -1,0 +1,91 @@
+---
+import { Picture } from "astro:assets"
+import type { Language } from "../languages.ts"
+import { screenshot } from "../screenshots.ts"
+import type { Shot } from "../shots.ts"
+
+interface Props {
+  readonly lang: Language
+  readonly shot: Shot
+  readonly alt: string
+  /** Which Space's colors glow behind the window, matching the side panel in the shot. */
+  readonly glow: "work" | "personal" | "settings"
+  /** For the shot in the first screen: loaded first and not faded in on scroll. */
+  readonly priority?: boolean
+}
+
+const { lang, shot, alt, glow, priority = false } = Astro.props
+const image = screenshot(lang, shot)
+---
+
+<div class:list={["screenshot", glow, { revealed: !priority }]}>
+  <Picture
+    src={image}
+    alt={alt}
+    widths={[544, 816, image.width]}
+    sizes={`(min-width: ${image.width + 80}px) ${image.width}px, calc(100vw - 40px)`}
+    formats={["avif", "webp"]}
+    quality={82}
+    priority={priority}
+  />
+</div>
+
+<style>
+  .screenshot {
+    position: relative;
+    isolation: isolate;
+    max-width: 68rem;
+    margin-inline: auto;
+  }
+
+  .screenshot::before {
+    content: "";
+    position: absolute;
+    inset: 6% -3% -9%;
+    z-index: -1;
+    background:
+      radial-gradient(55% 65% at 22% 55%, var(--glow-a), transparent 72%),
+      radial-gradient(55% 65% at 78% 60%, var(--glow-b), transparent 72%);
+    filter: blur(56px);
+    opacity: var(--glow-strength);
+  }
+
+  .work {
+    --glow-a: #86b3f5;
+    --glow-b: #b4a9f2;
+  }
+
+  .personal {
+    --glow-a: #f7a184;
+    --glow-b: #ee9cc2;
+  }
+
+  .settings {
+    --glow-a: #aebbd2;
+    --glow-b: #d9c6b0;
+  }
+
+  .screenshot :global(img) {
+    width: 100%;
+    /* The window's 14px corners, cut a hair wider so no backdrop pixel shows at the edge */
+    border-radius: 1.4% / 2.65%;
+    box-shadow: var(--window-shadow);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .revealed {
+        animation: rise linear both;
+        animation-timeline: view();
+        animation-range: entry 5% entry 45%;
+      }
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0.35;
+      transform: translateY(2.5rem) scale(0.97);
+    }
+  }
+</style>

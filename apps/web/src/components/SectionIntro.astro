@@ -1,0 +1,57 @@
+---
+import type { SectionIntro } from "../copy"
+
+interface Props {
+  readonly intro: SectionIntro
+  /** The id of the title, for the section's aria-labelledby. */
+  readonly titleId: string
+}
+
+const { intro, titleId } = Astro.props
+---
+
+<div class="intro">
+  <p class="eyebrow">{intro.eyebrow}</p>
+  <h2 id={titleId}>{intro.title}</h2>
+  <p class="lead">{intro.lead}</p>
+</div>
+
+<style>
+  .intro {
+    max-width: var(--text-width);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .eyebrow {
+    color: var(--accent);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  h2 {
+    margin-top: 0.5rem;
+    font-size: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.028em;
+  }
+
+  .lead {
+    margin-top: 1rem;
+    color: var(--ink-secondary);
+    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.3125rem);
+    line-height: 1.45;
+    letter-spacing: -0.014em;
+  }
+
+  :lang(ja) h2 {
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  :lang(ja) .lead {
+    line-height: 1.7;
+    letter-spacing: 0;
+  }
+</style>

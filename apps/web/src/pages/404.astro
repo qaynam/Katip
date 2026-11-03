@@ -1,0 +1,49 @@
+---
+import icon from "@brand/icon.svg"
+import Document from "../layouts/Document.astro"
+import { pathOf } from "../routes.ts"
+---
+
+<Document lang="en" title="Page not found – Katip">
+  <main class="not-found">
+    <img src={icon.src} width="96" height="96" alt="" />
+    <div lang="en">
+      <h1>Page not found</h1>
+      <p>
+        <a href={pathOf("en", "home")}>Go to the Katip home page</a>
+      </p>
+    </div>
+    <div lang="ja">
+      <h1>ページが見つかりません</h1>
+      <p>
+        <a href={pathOf("ja", "home")}>Katip のトップページへ</a>
+      </p>
+    </div>
+  </main>
+</Document>
+
+<style>
+  .not-found {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1.75rem;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--gutter);
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  div[lang="ja"] h1 {
+    letter-spacing: 0;
+  }
+
+  p {
+    margin-top: 0.375rem;
+  }
+</style>

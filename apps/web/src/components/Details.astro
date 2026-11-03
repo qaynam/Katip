@@ -1,0 +1,52 @@
+---
+import type { Detail } from "../copy"
+
+interface Props {
+  readonly details: ReadonlyArray<Detail>
+}
+
+const { details } = Astro.props
+---
+
+<ul class="details">
+  {details.map((detail) => (
+    <li>
+      <h3>{detail.title}</h3>
+      <p>{detail.text}</p>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 2rem clamp(1.5rem, 4vw, 3.5rem);
+    max-width: 60rem;
+    margin-inline: auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--hairline);
+  }
+
+  h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  p {
+    margin-top: 0.375rem;
+    color: var(--ink-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+
+  :lang(ja) p {
+    line-height: 1.75;
+  }
+</style>

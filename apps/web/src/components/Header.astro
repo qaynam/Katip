@@ -1,0 +1,135 @@
+---
+import GitHubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg"
+import logoDark from "@brand/logo-horizontal-dark.svg"
+import logo from "@brand/logo-horizontal.svg"
+import { COPY } from "../copy"
+import { LANGUAGE_NAMES, type Language } from "../languages.ts"
+import { otherLanguages, pathOf, type Page } from "../routes.ts"
+import { GITHUB_URL } from "../site.ts"
+
+interface Props {
+  readonly lang: Language
+  readonly page: Page
+}
+
+const { lang, page } = Astro.props
+const copy = COPY[lang]
+const home = pathOf(lang, "home")
+// On the home page the sections are right here; elsewhere the links lead back to them
+const sectionLink = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`)
+const LOGO_HEIGHT = 32
+---
+
+<header class="site-header">
+  <div class="bar container">
+    <a class="brand" href={home} aria-label={copy.header.home}>
+      <picture>
+        <source srcset={logoDark.src} media="(prefers-color-scheme: dark)" />
+        <img
+          src={logo.src}
+          alt="Katip"
+          width={Math.round((logo.width / logo.height) * LOGO_HEIGHT)}
+          height={LOGO_HEIGHT}
+        />
+      </picture>
+    </a>
+    <nav class="sections" aria-label={copy.header.sections}>
+      <ul>
+        <li>
+          <a href={sectionLink("features")}>{copy.header.features}</a>
+        </li>
+        <li>
+          <a href={sectionLink("arc")}>{copy.header.arc}</a>
+        </li>
+        <li>
+          <a href={sectionLink("privacy")}>{copy.header.privacy}</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="tools">
+      {otherLanguages(lang).map((language) => (
+        <a class="language" href={pathOf(language, page)} hreflang={language} lang={language}>
+          {LANGUAGE_NAMES[language]}
+        </a>
+      ))}
+      <a class="github" href={GITHUB_URL} aria-label={copy.header.github}>
+        <GitHubLogo width={22} height={22} aria-hidden="true" />
+      </a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: 1px solid var(--hairline);
+    background: color-mix(in srgb, var(--backdrop) 78%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 3.5rem;
+  }
+
+  .brand {
+    flex: none;
+    margin-left: -0.25rem;
+    border-radius: 0.5rem;
+  }
+
+  .sections {
+    margin-left: auto;
+  }
+
+  .sections ul {
+    display: flex;
+    gap: 1.75rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .sections a,
+  .language {
+    color: var(--ink-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .sections a:hover,
+  .language:hover,
+  .github:hover {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .github {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    margin-right: -0.375rem;
+    color: var(--ink-secondary);
+  }
+
+  @media (max-width: 47.99rem) {
+    .sections {
+      display: none;
+    }
+
+    .tools {
+      margin-left: auto;
+    }
+  }
+</style>
