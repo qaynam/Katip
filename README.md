@@ -156,8 +156,23 @@ apps/
     e2e/          Playwright tests and the contract test runner
     scripts/      packaging, brand assets and store screenshots
     store/        Chrome Web Store listing, screenshots and promo images
+  web/            the website, in English and Japanese (Astro, served by a Cloudflare Worker)
+    src/          pages, components and the copy of both languages in copy/
+    worker/       the Worker that sends visitors at / to their language
 assets/brand/     icon, logos and wordmark as SVG, with PNGs in png/
 ```
+
+### Website
+
+`apps/web/` is a static site with no client-side JavaScript. It takes its screenshots from `apps/extension/store/`, its logos from `assets/brand/` and its privacy policy pages from `PRIVACY.md` at build time, so updating those updates the site. All text lives in `apps/web/src/copy/`.
+
+```sh
+pnpm dev:web      # the site at http://localhost:4321, without the Worker
+pnpm preview:web  # builds, then serves the site with the Worker at http://localhost:8787
+pnpm deploy:web   # builds and deploys to Cloudflare
+```
+
+It is deployed as a Cloudflare Worker with static assets (`apps/web/wrangler.jsonc`). The Worker runs only for `/`, redirecting to `/ja/` when the browser's `Accept-Language` prefers Japanese and to `/en/` otherwise; every other path is served straight from the build. Before the first deploy, run `pnpm --filter @katip/web exec wrangler login` (or set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`), set `SITE_URL` in `apps/web/src/site.ts` to the site's domain, and attach that domain to the `katip-web` Worker in the Cloudflare dashboard. Once the store listing is published, set `CHROME_WEB_STORE_URL` in the same file to show "Add to Chrome".
 
 ## Brand assets
 
