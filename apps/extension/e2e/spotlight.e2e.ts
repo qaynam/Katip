@@ -45,7 +45,7 @@ test("choosing an open tab by name activates it and closes Spotlight", async ({
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /b", "Page /a"])
   const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
 
-  await choose(spotlight, "Page /b", /^Page \/b/)
+  await choose(spotlight, "Page /b", /^Page \/b\s+Home/)
 
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b active"])
   await expect.poll(() => spotlight.isClosed()).toBe(true)
