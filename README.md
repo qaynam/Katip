@@ -174,12 +174,7 @@ pnpm deploy:web   # builds and deploys to Cloudflare
 
 It is deployed as a Cloudflare Worker with static assets (`apps/web/wrangler.jsonc`). The Worker runs only for `/`, redirecting to the language the browser's `Accept-Language` ranks highest; when that names neither English nor Japanese, visitors from Japan go to `/ja/` and everyone else to `/en/`. Every other path is served straight from the build. The site lives at [katip.qaynam.dev](https://katip.qaynam.dev): a deploy attaches that custom domain to the `katip-web` Worker, which needs the `qaynam.dev` zone in the same Cloudflare account. If the domain changes, change both `SITE_URL` in `apps/web/src/site.ts` and the route in `apps/web/wrangler.jsonc`. Once the store listing is published, set `CHROME_WEB_STORE_URL` in the same file to show "Add to Chrome".
 
-CI deploys the site on every push to `main` once the checks pass. It needs, in the repository's settings on GitHub:
-
-- the variable `CLOUDFLARE_ACCOUNT_ID`, the account's ID (the deploy is skipped until it is set);
-- the secret `CLOUDFLARE_API_TOKEN`, an API token made from the "Edit Cloudflare Workers" template, covering the account and the `qaynam.dev` zone, with Zone · DNS · Edit added for the custom domain.
-
-To deploy from your machine instead, run `pnpm --filter @katip/web exec wrangler login` once, then `pnpm deploy:web`.
+The `katip-web` Worker is connected to this repository with Cloudflare's Workers Builds, which builds and deploys the site on every push to `main`; its build settings live in the Cloudflare dashboard. The Worker's name there must stay equal to `name` in `apps/web/wrangler.jsonc`. To deploy from your machine instead, run `pnpm --filter @katip/web exec wrangler login` once, then `pnpm deploy:web`.
 
 ## Brand assets
 
