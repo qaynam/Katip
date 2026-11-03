@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "turbo run dev --filter=@katip/extension",
+    "dev:web": "turbo run dev --filter=@katip/web",
     "build": "turbo run build",
     "package": "turbo run package --filter=@katip/extension",
+    "preview:web": "turbo run preview --filter=@katip/web",
+    "deploy:web": "turbo run deploy --filter=@katip/web",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e --filter=@katip/extension",
     "typecheck": "turbo run typecheck",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "prettier": "3.9.10",
+    "prettier-plugin-astro": "1.1.2",
     "prettier-plugin-svelte": "4.1.1",
     "turbo": "2.11.10"
   }
