@@ -33,7 +33,7 @@ Katip brings over your Spaces, their colors, pinned tabs, folders, split views a
 
 ## Privacy
 
-Katip has no server and sends nothing anywhere. Your Spaces, pins and settings live in Chrome's own storage and bookmarks. Live folders talk directly to Gmail and GitHub from your browser, using your existing sign-in, and only after you allow access to that site. Reading your history for Spotlight is optional and asks for permission first.
+Katip has no server and sends nothing anywhere. Your Spaces, pins and settings live in Chrome's own storage and bookmarks. Live folders talk directly to Gmail and GitHub from your browser, using your existing sign-in, and only after you allow access to that site. Reading your history for Spotlight is optional and asks for permission first. See the [privacy policy](PRIVACY.md) for the details.
 
 ## Install
 
