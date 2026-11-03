@@ -172,7 +172,7 @@ pnpm preview:web  # builds, then serves the site with the Worker at http://local
 pnpm deploy:web   # builds and deploys to Cloudflare
 ```
 
-It is deployed as a Cloudflare Worker with static assets (`apps/web/wrangler.jsonc`). The Worker runs only for `/`, redirecting to `/ja/` when the browser's `Accept-Language` prefers Japanese and to `/en/` otherwise; every other path is served straight from the build. Before the first deploy, run `pnpm --filter @katip/web exec wrangler login` (or set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`), set `SITE_URL` in `apps/web/src/site.ts` to the site's domain, and attach that domain to the `katip-web` Worker in the Cloudflare dashboard. Once the store listing is published, set `CHROME_WEB_STORE_URL` in the same file to show "Add to Chrome".
+It is deployed as a Cloudflare Worker with static assets (`apps/web/wrangler.jsonc`). The Worker runs only for `/`, redirecting to `/ja/` when the browser's `Accept-Language` prefers Japanese and to `/en/` otherwise; every other path is served straight from the build. The site lives at [katip.qaynam.dev](https://katip.qaynam.dev): `pnpm deploy:web` attaches that custom domain to the `katip-web` Worker, which needs the `qaynam.dev` zone in the same Cloudflare account. Before the first deploy, run `pnpm --filter @katip/web exec wrangler login` (or set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`). If the domain changes, change both `SITE_URL` in `apps/web/src/site.ts` and the route in `apps/web/wrangler.jsonc`. Once the store listing is published, set `CHROME_WEB_STORE_URL` in the same file to show "Add to Chrome".
 
 ## Brand assets
 

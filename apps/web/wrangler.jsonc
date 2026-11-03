@@ -3,6 +3,9 @@
   "name": "katip-web",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
+  // Attached on deploy; qaynam.dev must be a zone in the same Cloudflare account. Keep it equal to
+  // SITE_URL in src/site.ts
+  "routes": [{ "pattern": "katip.qaynam.dev", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

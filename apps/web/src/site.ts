@@ -1,6 +1,8 @@
-// Placeholder until the domain is decided: replace it with the real origin before the first deploy.
-// Canonical URLs, hreflang alternates, Open Graph images, robots.txt and the sitemap all come from it
-export const SITE_URL = "https://katip.example"
+/**
+ * The site's origin. Canonical URLs, hreflang alternates, Open Graph images, robots.txt and the
+ * sitemap all come from it; the Worker's custom domain in wrangler.jsonc must match.
+ */
+export const SITE_URL = "https://katip.qaynam.dev"
 
 /**
  * Katip's Chrome Web Store listing, or null until it is published. While it is null, the pages say
