@@ -5,20 +5,28 @@ export interface Env {
   readonly ASSETS: { readonly fetch: (request: Request) => Promise<Response> }
 }
 
-const redirectToPreferredLanguage = (request: Request, url: URL) => {
-  const language = preferredLanguage(request.headers.get("Accept-Language"))
+/** A request as Cloudflare hands it to the Worker, with the visitor's country looked up from their IP. */
+export type IncomingRequest = Request & { readonly cf?: { readonly country?: string } }
+
+const redirectToPreferredLanguage = (request: IncomingRequest, url: URL) => {
+  const language = preferredLanguage(
+    request.headers.get("Accept-Language"),
+    request.cf?.country ?? null,
+  )
   return new Response(null, {
     status: 302,
     headers: {
       Location: new URL(`/${language}/${url.search}`, url).href,
-      // The same URL answers differently per language, so caches must keep one answer per header
       Vary: "Accept-Language",
+      // Vary can name the header but not the country, so a cache keyed by it could hand one
+      // country's answer to another
+      "Cache-Control": "private, no-store",
     },
   })
 }
 
 export default {
-  fetch: async (request: Request, env: Env): Promise<Response> => {
+  fetch: async (request: IncomingRequest, env: Env): Promise<Response> => {
     const url = new URL(request.url)
     return url.pathname === "/"
       ? redirectToPreferredLanguage(request, url)

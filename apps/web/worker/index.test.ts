@@ -8,6 +8,9 @@ const assetsAnswering = (body: string) => ({
 const get = (url: string, env: Env, headers: Record<string, string> = {}) =>
   worker.fetch(new Request(url, { headers }), env)
 
+const getFrom = (country: string, url: string, env: Env, headers: Record<string, string>) =>
+  worker.fetch(Object.assign(new Request(url, { headers }), { cf: { country } }), env)
+
 describe("the site's Worker", () => {
   it("sends a visitor at the root to the Japanese pages when they prefer Japanese", async () => {
     const response = await get("https://katip.example/", assetsAnswering(""), {
@@ -33,10 +36,27 @@ describe("the site's Worker", () => {
     expect(response.headers.get("Location")).toBe("https://katip.example/en/")
   })
 
-  it("tells caches that the redirect depends on Accept-Language", async () => {
+  it("sends a visitor in Japan whose browser asks for neither language to the Japanese pages", async () => {
+    const response = await getFrom("JP", "https://katip.example/", assetsAnswering(""), {
+      "Accept-Language": "zh-CN,zh;q=0.9",
+    })
+
+    expect(response.headers.get("Location")).toBe("https://katip.example/ja/")
+  })
+
+  it("follows the browser's language over the visitor's country", async () => {
+    const response = await getFrom("JP", "https://katip.example/", assetsAnswering(""), {
+      "Accept-Language": "en-US,en;q=0.9",
+    })
+
+    expect(response.headers.get("Location")).toBe("https://katip.example/en/")
+  })
+
+  it("keeps the redirect out of caches, since it depends on the visitor", async () => {
     const response = await get("https://katip.example/", assetsAnswering(""))
 
     expect(response.headers.get("Vary")).toBe("Accept-Language")
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store")
   })
 
   it("keeps the query string, so campaign links survive the redirect", async () => {

@@ -48,4 +48,18 @@ describe("preferredLanguage", () => {
       expect(preferredLanguage(header)).toBe("en")
     },
   )
+
+  it("takes the language of the visitor's country when the header names none of the site's", () => {
+    expect(preferredLanguage("fr, de;q=0.8", "JP")).toBe("ja")
+    expect(preferredLanguage(null, "JP")).toBe("ja")
+  })
+
+  it("lets the header win over the visitor's country", () => {
+    expect(preferredLanguage("en-US", "JP")).toBe("en")
+    expect(preferredLanguage("ja", "US")).toBe("ja")
+  })
+
+  it("falls back to English in a country without a language of its own", () => {
+    expect(preferredLanguage("fr", "FR")).toBe("en")
+  })
 })
