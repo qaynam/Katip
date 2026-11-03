@@ -1,4 +1,4 @@
-import { Array, Clock, Effect, Equal, Match, Option, Order, Schema } from "effect"
+import { Array, Clock, Effect, Equal, Match, Option, Schema } from "effect"
 import { ArchiveRepository } from "#modules/archive"
 import {
   defaultLiveFolderTitle,
@@ -32,7 +32,6 @@ import {
   type Space,
   type SpaceId,
 } from "#modules/space"
-import { moveIndexFor } from "#modules/tab-order"
 import { settleTheme } from "#modules/theme"
 import {
   activeSpaceOf,
@@ -67,6 +66,7 @@ import { KatipState } from "./katip-state"
 import { openSpotlight } from "./spotlight-window"
 import { refreshLiveFoldersWhere, scheduleLiveFolderRefresh } from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
+import { byIndex, moveAmongTemporary } from "./temporary-order"
 import {
   currentTranslator,
   numberedSpaceName,
@@ -96,8 +96,6 @@ const trackedOrReject = Effect.fnUntraced(function* (tabId: TabId) {
     onSome: Effect.succeed,
   })
 })
-
-const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
 
 const titleOf = (tab: BrowserTab) => Option.getOrElse(tab.title, () => urlOf(tab))
 
@@ -225,15 +223,6 @@ const removePin = Effect.fnUntraced(function* (tracked: TrackedTab) {
   yield* state.workspace.update((workspace) => unbindPinned(workspace, tracked.tabId))
 })
 
-const splitPartnersIn = (windowTabs: ReadonlyArray<BrowserTab>) => (tabId: TabId) => {
-  const splitViewId = windowTabs.find((tab) => tab.id === tabId)?.splitViewId ?? Option.none()
-  return Option.match(splitViewId, {
-    onNone: () => [tabId],
-    onSome: (id) =>
-      windowTabs.filter((tab) => Option.contains(tab.splitViewId, id)).map((tab) => tab.id),
-  })
-}
-
 /**
  * Makes the tabs (two for a split view) temporary tabs of the Space, and moves them to the given
  * position in display order. Unpins them if they're pinned, in Katip or in Chrome.
@@ -245,10 +234,7 @@ const placeInTemporary = Effect.fnUntraced(function* (
 ) {
   const state = yield* KatipState
   const tabs = yield* Tabs
-  const settings = yield* (yield* SettingsRepository).get
   const moving = Array.sort(yield* Effect.forEach(tabIds, (tabId) => tabs.get(tabId)), byIndex)
-  const [first] = moving
-  if (first === undefined) return
   yield* Effect.forEach(moving, unpinFromChrome, { discard: true })
   // Re-read for each tab: unpinning the first tab of a split pin already unpins both
   yield* Effect.forEach(
@@ -260,43 +246,10 @@ const placeInTemporary = Effect.fnUntraced(function* (
     { discard: true },
   )
   const now = yield* Clock.currentTimeMillis
-  const workspace = yield* state.workspace.update((current) =>
+  yield* state.workspace.update((current) =>
     moving.reduce((acc, tab) => assignTab(acc, tab.id, spaceId, now), current),
   )
-  const windowTabs = Array.sort(yield* tabs.query({ windowId: first.windowId }), byIndex)
-  const spaceTabs = windowTabs
-    .filter((candidate) =>
-      Option.exists(
-        trackedTab(workspace, candidate.id),
-        (tracked) => tracked.spaceId === spaceId && tracked.pinned === null,
-      ),
-    )
-    .map((candidate) => candidate.id)
-  const index = moveIndexFor({
-    windowTabs: windowTabs.map((candidate) => candidate.id),
-    spaceTabs,
-    moving: moving.map((tab) => tab.id),
-    placement,
-    newestOnTop: settings.newTabsOnTop,
-    unitOf: splitPartnersIn(windowTabs),
-  })
-  if (Option.isNone(index)) return
-  yield* tabs.move(
-    moving.map((tab) => tab.id),
-    { index: index.value },
-  )
-  yield* resplitIfBroken(moving)
-})
-
-// Whether a split view survives moving both of its tabs together depends on the Chrome version.
-// If it came apart, the tabs are still side by side, so the split is made again
-const resplitIfBroken = Effect.fnUntraced(function* (moved: ReadonlyArray<BrowserTab>) {
-  const [left, right] = moved
-  if (left === undefined || right === undefined || Option.isNone(left.splitViewId)) return
-  const tabs = yield* Tabs
-  const current = yield* tabs.get(left.id)
-  if (Option.isSome(current.splitViewId)) return
-  yield* tabs.createSplit([left.id, right.id])
+  yield* moveAmongTemporary(moving, spaceId, placement)
 })
 
 const pinnedPosition = Effect.fnUntraced(function* (
