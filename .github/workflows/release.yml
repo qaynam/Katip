@@ -3,9 +3,15 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Publishing a release on GitHub's page can create its tag without a tag push
+  release:
+    types: [published]
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
 
 jobs:
   version:
@@ -46,10 +52,14 @@ jobs:
         with:
           cache: "false"
       - run: pnpm package
-      - name: Create the GitHub Release
+      - name: Attach the zip to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME" "apps/extension/.release/katip-$VERSION.zip"
-          --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+        run: |
+          zip="apps/extension/.release/katip-$VERSION.zip"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+          fi

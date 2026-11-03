@@ -201,11 +201,11 @@ Issues and pull requests are welcome. A few conventions keep the code easy to fo
 Set the version in `apps/extension/package.json` (the manifest takes it from there), then push a tag:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-CI checks that the tag matches the version, runs every check, and creates a GitHub Release with the zip ready for the Chrome Web Store.
+CI checks that the tag matches the version, runs every check, and creates a GitHub Release with the zip ready for the Chrome Web Store. Publishing a release with a new `v` tag on GitHub's Releases page works too: the same checks run, and the zip is attached to that release.
 
 ## License
 
