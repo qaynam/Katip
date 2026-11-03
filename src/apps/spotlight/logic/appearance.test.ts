@@ -5,8 +5,15 @@ import { spotlightAppearance } from "./appearance"
 const blue = themeOf([{ hue: 250, chroma: 0.8 }])
 
 describe("spotlightAppearance", () => {
-  it("follows the OS's light or dark even when the Space's theme fixes the mode", () => {
-    expect(spotlightAppearance({ ...blue, mode: "dark" }, "light").scheme).toBe("light")
+  it("is light or dark as the Space's theme says, like the side panel", () => {
+    expect([
+      spotlightAppearance({ ...blue, mode: "dark" }, "light").scheme,
+      spotlightAppearance({ ...blue, mode: "light" }, "dark").scheme,
+    ]).toStrictEqual(["dark", "light"])
+  })
+
+  it("follows the OS when the Space's theme is automatic", () => {
+    expect(spotlightAppearance({ ...blue, mode: "auto" }, "dark").scheme).toBe("dark")
   })
 
   it("is paler than the Space's theme", () => {
