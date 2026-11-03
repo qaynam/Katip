@@ -207,7 +207,6 @@ export const en: Copy = {
     privacy: "Privacy policy",
     license: "MIT License",
     language: "Language",
-    trademark: "Chrome is a trademark of Google LLC.",
   },
   privacyPage: {
     title: "Privacy Policy",

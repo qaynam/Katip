@@ -211,7 +211,6 @@ export const ja: Copy = {
     privacy: "プライバシーポリシー",
     license: "MIT ライセンス",
     language: "言語",
-    trademark: "Chrome は Google LLC の商標です。",
   },
   privacyPage: {
     title: "プライバシーポリシー",

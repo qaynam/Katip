@@ -97,7 +97,6 @@ export interface Copy {
     readonly privacy: string
     readonly license: string
     readonly language: string
-    readonly trademark: string
   }
   readonly privacyPage: {
     readonly title: string
