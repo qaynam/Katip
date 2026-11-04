@@ -1,3 +1,20 @@
+<script lang="ts" module>
+  const RING_DOTS = 24
+  const RING_RADIUS = 28.5
+
+  // The dots grow and stand out more clockwise from the top, as the grain does when the dial turns
+  const ringDots = Array.from({ length: RING_DOTS }, (_, index) => {
+    const share = index / (RING_DOTS - 1)
+    const radians = (index / RING_DOTS) * 2 * Math.PI
+    return {
+      x: 32 + RING_RADIUS * Math.sin(radians),
+      y: 32 - RING_RADIUS * Math.cos(radians),
+      radius: 0.9 + 0.7 * share,
+      opacity: 0.16 + 0.6 * share,
+    }
+  })
+</script>
+
 <script lang="ts">
   import { Option } from "effect"
   import { dialValueAt, valueAfterKey } from "../../logic/picker-geometry"
@@ -73,9 +90,11 @@
   onkeyup={onSettle}
 >
   <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
-    <circle class="dots" cx="32" cy="32" r="29" />
-    <circle class="knob" cx="32" cy="32" r="21" />
+    {#each ringDots as dot, index (index)}
+      <circle class="dot" cx={dot.x} cy={dot.y} r={dot.radius} opacity={dot.opacity} />
+    {/each}
   </svg>
+  <span class="knob" aria-hidden="true"></span>
   {#if isAvailable}
     <span class="tick" data-tick></span>
   {/if}
@@ -102,18 +121,27 @@
     height: 100%;
   }
 
-  .dots {
-    fill: none;
-    stroke: rgb(255 255 255 / 0.32);
-    stroke-width: 2.2;
-    stroke-dasharray: 0 5.69;
-    stroke-linecap: round;
+  .dot {
+    fill: #fff;
   }
 
+  /* The knob shows the grain itself, stronger as the dial turns */
   .knob {
-    fill: rgb(0 0 0 / 0.28);
-    stroke: rgb(255 255 255 / 0.14);
-    stroke-width: 1;
+    position: absolute;
+    inset: 11px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.2);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.25);
+  }
+
+  .knob::after {
+    position: absolute;
+    inset: 0;
+    background-image: var(--grain-image);
+    background-size: 120px 120px;
+    opacity: calc(0.15 + 0.85 * var(--turn));
+    content: "";
   }
 
   .tick {

@@ -2,16 +2,20 @@
   const WAVE_WIDTH = 200
   const WAVE_HEIGHT = 32
   const HALF_WAVES = 18
+  const MAX_WAVE_AMPLITUDE = 10
 
   const halfWaveWidth = WAVE_WIDTH / HALF_WAVES
-  const wavePath = [
-    `M0 ${WAVE_HEIGHT / 2}`,
-    `Q${halfWaveWidth / 2} 6 ${halfWaveWidth} ${WAVE_HEIGHT / 2}`,
-    ...Array.from(
-      { length: HALF_WAVES - 1 },
-      (_, index) => `T${halfWaveWidth * (index + 2)} ${WAVE_HEIGHT / 2}`,
-    ),
-  ].join(" ")
+
+  /** The wave grows from a flat line at no intensity to its full height at the most. */
+  const wavePath = (intensity: number) =>
+    [
+      `M0 ${WAVE_HEIGHT / 2}`,
+      `Q${halfWaveWidth / 2} ${WAVE_HEIGHT / 2 - MAX_WAVE_AMPLITUDE * intensity} ${halfWaveWidth} ${WAVE_HEIGHT / 2}`,
+      ...Array.from(
+        { length: HALF_WAVES - 1 },
+        (_, index) => `T${halfWaveWidth * (index + 2)} ${WAVE_HEIGHT / 2}`,
+      ),
+    ].join(" ")
 
   const THUMB_WIDTH_PX = 16
 </script>
@@ -35,6 +39,7 @@
   const id = $props.id()
   const clipId = `${id}-lit`
   let isDragging = false
+  const wave = $derived(wavePath(isAvailable ? value : 0))
 
   const valueAt = (event: PointerEvent & { currentTarget: HTMLElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -100,8 +105,8 @@
     <clipPath id={clipId}>
       <rect width={isAvailable ? value * WAVE_WIDTH : 0} height={WAVE_HEIGHT} />
     </clipPath>
-    <path class="dim" d={wavePath} vector-effect="non-scaling-stroke" />
-    <path class="lit" d={wavePath} clip-path="url(#{clipId})" vector-effect="non-scaling-stroke" />
+    <path class="dim" d={wave} vector-effect="non-scaling-stroke" />
+    <path class="lit" d={wave} clip-path="url(#{clipId})" vector-effect="non-scaling-stroke" />
   </svg>
   {#if isAvailable}
     <span class="thumb" data-thumb></span>
