@@ -14,7 +14,7 @@ Katip turns Chrome's side panel into a sidebar that organizes your tabs into Spa
 - **Spaces**: separate sets of tabs for work, hobbies or projects, each with its own gradient theme. Switch with the dock at the bottom of the side panel.
 - **Pinned tabs and folders**: pins are saved as Chrome bookmarks, so Chrome Sync carries them to your other devices. Nest folders, give them icons, and drag anything anywhere.
 - **Split view**: drop one tab onto another to open them side by side, and pin the pair to reopen it later (Chrome 155 or later).
-- **Favorites**: Chrome's pinned tabs, shown as a row of icons at the top.
+- **Favorites**: the pages you keep at hand in every window, shown as a row of icons at the top. Each opens as a Chrome pinned tab, and stays in Favorites when that tab is closed.
 - **Live folders**: a folder that lists your Gmail inbox or label, or your GitHub review requests, pull requests, issues or mentions, using the session you're already signed in with.
 - **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only.
 - **Archive**: temporary tabs you haven't used for a while are closed and kept in the archive, so you can bring them back.

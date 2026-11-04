@@ -14,6 +14,8 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.favorites.region": "收藏",
   "sidepanel.favorites.empty": "将标签页拖到这里以添加到收藏",
+  "sidepanel.favorites.remove": "从收藏中移除",
+  "sidepanel.favorites.menu": "收藏菜单",
 
   "sidepanel.space.menu": "空间菜单",
   "sidepanel.space.nameLabel": "空间名称",

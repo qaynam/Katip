@@ -1,4 +1,5 @@
 import { ArchiveEntryId, type ArchiveEntry } from "#modules/archive"
+import { FavoriteId } from "#modules/favorites"
 import type { LiveSource } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
@@ -139,15 +140,13 @@ export const spaceView = (
   }
 }
 
-export const favoriteView = (
-  id: number,
-  overrides: Partial<Omit<FavoriteView, "tabId">> = {},
-): FavoriteView => ({
-  tabId: TabId.make(id),
+/** A Favorite open in this window as the tab `id`, unless `openTab` says otherwise. */
+export const favoriteView = (id: number, overrides: Partial<FavoriteView> = {}): FavoriteView => ({
+  favoriteId: FavoriteId.make(`favorite-${id}`),
   title: `Favorite ${id}`,
   url: `https://example.com/favorite/${id}`,
   favIconUrl: null,
-  isActive: false,
+  openTab: { tabId: TabId.make(id), isActive: false },
   ...overrides,
 })
 

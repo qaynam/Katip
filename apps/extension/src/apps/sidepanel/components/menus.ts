@@ -2,7 +2,13 @@ import { Option } from "effect"
 import type { MessageKey } from "#modules/i18n"
 import { LiveSort } from "#modules/live-folders"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
-import type { PinnedLiveFolderView, PinnedSplitView, SidebarCommand, SpaceView } from "#protocol"
+import type {
+  FavoriteView,
+  PinnedLiveFolderView,
+  PinnedSplitView,
+  SidebarCommand,
+  SpaceView,
+} from "#protocol"
 import {
   liveSourceNames,
   sourceOrigins,
@@ -40,6 +46,32 @@ export const openTabMenu = (
     ...(destinations.length > 0 ? [submenu(t("sidepanel.tab.moveToSpace"), destinations)] : []),
     action(t("sidepanel.tab.archive"), run({ _tag: "ArchiveTab", tabId })),
     action(t("common.close"), run({ _tag: "CloseTab", tabId })),
+  ]
+}
+
+export const favoriteMenu = (
+  ctx: SidebarContext,
+  favorite: FavoriteView,
+): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
+  const run = (command: SidebarCommand) => () => void ctx.run(command)
+  const { favoriteId, openTab } = favorite
+  const membership =
+    favoriteId !== null
+      ? [action(t("sidepanel.favorites.remove"), run({ _tag: "RemoveFavorite", favoriteId }))]
+      : openTab !== null
+        ? [
+            action(
+              t("sidepanel.tab.addToFavorites"),
+              run({ _tag: "AddToFavorites", tabId: openTab.tabId }),
+            ),
+          ]
+        : []
+  return [
+    ...membership,
+    ...(openTab === null
+      ? []
+      : [action(t("common.close"), run({ _tag: "CloseTab", tabId: openTab.tabId }))]),
   ]
 }
 

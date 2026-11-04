@@ -117,8 +117,8 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.temporaryTabs": {
     other: "ピン留めしていない {count} 個のタブ（一時的なタブのため）",
   },
-  "options.data.import.preview.favoritesAlreadyOpen": {
-    other: "このウィンドウで開いている {count} 個の Favorites",
+  "options.data.import.preview.favoritesAlreadySaved": {
+    other: "すでに Favorites にある {count} 個のページ",
   },
   "options.data.import.preview.nonWebLinks": {
     other: "Web ページではない {count} 個のタブ（http と https のアドレスだけを読み込むため）",
@@ -131,11 +131,11 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.noneChosen": "読み込む Space を 1 つ以上選んでください。",
   "options.data.import.preview.addOnly":
     "新しい Space を追加するだけです。今ある Space の名前の変更、統合、削除はしません。",
-  "options.data.import.openFavorites.label": "Favorites を固定タブとして開く",
-  "options.data.import.openFavorites.description":
-    "このウィンドウの、今ある Favorites の後ろに開きます。",
-  "options.data.import.openFavorites.descriptionByProfile":
-    "このウィンドウの、今ある Favorites の後ろに開きます。開くのは、選んだ Space のプロファイルの Favorites だけです。",
+  "options.data.import.addFavorites.label": "Favorites に追加",
+  "options.data.import.addFavorites.description":
+    "今ある Favorites の後ろに、閉じた状態で追加します。",
+  "options.data.import.addFavorites.descriptionByProfile":
+    "今ある Favorites の後ろに、閉じた状態で追加します。追加するのは、選んだ Space のプロファイルの Favorites だけです。",
   "options.data.import.confirm": "読み込む",
   "options.data.import.cancel": "キャンセル",
   "options.data.import.problem.notArc":

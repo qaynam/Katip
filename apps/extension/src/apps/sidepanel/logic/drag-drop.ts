@@ -1,4 +1,5 @@
 import { Match, Option } from "effect"
+import type { FavoriteId } from "#modules/favorites"
 import type { SpaceId } from "#modules/space"
 import type { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import type { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
@@ -40,7 +41,14 @@ export type DragSource =
       /** The folder itself and every folder inside it. It can't be dropped into any of them. */
       readonly selfAndDescendantIds: ReadonlyArray<BookmarkId>
     }
-  | { readonly _tag: "Favorite"; readonly tabId: TabId; readonly index: number }
+  | {
+      readonly _tag: "Favorite"
+      // null for a pinned tab that isn't a Favorite's yet
+      readonly favoriteId: FavoriteId | null
+      // null while the Favorite is closed in this window
+      readonly openTabId: TabId | null
+      readonly index: number
+    }
   | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
 
 // slot is the index of a gap in the current list, which still includes the dragged item.
@@ -142,7 +150,7 @@ const singleTabOf = (source: DragSource): Option.Option<TabId> =>
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId),
     PinnedSplit: () => Option.none(),
     PinnedFolder: () => Option.none(),
-    Favorite: ({ tabId }) => Option.some(tabId),
+    Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId),
     SpaceMark: () => Option.none(),
   })
 
@@ -185,7 +193,7 @@ const dropOnTemporary = (
     TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
     PinnedItem: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
     PinnedFolder: () => Option.none(),
-    Favorite: ({ tabId }) => Option.some(placeTab(tabId)),
+    Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
     SpaceMark: () => Option.none(),
   })
 }
@@ -241,21 +249,20 @@ const dropOnPinned = (
         placement: placementAt(target.slot),
       }),
     TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
-    Favorite: ({ tabId }) => Option.some(placeTab(tabId)),
+    Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
     SpaceMark: () => Option.none(),
   })
 }
 
-const dropOnFavorites = (source: DragSource, slot: number): Option.Option<SidebarCommand> =>
-  source._tag === "Favorite"
-    ? reorder(source.index, slot, (toIndex) => ({
-        _tag: "MoveFavorite",
-        tabId: source.tabId,
-        toIndex,
-      }))
-    : singleTabOf(source).pipe(
-        Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, index: slot })),
-      )
+const dropOnFavorites = (source: DragSource, slot: number): Option.Option<SidebarCommand> => {
+  if (source._tag === "Favorite" && source.favoriteId !== null) {
+    const { favoriteId } = source
+    return reorder(source.index, slot, (toIndex) => ({ _tag: "MoveFavorite", favoriteId, toIndex }))
+  }
+  return singleTabOf(source).pipe(
+    Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, index: slot })),
+  )
+}
 
 const dropOnSpaceBar = (source: DragSource, slot: number): Option.Option<SidebarCommand> =>
   source._tag === "SpaceMark"
@@ -324,9 +331,9 @@ export interface PanelBounds {
 export const openTabOf = (source: DragSource): TabId | null => {
   switch (source._tag) {
     case "TemporaryTab":
-    case "Favorite":
       return source.tabId
     case "PinnedItem":
+    case "Favorite":
       return source.openTabId
     default:
       return null

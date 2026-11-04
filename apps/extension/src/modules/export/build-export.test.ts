@@ -1,5 +1,6 @@
 import { Option, Result } from "effect"
 import { describe, expect, it } from "vitest"
+import { FavoriteId } from "#modules/favorites"
 import { type PinnedNode, PinnedTreeUnavailable, type PinnedTree } from "#modules/pinned"
 import { defaultSettings, IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
@@ -68,6 +69,7 @@ const sourcesWith = (overrides: Partial<ExportSources> = {}): ExportSources => (
   folderIcons: new Map(),
   liveSorts: new Map(),
   workspace: emptyWorkspace,
+  favorites: [],
   tabs: [],
   settings: defaultSettings,
   ...overrides,
@@ -398,59 +400,24 @@ describe("temporary tabs", () => {
 })
 
 describe("Favorites", () => {
-  it("are Chrome's pinned tabs, exported in tab strip order", () => {
-    const tabs = [
-      browserTab(1, { pinned: true, title: "Calendar", url: "https://calendar.example.com/" }),
-      browserTab(2, { pinned: true, title: "Music", url: "https://music.example.com/" }),
-      browserTab(3),
+  it("are every saved Favorite in order, closed ones included", () => {
+    const favorites = [
+      { id: FavoriteId.make("calendar"), title: "Calendar", url: "https://calendar.example.com/" },
+      { id: FavoriteId.make("music"), title: "Music", url: "https://music.example.com/" },
     ]
 
-    expect(exported(sourcesWith({ tabs })).favorites).toStrictEqual([
+    expect(exported(sourcesWith({ favorites })).favorites).toStrictEqual([
       { title: "Calendar", url: "https://calendar.example.com/" },
       { title: "Music", url: "https://music.example.com/" },
     ])
   })
 
-  it("aren't exported as temporary tabs even when a Space still records them", () => {
+  it("aren't exported as temporary tabs even when a Space still records their tabs", () => {
     const favorite = browserTab(1, { pinned: true })
 
     expect(
       homeOf(sourcesWith({ tabs: [favorite], workspace: inSpace(HOME, [favorite]) })).tabs,
     ).toStrictEqual([])
-  })
-
-  it("merge the same page pinned in several windows into one", () => {
-    const tabs = [
-      browserTab(1, {
-        windowId: WindowId.make(1),
-        index: 0,
-        pinned: true,
-        url: "https://a.example.com/",
-      }),
-      browserTab(2, {
-        windowId: WindowId.make(2),
-        index: 0,
-        pinned: true,
-        url: "https://a.example.com/",
-      }),
-      browserTab(3, {
-        windowId: WindowId.make(2),
-        index: 1,
-        pinned: true,
-        url: "https://b.example.com/",
-      }),
-    ]
-
-    expect(exported(sourcesWith({ tabs })).favorites.map((link) => link.url)).toStrictEqual([
-      "https://a.example.com/",
-      "https://b.example.com/",
-    ])
-  })
-
-  it("leave out pinned tabs in incognito windows", () => {
-    const tabs = [browserTab(1, { pinned: true, incognito: true })]
-
-    expect(exported(sourcesWith({ tabs })).favorites).toStrictEqual([])
   })
 })
 

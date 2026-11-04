@@ -16,6 +16,8 @@ export const sidepanel = {
 
   "sidepanel.favorites.region": "Favorites",
   "sidepanel.favorites.empty": "Drag tabs here to add them to Favorites",
+  "sidepanel.favorites.remove": "Remove from Favorites",
+  "sidepanel.favorites.menu": "Favorite menu",
 
   "sidepanel.space.menu": "Space menu",
   "sidepanel.space.nameLabel": "Space name",

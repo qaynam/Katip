@@ -1,5 +1,6 @@
 import { Array, Clock, Effect, Match, Option, pipe } from "effect"
 import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
+import type { Favorite } from "#modules/favorites"
 import { makeTranslator } from "#modules/i18n"
 import {
   PinnedBookmarks,
@@ -132,6 +133,15 @@ const pinCandidate = ({ space, node, folderPath }: PinSource): ResultCandidate =
   }
 }
 
+const favoriteCandidate = (favorite: Favorite): ResultCandidate => ({
+  kind: "Favorite",
+  title: favorite.title,
+  url: favorite.url,
+  lastUsedAt: Option.none(),
+  isCurrent: false,
+  result: { _tag: "Favorite", favoriteId: favorite.id, title: favorite.title, url: favorite.url },
+})
+
 const spaceCandidate =
   (activeSpaceId: Option.Option<SpaceId>) =>
   (space: Space): ResultCandidate => ({
@@ -229,6 +239,15 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   const closedPins = pins.filter(({ node }) =>
     bookmarksOf(node).every((pin) => !openPinIds.has(pin.id)),
   )
+  const openFavoriteIds = new Set(
+    (yield* state.favoriteTabs.get).flatMap(({ tabId, favoriteId }) =>
+      openTabIds.has(tabId) ? [favoriteId] : [],
+    ),
+  )
+  // Like a pin, an open Favorite is offered only as its tab
+  const closedFavorites = (yield* state.favorites.get).filter(
+    (favorite) => !openFavoriteIds.has(favorite.id),
+  )
   const pinnedIds = new Set(pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.id)))
   const toTabCandidate = tabCandidate({
     callerWindowId,
@@ -245,6 +264,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   const shownUrls = new Set([
     ...tabs.map(urlOf),
     ...pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.url)),
+    ...closedFavorites.map((favorite) => favorite.url),
     ...bookmarks.map((bookmark) => bookmark.url),
   ])
   const history = yield* historyCandidates(query, shownUrls).pipe(
@@ -255,6 +275,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   return [
     ...tabs.map(toTabCandidate),
     ...closedPins.map(pinCandidate),
+    ...closedFavorites.map(favoriteCandidate),
     ...spaces.map(spaceCandidate(activeSpaceOf(workspace, callerWindowId))),
     ...bookmarks,
     ...history,

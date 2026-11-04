@@ -21,7 +21,7 @@ type CountedMessageKey =
   | "options.data.import.preview.flattenedFolders"
   | "options.data.import.preview.widerSplits"
   | "options.data.import.preview.temporaryTabs"
-  | "options.data.import.preview.favoritesAlreadyOpen"
+  | "options.data.import.preview.favoritesAlreadySaved"
   | "options.data.import.preview.nonWebLinks"
   | "options.data.import.preview.unsupportedItems"
 
@@ -42,7 +42,7 @@ const present = (lines: ReadonlyArray<PreviewLine>) => lines.filter(({ count }) 
 /** What the preview lists for a candidate, leaving out what there are none of. */
 export const previewLinesOf = (
   { summary, arcReport }: ImportCandidate,
-  opensFavorites: boolean,
+  addsFavorites: boolean,
 ): PreviewLines => {
   const report = Option.getOrNull(arcReport)
   return {
@@ -54,7 +54,7 @@ export const previewLinesOf = (
       { key: "options.data.import.preview.liveFolders", count: summary.liveFolders },
       {
         key: "options.data.import.preview.favorites",
-        count: opensFavorites ? summary.favorites : 0,
+        count: addsFavorites ? summary.favorites : 0,
       },
     ]),
     adjusted: present([
@@ -64,8 +64,8 @@ export const previewLinesOf = (
     leftOut: present([
       { key: "options.data.import.preview.temporaryTabs", count: summary.temporaryTabs },
       {
-        key: "options.data.import.preview.favoritesAlreadyOpen",
-        count: summary.favoritesAlreadyOpen,
+        key: "options.data.import.preview.favoritesAlreadySaved",
+        count: summary.favoritesAlreadySaved,
       },
       { key: "options.data.import.preview.nonWebLinks", count: report?.nonWebLinks ?? 0 },
       {

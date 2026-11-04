@@ -50,7 +50,7 @@ export const en: Copy = {
       },
       {
         title: "Favorites",
-        text: "Chrome’s pinned tabs, shown as a row of icons at the top of the side panel.",
+        text: "The pages you keep at hand in every window, as a row of icons at the top of the side panel. Closing one’s tab keeps it there, a click away from opening again.",
       },
     ],
   },

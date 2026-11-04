@@ -12,6 +12,7 @@ export const background: CatalogSection<"background"> = {
   "background.split.alreadySplit": "Esta pestaña ya está en una vista dividida",
   "background.split.otherWindow": "No se pueden dividir pestañas de ventanas distintas",
   "background.pin.notFound": "No se encontró la pestaña fijada",
+  "background.favorite.notFound": "No se encontró en Favoritos",
   "background.folder.notFound": "No se encontró la carpeta",
   "background.folder.cannotOpen": "Las carpetas no se pueden abrir",
   "background.folder.tooDeepToCreate": "No se pueden crear carpetas a más profundidad",

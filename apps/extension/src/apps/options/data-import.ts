@@ -127,13 +127,13 @@ export const prepareKatipImport = Effect.fnUntraced(function* (file: ChosenFile)
 })
 
 /** Asks the background to import a previewed file. */
-export const confirmImport = (candidate: ImportCandidate, openFavorites: boolean) =>
+export const confirmImport = (candidate: ImportCandidate, addFavorites: boolean) =>
   Effect.flatMap(
     ask(
       {
         _tag: "Apply",
         content: candidate.content,
-        openFavorites,
+        addFavorites,
         spacesWithoutTheme: Option.match(candidate.arcReport, {
           onNone: () => [],
           onSome: (report) => report.spacesWithoutTheme,

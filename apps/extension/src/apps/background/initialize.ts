@@ -4,6 +4,7 @@ import { addSpace, SpaceId, SpaceName, type SpaceList } from "#modules/space"
 import {
   activeSpaceOf,
   forgetTab,
+  RESTORE_WINDOW_MS,
   spaceOf,
   startRestore,
   switchSpace,
@@ -11,7 +12,8 @@ import {
 } from "#modules/workspace"
 import { Tabs, type BrowserTab } from "#platform/browser"
 import { pruneStaleBindings } from "./bindings"
-import { KatipState, loadRestoreSnapshot } from "./katip-state"
+import { reconcileFavoriteTabs } from "./favorites"
+import { KatipState, loadFavoriteRestoreSnapshot, loadRestoreSnapshot } from "./katip-state"
 import { admitTab } from "./tab-admission"
 import { currentTranslator, numberedSpaceName } from "./translation"
 
@@ -69,6 +71,15 @@ export const initialize = Effect.gen(function* () {
     yield* state.restoreQueue.update(() =>
       Option.getOrNull(Option.map(snapshot, (records) => startRestore(records, now))),
     )
+    const favoriteSnapshot = yield* loadFavoriteRestoreSnapshot
+    yield* state.favoriteRestoreQueue.update(() =>
+      Option.getOrNull(
+        Option.map(favoriteSnapshot, (records) => ({
+          records,
+          expiresAt: now + RESTORE_WINDOW_MS,
+        })),
+      ),
+    )
   }
 
   const numbered = yield* numberedSpaceName
@@ -82,4 +93,5 @@ export const initialize = Effect.gen(function* () {
   yield* Effect.forEach(tabs, admitTab, { discard: true })
   yield* state.workspace.update((workspace) => activateSpacesOfActiveTabs(workspace, tabs))
   yield* pruneStaleBindings
+  yield* reconcileFavoriteTabs(tabs)
 })

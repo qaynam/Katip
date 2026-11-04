@@ -47,7 +47,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field.
 > A folder that lists your Gmail inbox or a label, or your GitHub review requests, pull requests, issues and mentions, using the accounts you're already signed in to.
 >
 > AND MORE
-> • Favorites: your browser's pinned tabs as a row of icons
+> • Favorites: the pages you keep at hand as a row of icons, kept even when their tabs are closed
 > • Archive: tabs you haven't used for a while are closed and kept, ready to bring back
 > • Keyboard shortcuts for the side panel, Spotlight and copying links
 > • Export your data to a file and import it again
@@ -87,7 +87,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field.
 > Gmail の受信トレイやラベル、GitHub のレビュー依頼・プルリクエスト・Issue・メンションを一覧にするフォルダです。ログイン済みのアカウントをそのまま使います。
 >
 > そのほか
-> • Favorites: ブラウザのピン留めタブをアイコンで並べて表示
+> • Favorites: よく使うページをアイコンで並べて表示。タブを閉じても残ります
 > • アーカイブ: しばらく使っていないタブを閉じて保存し、いつでも戻せます
 > • サイドパネル、Spotlight、リンクのコピーのキーボードショートカット
 > • データをファイルに書き出し、読み込み直せます

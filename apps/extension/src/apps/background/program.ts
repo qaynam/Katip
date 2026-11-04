@@ -11,6 +11,7 @@ import {
   Stream,
 } from "effect"
 import { ArchiveRepository } from "#modules/archive"
+import { takeFavoriteSnapshot } from "#modules/favorites"
 import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
@@ -34,7 +35,7 @@ import { makeDebounced } from "./debounced"
 import { AcceptsExternalConnection } from "./external-connection"
 import { ExtensionInfo } from "./extension-info"
 import { initialize } from "./initialize"
-import { KatipState, saveRestoreSnapshot } from "./katip-state"
+import { KatipState, saveFavoriteRestoreSnapshot, saveRestoreSnapshot } from "./katip-state"
 import {
   LIVE_FOLDER_REFRESH_ALARM,
   refreshDueLiveFolders,
@@ -55,14 +56,11 @@ const byWindowThenIndex = Order.combine(
 )
 
 const saveSnapshot = Effect.gen(function* () {
-  const workspace = yield* (yield* KatipState).workspace.get
+  const state = yield* KatipState
   const tabs = Array.sort(yield* (yield* Tabs).query({}), byWindowThenIndex)
-  yield* saveRestoreSnapshot(
-    takeSnapshot(
-      workspace,
-      tabs.map((tab) => ({ tabId: tab.id, url: urlOf(tab) })),
-    ),
-  )
+  const liveTabs = tabs.map((tab) => ({ tabId: tab.id, url: urlOf(tab) }))
+  yield* saveRestoreSnapshot(takeSnapshot(yield* state.workspace.get, liveTabs))
+  yield* saveFavoriteRestoreSnapshot(takeFavoriteSnapshot(yield* state.favoriteTabs.get, liveTabs))
 })
 
 // Existing groups are left alone when syncing is off: ungrouping them would wreck a tab strip the

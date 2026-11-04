@@ -1,5 +1,12 @@
 import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
+import {
+  favoriteById,
+  favoriteOfTab,
+  type FavoriteId,
+  type FavoriteList,
+  type FavoriteTabs,
+} from "#modules/favorites"
 import type { Translator } from "#modules/i18n"
 import {
   DEFAULT_LIVE_SORT,
@@ -43,6 +50,9 @@ export interface SidebarSources {
   readonly windowId: WindowId
   readonly spaces: SpaceList
   readonly workspace: Workspace
+  /** Every Favorite, in order, whether open in this window or not. */
+  readonly favorites: FavoriteList
+  readonly favoriteTabs: FavoriteTabs
   /** The tabs of the window the view is for, in any order. */
   readonly windowTabs: ReadonlyArray<BrowserTab>
   /** The pinned trees that could be read. A Space missing here is shown as unreadable. */
@@ -98,15 +108,59 @@ const tabView = (tab: BrowserTab, title: string): TabView => ({
   splitViewId: Option.getOrNull(tab.splitViewId),
 })
 
-const favoriteView =
-  (untitled: string) =>
-  (tab: BrowserTab): FavoriteView => ({
-    tabId: tab.id,
-    title: pageTitleOf(tab, untitled),
-    url: urlOf(tab),
-    favIconUrl: Option.getOrNull(tab.favIconUrl),
-    isActive: tab.active,
-  })
+/** `fallbackTitle` names the tab while it has no title of its own, such as while it loads. */
+const openFavoriteView = (
+  favoriteId: FavoriteId | null,
+  tab: BrowserTab,
+  fallbackTitle: string,
+): FavoriteView => ({
+  favoriteId,
+  title: Option.getOrElse(tab.title, () => fallbackTitle),
+  url: urlOf(tab),
+  favIconUrl: Option.getOrNull(tab.favIconUrl),
+  openTab: { tabId: tab.id, isActive: tab.active },
+})
+
+// When two pinned tabs in the window are the same Favorite's (after a mix-up while restoring, say),
+// only the lower-index one shows as the Favorite and the other shows on its own. Not hidden: a
+// hidden tab couldn't be closed
+const favoriteViews = (sources: SidebarSources): ReadonlyArray<FavoriteView> => {
+  const untitled = sources.translator.t("common.newTab")
+  const { shown, loose } = Array.reduce(
+    Array.sort(
+      sources.windowTabs.filter((tab) => tab.pinned),
+      byIndex,
+    ),
+    {
+      shown: new Map<FavoriteId, BrowserTab>(),
+      loose: [] as ReadonlyArray<BrowserTab>,
+    },
+    (acc, tab) => {
+      const favoriteId = Option.filter(
+        favoriteOfTab(sources.favoriteTabs, tab.id),
+        (id) => Option.isSome(favoriteById(sources.favorites, id)) && !acc.shown.has(id),
+      )
+      return Option.isSome(favoriteId)
+        ? { ...acc, shown: new Map(acc.shown).set(favoriteId.value, tab) }
+        : { ...acc, loose: [...acc.loose, tab] }
+    },
+  )
+  return [
+    ...sources.favorites.map((favorite): FavoriteView => {
+      const tab = shown.get(favorite.id)
+      return tab === undefined
+        ? {
+            favoriteId: favorite.id,
+            title: favorite.title,
+            url: favorite.url,
+            favIconUrl: null,
+            openTab: null,
+          }
+        : openFavoriteView(favorite.id, tab, favorite.title)
+    }),
+    ...loose.map((tab) => openFavoriteView(null, tab, pageTitleOf(tab, untitled))),
+  ]
+}
 
 interface SpaceTab {
   readonly tab: BrowserTab
@@ -384,9 +438,7 @@ export const projectSidebarView = (sources: SidebarSources): Option.Option<Sideb
         sources,
       ),
     ),
-    favorites: tabs
-      .filter((tab) => tab.pinned)
-      .map(favoriteView(sources.translator.t("common.newTab"))),
+    favorites: favoriteViews(sources),
     archive: sources.archive,
     autoArchive: sources.autoArchive,
     canSplit: sources.canSplit,

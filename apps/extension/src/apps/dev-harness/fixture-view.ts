@@ -404,7 +404,11 @@ export const fixtureView = (now: number): SidebarView => {
       favoriteView(2, { title: "Calendar", url: "https://calendar.example.com/" }),
       favoriteView(3, { title: "Chat", url: "https://chat.example.com/" }),
       favoriteView(4, { title: "GitHub", url: "https://github.com/" }),
-      favoriteView(5, { title: "Translate", url: "https://translate.example.com/" }),
+      favoriteView(5, {
+        title: "Translate",
+        url: "https://translate.example.com/",
+        openTab: null,
+      }),
     ],
     archive: [
       archiveEntry("a1", {

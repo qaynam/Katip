@@ -211,16 +211,15 @@ describe("previewing Arc's file", () => {
     })
   })
 
-  it("offers to open the Favorites as pinned tabs, turned on", async () => {
+  it("offers to add the Favorites, turned on", async () => {
     renderImport()
 
     await chooseArcFile()
     await preview("Ready to import from Arc")
 
-    expect(
-      screen.getByRole<HTMLInputElement>("switch", { name: "Open Favorites as pinned tabs" })
-        .checked,
-    ).toBe(true)
+    expect(screen.getByRole<HTMLInputElement>("switch", { name: "Add to Favorites" }).checked).toBe(
+      true,
+    )
   })
 
   it("importing sends the file as a Katip export file, with Arc's Spaces and Favorites", async () => {
@@ -237,7 +236,7 @@ describe("previewing Arc's file", () => {
     expect({
       spaces: document?.spaces.map(({ name }) => name),
       favorites: document?.favorites.map(({ url }) => url),
-      openFavorites: apply?._tag === "Apply" && apply.openFavorites,
+      addFavorites: apply?._tag === "Apply" && apply.addFavorites,
       spacesWithoutTheme: apply?._tag === "Apply" && apply.spacesWithoutTheme,
     }).toStrictEqual({
       spaces: ["Work", "Reading", "", "Personal"],
@@ -246,17 +245,17 @@ describe("previewing Arc's file", () => {
         "https://music.example.com/",
         "https://photos.example.com/",
       ],
-      openFavorites: true,
+      addFavorites: true,
       spacesWithoutTheme: ["space-untitled"],
     })
   })
 
-  it("with opening Favorites turned off, leaves them out of the list and of the import", async () => {
+  it("with adding Favorites turned off, leaves them out of the list and of the import", async () => {
     const { requests, finished } = renderImport()
     await chooseArcFile()
     const ready = await preview("Ready to import from Arc")
 
-    await fireEvent.click(screen.getByRole("switch", { name: "Open Favorites as pinned tabs" }))
+    await fireEvent.click(screen.getByRole("switch", { name: "Add to Favorites" }))
     const added = listedUnder(ready, "To be added")
     await fireEvent.click(importButton())
     await waitFor(() => expect(finished).toStrictEqual([true]))
@@ -264,7 +263,7 @@ describe("previewing Arc's file", () => {
     const [apply] = await applyRequests(requests)
     expect([
       added.includes("3 Favorites"),
-      apply?._tag === "Apply" && apply.openFavorites,
+      apply?._tag === "Apply" && apply.addFavorites,
     ]).toStrictEqual([false, false])
   })
 
@@ -496,22 +495,21 @@ describe("choosing what to import from Arc", () => {
     })
   })
 
-  it("keeps opening Favorites as set when the choice changes", async () => {
+  it("keeps adding Favorites as set when the choice changes", async () => {
     renderImport()
     await chooseArcFile()
     const region = await ready()
 
-    await fireEvent.click(screen.getByRole("switch", { name: "Open Favorites as pinned tabs" }))
+    await fireEvent.click(screen.getByRole("switch", { name: "Add to Favorites" }))
     await fireEvent.click(checkbox("Work"))
     await waitFor(() => expect(listedUnder(region, "To be added")[0]).toBe("3 Spaces"))
 
-    expect(
-      screen.getByRole<HTMLInputElement>("switch", { name: "Open Favorites as pinned tabs" })
-        .checked,
-    ).toBe(false)
+    expect(screen.getByRole<HTMLInputElement>("switch", { name: "Add to Favorites" }).checked).toBe(
+      false,
+    )
   })
 
-  it("says the Favorites opened are only those of the chosen Spaces' profiles", async () => {
+  it("says the Favorites added are only those of the chosen Spaces' profiles", async () => {
     renderImport()
     await chooseArcFile()
     await ready()
@@ -519,7 +517,7 @@ describe("choosing what to import from Arc", () => {
     expect(
       screen.getByRole("switch", {
         description:
-          "They open in this window, after the Favorites you have. Only Favorites from the profiles of the Spaces you chose are opened.",
+          "They go after the Favorites you have, closed until you open them. Only Favorites from the profiles of the Spaces you chose are added.",
       }),
     ).toBeTruthy()
   })
@@ -597,7 +595,7 @@ describe("previewing a Katip file", () => {
       {
         _tag: "Apply",
         content: homeFile,
-        openFavorites: true,
+        addFavorites: true,
         spacesWithoutTheme: [],
         spacesNamedByImport: [],
       },

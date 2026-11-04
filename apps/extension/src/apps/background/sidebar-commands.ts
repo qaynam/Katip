@@ -1,5 +1,6 @@
 import { Array, Clock, Effect, Equal, Match, Option, Schema } from "effect"
 import { ArchiveRepository } from "#modules/archive"
+import type { FavoriteId } from "#modules/favorites"
 import {
   defaultLiveFolderTitle,
   GitHubTokenStore,
@@ -62,6 +63,13 @@ import {
 import type { CommandOutcome, PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
 import { pruneStaleBindings } from "./bindings"
 import { ExtensionInfo } from "./extension-info"
+import {
+  addToFavorites,
+  moveFavoriteTo,
+  openFavorite,
+  removeFavoriteAndUnpin,
+  removeFavoriteOfTab,
+} from "./favorites"
 import { newSpaceId } from "./initialize"
 import { KatipState } from "./katip-state"
 import { openSpotlight } from "./spotlight-window"
@@ -189,7 +197,10 @@ const releaseLiveFolders = Effect.fnUntraced(function* (folderIds: ReadonlyArray
   yield* scheduleLiveFolderRefresh
 })
 
+// Not only unpinned: the Favorite would stay behind, closed, though its tab was taken out of
+// Favorites and into a Space
 const unpinFromChrome = Effect.fnUntraced(function* (tab: BrowserTab) {
+  yield* removeFavoriteOfTab(tab.id)
   if (tab.pinned) yield* (yield* Tabs).update(tab.id, { pinned: false })
 })
 
@@ -618,14 +629,26 @@ const tabCommands = {
     yield* tabs.remove([tabId])
   }),
 
-  AddToFavorites: Effect.fnUntraced(function* ({ tabId, index }: { tabId: TabId; index?: number }) {
-    const tabs = yield* Tabs
-    yield* tabs.update(tabId, { pinned: true })
-    if (index !== undefined) yield* tabs.move([tabId], { index })
+  AddToFavorites: ({ tabId, index }: { tabId: TabId; index?: number }) =>
+    addToFavorites(tabId, Option.fromUndefinedOr(index)),
+
+  MoveFavorite: ({ favoriteId, toIndex }: { favoriteId: FavoriteId; toIndex: number }) =>
+    moveFavoriteTo(favoriteId, toIndex),
+
+  OpenFavorite: Effect.fnUntraced(function* ({
+    windowId,
+    favoriteId,
+  }: {
+    windowId: WindowId
+    favoriteId: FavoriteId
+  }) {
+    if (!(yield* openFavorite(windowId, favoriteId))) {
+      return yield* reject("background.favorite.notFound")
+    }
   }),
 
-  MoveFavorite: ({ tabId, toIndex }: { tabId: TabId; toIndex: number }) =>
-    Tabs.use((tabs) => tabs.move([tabId], { index: toIndex })),
+  RemoveFavorite: ({ favoriteId }: { favoriteId: FavoriteId }) =>
+    removeFavoriteAndUnpin(favoriteId),
 }
 
 const bindingOf = (tracked: TrackedTab) =>

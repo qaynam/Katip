@@ -1,4 +1,5 @@
 import { Array, Match, Option, Order, pipe, Result } from "effect"
+import type { FavoriteList } from "#modules/favorites"
 import { DEFAULT_LIVE_SORT, type LiveSort, type LiveSource } from "#modules/live-folders"
 import {
   PinnedTreeUnavailable,
@@ -35,6 +36,8 @@ export interface ExportSources {
   /** A live folder missing here uses the default sort. */
   readonly liveSorts: ReadonlyMap<BookmarkId, LiveSort>
   readonly workspace: Workspace
+  /** Every Favorite, open or closed, in order. */
+  readonly favorites: FavoriteList
   /** The tabs of every window, in any order. */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly settings: Settings
@@ -212,13 +215,7 @@ export const buildExport = (
       exportedAt: new Date(sources.exportedAt).toISOString(),
       generator: { name: "Katip", version: sources.katipVersion },
       spaces,
-      // Favorites are each window's pinned tabs, so the same page often appears once per window
-      favorites: Array.dedupeWith(
-        openTabs
-          .filter((tab) => tab.pinned)
-          .map((tab): ExportedLink => ({ title: pageTitleOf(tab), url: urlOf(tab) })),
-        (a, b) => a.url === b.url,
-      ),
+      favorites: sources.favorites.map(({ title, url }): ExportedLink => ({ title, url })),
       settings: exportedSettingsOf(sources.settings),
     }),
   )

@@ -113,8 +113,8 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.temporaryTabs": {
     other: "{count} 个未固定的标签页（未固定的标签页是临时的）",
   },
-  "options.data.import.preview.favoritesAlreadyOpen": {
-    other: "{count} 个已在此窗口中打开的收藏",
+  "options.data.import.preview.favoritesAlreadySaved": {
+    other: "{count} 个已在收藏中的页面",
   },
   "options.data.import.preview.nonWebLinks": {
     other: "{count} 个不是网页的标签页（只导入 http 和 https 地址）",
@@ -126,10 +126,10 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.nothing": "此文件中没有可导入的内容。",
   "options.data.import.preview.noneChosen": "请至少选择一个要导入的空间。",
   "options.data.import.preview.addOnly": "只会添加新的空间。你现有的空间不会被重命名、合并或删除。",
-  "options.data.import.openFavorites.label": "将收藏作为固定标签页打开",
-  "options.data.import.openFavorites.description": "它们会在此窗口中现有的收藏之后打开。",
-  "options.data.import.openFavorites.descriptionByProfile":
-    "它们会在此窗口中现有的收藏之后打开。只会打开所选空间所属配置文件中的收藏。",
+  "options.data.import.addFavorites.label": "添加到收藏",
+  "options.data.import.addFavorites.description": "它们会以关闭状态添加到现有收藏之后。",
+  "options.data.import.addFavorites.descriptionByProfile":
+    "它们会以关闭状态添加到现有收藏之后。只会添加所选空间所属配置文件中的收藏。",
   "options.data.import.confirm": "导入",
   "options.data.import.cancel": "取消",
   "options.data.import.problem.notArc": "这不是 Arc 的侧边栏文件。请选择 StorableSidebar.json。",

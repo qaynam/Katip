@@ -2,6 +2,13 @@ import { Clock, Effect, Match } from "effect"
 import { forgetTab, forgetWindow, recordActivation, replaceTab } from "#modules/workspace"
 import type { BrowserEvent } from "#platform/browser"
 import {
+  adoptPinnedTab,
+  followMovedFavoriteTab,
+  refreshFavoriteTitle,
+  releaseFavoriteTab,
+  replaceFavoriteTab,
+} from "./favorites"
+import {
   admitCreatedTab,
   admitTab,
   forgetPendingTab,
@@ -15,9 +22,17 @@ const handleTabUpdated = Effect.fnUntraced(function* (
 ) {
   const state = yield* KatipState
   const { changes, tab } = event
-  if (changes.pinned === true) {
-    // A tab pinned in Chrome becomes a Favorite, which belongs to no Space
-    yield* state.workspace.update((workspace) => forgetTab(workspace, tab.id))
+  // Not removing the Favorite: Chrome unpins a tab right before closing it, and before moving it
+  // to another window, so an unpinning can't be told apart from closing the Favorite's tab, which
+  // must keep the Favorite. A Favorite is removed only from Katip
+  if (changes.pinned === false) yield* releaseFavoriteTab(tab.id)
+  if (tab.pinned) {
+    // A tab pinned in Chrome is a Favorite's, which belongs to no Space
+    if (changes.pinned === true) {
+      yield* state.workspace.update((workspace) => forgetTab(workspace, tab.id))
+    }
+    yield* adoptPinnedTab(tab)
+    if (changes.title !== undefined) yield* refreshFavoriteTitle(tab)
     return
   }
   if (changes.url !== undefined) yield* settleProvisionalTab(tab)
@@ -35,15 +50,23 @@ export const handleBrowserEvent = (event: BrowserEvent) =>
     const state = yield* KatipState
     yield* Match.value(event).pipe(
       Match.tagsExhaustive({
-        TabCreated: ({ tab }) => admitCreatedTab(tab),
+        TabCreated: ({ tab }) =>
+          Effect.andThen(admitCreatedTab(tab), tab.pinned ? adoptPinnedTab(tab) : Effect.void),
         TabUpdated: handleTabUpdated,
         TabRemoved: ({ tabId }) =>
-          Effect.andThen(
-            forgetPendingTab(tabId),
-            state.workspace.update((workspace) => forgetTab(workspace, tabId)),
+          Effect.all(
+            [
+              forgetPendingTab(tabId),
+              state.workspace.update((workspace) => forgetTab(workspace, tabId)),
+              releaseFavoriteTab(tabId),
+            ],
+            { discard: true },
           ),
         TabReplaced: ({ addedTabId, removedTabId }) =>
-          state.workspace.update((workspace) => replaceTab(workspace, removedTabId, addedTabId)),
+          Effect.andThen(
+            state.workspace.update((workspace) => replaceTab(workspace, removedTabId, addedTabId)),
+            replaceFavoriteTab(removedTabId, addedTabId),
+          ),
         TabActivated: ({ tabId, windowId }) =>
           Effect.flatMap(Clock.currentTimeMillis, (now) =>
             state.workspace.update((workspace) =>
@@ -52,7 +75,7 @@ export const handleBrowserEvent = (event: BrowserEvent) =>
           ),
         WindowRemoved: ({ windowId }) =>
           state.workspace.update((workspace) => forgetWindow(workspace, windowId)),
-        TabMoved: () => Effect.void,
+        TabMoved: ({ tabId, windowId }) => followMovedFavoriteTab(tabId, windowId),
         TabAttached: () => Effect.void,
         TabDetached: () => Effect.void,
         TabGroupCreated: () => Effect.void,

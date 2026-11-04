@@ -10,7 +10,7 @@ import {
 } from "#modules/export"
 import { defaultSettings } from "#modules/settings"
 import { groupColorOf, neutralTheme, themeOf } from "#modules/theme"
-import { type PortSender, type TabId } from "#platform/browser"
+import { type PortSender } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import {
   EXPORT_PORT_NAME,
@@ -98,7 +98,7 @@ const preview = (content: string, sender?: PortSender) =>
 const apply = (
   content: string,
   options: {
-    readonly openFavorites?: boolean
+    readonly addFavorites?: boolean
     readonly spacesWithoutTheme?: ReadonlyArray<string>
     readonly spacesNamedByImport?: ReadonlyArray<string>
   } = {},
@@ -108,7 +108,7 @@ const apply = (
     {
       _tag: "Apply",
       content,
-      openFavorites: options.openFavorites ?? true,
+      addFavorites: options.addFavorites ?? true,
       spacesWithoutTheme: options.spacesWithoutTheme ?? [],
       spacesNamedByImport: options.spacesNamedByImport ?? [],
     },
@@ -124,13 +124,6 @@ const exported = Effect.gen(function* () {
   if (answer._tag !== "Exported") return yield* Effect.die(new Error("couldn't export"))
   return Result.getOrThrow(decodeExportFile(answer.content))
 }).pipe(Effect.scoped)
-
-const settingsPageIn = (tabId: TabId): PortSender => ({
-  external: false,
-  url: Option.some("chrome-extension://katip-test/options/index.html"),
-  origin: Option.some("chrome-extension://katip-test"),
-  tabId: Option.some(tabId),
-})
 
 /** A window with one tab, the background running, and the first Space holding one pin. */
 const startWithHomePin = Effect.gen(function* () {
@@ -221,7 +214,7 @@ describe("data import", () => {
             splits: 1,
             liveFolders: 1,
             favorites: 1,
-            favoritesAlreadyOpen: 1,
+            favoritesAlreadySaved: 1,
             flattenedFolders: 1,
             temporaryTabs: 1,
           },
@@ -331,7 +324,7 @@ describe("data import", () => {
     ) => {
       const { document, report } = arcImportOf(arc, { spaceIds: new Set(spaceIds), arrangement })
       return apply(Result.getOrThrow(encodeExportFile(document)), {
-        openFavorites: false,
+        addFavorites: false,
         spacesWithoutTheme: report.spacesWithoutTheme,
         spacesNamedByImport: report.spacesNamedByImport,
       })
@@ -472,49 +465,44 @@ describe("data import", () => {
     ]
 
     it.live(
-      "open as pinned tabs in the settings page's window, after its Favorites, skipping pages already open as Favorites",
+      "are added closed after the saved Favorites, skipping pages Favorites already has, and open no tab",
       () =>
         inBackground(
           Effect.gen(function* () {
             const fake = yield* FakeBrowser
-            yield* fake.seedWindow({ tabs: [{ url: "https://elsewhere.example/" }] })
-            const { windowId, tabIds } = yield* fake.seedWindow({
-              tabs: [
-                { url: "https://mail.example.com/", pinned: true },
-                { url: "chrome-extension://katip-test/options/index.html", active: true },
-              ],
+            const { windowId } = yield* fake.seedWindow({
+              tabs: [{ url: "https://mail.example.com/", title: "Mail", pinned: true }, {}],
             })
             yield* startBackground
-            yield* (yield* openSidebar(windowId)).viewWhere((view) => view.spaces.length === 1)
+            const sidebar = yield* openSidebar(windowId)
+            yield* sidebar.viewWhere((view) => view.favorites.length === 1)
+            const tabsBefore = (yield* fake.snapshot).tabs.length
 
-            yield* apply(fileWith([], favorites), {}, settingsPageIn(tabIds[1]))
-            const { tabs } = yield* fake.snapshot
+            yield* apply(fileWith([], favorites))
+            const view = yield* sidebar.viewWhere((v) => v.favorites.length === 2)
 
-            expect(
-              tabs
-                .filter((tab) => tab.pinned)
-                .map((tab) => ({
-                  inSettingsWindow: tab.windowId === windowId,
-                  url: Option.getOrNull(tab.url),
-                })),
-            ).toStrictEqual([
-              { inSettingsWindow: true, url: "https://mail.example.com/" },
-              { inSettingsWindow: true, url: "https://calendar.example.com/" },
+            expect([
+              view.favorites.map((favorite) => [favorite.title, favorite.openTab !== null]),
+              (yield* fake.snapshot).tabs.length,
+            ]).toStrictEqual([
+              [
+                ["Mail", true],
+                ["Calendar", false],
+              ],
+              tabsBefore,
             ])
           }),
         ),
     )
 
-    it.live("with opening Favorites turned off, opens no tab", () =>
+    it.live("with adding Favorites turned off, adds none", () =>
       inBackground(
         Effect.gen(function* () {
           yield* startWithHomePin
-          const fake = yield* FakeBrowser
-          const before = (yield* fake.snapshot).tabs.length
 
-          yield* apply(fileWith([], favorites), { openFavorites: false })
+          yield* apply(fileWith([], favorites), { addFavorites: false })
 
-          expect((yield* fake.snapshot).tabs).toHaveLength(before)
+          expect((yield* exported).favorites).toStrictEqual([])
         }),
       ),
     )
@@ -616,7 +604,7 @@ describe("data import", () => {
           encodeImportRequest({
             _tag: "Apply",
             content: fileWith([nestedSpace]),
-            openFavorites: true,
+            addFavorites: true,
             spacesWithoutTheme: [],
             spacesNamedByImport: [],
           }),

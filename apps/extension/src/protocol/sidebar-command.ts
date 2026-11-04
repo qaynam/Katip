@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
+import { FavoriteId } from "#modules/favorites"
 import { LiveSort, LiveSource } from "#modules/live-folders"
 import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
@@ -77,8 +78,11 @@ export const SidebarCommand = Schema.Union([
     placement: PinnedPlacement,
   }),
   Schema.TaggedStruct("ArchiveTab", { tabId: TabId }),
+  // index is the place among the Favorites, closed ones included
   Schema.TaggedStruct("AddToFavorites", { tabId: TabId, index: Schema.optionalKey(Schema.Int) }),
-  Schema.TaggedStruct("MoveFavorite", { tabId: TabId, toIndex: Schema.Int }),
+  Schema.TaggedStruct("MoveFavorite", { favoriteId: FavoriteId, toIndex: Schema.Int }),
+  Schema.TaggedStruct("OpenFavorite", { windowId: WindowId, favoriteId: FavoriteId }),
+  Schema.TaggedStruct("RemoveFavorite", { favoriteId: FavoriteId }),
 
   Schema.TaggedStruct("OpenPinnedItem", { windowId: WindowId, bookmarkId: BookmarkId }),
   Schema.TaggedStruct("MovePinnedItem", { bookmarkId: BookmarkId, placement: PinnedPlacement }),

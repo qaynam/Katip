@@ -15,6 +15,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
 
   "spotlight.kind.tab": "标签页",
   "spotlight.kind.pin": "已固定",
+  "spotlight.kind.favorite": "收藏",
   "spotlight.kind.space": "空间",
   "spotlight.kind.bookmark": "书签",
   "spotlight.kind.history": "历史记录",

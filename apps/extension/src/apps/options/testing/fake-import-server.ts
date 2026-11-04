@@ -21,7 +21,7 @@ const previewOf = (content: string): ImportServerMessage =>
       _tag: "Previewed",
       summary: planImport(document, {
         rule: { isTabGroupSyncEnabled: false },
-        openFavoriteUrls: new Set(),
+        savedFavoriteUrls: new Set(),
       }).summary,
     }),
   })

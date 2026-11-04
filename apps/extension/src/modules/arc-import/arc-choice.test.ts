@@ -26,7 +26,7 @@ const twoLevels = { isTabGroupSyncEnabled: false }
 const oneLevel = { isTabGroupSyncEnabled: true }
 
 const summaryOf = (document: ReturnType<typeof choose>["document"], rule = twoLevels) =>
-  planImport(document, { rule, openFavoriteUrls: new Set() }).summary
+  planImport(document, { rule, savedFavoriteUrls: new Set() }).summary
 
 describe("wholeSidebar", () => {
   it("chooses every Arc Space, each as a Space of its own", () => {

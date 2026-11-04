@@ -22,6 +22,7 @@ export const exportFileContent = Effect.gen(function* () {
       folderIcons: yield* (yield* FolderIconStore).load,
       liveSorts: (yield* (yield* LiveFolders).snapshot).sorts,
       workspace: yield* state.workspace.get,
+      favorites: yield* state.favorites.get,
       tabs: yield* (yield* Tabs).query({}),
       settings: yield* (yield* SettingsRepository).get,
     }),

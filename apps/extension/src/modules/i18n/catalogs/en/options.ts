@@ -125,9 +125,9 @@ export const options = {
     one: "{count} unpinned tab, as unpinned tabs are temporary",
     other: "{count} unpinned tabs, as unpinned tabs are temporary",
   },
-  "options.data.import.preview.favoritesAlreadyOpen": {
-    one: "{count} Favorite already open in this window",
-    other: "{count} Favorites already open in this window",
+  "options.data.import.preview.favoritesAlreadySaved": {
+    one: "{count} page already in Favorites",
+    other: "{count} pages already in Favorites",
   },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} tab that isn’t a web page, as only http and https addresses are imported",
@@ -142,11 +142,11 @@ export const options = {
   "options.data.import.preview.noneChosen": "Choose at least one Space to import.",
   "options.data.import.preview.addOnly":
     "Only new Spaces are added. None of your Spaces are renamed, merged into, or removed.",
-  "options.data.import.openFavorites.label": "Open Favorites as pinned tabs",
-  "options.data.import.openFavorites.description":
-    "They open in this window, after the Favorites you have.",
-  "options.data.import.openFavorites.descriptionByProfile":
-    "They open in this window, after the Favorites you have. Only Favorites from the profiles of the Spaces you chose are opened.",
+  "options.data.import.addFavorites.label": "Add to Favorites",
+  "options.data.import.addFavorites.description":
+    "They go after the Favorites you have, closed until you open them.",
+  "options.data.import.addFavorites.descriptionByProfile":
+    "They go after the Favorites you have, closed until you open them. Only Favorites from the profiles of the Spaces you chose are added.",
   "options.data.import.confirm": "Import",
   "options.data.import.cancel": "Cancel",
   "options.data.import.problem.notArc":

@@ -1,5 +1,6 @@
 import { Option, Schema } from "effect"
 import { Action } from "#modules/actions"
+import { FavoriteId } from "#modules/favorites"
 import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
@@ -50,6 +51,8 @@ export const SpotlightResult = Schema.TaggedUnion({
     folderPath: Schema.Array(Schema.String),
     isSplit: Schema.Boolean,
   },
+  // A closed Favorite. An open one arrives as an OpenTab
+  Favorite: { favoriteId: FavoriteId, title: Schema.String, url: Schema.String },
   Space: { spaceId: SpaceId, name: SpaceName, theme: SpaceTheme, isActive: Schema.Boolean },
   Bookmark: { bookmarkId: BookmarkId, title: Schema.String, url: Schema.String },
   // A page from the browsing history, leaving out URLs already among the open tabs, pins and

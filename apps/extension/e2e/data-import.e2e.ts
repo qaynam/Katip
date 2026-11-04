@@ -9,11 +9,6 @@ const ARC_SIDEBAR_FIXTURE = fileURLToPath(
 
 /** Chooses Arc's sidebar file on the settings page and waits for its preview. */
 const previewArcFile = async (context: BrowserContext, background: Worker) => {
-  // The fixture's pages are made up; answer them here so opening the Favorites reaches no network
-  await context.route(
-    (url) => url.hostname.endsWith(".example.com"),
-    (route) => route.fulfill({ contentType: "text/html", body: "<title>Example</title>" }),
-  )
   const options = await context.newPage()
   await options.goto(new URL("options/index.html", background.url()).href)
   await options.getByRole("tab", { name: "Data" }).click()
@@ -61,17 +56,24 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
     untitled: ["Weather"],
     personal: ["Recipes", "Trips[Packing List]"],
   })
-  await expect
-    .poll(() =>
-      background.evaluate(async () =>
-        (await chrome.tabs.query({ pinned: true })).map((tab) => tab.pendingUrl ?? tab.url),
-      ),
-    )
-    .toStrictEqual([
-      "https://calendar.example.com/",
-      "https://music.example.com/",
-      "https://photos.example.com/",
-    ])
+  // Added closed, so no tab opens for them
+  const favorites = sidebar.getByRole("region", { name: "Favorites" }).getByRole("button")
+  await expect(favorites).toHaveCount(3)
+  expect(
+    await Promise.all(
+      (await favorites.all()).map(async (tile) => [
+        await tile.getAttribute("aria-label"),
+        await tile.getAttribute("data-favorite-state"),
+      ]),
+    ),
+  ).toStrictEqual([
+    ["Calendar", "closed"],
+    ["Music", "closed"],
+    ["Photos", "closed"],
+  ])
+  expect(await background.evaluate(async () => chrome.tabs.query({ pinned: true }))).toStrictEqual(
+    [],
+  )
   const switcher = sidebar.getByRole("navigation", { name: "Switch Space" })
   for (const name of ["Home", "Work", "Reading", "Space 4", "Personal"]) {
     await expect(switcher.getByRole("button", { name, exact: true })).toBeVisible()
@@ -88,7 +90,7 @@ test("combining the chosen Arc Spaces adds one Space named Arc with a folder for
 
   await preview.getByRole("checkbox", { name: "Untitled Space" }).click()
   await preview.getByRole("radio", { name: "Combine into one Space" }).click()
-  await preview.getByRole("switch", { name: "Open Favorites as pinned tabs" }).click()
+  await preview.getByRole("switch", { name: "Add to Favorites" }).click()
 
   await expect(preview.getByRole("list", { name: "To be added" }).getByRole("listitem")).toHaveText(
     ["1 Space", "8 pinned tabs", "5 folders", "2 split views"],

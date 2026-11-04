@@ -1,5 +1,6 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
+import { FavoriteId } from "#modules/favorites"
 import type { LiveFolderRecord, LiveItem, LiveSource } from "#modules/live-folders"
 import type { PinnedTree } from "#modules/pinned"
 import { makeTranslator } from "#modules/i18n"
@@ -75,6 +76,8 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   windowId: WINDOW,
   spaces: [space("home"), space("work")],
   workspace: switchSpace(emptyWorkspace, WINDOW, spaceId("home")),
+  favorites: [],
+  favoriteTabs: [],
   windowTabs: [],
   pinnedTrees: new Map([
     [spaceId("home"), []],
@@ -191,26 +194,56 @@ describe("temporary tabs", () => {
 })
 
 describe("Favorites", () => {
-  it("lists the tabs pinned in Chrome in index order, and shows them in no Space", () => {
+  const mail = FavoriteId.make("mail")
+  const docs = FavoriteId.make("docs")
+  const favorites = [
+    { id: mail, url: "https://mail.example/", title: "Mail" },
+    { id: docs, url: "https://docs.example/", title: "Docs" },
+  ]
+
+  it("lists every Favorite in order, with the tab open for it in this window, and shows that tab in no Space", () => {
     const view = project({
       workspace: inHome(emptyWorkspace, 3),
+      favorites,
+      favoriteTabs: [{ tabId: tabId(2), favoriteId: docs }],
       windowTabs: [
-        browserTab(2, { pinned: true, index: 1 }),
-        browserTab(1, { pinned: true, index: 0, active: true }),
-        browserTab(3, { index: 2 }),
+        browserTab(2, { pinned: true, index: 0, active: true }),
+        browserTab(3, { index: 1 }),
       ],
     })
 
     expect({
-      favorites: view.favorites.map((f) => [f.tabId, f.isActive]),
+      favorites: view.favorites.map((f) => [f.favoriteId, f.title, f.openTab]),
       home: temporaryTabIds(homeOf(view)),
     }).toStrictEqual({
       favorites: [
-        [1, true],
-        [2, false],
+        [mail, "Mail", null],
+        [docs, "Tab 2", { tabId: tabId(2), isActive: true }],
       ],
       home: [3],
     })
+  })
+
+  it("lists a pinned tab that isn't a Favorite's yet after the Favorites, so it can still be closed", () => {
+    const view = project({
+      favorites,
+      favoriteTabs: [
+        { tabId: tabId(1), favoriteId: mail },
+        { tabId: tabId(2), favoriteId: mail },
+      ],
+      windowTabs: [
+        browserTab(1, { pinned: true, index: 0 }),
+        browserTab(2, { pinned: true, index: 1 }),
+        browserTab(3, { pinned: true, index: 2 }),
+      ],
+    })
+
+    expect(view.favorites.map((f) => [f.favoriteId, f.openTab?.tabId ?? null])).toStrictEqual([
+      [mail, tabId(1)],
+      [docs, null],
+      [null, tabId(2)],
+      [null, tabId(3)],
+    ])
   })
 })
 

@@ -20,20 +20,13 @@ import {
 import type { SettingsRepository } from "#modules/settings"
 import { addSpace, nextSpaceName, SpaceName, unusedSpaceName } from "#modules/space"
 import { settleTheme } from "#modules/theme"
-import {
-  type BrowserApiError,
-  type BrowserPort,
-  type PortSender,
-  Tabs,
-  type WindowId,
-  Windows,
-} from "#platform/browser"
+import { type BrowserApiError, type BrowserPort } from "#platform/browser"
 import { ImportClientMessage, ImportServerMessage } from "#protocol"
 import { newSpaceId } from "./initialize"
+import { newFavoriteId } from "./favorites"
 import { KatipState } from "./katip-state"
 import { refreshDueLiveFolders, scheduleLiveFolderRefresh } from "./live-folder-refresh"
 import { currentNestingRule } from "./sidebar-commands"
-import { urlOf } from "./tab-admission"
 import { numberedSpaceName, translate } from "./translation"
 
 /** The content isn't an export file this Katip can read. */
@@ -49,40 +42,17 @@ type FileSpace = LatestExport["spaces"][number]
 const readDocument = (content: string) =>
   Effect.mapError(Effect.fromResult(decodeExportFile(content)), () => new UnreadableImport())
 
-const lastFocusedWindow = Effect.map(
-  Windows.use((windows) => windows.getLastFocused),
-  (window) => window.id,
+const savedFavoriteUrls = Effect.map(
+  KatipState.use((state) => state.favorites.get),
+  (favorites): ReadonlySet<string> => new Set(favorites.map((favorite) => favorite.url)),
 )
 
-/** Where Favorites open: the window of the settings page that asked, else the last focused one. */
-const favoritesWindow = (sender: Option.Option<PortSender>) =>
-  Option.match(
-    Option.flatMap(sender, ({ tabId }) => tabId),
-    {
-      onNone: () => lastFocusedWindow,
-      onSome: (tabId) =>
-        Tabs.use((tabs) => tabs.get(tabId)).pipe(
-          Effect.map((tab) => tab.windowId),
-          Effect.catch(() => lastFocusedWindow),
-        ),
-    },
-  )
-
-const favoriteUrlsIn = (windowId: WindowId) =>
-  Effect.map(
-    Tabs.use((tabs) => tabs.query({ windowId, pinned: true })),
-    (favorites): ReadonlySet<string> => new Set(favorites.map(urlOf)),
-  )
-
 /** What importing the content would add and leave out. Changes nothing. */
-export const previewImport = Effect.fnUntraced(function* (
-  content: string,
-  sender: Option.Option<PortSender>,
-) {
+export const previewImport = Effect.fnUntraced(function* (content: string) {
   const document = yield* readDocument(content)
   const plan = planImport(document, {
     rule: yield* currentNestingRule,
-    openFavoriteUrls: yield* favoriteUrlsIn(yield* favoritesWindow(sender)),
+    savedFavoriteUrls: yield* savedFavoriteUrls,
   })
   return plan.summary
 })
@@ -171,18 +141,13 @@ const addFileSpace = Effect.fnUntraced(function* (
   return planned
 })
 
-const openFavorites = Effect.fnUntraced(function* (
-  favorites: LatestExport["favorites"],
-  sender: Option.Option<PortSender>,
-) {
-  const tabs = yield* Tabs
-  const windowId = yield* favoritesWindow(sender)
-  const planned = planFavorites(favorites, yield* favoriteUrlsIn(windowId))
-  yield* Effect.forEach(
-    planned.toOpen,
-    ({ url }) => tabs.create({ windowId, url, pinned: true, active: false }),
-    { discard: true },
+// Added closed: opening every Favorite of a file at once would flood the window with tabs
+const addFavorites = Effect.fnUntraced(function* (favorites: LatestExport["favorites"]) {
+  const planned = planFavorites(favorites, yield* savedFavoriteUrls)
+  const added = yield* Effect.forEach(planned.toAdd, ({ title, url }) =>
+    Effect.map(newFavoriteId, (id) => ({ id, title, url })),
   )
+  yield* KatipState.use((state) => state.favorites.update((list) => [...list, ...added]))
 })
 
 const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
@@ -192,18 +157,17 @@ const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
   )
 
 /**
- * Adds the content's Spaces and, when asked, opens its Favorites.
+ * Adds the content's Spaces and, when asked, its Favorites.
  *
  * @remarks
  * Only adds: each Space in the content becomes a new Space after the existing ones, and no
  * existing Space, pin or setting changes. A name the import suggested gets a number when a Space
- * already has it; a name from the file is kept as it is. Favorites already open where they'd open
- * are skipped. Temporary tabs and settings in the content aren't imported. When a step fails, the
- * Spaces added before it are kept.
+ * already has it; a name from the file is kept as it is. Favorites go after the existing ones,
+ * closed, and pages Favorites already has are skipped. Temporary tabs and settings in the content
+ * aren't imported. When a step fails, the Spaces added before it are kept.
  */
 export const applyImport = Effect.fnUntraced(function* (
   request: Extract<ImportClientMessage, { readonly _tag: "Apply" }>,
-  sender: Option.Option<PortSender>,
   serialize: Serialize,
 ) {
   const document = yield* readDocument(request.content)
@@ -216,7 +180,7 @@ export const applyImport = Effect.fnUntraced(function* (
       serialize,
     ),
   )
-  if (request.openFavorites) yield* serialize(openFavorites(document.favorites, sender))
+  if (request.addFavorites) yield* serialize(addFavorites(document.favorites))
   if (added.some((space) => hasLiveFolder(space.pinned))) {
     yield* serialize(Effect.andThen(scheduleLiveFolderRefresh, refreshDueLiveFolders))
   }
@@ -235,18 +199,15 @@ const reply = (port: BrowserPort, message: ImportServerMessage) =>
 
 const answer = (
   message: ImportClientMessage,
-  sender: Option.Option<PortSender>,
   serialize: Serialize,
   afterChange: Effect.Effect<void>,
 ) =>
   Effect.gen(function* () {
     if (message._tag === "Preview") {
-      const summary = yield* serialize(previewImport(message.content, sender))
+      const summary = yield* serialize(previewImport(message.content))
       return { _tag: "Previewed", summary } satisfies ImportServerMessage
     }
-    yield* applyImport(message, sender, (effect) =>
-      Effect.tap(serialize(effect), () => afterChange),
-    )
+    yield* applyImport(message, (effect) => Effect.tap(serialize(effect), () => afterChange))
     return { _tag: "Applied" } satisfies ImportServerMessage
   }).pipe(
     Effect.catchTag("UnreadableImport", () =>
@@ -277,7 +238,7 @@ export const serveDataImport = (
       Effect.flatMap(Effect.option(decodeClientMessage(raw)), (message) =>
         Option.isNone(message)
           ? Effect.void
-          : Effect.flatMap(answer(message.value, port.sender, serialize, afterChange), (answered) =>
+          : Effect.flatMap(answer(message.value, serialize, afterChange), (answered) =>
               reply(port, answered),
             ),
       ),

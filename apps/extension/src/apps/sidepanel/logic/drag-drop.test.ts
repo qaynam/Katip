@@ -1,5 +1,6 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
+import { FavoriteId } from "#modules/favorites"
 import { SpaceId } from "#modules/space"
 import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 import {
@@ -58,9 +59,17 @@ const pinnedFolderSource = (
   position: options.position ?? { parentId: null, index: 0 },
   selfAndDescendantIds: [id, ...(options.descendantIds ?? [])].map(bookmarkId),
 })
+/** A Favorite open as the tab `id`. */
 const favorite = (id: number, index: number): DragSource => ({
   _tag: "Favorite",
-  tabId: tabId(id),
+  favoriteId: FavoriteId.make(`favorite-${id}`),
+  openTabId: tabId(id),
+  index,
+})
+const closedFavorite = (id: number, index: number): DragSource => ({
+  _tag: "Favorite",
+  favoriteId: FavoriteId.make(`favorite-${id}`),
+  openTabId: null,
   index,
 })
 const spaceMark = (id: string, index: number): DragSource => ({
@@ -249,8 +258,35 @@ describe("Dragging a Favorite", () => {
   it("reorders it to the drop position shifted back by one when moved later within Favorites", () => {
     expect(drop(favorite(5, 0), { _tag: "Favorites", slot: 2 })).toStrictEqual({
       _tag: "MoveFavorite",
-      tabId: tabId(5),
+      favoriteId: FavoriteId.make("favorite-5"),
       toIndex: 1,
+    })
+  })
+
+  it("reorders a closed Favorite within Favorites too", () => {
+    expect(drop(closedFavorite(5, 2), { _tag: "Favorites", slot: 0 })).toStrictEqual({
+      _tag: "MoveFavorite",
+      favoriteId: FavoriteId.make("favorite-5"),
+      toIndex: 0,
+    })
+  })
+
+  it("can't drop a closed Favorite into pinned or temporary tabs", () => {
+    const temporary: DropTarget = { _tag: "Temporary", placement: { _tag: "Bottom" } }
+
+    expect([
+      drop(closedFavorite(5, 0), pinnedTarget(null, 0)),
+      drop(closedFavorite(5, 0), temporary),
+    ]).toStrictEqual([null, null])
+  })
+
+  it("saves a pinned tab that isn't a Favorite's yet where it is dropped in Favorites", () => {
+    const loose: DragSource = { _tag: "Favorite", favoriteId: null, openTabId: tabId(5), index: 3 }
+
+    expect(drop(loose, { _tag: "Favorites", slot: 1 })).toStrictEqual({
+      _tag: "AddToFavorites",
+      tabId: tabId(5),
+      index: 1,
     })
   })
 

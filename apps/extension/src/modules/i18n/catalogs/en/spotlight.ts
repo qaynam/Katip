@@ -15,6 +15,7 @@ export const spotlight = {
 
   "spotlight.kind.tab": "Tab",
   "spotlight.kind.pin": "Pinned",
+  "spotlight.kind.favorite": "Favorite",
   "spotlight.kind.space": "Space",
   "spotlight.kind.bookmark": "Bookmark",
   "spotlight.kind.history": "History",

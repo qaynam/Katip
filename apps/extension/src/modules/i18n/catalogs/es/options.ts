@@ -136,9 +136,9 @@ export const options: CatalogSection<"options"> = {
     one: "{count} pestaña sin fijar, porque las pestañas sin fijar son temporales",
     other: "{count} pestañas sin fijar, porque las pestañas sin fijar son temporales",
   },
-  "options.data.import.preview.favoritesAlreadyOpen": {
-    one: "{count} Favorito ya abierto en esta ventana",
-    other: "{count} Favoritos ya abiertos en esta ventana",
+  "options.data.import.preview.favoritesAlreadySaved": {
+    one: "{count} página que ya está en Favoritos",
+    other: "{count} páginas que ya están en Favoritos",
   },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} pestaña que no es una página web, porque solo se importan direcciones http y https",
@@ -154,11 +154,11 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.noneChosen": "Elige al menos un espacio que importar.",
   "options.data.import.preview.addOnly":
     "Solo se añaden espacios nuevos. Ninguno de tus espacios se renombra, se combina con otro ni se elimina.",
-  "options.data.import.openFavorites.label": "Abrir los Favoritos como pestañas fijadas",
-  "options.data.import.openFavorites.description":
-    "Se abren en esta ventana, después de los Favoritos que ya tienes.",
-  "options.data.import.openFavorites.descriptionByProfile":
-    "Se abren en esta ventana, después de los Favoritos que ya tienes. Solo se abren los Favoritos de los perfiles de los espacios que elegiste.",
+  "options.data.import.addFavorites.label": "Añadir a Favoritos",
+  "options.data.import.addFavorites.description":
+    "Se añaden después de los Favoritos que ya tienes, cerrados hasta que los abras.",
+  "options.data.import.addFavorites.descriptionByProfile":
+    "Se añaden después de los Favoritos que ya tienes, cerrados hasta que los abras. Solo se añaden los Favoritos de los perfiles de los espacios que elegiste.",
   "options.data.import.confirm": "Importar",
   "options.data.import.cancel": "Cancelar",
   "options.data.import.problem.notArc":

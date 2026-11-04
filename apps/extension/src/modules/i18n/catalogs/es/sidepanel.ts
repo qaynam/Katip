@@ -18,6 +18,8 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.favorites.region": "Favoritos",
   "sidepanel.favorites.empty": "Arrastra pestañas aquí para añadirlas a Favoritos",
+  "sidepanel.favorites.remove": "Quitar de Favoritos",
+  "sidepanel.favorites.menu": "Menú del favorito",
 
   "sidepanel.space.menu": "Menú del espacio",
   "sidepanel.space.nameLabel": "Nombre del espacio",

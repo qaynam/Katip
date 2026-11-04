@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
+import { FavoriteId } from "#modules/favorites"
 import { LiveItem, LiveSort, LiveSource } from "#modules/live-folders"
 import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
@@ -167,11 +168,13 @@ export const SpaceView = Schema.Struct({
 export type SpaceView = typeof SpaceView.Type
 
 export const FavoriteView = Schema.Struct({
-  tabId: TabId,
+  // null for a tab pinned in Chrome that isn't a Favorite's yet, such as one whose URL is unknown
+  favoriteId: Schema.NullOr(FavoriteId),
   title: Schema.String,
   url: Schema.String,
   favIconUrl: Schema.NullOr(Schema.String),
-  isActive: Schema.Boolean,
+  // The tab open for it in this window. null while it is closed here
+  openTab: Schema.NullOr(Schema.Struct({ tabId: TabId, isActive: Schema.Boolean })),
 })
 export type FavoriteView = typeof FavoriteView.Type
 

@@ -60,7 +60,7 @@
   let arc = $state.raw<ArcChoosing | null>(null)
   /** Whether the preview is being redone for a new choice, so its counts are out of date. */
   let isUpdating = $state(false)
-  let opensFavorites = $state(true)
+  let addsFavorites = $state(true)
   let arcInput = $state<HTMLInputElement>()
   let katipInput = $state<HTMLInputElement>()
   // Choices can change faster than the background answers, so an answer is shown only while it's
@@ -104,7 +104,7 @@
     phase = { _tag: "Reading" }
     arc = null
     isUpdating = false
-    opensFavorites = true
+    addsFavorites = true
     if (source === "Katip") return show(request, prepareKatipImport(file))
     const read = await runtime.runPromiseExit(readArcFile(file))
     if (request !== latestRequest) return
@@ -126,7 +126,7 @@
   const confirm = async (chosen: ImportCandidate) => {
     latestRequest++
     phase = { _tag: "Importing", candidate: chosen }
-    const imported = await runtime.runPromiseExit(confirmImport(chosen, opensFavorites))
+    const imported = await runtime.runPromiseExit(confirmImport(chosen, addsFavorites))
     phase = { _tag: "Idle" }
     arc = null
     onfinish(Exit.isSuccess(imported))
@@ -191,7 +191,7 @@
 
 {#if candidate !== null}
   {@const current = candidate}
-  {@const lines = previewLinesOf(current, opensFavorites)}
+  {@const lines = previewLinesOf(current, addsFavorites)}
   {@const hasContent = current.summary.spaces > 0 || current.summary.favorites > 0}
   {@const choosing = current.source === "Arc" ? arc : null}
   {@const arcSpaces = choosing?.file.conversion.spaces ?? []}
@@ -230,19 +230,19 @@
       </ul>
       {#if current.summary.favorites > 0}
         <SettingRow
-          label={t("options.data.import.openFavorites.label")}
+          label={t("options.data.import.addFavorites.label")}
           description={t(
             spansProfiles
-              ? "options.data.import.openFavorites.descriptionByProfile"
-              : "options.data.import.openFavorites.description",
+              ? "options.data.import.addFavorites.descriptionByProfile"
+              : "options.data.import.addFavorites.description",
           )}
           disabled={phase._tag === "Importing"}
         >
           {#snippet children(control)}
             <Switch
               {...control}
-              checked={opensFavorites}
-              onchange={(checked) => (opensFavorites = checked)}
+              checked={addsFavorites}
+              onchange={(checked) => (addsFavorites = checked)}
             />
           {/snippet}
         </SettingRow>

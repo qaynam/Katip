@@ -9,7 +9,8 @@ import {
 } from "./search-text"
 import { urlFromInput } from "./url-input"
 
-export type CandidateKind = "OpenTab" | "Pin" | "Space" | "Bookmark" | "History" | "Action"
+export type CandidateKind =
+  "OpenTab" | "Pin" | "Favorite" | "Space" | "Bookmark" | "History" | "Action"
 
 /**
  * `All` searches candidates of every kind. `Actions` searches only the action (`Action`)
@@ -63,6 +64,7 @@ const URL_MATCH_DISCOUNT = 20
 const kindBonus: Record<CandidateKind, number> = {
   OpenTab: 4,
   Pin: 3,
+  Favorite: 3,
   Space: 3,
   Action: 2,
   Bookmark: 1,

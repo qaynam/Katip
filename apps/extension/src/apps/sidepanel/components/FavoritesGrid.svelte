@@ -1,8 +1,10 @@
 <script lang="ts">
-  import type { FavoriteView } from "#protocol"
+  import type { FavoriteView, SidebarCommand } from "#protocol"
   import { edgeAt, slotAt } from "../logic/drag-drop"
+  import { pointRect } from "../logic/menu-position"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
+  import { favoriteMenu } from "./menus"
 
   interface Props {
     favorites: ReadonlyArray<FavoriteView>
@@ -22,6 +24,37 @@
     const bounds = event.currentTarget.getBoundingClientRect()
     const edge = edgeAt(event.clientX - bounds.left, bounds.width)
     ctx.drag.offer(event, key, edge, { _tag: "Favorites", slot: slotAt(index, edge) })
+  }
+
+  const keyOf = (favorite: FavoriteView) =>
+    favorite.favoriteId !== null
+      ? `favorite:${favorite.favoriteId}`
+      : `favorite-tab:${favorite.openTab?.tabId}`
+
+  const openCommand = (favorite: FavoriteView): SidebarCommand | null =>
+    favorite.openTab !== null
+      ? { _tag: "ActivateTab", tabId: favorite.openTab.tabId }
+      : favorite.favoriteId !== null
+        ? { _tag: "OpenFavorite", windowId: ctx.view.windowId, favoriteId: favorite.favoriteId }
+        : null
+
+  const open = (favorite: FavoriteView) => {
+    const command = openCommand(favorite)
+    if (command !== null) void ctx.run(command)
+  }
+
+  const openMenu = (event: MouseEvent & { currentTarget: HTMLElement }, favorite: FavoriteView) => {
+    event.preventDefault()
+    ctx.tooltip.hide()
+    const isFromKeyboard = event.clientX === 0 && event.clientY === 0
+    ctx.menu.open({
+      label: t("sidepanel.favorites.menu"),
+      anchor: isFromKeyboard
+        ? event.currentTarget.getBoundingClientRect()
+        : pointRect({ x: event.clientX, y: event.clientY }),
+      trigger: null,
+      entries: favoriteMenu(ctx, favorite),
+    })
   }
 
   const onGridDragOver = (event: DragEvent) => {
@@ -48,9 +81,10 @@
     </p>
   {:else}
     <ul class="grid" ondragover={onGridDragOver}>
-      {#each favorites as favorite, index (favorite.tabId)}
-        {@const key = `favorite:${favorite.tabId}`}
+      {#each favorites as favorite, index (keyOf(favorite))}
+        {@const key = keyOf(favorite)}
         {@const zone = ctx.drag.zoneFor(key)}
+        {@const isActive = favorite.openTab?.isActive ?? false}
         <li
           class="cell"
           class:drop-before={zone === "before"}
@@ -58,17 +92,25 @@
           class:dragged={ctx.drag.sourceKey === key}
           draggable="true"
           ondragstart={(event) =>
-            ctx.drag.begin(event, key, { _tag: "Favorite", tabId: favorite.tabId, index })}
+            ctx.drag.begin(event, key, {
+              _tag: "Favorite",
+              favoriteId: favorite.favoriteId,
+              openTabId: favorite.openTab?.tabId ?? null,
+              index,
+            })}
           ondragend={(event) => ctx.drag.finish(event)}
           ondragover={(event) => onTileDragOver(event, key, index)}
         >
           <button
             class="tile"
-            class:active={favorite.isActive}
+            class:active={isActive}
+            class:closed={favorite.openTab === null}
             type="button"
             aria-label={favorite.title}
-            aria-current={favorite.isActive ? "true" : undefined}
-            onclick={() => void ctx.run({ _tag: "ActivateTab", tabId: favorite.tabId })}
+            aria-current={isActive ? "true" : undefined}
+            data-favorite-state={favorite.openTab === null ? "closed" : "open"}
+            onclick={() => open(favorite)}
+            oncontextmenu={(event) => openMenu(event, favorite)}
             onpointerenter={(event) =>
               ctx.tooltip.schedule(
                 { title: favorite.title },
@@ -135,6 +177,11 @@
   .tile.active {
     background: var(--surface-active);
     box-shadow: var(--shadow-active);
+  }
+
+  /* Dimmed rather than hidden: a closed Favorite stays one click away, like a closed pin */
+  .tile.closed > :global(*) {
+    opacity: 0.55;
   }
 
   .cell.drop-before::before,

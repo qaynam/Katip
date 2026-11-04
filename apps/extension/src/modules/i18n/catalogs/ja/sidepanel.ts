@@ -16,6 +16,8 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.favorites.region": "Favorites",
   "sidepanel.favorites.empty": "タブをここにドラッグして Favorites に追加",
+  "sidepanel.favorites.remove": "Favorites から外す",
+  "sidepanel.favorites.menu": "Favorites のメニュー",
 
   "sidepanel.space.menu": "Space のメニュー",
   "sidepanel.space.nameLabel": "Space の名前",

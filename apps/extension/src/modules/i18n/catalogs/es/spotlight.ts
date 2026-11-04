@@ -16,6 +16,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
 
   "spotlight.kind.tab": "Pestaña",
   "spotlight.kind.pin": "Fijada",
+  "spotlight.kind.favorite": "Favorito",
   "spotlight.kind.space": "Espacio",
   "spotlight.kind.bookmark": "Marcador",
   "spotlight.kind.history": "Historial",

@@ -193,11 +193,11 @@ describe("planFavorites", () => {
     )
 
     expect(planned).toStrictEqual({
-      toOpen: [
+      toAdd: [
         { title: "Mail", url: "https://mail.example/" },
         { title: "Music", url: "https://music.example/" },
       ],
-      alreadyOpen: 1,
+      alreadySaved: 1,
     })
   })
 })
@@ -240,7 +240,7 @@ describe("planImport", () => {
 
     const { summary } = planImport(document, {
       rule: twoLevels,
-      openFavoriteUrls: new Set(["https://mail.example/"]),
+      savedFavoriteUrls: new Set(["https://mail.example/"]),
     })
 
     expect(summary).toStrictEqual({
@@ -250,7 +250,7 @@ describe("planImport", () => {
       splits: 1,
       liveFolders: 1,
       favorites: 1,
-      favoritesAlreadyOpen: 1,
+      favoritesAlreadySaved: 1,
       flattenedFolders: 1,
       temporaryTabs: 1,
     })

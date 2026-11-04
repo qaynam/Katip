@@ -69,10 +69,10 @@ export const ImportSummary = Schema.Struct({
   folders: Schema.Int,
   splits: Schema.Int,
   liveFolders: Schema.Int,
-  /** Favorites to open as pinned tabs. */
+  /** Favorites to add, closed until they're opened. */
   favorites: Schema.Int,
-  /** Favorites left out because the same page is already open as a Favorite. */
-  favoritesAlreadyOpen: Schema.Int,
+  /** Favorites left out because Favorites already has the same page. */
+  favoritesAlreadySaved: Schema.Int,
   /** Folders nested deeper than allowed, whose contents moved into the deepest allowed folder. */
   flattenedFolders: Schema.Int,
   /** Temporary tabs, left out as they're temporary by nature. */
@@ -168,22 +168,22 @@ export const planSpace = (space: FileSpace, rule: FolderNestingRule): PlannedSpa
 
 export interface PlannedFavorites {
   /** In the file's order, each page once. */
-  readonly toOpen: ReadonlyArray<PlannedLink>
-  readonly alreadyOpen: number
+  readonly toAdd: ReadonlyArray<PlannedLink>
+  readonly alreadySaved: number
 }
 
 /**
- * Plans the Favorites to open from a Katip export document's Favorites.
+ * Plans the Favorites to add from a Katip export document's Favorites.
  *
- * @param openFavoriteUrls - Pages already open as Favorites where they'd open, which are left out.
+ * @param savedFavoriteUrls - Pages Favorites already has, which are left out.
  */
 export const planFavorites = (
   favorites: ReadonlyArray<FileLink>,
-  openFavoriteUrls: ReadonlySet<string>,
+  savedFavoriteUrls: ReadonlySet<string>,
 ): PlannedFavorites => {
   const distinct = Array.dedupeWith(favorites.map(linkOf), (a, b) => a.url === b.url)
-  const toOpen = distinct.filter(({ url }) => !openFavoriteUrls.has(url))
-  return { toOpen, alreadyOpen: distinct.length - toOpen.length }
+  const toAdd = distinct.filter(({ url }) => !savedFavoriteUrls.has(url))
+  return { toAdd, alreadySaved: distinct.length - toAdd.length }
 }
 
 interface NodeCounts {
@@ -220,16 +220,16 @@ export const summarize = (
 ): ImportSummary => ({
   spaces: spaces.length,
   ...spaces.map((space) => countNodes(space.pinned)).reduce(addCounts, noNodes),
-  favorites: favorites.toOpen.length,
-  favoritesAlreadyOpen: favorites.alreadyOpen,
+  favorites: favorites.toAdd.length,
+  favoritesAlreadySaved: favorites.alreadySaved,
   flattenedFolders: spaces.reduce((sum, space) => sum + space.flattenedFolders, 0),
   temporaryTabs: spaces.reduce((sum, space) => sum + space.temporaryTabs, 0),
 })
 
 export interface ImportContext {
   readonly rule: FolderNestingRule
-  /** Pages already open as Favorites where the file's Favorites would open. */
-  readonly openFavoriteUrls: ReadonlySet<string>
+  /** Pages Favorites already has. */
+  readonly savedFavoriteUrls: ReadonlySet<string>
 }
 
 /**
@@ -241,6 +241,6 @@ export interface ImportContext {
  */
 export const planImport = (document: LatestExport, context: ImportContext) => {
   const spaces = document.spaces.map((space) => planSpace(space, context.rule))
-  const favorites = planFavorites(document.favorites, context.openFavoriteUrls)
+  const favorites = planFavorites(document.favorites, context.savedFavoriteUrls)
   return { spaces, favorites, summary: summarize(spaces, favorites) }
 }

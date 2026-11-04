@@ -166,6 +166,12 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
         windowId: callerWindowId,
         bookmarkId,
       }),
+    Favorite: ({ favoriteId }) =>
+      runAsSidebarCommand(callerWindowId, {
+        _tag: "OpenFavorite",
+        windowId: callerWindowId,
+        favoriteId,
+      }),
     Space: ({ spaceId }) =>
       runAsSidebarCommand(callerWindowId, {
         _tag: "SwitchSpace",

@@ -44,6 +44,7 @@ const withoutShortcut = (display: Omit<ResultDisplay, "shortcut">): ResultDispla
 const kindLabels = {
   OpenTab: "spotlight.kind.tab",
   Pin: "spotlight.kind.pin",
+  Favorite: "spotlight.kind.favorite",
   Space: "spotlight.kind.space",
   Bookmark: "spotlight.kind.bookmark",
   History: "spotlight.kind.history",
@@ -93,6 +94,15 @@ export const displayOf = (
         kindLabel,
         icon: favicon(pin.url, pin.title),
       }),
+    Favorite: (favorite) => {
+      const title = titleOrUrl(favorite.title, favorite.url)
+      return withoutShortcut({
+        title,
+        detail: joinDetail([t("spotlight.detail.favorites"), readableUrl(favorite.url)]),
+        kindLabel,
+        icon: favicon(favorite.url, title),
+      })
+    },
     Space: (space) =>
       withoutShortcut({
         title: space.name,

@@ -162,6 +162,7 @@ test.describe("dragging a Favorite", () => {
 
     await expect(temporaryTitles(sidebar)).toHaveText(["Page /b", "Page /a"])
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b"])
+    await expect(favorites.getByRole("button")).toHaveCount(0)
   })
 
   test("dropping it on the pinned area unpins it in Chrome and makes it a pin", async ({
@@ -187,6 +188,7 @@ test.describe("dragging a Favorite", () => {
     await expect(pinned.getByRole("button", { name: "Page /a" })).toBeVisible()
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a"])
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page /a"])
+    await expect(favorites.getByRole("button")).toHaveCount(0)
   })
 })
 
