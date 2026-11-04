@@ -155,7 +155,7 @@ apps/
       protocol/   messages between pages and the background
     e2e/          Playwright tests and the contract test runner
     scripts/      packaging, brand assets and store screenshots
-    store/        Chrome Web Store listing, screenshots and promo images
+    store/        Chrome Web Store listing, screenshots and promo images, and the website's link preview cards
   web/            the website, in English and Japanese (Astro, served by a Cloudflare Worker)
     src/          pages, components and the copy of both languages in copy/
     worker/       the Worker that sends visitors at / to their language

@@ -7,7 +7,7 @@ export const ja: Copy = {
     description:
       "Katip は、Chrome のサイドパネルをタブを整理するサイドバーに変える拡張機能です。Space、ピン留め、フォルダ、分割ビュー、Spotlight 検索に対応。無料のオープンソースで、データはブラウザの外に出ません。",
     imageAlt:
-      "Katip: タブを Space ごとに整理。サイドパネルに「Work」Space のピン留めタブとフォルダが並んでいます。",
+      "Katip: タブを Space ごとに整理。サイドパネルに「仕事」Space のピン留めタブとフォルダが並んでいます。",
   },
   skipToContent: "本文へ移動",
   header: {

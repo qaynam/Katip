@@ -41,7 +41,7 @@ export interface Copy {
   readonly meta: {
     readonly title: string
     readonly description: string
-    /** Describes the Open Graph image, the store's marquee tile. */
+    /** Describes the image shown when a link to the page is shared. */
     readonly imageAlt: string
   }
   readonly skipToContent: string

@@ -1,5 +1,7 @@
 ---
-import marquee from "@store/promo/marquee.png"
+import type { ImageMetadata } from "astro"
+import socialCardEn from "@store/social/en.png"
+import socialCardJa from "@store/social/ja.png"
 import Footer from "../components/Footer.astro"
 import Header from "../components/Header.astro"
 import { COPY } from "../copy"
@@ -21,7 +23,9 @@ const canonical = absoluteUrl(pathOf(lang, page))
 // the home page, so the other pages fall back to their English version
 const languageNeutral =
   page === "home" ? absoluteUrl("/") : absoluteUrl(pathOf(DEFAULT_LANGUAGE, page))
-const image = absoluteUrl(marquee.src)
+const socialCards = { en: socialCardEn, ja: socialCardJa } satisfies Record<Language, ImageMetadata>
+const socialCard = socialCards[lang]
+const image = absoluteUrl(socialCard.src)
 ---
 
 <Document lang={lang} title={title} description={description}>
@@ -41,8 +45,8 @@ const image = absoluteUrl(marquee.src)
       <meta property="og:locale:alternate" content={OPEN_GRAPH_LOCALES[language]} />
     ))}
     <meta property="og:image" content={image} />
-    <meta property="og:image:width" content={String(marquee.width)} />
-    <meta property="og:image:height" content={String(marquee.height)} />
+    <meta property="og:image:width" content={String(socialCard.width)} />
+    <meta property="og:image:height" content={String(socialCard.height)} />
     <meta property="og:image:alt" content={copy.meta.imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />

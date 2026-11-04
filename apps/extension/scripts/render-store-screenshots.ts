@@ -28,6 +28,8 @@ import {
   sidebarDivider,
   SMALL_TILE,
   smallTileHtml,
+  SOCIAL_CARD,
+  socialCardHtml,
   SPLIT_BOXES,
   splitGap,
   STAGE,
@@ -503,6 +505,33 @@ const renderPromos = async (
   )
 }
 
+const renderSocialCard = (
+  browser: Browser,
+  workDir: string,
+  samples: LocaleSamples,
+  captures: Captures,
+  pages: PageCaptures,
+) => {
+  const socialDir = join(OUTPUT_DIR, "social")
+  mkdirSync(socialDir, { recursive: true })
+  return render(
+    browser,
+    workDir,
+    socialCardHtml({
+      lang: samples.lang,
+      headline: samples.captions.spaces.title,
+      subtitle: samples.captions.spaces.subtitle,
+      window: browserWindow(
+        { ...STAGE, left: 600, top: 64 },
+        captures.sidebarSpaces,
+        pages.roadmap,
+      ),
+    }),
+    SOCIAL_CARD,
+    join(socialDir, `${samples.lang}.png`),
+  )
+}
+
 buildExtension()
 const workDir = mkdtempSync(join(tmpdir(), "katip-store-"))
 const sites = await serveSamples()
@@ -534,6 +563,7 @@ try {
       )
     }
     if (samples.lang === "en") await renderPromos(plain, workDir, samples, captures, pages)
+    await renderSocialCard(plain, workDir, samples, captures, pages)
   }
 } finally {
   await plain.close()

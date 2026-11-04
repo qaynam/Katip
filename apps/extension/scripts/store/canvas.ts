@@ -19,6 +19,12 @@ export const CANVAS = { width: 1280, height: 800 } as const
 export const SMALL_TILE = { width: 440, height: 280 } as const
 export const MARQUEE = { width: 1400, height: 560 } as const
 
+/**
+ * The image shown when a link to the website is shared. X's large card is 2:1; sites with
+ * 1.91:1 cards crop only a sliver off its sides.
+ */
+export const SOCIAL_CARD = { width: 1200, height: 600 } as const
+
 /** The browser window under the caption. */
 export const STAGE: Box = { left: 96, top: 184, width: 1088, height: 576 }
 
@@ -193,6 +199,40 @@ p { margin: 14px 0 0; color: ${SECONDARY_INK}; font-size: 19px; line-height: 1.4
 `,
     `<div class="brand">
   <div class="logo">${flushIcon(64)}<img src="${WORDMARK}" width="120" alt=""></div>
+  <h1>${escape(headline)}</h1>
+  <p>${escape(subtitle)}</p>
+</div>
+${window}`,
+  )
+
+/** The link preview card: the name and headline beside the browser window, in `lang`. */
+export const socialCardHtml = ({
+  lang,
+  headline,
+  subtitle,
+  window,
+}: {
+  readonly lang: string
+  readonly headline: string
+  readonly subtitle: string
+  readonly window: string
+}) =>
+  page(
+    lang,
+    SOCIAL_CARD,
+    // Larger type than the marquee's: a card is shown at about half its size in a timeline. The
+    // text stays clear of the bottom left corner, where X lays the site's domain over the image
+    `
+body { background: radial-gradient(80% 120% at 0% 0%, #FFFFFF 0%, ${BACKDROP} 65%); }
+.brand { position: absolute; left: 72px; top: 0; bottom: 40px; display: flex; flex-direction: column; justify-content: center; width: 470px; }
+.brand img { position: static; }
+.logo { display: flex; align-items: center; gap: 16px; }
+h1 { margin: 34px 0 0; font-size: 54px; line-height: 1.08; font-weight: 700; letter-spacing: -0.028em; }
+p { margin: 18px 0 0; color: ${SECONDARY_INK}; font-size: 24px; line-height: 1.4; }
+.window { border-radius: 14px 0 0 0; }
+`,
+    `<div class="brand">
+  <div class="logo">${flushIcon(72)}<img src="${WORDMARK}" width="136" alt=""></div>
   <h1>${escape(headline)}</h1>
   <p>${escape(subtitle)}</p>
 </div>
