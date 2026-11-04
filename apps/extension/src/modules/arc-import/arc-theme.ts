@@ -63,13 +63,13 @@ const decodeUnitInterval = Schema.decodeUnknownOption(
 )
 const decodeScheme = Schema.decodeUnknownOption(Schema.Literals(["light", "dark"]))
 
-// Not copied as they are: Katip's intensity also darkens the light scheme, and its grain is
-// stronger than Arc's noise, so the same numbers painted imported Spaces far darker and grainier
-// than Arc. The scales were fitted to a Retina screenshot of Arc's window in the light scheme.
-// Katip's colors at intensity 0.75 come closest to Arc's at its full intensity (the smallest OKLab
-// distance from top to bottom), and Katip's grain at about 0.25 varies the brightness from pixel
-// to pixel as much as Arc's noise at 0.5
-const INTENSITY_PER_ARC_INTENSITY = 0.75
+// Not copied as they are: Arc paints a clear tint even with no intensity, and its noise is weaker
+// than Katip's grain, so the same numbers painted imported Spaces nearly grey and grainier than
+// Arc. The mappings were fitted to Retina screenshots of Arc's window in the light scheme. Katip's
+// colors at intensity 0.6 come closest to Arc's with no intensity, so Arc's range maps onto the
+// upper part of Katip's, and Katip's grain at about 0.25 varies the brightness from pixel to pixel
+// as much as Arc's noise at 0.5
+const INTENSITY_AT_NO_ARC_INTENSITY = 0.6
 const GRAIN_PER_ARC_NOISE = 0.5
 
 const colorsIn = (entries: ReadonlyArray<unknown>) =>
@@ -162,11 +162,13 @@ const shownColors = (
   )
 }
 
-const scaledOr = (value: unknown, scale: number, fallback: number) =>
-  Option.match(decodeUnitInterval(value), {
-    onNone: () => fallback,
-    onSome: (factor) => factor * scale,
-  })
+const mappedOr = (value: unknown, map: (factor: number) => number, fallback: number) =>
+  Option.match(decodeUnitInterval(value), { onNone: () => fallback, onSome: map })
+
+const intensityOfArc = (factor: number) =>
+  INTENSITY_AT_NO_ARC_INTENSITY + factor * (1 - INTENSITY_AT_NO_ARC_INTENSITY)
+
+const grainOfArc = (factor: number) => factor * GRAIN_PER_ARC_NOISE
 
 /** The first of `appearances` that is `light` or `dark`, else `auto`. */
 const modeOf = (appearances: ReadonlyArray<unknown>): ThemeMode =>
@@ -187,12 +189,8 @@ const gradientThemeOf = (customInfo: unknown): Option.Option<SpaceTheme> =>
       {
         mode: modeOf([single.contentOverBackgroundAppearance, gradient.translucencyStyle]),
         colors,
-        intensity: scaledOr(
-          gradient.modifiers?.intensityFactor,
-          INTENSITY_PER_ARC_INTENSITY,
-          DEFAULT_INTENSITY,
-        ),
-        grain: scaledOr(gradient.modifiers?.noiseFactor, GRAIN_PER_ARC_NOISE, DEFAULT_GRAIN),
+        intensity: mappedOr(gradient.modifiers?.intensityFactor, intensityOfArc, DEFAULT_INTENSITY),
+        grain: mappedOr(gradient.modifiers?.noiseFactor, grainOfArc, DEFAULT_GRAIN),
       } satisfies SpaceTheme,
       (theme) => theme.colors.length > 0,
     )

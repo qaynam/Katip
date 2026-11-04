@@ -88,10 +88,12 @@ describe("Changing a folder's icon", () => {
     expect(document.activeElement).toBe(folderHeader())
   })
 
-  it("shows the chosen icon instead of the folder glyph in the folder's header", async () => {
+  it("shows the chosen icon inside the folder glyph in the folder's header", async () => {
     await renderSidebar(viewWithFolder("moon"))
 
-    const shown = folderHeader().querySelector<HTMLElement>("[data-folder-icon]")
+    const shown = folderHeader().querySelector<HTMLElement>(
+      "[data-folder-glyph] [data-folder-icon]",
+    )
 
     expect(shown?.dataset["folderIcon"]).toBe("moon")
   })

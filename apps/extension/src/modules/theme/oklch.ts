@@ -45,6 +45,37 @@ const intoGamut = (color: Oklch): Rgb => {
   return toLinearRgb({ ...color, chroma: search(0, color.chroma, 16) })
 }
 
+const maxChromaAt = (lightness: number, hue: number) => {
+  const search = (low: number, high: number, step: number): number =>
+    step === 0
+      ? low
+      : isInGamut(toLinearRgb({ lightness, chroma: (low + high) / 2, hue }))
+        ? search((low + high) / 2, high, step - 1)
+        : search(low, (low + high) / 2, step - 1)
+  return search(0, 0.4, 20)
+}
+
+const GOLDEN_RATIO_CONJUGATE = (Math.sqrt(5) - 1) / 2
+
+/**
+ * The most vivid color of a hue that sRGB can show. Yellow's sits near white and blue's far
+ * darker, which is why vivid yellows look light and vivid blues deep.
+ */
+export const cuspOf = (hue: number): Oklch => {
+  // How much chroma sRGB allows rises and then falls as lightness goes from black to white, so a
+  // golden-section search finds the peak
+  const search = (low: number, high: number, step: number): number => {
+    if (step === 0) return (low + high) / 2
+    const lower = high - (high - low) * GOLDEN_RATIO_CONJUGATE
+    const upper = low + (high - low) * GOLDEN_RATIO_CONJUGATE
+    return maxChromaAt(lower, hue) < maxChromaAt(upper, hue)
+      ? search(lower, high, step - 1)
+      : search(low, upper, step - 1)
+  }
+  const lightness = search(0, 1, 40)
+  return { lightness, chroma: maxChromaAt(lightness, hue), hue }
+}
+
 const encodeGamma = (channel: number) => {
   const clamped = Number.clamp(channel, { minimum: 0, maximum: 1 })
   return clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055

@@ -150,7 +150,7 @@
     border: none;
     border-radius: 7px;
     background: none;
-    color: var(--accent);
+    color: var(--folder-line);
     transition: background-color 120ms ease;
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { contrastRatio, fromSrgb, relativeLuminance, rgbCss, toSrgb } from "./oklch"
+import { contrastRatio, cuspOf, fromSrgb, relativeLuminance, rgbCss, toSrgb } from "./oklch"
 
 const white = { red: 1, green: 1, blue: 1 }
 const black = { red: 0, green: 0, blue: 0 }
@@ -60,5 +60,21 @@ describe("fromSrgb", () => {
     expect(fromSrgb({ red: 1.2, green: -0.1, blue: 0 })).toStrictEqual(
       fromSrgb({ red: 1, green: 0, blue: 0 }),
     )
+  })
+})
+
+describe("cuspOf", () => {
+  it("finds sRGB red as the most vivid color of red's hue", () => {
+    const red = fromSrgb({ red: 1, green: 0, blue: 0 })
+    const cusp = cuspOf(red.hue)
+
+    expect([cusp.lightness, cusp.chroma]).toStrictEqual([
+      expect.closeTo(red.lightness, 2),
+      expect.closeTo(red.chroma, 3),
+    ])
+  })
+
+  it("puts the most vivid yellow far lighter than the most vivid blue", () => {
+    expect(cuspOf(110).lightness - cuspOf(265).lightness).toBeGreaterThan(0.4)
   })
 })

@@ -669,10 +669,10 @@ describe("convertArcSidebar", () => {
       expect(work?.theme).toStrictEqual({
         mode: "dark",
         colors: [
-          { hue: expect.closeTo(264.57, 1), chroma: 1 },
-          { hue: expect.closeTo(306.93, 1), chroma: expect.closeTo(0.477, 2) },
+          { hue: expect.closeTo(264.57, 1), chroma: expect.closeTo(0.639, 2) },
+          { hue: expect.closeTo(306.93, 1), chroma: expect.closeTo(0.271, 2) },
         ],
-        intensity: 0.375,
+        intensity: 0.8,
         grain: 0.15,
       })
     })
@@ -682,7 +682,7 @@ describe("convertArcSidebar", () => {
 
       expect(reading?.theme).toStrictEqual({
         mode: "auto",
-        colors: [{ hue: expect.closeTo(149.24, 1), chroma: expect.closeTo(0.862, 2) }],
+        colors: [{ hue: expect.closeTo(149.24, 1), chroma: expect.closeTo(0.598, 2) }],
         intensity: 0.7,
         grain: 0.2,
       })
@@ -702,11 +702,11 @@ describe("convertArcSidebar", () => {
       expect(theme).toStrictEqual({
         mode: "light",
         colors: [
-          { hue: expect.closeTo(92.72, 1), chroma: expect.closeTo(0.188, 2) },
-          { hue: expect.closeTo(289.64, 1), chroma: expect.closeTo(0.328, 2) },
-          { hue: expect.closeTo(299.32, 1), chroma: expect.closeTo(0.493, 2) },
+          { hue: expect.closeTo(92.72, 1), chroma: expect.closeTo(0.178, 2) },
+          { hue: expect.closeTo(289.64, 1), chroma: expect.closeTo(0.19, 2) },
+          { hue: expect.closeTo(299.32, 1), chroma: expect.closeTo(0.285, 2) },
         ],
-        intensity: 0.75,
+        intensity: 1,
         grain: 0.25,
       })
     })
@@ -788,11 +788,11 @@ describe("convertArcSidebar", () => {
 
     describe("intensity and grain", () => {
       it.each([
-        [1, 0.5, { intensity: 0.75, grain: 0.25 }],
-        [0.8, 0.8, { intensity: 0.6, grain: 0.4 }],
-        [0, 0, { intensity: 0, grain: 0 }],
+        [1, 0.5, { intensity: 1, grain: 0.25 }],
+        [0.8, 0.8, { intensity: 0.92, grain: 0.4 }],
+        [0, 0, { intensity: 0.6, grain: 0 }],
       ])(
-        "scales Arc's intensity %d and noise %d to look alike in Katip",
+        "maps Arc's intensity %d and noise %d to the Katip values that look alike",
         (intensityFactor, noiseFactor, expected) => {
           const theme = themeOfSpaceWith(
             gradientTheme({ baseColors: [red], modifiers: { intensityFactor, noiseFactor } }),

@@ -14,7 +14,6 @@
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import FolderGlyph from "./FolderGlyph.svelte"
-  import FolderIconGlyph from "./FolderIconGlyph.svelte"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import { addLiveFolderMenu, createFolder } from "./menus"
   import PinnedItemRow from "./PinnedItemRow.svelte"
@@ -130,11 +129,7 @@
 
 {#snippet glyph()}
   <span class="folder-icon">
-    {#if folder.icon === null}
-      <FolderGlyph isOpen={folder.isExpanded} />
-    {:else}
-      <FolderIconGlyph icon={folder.icon} />
-    {/if}
+    <FolderGlyph isOpen={folder.isExpanded} icon={folder.icon} />
   </span>
 {/snippet}
 
@@ -260,7 +255,6 @@
     flex: none;
     place-items: center;
     width: 18px;
-    color: var(--accent);
   }
 
   .title {

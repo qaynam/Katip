@@ -29,6 +29,9 @@
   style:--surface-active={appearance.activeSurface}
   style:--divider={appearance.divider}
   style:--accent={appearance.accent}
+  style:--folder-tab={appearance.folderTab}
+  style:--folder-fill={appearance.folderFill}
+  style:--folder-line={appearance.folderLine}
 >
   <ThemeBackdrop
     background={appearance.background}
