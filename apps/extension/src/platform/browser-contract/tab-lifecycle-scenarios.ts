@@ -564,15 +564,16 @@ export const tabUpdateSuite: ContractSuite = {
 
           return yield* stage.observe({
             windows: [windowId],
+            // Not the duplicate's URL: Chrome sometimes returns the duplicate before it starts
+            // loading, with neither url nor pendingUrl set
             returned: () => ({
               tab: stage.tab(duplicated),
               opener: Option.getOrNull(Option.map(duplicated.openerTabId, stage.tabLabel)),
-              url: urlOf(duplicated),
             }),
           })
         }),
       expected: {
-        returned: { tab: "c2@3 active", opener: "a", url: pageUrl("c") },
+        returned: { tab: "c2@3 active", opener: "a" },
         strip: ["a", "b", "c", "c2 active", "d"],
         tabEvents: ["created c2@3 active", "activated c2"],
       },
