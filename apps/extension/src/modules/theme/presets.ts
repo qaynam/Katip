@@ -3,29 +3,75 @@ import { themeOf, type SpaceTheme, type ThemeColor } from "./space-theme"
 
 const color = (hue: number, chroma: number): ThemeColor => ({ hue, chroma })
 
-/** The presets under the picker. The first page holds single colors, the second gradients. */
-export const presetPages: ReadonlyArray<ReadonlyArray<ReadonlyArray<ThemeColor>>> = [
+/**
+ * A preset under the picker. Colors replaces the theme's colors; Gray also sets the scheme and
+ * intensity, which is what makes a gray light or dark.
+ */
+export type ThemePreset =
+  | { readonly _tag: "Colors"; readonly colors: ReadonlyArray<ThemeColor> }
+  | { readonly _tag: "Gray"; readonly mode: "light" | "dark"; readonly intensity: number }
+
+const colors = (...colors: ReadonlyArray<ThemeColor>): ThemePreset => ({ _tag: "Colors", colors })
+
+const gray = (mode: "light" | "dark", intensity: number): ThemePreset => ({
+  _tag: "Gray",
+  mode,
+  intensity,
+})
+
+const GRADIENT_SPREAD_DEGREES = 25
+
+/** Three colors spread evenly around the primary color, the way the picker keeps them. */
+const gradient = (hue: number, chroma: number): ThemePreset =>
+  colors(
+    color(hue, chroma),
+    color((hue + GRADIENT_SPREAD_DEGREES) % 360, chroma),
+    color((hue + 360 - GRADIENT_SPREAD_DEGREES) % 360, chroma),
+  )
+
+/** A gray as one achromatic color, so the intensity and grain still apply to it. */
+const achromatic = color(0, 0)
+
+/** The theme a preset turns `theme` into. What the preset doesn't set stays as it was. */
+export const applyPreset = (theme: SpaceTheme, preset: ThemePreset): SpaceTheme =>
+  preset._tag === "Colors"
+    ? { ...theme, colors: preset.colors }
+    : { ...theme, colors: [achromatic], mode: preset.mode, intensity: preset.intensity }
+
+/** The presets under the picker, a page each of single colors, gradients and grays. */
+export const presetPages: ReadonlyArray<ReadonlyArray<ThemePreset>> = [
   [
-    [color(90, 0.05)],
-    [color(350, 0.55)],
-    [color(310, 0.45)],
-    [color(20, 0.8)],
-    [color(45, 0.85)],
-    [color(90, 0.8)],
-    [color(150, 0.75)],
-    [color(225, 0.6)],
-    [color(270, 0.25)],
+    colors(color(61, 0.08)),
+    colors(color(358, 0.44)),
+    colors(color(320, 0.4)),
+    colors(color(20, 0.73)),
+    colors(color(38, 0.77)),
+    colors(color(90, 0.81)),
+    colors(color(155, 0.84)),
+    colors(color(228, 0.6)),
+    colors(color(275, 0.3)),
   ],
   [
-    [color(90, 0.1), color(250, 0.15)],
-    [color(350, 0.6), color(30, 0.6)],
-    [color(310, 0.5), color(350, 0.5)],
-    [color(30, 0.8), color(70, 0.8)],
-    [color(70, 0.8), color(120, 0.8)],
-    [color(120, 0.75), color(170, 0.75)],
-    [color(170, 0.7), color(220, 0.7)],
-    [color(220, 0.7), color(280, 0.6)],
-    [color(260, 0.35), color(310, 0.35)],
+    gradient(96, 0.07),
+    gradient(20, 0.3),
+    gradient(350, 0.22),
+    gradient(48, 0.58),
+    gradient(86, 0.74),
+    gradient(122, 0.68),
+    gradient(178, 0.78),
+    gradient(266, 0.31),
+    gradient(301, 0.15),
+  ],
+  [
+    gray("light", 0),
+    gray("light", 0.35),
+    gray("light", 0.7),
+    gray("light", 1),
+    gray("dark", 1),
+    gray("dark", 0.75),
+    gray("dark", 0.5),
+    gray("dark", 0.25),
+    gray("dark", 0),
   ],
 ]
 

@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { Option } from "effect"
   import type { MessageKey } from "#modules/i18n"
-  import { presetPages, type ThemeColor } from "#modules/theme"
-  import { themeSwatch } from "../../logic/space-themes"
+  import { presetPages, type ThemePreset } from "#modules/theme"
+  import { presetSwatch } from "../../logic/space-themes"
   import { getSidebarContext } from "../../state/sidebar-context"
   import Icon from "../Icon.svelte"
 
   interface Props {
-    onPick: (colors: ReadonlyArray<ThemeColor>) => void
+    onPick: (preset: ThemePreset) => void
   }
 
   const { onPick }: Props = $props()
@@ -17,6 +16,7 @@
   const pageLabels = [
     "sidepanel.theme.presets.solid",
     "sidepanel.theme.presets.gradient",
+    "sidepanel.theme.presets.gray",
   ] as const satisfies ReadonlyArray<MessageKey>
 
   let page = $state(0)
@@ -44,7 +44,7 @@
         class="swatch"
         type="button"
         aria-label="{pageLabel} {index + 1}"
-        style:background={Option.getOrUndefined(themeSwatch(preset))}
+        style:background={presetSwatch(preset)}
         onclick={() => onPick(preset)}
       ></button>
     {/each}

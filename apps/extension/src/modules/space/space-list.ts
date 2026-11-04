@@ -52,7 +52,9 @@ export const unusedSpaceName = (spaces: SpaceList, name: SpaceName): SpaceName =
 
 // The first preset on the first page is neutral, so it isn't one of the themes handed out
 // automatically
-const colorfulPresets = (presetPages[0] ?? []).slice(1).map(themeOf)
+const colorfulPresets = (presetPages[0] ?? [])
+  .slice(1)
+  .flatMap((preset) => (preset._tag === "Colors" ? [themeOf(preset.colors)] : []))
 
 const defaultTheme = (spaces: SpaceList): SpaceTheme => {
   const used = new Set(spaces.map((space) => groupColorOf(space.theme)))

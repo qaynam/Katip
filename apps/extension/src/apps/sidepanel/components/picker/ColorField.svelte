@@ -6,8 +6,8 @@
 </script>
 
 <script lang="ts">
-  import { Array, Option } from "effect"
-  import { colorAtPoint, pointOfColor, swatchOf, type ThemeColor } from "#modules/theme"
+  import { Option } from "effect"
+  import { colorAtPoint, moveColor, pointOfColor, swatchOf, type ThemeColor } from "#modules/theme"
   import { FIELD_EDGE_INSET_PX, pickerPointAt, pointAfterKey } from "../../logic/picker-geometry"
   import { getSidebarContext } from "../../state/sidebar-context"
 
@@ -32,9 +32,6 @@
     )
   }
 
-  const withColorAt = (index: number, color: ThemeColor): ReadonlyArray<ThemeColor> =>
-    Option.getOrElse(Array.replace(colors, index, color), () => [color])
-
   const indexToGrab = (event: PointerEvent): number => {
     const pointUnderPointer =
       event.target instanceof Element ? event.target.closest("[data-color-index]") : null
@@ -46,17 +43,17 @@
     event.preventDefault()
     draggedIndex = indexToGrab(event)
     field?.setPointerCapture?.(event.pointerId)
-    onChange(withColorAt(draggedIndex, colorUnder(event)))
+    onChange(moveColor(colors, draggedIndex, colorUnder(event)))
   }
 
   const drag = (event: PointerEvent) => {
     if (draggedIndex === null) return
-    onChange(withColorAt(draggedIndex, colorUnder(event)))
+    onChange(moveColor(colors, draggedIndex, colorUnder(event)))
   }
 
   const release = (event: PointerEvent) => {
     if (draggedIndex === null) return
-    onChange(withColorAt(draggedIndex, colorUnder(event)))
+    onChange(moveColor(colors, draggedIndex, colorUnder(event)))
     draggedIndex = null
     onSettle()
   }
@@ -65,7 +62,7 @@
     const moved = pointAfterKey(pointOfColor(color), event.key)
     if (Option.isNone(moved)) return
     event.preventDefault()
-    onChange(withColorAt(index, colorAtPoint(moved.value)))
+    onChange(moveColor(colors, index, colorAtPoint(moved.value)))
   }
 </script>
 

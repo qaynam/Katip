@@ -180,6 +180,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.theme.presets": "预设",
   "sidepanel.theme.presets.solid": "纯色",
   "sidepanel.theme.presets.gradient": "渐变",
+  "sidepanel.theme.presets.gray": "灰色",
   "sidepanel.theme.presets.of": "{kind}预设",
   "sidepanel.theme.presets.previous": "上一组预设",
   "sidepanel.theme.presets.next": "下一组预设",

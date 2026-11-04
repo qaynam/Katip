@@ -90,7 +90,12 @@ describe("addSpace", () => {
 
   it("without a theme, gives a preset whose color family no existing Space uses", () => {
     const redPreset = Option.getOrThrow(
-      Array.findFirst(presetPages[0] ?? [], (colors) => groupColorOf(themeOf(colors)) === "red"),
+      Array.findFirst(
+        (presetPages[0] ?? []).flatMap((preset) =>
+          preset._tag === "Colors" ? [preset.colors] : [],
+        ),
+        (colors) => groupColorOf(themeOf(colors)) === "red",
+      ),
     )
     const spaces = [space("a", { theme: themeOf(redPreset) })]
 

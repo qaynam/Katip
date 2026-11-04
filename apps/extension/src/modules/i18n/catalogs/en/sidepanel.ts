@@ -186,6 +186,7 @@ export const sidepanel = {
   "sidepanel.theme.presets": "Presets",
   "sidepanel.theme.presets.solid": "Solid",
   "sidepanel.theme.presets.gradient": "Gradient",
+  "sidepanel.theme.presets.gray": "Gray",
   "sidepanel.theme.presets.of": "{kind} presets",
   "sidepanel.theme.presets.previous": "Previous presets",
   "sidepanel.theme.presets.next": "Next presets",

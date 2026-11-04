@@ -193,6 +193,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.theme.presets": "Preajustes",
   "sidepanel.theme.presets.solid": "Sólidos",
   "sidepanel.theme.presets.gradient": "Degradados",
+  "sidepanel.theme.presets.gray": "Grises",
   "sidepanel.theme.presets.of": "Preajustes: {kind}",
   "sidepanel.theme.presets.previous": "Preajustes anteriores",
   "sidepanel.theme.presets.next": "Preajustes siguientes",

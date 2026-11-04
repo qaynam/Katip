@@ -11,11 +11,18 @@ export type { Rgb } from "./oklch"
 export {
   addHarmonyColor,
   colorAtPoint,
+  moveColor,
   pointOfColor,
   removeLastColor,
   type PickerPoint,
 } from "./picker"
-export { groupColorOf, presetPages, themeOfGroupColor } from "./presets"
+export {
+  applyPreset,
+  groupColorOf,
+  presetPages,
+  themeOfGroupColor,
+  type ThemePreset,
+} from "./presets"
 export {
   DEFAULT_GRAIN,
   DEFAULT_INTENSITY,

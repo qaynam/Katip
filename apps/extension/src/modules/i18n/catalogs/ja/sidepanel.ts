@@ -187,6 +187,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.theme.presets": "プリセット",
   "sidepanel.theme.presets.solid": "単色",
   "sidepanel.theme.presets.gradient": "グラデーション",
+  "sidepanel.theme.presets.gray": "グレー",
   "sidepanel.theme.presets.of": "{kind}のプリセット",
   "sidepanel.theme.presets.previous": "前のプリセット",
   "sidepanel.theme.presets.next": "次のプリセット",

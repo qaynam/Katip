@@ -3,11 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { SpaceName } from "#modules/space"
 import {
   appearanceOf,
+  applyPreset,
   colorAtPoint,
   MAX_THEME_COLORS,
+  moveColor,
   neutralTheme,
   presetPages,
   type SpaceTheme,
+  type ThemePreset,
 } from "#modules/theme"
 import type { SidebarCommand } from "#protocol"
 import { FIELD_EDGE_INSET_PX } from "../logic/picker-geometry"
@@ -133,6 +136,21 @@ describe("The picker after a color is chosen", () => {
     expect(shownAppearance(container).background).toBe(appearanceOf(dragged, "light").background)
   })
 
+  it("drags every color together when one of them is dragged", async () => {
+    const harmony = [yellow, { hue: 130, chroma: 0.8 }, { hue: 50, chroma: 0.8 }]
+    const { connection, picker } = await openPicker({ ...tunedTheme, colors: harmony })
+    const field = fieldOf(picker)
+    const second = within(picker).getByRole("button", { name: "Color 2" })
+    const at = { clientX: fieldCenter.x, clientY: fieldCenter.y - fieldRadius / 2, pointerId: 1 }
+
+    await fireEvent.pointerDown(second, at)
+    await fireEvent.pointerUp(field, at)
+
+    expect(sentThemes(connection.sentCommands).at(-1)?.colors).toStrictEqual(
+      moveColor(harmony, 1, colorAtPoint({ x: 0, y: 0.5 })),
+    )
+  })
+
   it("moves the color dot with the arrow keys", async () => {
     const { connection, picker } = await openPicker({
       ...tunedTheme,
@@ -209,14 +227,20 @@ describe("The picker after a color is chosen", () => {
   })
 })
 
+const presetAt = (page: number, index: number): ThemePreset => {
+  const preset = presetPages[page]?.[index]
+  if (preset === undefined) throw new Error(`No preset ${index} on page ${page}`)
+  return preset
+}
+
 describe("Presets", () => {
-  it("changes only the colors when chosen, keeping the mode, intensity, and grain", async () => {
+  it("changes only the colors when a color preset is chosen, keeping the mode, intensity, and grain", async () => {
     const { connection, picker } = await openPicker(tunedTheme)
 
     await fireEvent.click(within(picker).getByRole("button", { name: "Solid 2" }))
 
     expect(sentThemes(connection.sentCommands)).toStrictEqual([
-      { ...tunedTheme, colors: presetPages[0]?.[1] },
+      applyPreset(tunedTheme, presetAt(0, 1)),
     ])
   })
 
@@ -226,7 +250,22 @@ describe("Presets", () => {
     await fireEvent.click(within(picker).getByRole("button", { name: "Next presets" }))
     await fireEvent.click(within(picker).getByRole("button", { name: "Gradient 1" }))
 
-    expect(sentThemes(connection.sentCommands).at(-1)?.colors).toStrictEqual(presetPages[1]?.[0])
+    expect(sentThemes(connection.sentCommands).at(-1)).toStrictEqual(
+      applyPreset(tunedTheme, presetAt(1, 0)),
+    )
+  })
+
+  it("lists grays on the last page, which set the scheme and intensity too", async () => {
+    const { connection, picker } = await openPicker(tunedTheme)
+    const next = within(picker).getByRole("button", { name: "Next presets" })
+
+    await fireEvent.click(next)
+    await fireEvent.click(next)
+    await fireEvent.click(within(picker).getByRole("button", { name: "Gray 1" }))
+
+    expect(sentThemes(connection.sentCommands).at(-1)).toStrictEqual(
+      applyPreset(tunedTheme, presetAt(2, 0)),
+    )
   })
 
   it("can't go back from the first page or forward from the last", async () => {
@@ -234,7 +273,9 @@ describe("Presets", () => {
     const button = (name: string) => within(picker).getByRole<HTMLButtonElement>("button", { name })
     const canGoBackOnFirst = !button("Previous presets").disabled
 
-    await fireEvent.click(button("Next presets"))
+    for (let page = 1; page < presetPages.length; page += 1) {
+      await fireEvent.click(button("Next presets"))
+    }
 
     expect([canGoBackOnFirst, button("Next presets").disabled]).toStrictEqual([false, true])
   })

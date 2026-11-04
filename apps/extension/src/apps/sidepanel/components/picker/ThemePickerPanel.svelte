@@ -3,6 +3,7 @@
   import type { MessageKey } from "#modules/i18n"
   import {
     addHarmonyColor,
+    applyPreset,
     MAX_THEME_COLORS,
     neutralTheme,
     removeLastColor,
@@ -120,7 +121,7 @@
     </div>
   </div>
 
-  <PresetRow onPick={(colors) => commit({ ...theme, colors })} />
+  <PresetRow onPick={(preset) => commit(applyPreset(theme, preset))} />
 
   <div class="tuning">
     <IntensitySlider
