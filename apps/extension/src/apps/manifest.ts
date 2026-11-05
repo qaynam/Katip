@@ -21,9 +21,16 @@ const messageNameOf = (key: ManifestMessageKey): string => key.replaceAll(".", "
 
 const localized = (key: ManifestMessageKey): string => `__MSG_${messageNameOf(key)}__`
 
-// This public key fixes the extension ID to hggfdjnidgfpigakapgkgolnjemijaed
+// This public key fixes the extension ID to hggfdjnidgfpigakapgkgolnjemijaed, the ID the
+// development page on localhost connects to. Its private key is not kept anywhere
 const DEVELOPMENT_PUBLIC_KEY =
   "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1NcVH3QU/wS6acXcUvFkkqNLkaAEPQh6F83b3us2DoqCNLlsArSL2k9AEocUbX3Pzzz9Zr6kWbwesAVcrsvsnn0IO206pbboppASdYB0N5beGkug7aA9ZkzIck2s4INm5U5Dd/NdNLiTjtXz7yfozehxBuYanzovkulYwVbUXvc8437BZAasznkP2CArE4yZC/Agwmaoz/W0l7V1MEbsR0skCSOJKcsGmhZUqlfAh5uTIK5Uvk4IYIuRNJjWKcHyH3qbLtrm8ELMVfNSvEdnSzm2QCf93dqHahEWhKZcMokEJQpnG1l1asuxNamSAOiPc325D1Ca2bXyTKNdornDyQIDAQAB"
+
+// This public key fixes the extension ID to ipbjfhfabfhcgdaigheeomapmikalpak. Changing it makes
+// every installed copy a new extension that starts without Katip's data. Its private key is kept
+// out of the repository and the build
+const RELEASE_PUBLIC_KEY =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxM3K2fgqIYRReVwCwv5fy/GeSIpaygfiN2yQrZwDxwjGzzE6hZei6E9zQ8JbHp1ePBgbz3uKF30nmOfoUA91ePxQ9Efhll9dGLQ1tlXeZztXEzdI9wjg7xRaPHTcksG3dSDci7a75zy2Aniby2gEY2ZjzHcH3IZi29fKWUBLoRJ4Z1qx0HmxllLd34CkRr0oGDFkX3THtXdgiM8P9ggaOWZ8sDxdRR3sqjpLstvceaxOkF3foEmpk1tmSZwrK8FNQ+CAiIYStbr+j0ETpnin9ZgqXr+sqKJAbT11EdWxWjZXW1NRqtX6uNoOUnpNjAQG+7TqPM4Gr07Bj3kli6U+hwIDAQAB"
 
 interface CommandDeclaration {
   readonly suggested_key?: { readonly default: string; readonly mac?: string }
@@ -158,11 +165,13 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
       { ...command, description: localized(description) },
     ]),
   ),
+  // Not left to Chrome: without a key, Chrome takes the ID from the folder the extension is loaded
+  // from, so an update unzipped into another folder would be a new extension with none of Katip's
+  // data. Development builds get another key, so both can be installed side by side
+  key: mode === "development" ? DEVELOPMENT_PUBLIC_KEY : RELEASE_PUBLIC_KEY,
   // Browser automation tools can't open extension pages, so development builds let a test page on
-  // localhost connect to the background. The public key keeps the ID to connect to the same
-  // wherever the build is loaded from (its private key is not kept anywhere)
+  // localhost connect to the background
   ...(mode === "development" && {
     externally_connectable: { matches: ["http://localhost/*"] },
-    key: DEVELOPMENT_PUBLIC_KEY,
   }),
 })

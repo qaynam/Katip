@@ -1,7 +1,33 @@
+import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { buildLocaleMessages, buildManifest } from "./manifest"
+
+/** The ID Chrome gives an extension loaded with this manifest: from its key, as Chrome makes it. */
+const extensionIdOf = ({ key = "" }: chrome.runtime.ManifestV3) =>
+  [...createHash("sha256").update(Buffer.from(key, "base64")).digest("hex").slice(0, 32)]
+    .map((digit) => String.fromCharCode("a".charCodeAt(0) + Number.parseInt(digit, 16)))
+    .join("")
+
+describe("the manifest's extension ID", () => {
+  it("is the same for every release build, so an update loaded from another folder keeps Katip's data", () => {
+    expect([
+      extensionIdOf(buildManifest("production", "1.0.0")),
+      extensionIdOf(buildManifest("production", "2.0.0")),
+    ]).toStrictEqual(["ipbjfhfabfhcgdaigheeomapmikalpak", "ipbjfhfabfhcgdaigheeomapmikalpak"])
+  })
+
+  it("is another one for development builds, so both can be installed side by side", () => {
+    expect(extensionIdOf(buildManifest("development", "1.0.0"))).toBe(
+      "hggfdjnidgfpigakapgkgolnjemijaed",
+    )
+  })
+
+  it("lets no web page connect to a release build, though its ID is known to everyone", () => {
+    expect(buildManifest("production", "1.0.0").externally_connectable).toBeUndefined()
+  })
+})
 
 describe("the manifest's version", () => {
   it.each(["1", "0.1.0", "1.2.3.4", "65535.65535.65535.65535"])(

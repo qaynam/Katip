@@ -43,6 +43,12 @@ Katip has no server and sends nothing anywhere. Your Spaces, pins and settings l
 
 Katip runs on Chrome 120 or later and on other Chromium browsers with a side panel.
 
+### Updating a release
+
+Unzip the new release into any folder and load it the same way. Every release has the same extension ID, so Chrome takes it as the Katip you have and keeps your Spaces, Favorites and settings. Don't remove the old version first: removing an extension deletes its data.
+
+Releases up to 1.1.0 had no fixed ID, so moving from one of them starts Katip anew, once. Remove the old version, then load the new one. Your Spaces and pins come back from your bookmarks, but split pins and live folders show as plain folders, and Favorites, Space colors, folder icons and settings start over.
+
 ## Development
 
 Requirements: Node.js 24 and pnpm 11.
