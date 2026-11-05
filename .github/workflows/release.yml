@@ -43,6 +43,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,6 +54,13 @@ jobs:
         with:
           cache: "false"
       - run: pnpm package
+      # Not just the digest GitHub shows for the asset: a zip swapped in by anyone able to edit the
+      # release would match its own digest. Every zip carries Katip's fixed ID, so a zip built
+      # elsewhere would take over the data of the Katip it is loaded over
+      - name: Attest that the zip was built here
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: apps/extension/.release/katip-${{ needs.version.outputs.version }}.zip
       - name: Attach the zip to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -49,6 +49,14 @@ Unzip the new release into any folder and load it the same way. Every release ha
 
 Releases up to 1.1.0 had no fixed ID, so moving from one of them starts Katip anew, once. Remove the old version, then load the new one. Your Spaces and pins come back from your bookmarks, but split pins and live folders show as plain folders, and Favorites, Space colors, folder icons and settings start over.
 
+### Checking a download
+
+A zip loaded as an update gets all of Katip's data, so load only zips from this repository's releases. With the [GitHub CLI](https://cli.github.com), you can check that a zip was built from this repository by its release workflow:
+
+```sh
+gh attestation verify katip-<version>.zip --repo qaynam/Katip
+```
+
 ## Development
 
 Requirements: Node.js 24 and pnpm 11.
