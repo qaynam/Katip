@@ -61,14 +61,22 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: apps/extension/.release/katip-${{ needs.version.outputs.version }}.zip
-      - name: Attach the zip to the GitHub Release
+      # Not GitHub's generated notes: they list merged pull requests, and changes land on main
+      # without any, which left only a compare link. CHANGELOG.md is written for people using Katip
+      - name: Take the version's notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node apps/extension/scripts/print-release-notes.ts "$VERSION" > "$RUNNER_TEMP/notes.md"
+      - name: Attach the zip and the notes to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           zip="apps/extension/.release/katip-$VERSION.zip"
+          notes="$RUNNER_TEMP/notes.md"
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+            gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --verify-tag --notes-file "$notes"
           fi

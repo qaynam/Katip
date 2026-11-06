@@ -211,17 +211,18 @@ Issues and pull requests are welcome. A few conventions keep the code easy to fo
 - Code says **how**, tests say **what** (test names read as behavior), commit messages say **why**, and code comments say **why not** (why the obvious alternative wasn't taken).
 - Write code, comments, tests and commit messages in English. User-facing text goes into the translation catalogs in `apps/extension/src/modules/i18n/catalogs/`.
 - Run `pnpm check` before opening a pull request, and `pnpm test:e2e` when you touch browser behavior.
+- Add a line to the Unreleased section of [CHANGELOG.md](CHANGELOG.md), in English and Japanese, for every change people using Katip would notice.
 
 ## Releasing
 
-Set the version in `apps/extension/package.json` (the manifest takes it from there), then push a tag:
+Set the version in `apps/extension/package.json` (the manifest takes it from there), and rename the Unreleased section of [CHANGELOG.md](CHANGELOG.md) to that version and the date, as in `## 1.3.0 — 2026-11-20`. Commit both, then push a tag:
 
 ```sh
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-CI checks that the tag matches the version, runs every check, and creates a GitHub Release with the zip ready for the Chrome Web Store. Publishing a release with a new `v` tag on GitHub's Releases page works too: the same checks run, and the zip is attached to that release.
+CI checks that the tag matches the version, runs every check, and creates a GitHub Release with the zip ready for the Chrome Web Store, using the version's section of CHANGELOG.md as its notes. The checks fail when that section is missing. Publishing a release with a new `v` tag on GitHub's Releases page works too: the same checks run, and the zip and the notes from CHANGELOG.md replace what that release had.
 
 ## License
 
