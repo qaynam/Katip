@@ -5,6 +5,7 @@ import type { SidebarCommand } from "#protocol"
 import App from "./App.svelte"
 import { createMemoryLocalePreferences } from "./connection/locale-preferences"
 import { createMemoryOriginAccess } from "./connection/memory-origin-access"
+import { createMemoryScrollPositions } from "./connection/memory-scroll-positions"
 import type { SidebarConnection } from "./connection/sidebar-connection"
 import { renderSidebar } from "./testing/render-sidebar"
 import {
@@ -104,6 +105,7 @@ describe("Commands that never reach the background", () => {
         originAccess: createMemoryOriginAccess(),
         localePreferences: createMemoryLocalePreferences("en"),
         browserLanguages: [],
+        scrollPositions: createMemoryScrollPositions(),
       },
     })
     await tick()

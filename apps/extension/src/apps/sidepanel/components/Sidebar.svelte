@@ -1,8 +1,10 @@
 <script lang="ts">
   import { Option } from "effect"
+  import { untrack } from "svelte"
   import type { Translator } from "#modules/i18n"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { OriginAccess } from "../connection/origin-access"
+  import type { ScrollPositions } from "../connection/scroll-positions"
   import type { FaviconResolver } from "../logic/favicon"
   import { openTabOf } from "../logic/drag-drop"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
@@ -44,11 +46,21 @@
     translator: Translator
     originAccess: OriginAccess
     faviconUrl: FaviconResolver
+    scrollPositions: ScrollPositions
     onReload: () => void
   }
 
-  const { view, activeSpace, run, toasts, translator, originAccess, faviconUrl, onReload }: Props =
-    $props()
+  const {
+    view,
+    activeSpace,
+    run,
+    toasts,
+    translator,
+    originAccess,
+    faviconUrl,
+    scrollPositions,
+    onReload,
+  }: Props = $props()
 
   const menu = new MenuController()
   const dialog = new DialogController()
@@ -137,6 +149,29 @@
   const forgetDropTargetWhenLeaving = (event: DragEvent) => {
     if (event.relatedTarget === null) drag.reject()
   }
+
+  // Chrome discards this page whenever the panel closes, and with it where the list was scrolled
+  const keepScrollPosition = (body: HTMLElement) => {
+    // Read without tracking: each view update would otherwise redo this and scroll the list back
+    const [windowId, spaceId] = untrack(() => [view.windowId, activeSpace.id] as const)
+    let isRestored = false
+    let isDetached = false
+    void scrollPositions.read(windowId, spaceId).then((top) => {
+      if (isDetached) return
+      if (top !== null) body.scrollTop = top
+      isRestored = true
+    })
+    // Not saved before the position is restored: the active tab scrolling itself into view as the
+    // list first shows would overwrite it. Nor while the archive is shown in the list's place
+    const save = () => {
+      if (isRestored && !isArchiveOpen) scrollPositions.save(windowId, spaceId, body.scrollTop)
+    }
+    body.addEventListener("scrollend", save)
+    return () => {
+      isDetached = true
+      body.removeEventListener("scrollend", save)
+    }
+  }
 </script>
 
 <ThemedSurface theme={displayedTheme} transitionKey={activeSpace.id}>
@@ -155,7 +190,7 @@
     {#key activeSpace.id}
       <div class="space">
         <SpaceTitle space={activeSpace} />
-        <div class="space-body">
+        <div class="space-body" data-space-body {@attach keepScrollPosition}>
           {#if isArchiveOpen}
             <ArchivePanel spaceId={activeSpace.id} />
           {:else}

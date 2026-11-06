@@ -5,6 +5,7 @@ import App from "./App.svelte"
 import { makeStoredLocalePreferences } from "./connection/locale-preferences"
 import { chromeOriginAccess } from "./connection/origin-access"
 import { createPortConnection, type SidebarPort } from "./connection/port-connection"
+import { makeSessionScrollPositions } from "./connection/scroll-positions"
 
 const openPort = (): SidebarPort => {
   const port = chrome.runtime.connect({ name: SIDEBAR_PORT_NAME })
@@ -34,5 +35,6 @@ mount(App, {
     localePreferences: makeStoredLocalePreferences(),
     browserLanguages: navigator.languages,
     faviconUrl,
+    scrollPositions: makeSessionScrollPositions(),
   },
 })

@@ -11,6 +11,8 @@ import {
 } from "../connection/memory-connection"
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
+import { createMemoryScrollPositions } from "../connection/memory-scroll-positions"
+import type { ScrollPositions } from "../connection/scroll-positions"
 
 // jsdom has no layout and doesn't implement scrollIntoView
 beforeEach(() => {
@@ -26,12 +28,15 @@ export const renderSidebar = async (
     readonly locale?: LocalePreference
     /** The browser languages used when the language setting is auto. */
     readonly browserLanguages?: ReadonlyArray<string>
+    /** Pass the same one to two renders to reopen the side panel. Empty by default. */
+    readonly scrollPositions?: ScrollPositions
   } = {},
 ) => {
   const {
     grantsAccess = true,
     locale = "en",
     browserLanguages = [],
+    scrollPositions = createMemoryScrollPositions(),
     ...connectionOptions
   } = options
   const connection = createMemoryConnection({
@@ -42,7 +47,14 @@ export const renderSidebar = async (
   const localePreferences = createMemoryLocalePreferences(locale)
   const onReload = vi.fn()
   const result = render(App, {
-    props: { connection, originAccess, localePreferences, browserLanguages, onReload },
+    props: {
+      connection,
+      originAccess,
+      localePreferences,
+      browserLanguages,
+      scrollPositions,
+      onReload,
+    },
   })
   await tick()
   return {

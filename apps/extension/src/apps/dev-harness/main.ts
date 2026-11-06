@@ -6,6 +6,7 @@ import App from "../sidepanel/App.svelte"
 import { createMemoryLocalePreferences } from "../sidepanel/connection/locale-preferences"
 import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
 import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
+import { createMemoryScrollPositions } from "../sidepanel/connection/memory-scroll-positions"
 import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
 import { respondInFixture } from "./fixture-backend"
@@ -125,6 +126,7 @@ if (connection === null) {
       originAccess,
       localePreferences,
       browserLanguages: navigator.languages,
+      scrollPositions: createMemoryScrollPositions(),
     },
   })
 }

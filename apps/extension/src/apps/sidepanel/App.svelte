@@ -14,6 +14,7 @@
   import Toasts from "./components/Toasts.svelte"
   import type { LocalePreferences } from "./connection/locale-preferences"
   import type { OriginAccess } from "./connection/origin-access"
+  import type { ScrollPositions } from "./connection/scroll-positions"
   import type { SidebarConnection, Undelivered } from "./connection/sidebar-connection"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
   import { findActiveSpace } from "./logic/view-queries"
@@ -29,6 +30,7 @@
      */
     browserLanguages: ReadonlyArray<string>
     faviconUrl?: FaviconResolver
+    scrollPositions: ScrollPositions
     onReload?: () => void
   }
 
@@ -38,6 +40,7 @@
     localePreferences,
     browserLanguages,
     faviconUrl = noFaviconResolver,
+    scrollPositions,
     onReload = () => location.reload(),
   }: Props = $props()
 
@@ -87,6 +90,7 @@
     {translator}
     {originAccess}
     {faviconUrl}
+    {scrollPositions}
     {onReload}
   />
 {:else}
