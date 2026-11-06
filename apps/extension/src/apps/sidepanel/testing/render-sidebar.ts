@@ -21,6 +21,18 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
+// jsdom can't play animations, so the side panel runs as it does for people who ask for reduced
+// motion. Every other media query is left unmatched, as it was without matchMedia
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+  return () => vi.unstubAllGlobals()
+})
+
 export const renderSidebar = async (
   view: SidebarView | null,
   options: Pick<MemoryConnectionOptions, "respond"> & {

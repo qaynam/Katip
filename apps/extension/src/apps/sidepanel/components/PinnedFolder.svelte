@@ -11,8 +11,10 @@
   import { bookmarkTitleChange } from "../logic/drafts"
   import { pointRect } from "../logic/menu-position"
   import { childPosition, selfAndDescendantFolderIds } from "../logic/view-queries"
+  import { FolderExpansion } from "../state/folder-expansion.svelte"
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
+  import { disclose, DISCLOSURE_DURATION_MS } from "./disclose"
   import FolderGlyph from "./FolderGlyph.svelte"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import { addLiveFolderMenu, createFolder } from "./menus"
@@ -25,6 +27,9 @@
     folder: PinnedFolderView
     position: PinnedPosition
   }
+
+  const PEEK_EXIT_DURATION_MS = 160
+  const PEEK_RETURN_DELAY_MS = DISCLOSURE_DURATION_MS * 0.4
 
   const { folder, position }: Props = $props()
   const ctx = getSidebarContext()
@@ -53,12 +58,18 @@
     if (ctx.pendingRename.consume(folder.bookmarkId)) isEditing = true
   })
 
-  const setExpanded = (isExpanded: boolean) =>
-    void ctx.run({ _tag: "SetFolderExpanded", bookmarkId: folder.bookmarkId, isExpanded })
+  const expansion = new FolderExpansion(
+    () => folder.isExpanded,
+    (isExpanded) =>
+      ctx.run({ _tag: "SetFolderExpanded", bookmarkId: folder.bookmarkId, isExpanded }),
+  )
+  const isExpanded = $derived(expansion.isExpanded)
+
+  const setExpanded = (next: boolean) => void expansion.set(next)
 
   const toggle = (event: MouseEvent) => {
     if (event.detail > 1) return
-    setExpanded(!folder.isExpanded)
+    setExpanded(!isExpanded)
   }
 
   const rename = (draft: string) => {
@@ -70,7 +81,7 @@
   }
 
   const createSubfolder = () => {
-    if (!folder.isExpanded) setExpanded(true)
+    if (!isExpanded) setExpanded(true)
     void createFolder(ctx, folder.bookmarkId)
   }
 
@@ -115,13 +126,13 @@
 
   const onHeaderDragOver = (event: DragEvent & { currentTarget: HTMLElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
-    const zone = folderZoneAt(event.clientY - bounds.top, bounds.height, folder.isExpanded)
+    const zone = folderZoneAt(event.clientY - bounds.top, bounds.height, isExpanded)
     const target = folderDropTarget(
       { bookmarkId: folder.bookmarkId, position, childCount: folder.children.length },
       zone,
     )
     ctx.drag.offer(event, key, zone, target)
-    if (zone === "into" && !folder.isExpanded && ctx.drag.accepts(target)) {
+    if (zone === "into" && !isExpanded && ctx.drag.accepts(target)) {
       ctx.drag.hoverFor(key, () => setExpanded(true))
     }
   }
@@ -129,12 +140,12 @@
 
 {#snippet glyph()}
   <span class="folder-icon">
-    <FolderGlyph isOpen={folder.isExpanded} icon={folder.icon} />
+    <FolderGlyph isOpen={isExpanded} icon={folder.icon} />
   </span>
 {/snippet}
 
 <li class="folder" class:dragged={isDragged}>
-  <div class="header-row" class:searchable={!folder.isExpanded} bind:this={headerRow}>
+  <div class="header-row" class:searchable={!isExpanded} bind:this={headerRow}>
     {#if isEditing}
       <div class="header editing">
         {@render glyph()}
@@ -154,7 +165,7 @@
         class:drop-into={dropZone === "into"}
         class:drop-first-child={dropZone === "firstChild"}
         type="button"
-        aria-expanded={folder.isExpanded}
+        aria-expanded={isExpanded}
         draggable="true"
         onclick={toggle}
         ondblclick={() => (isEditing = true)}
@@ -167,26 +178,34 @@
         {@render glyph()}
         <span class="title">{folder.title || t("sidepanel.folder.untitled")}</span>
       </button>
-      {#if !folder.isExpanded && headerRow !== undefined}
+      {#if !isExpanded && headerRow !== undefined}
         <FolderSearchButton bookmarkId={folder.bookmarkId} anchor={headerRow} />
       {/if}
     {/if}
   </div>
 
-  {#if folder.isExpanded}
-    {#if folder.children.length === 0}
-      <p
-        class="empty"
-        class:drop-into={ctx.drag.zoneFor(emptyKey) !== null}
-        ondragover={(event) => ctx.drag.offer(event, emptyKey, "into", intoFolder)}
-      >
-        {t("sidepanel.folder.dropHere")}
-      </p>
-    {:else}
-      <PinnedNodes nodes={folder.children} parentId={folder.bookmarkId} />
-    {/if}
+  {#if isExpanded}
+    <div class="contents" transition:disclose>
+      {#if folder.children.length === 0}
+        <p
+          class="empty"
+          class:drop-into={ctx.drag.zoneFor(emptyKey) !== null}
+          ondragover={(event) => ctx.drag.offer(event, emptyKey, "into", intoFolder)}
+        >
+          {t("sidepanel.folder.dropHere")}
+        </p>
+      {:else}
+        <PinnedNodes nodes={folder.children} parentId={folder.bookmarkId} />
+      {/if}
+    </div>
   {:else if folder.peekedItems.length > 0}
-    <ul class="peek">
+    <!-- The rows peeked out are among the folder's contents. Gone quickly as the folder opens, and
+         back only once its contents have mostly closed, so that they aren't seen twice -->
+    <ul
+      class="peek"
+      in:disclose={{ delay: PEEK_RETURN_DELAY_MS }}
+      out:disclose={{ duration: PEEK_EXIT_DURATION_MS }}
+    >
       {#each folder.peekedItems as node (node.bookmarkId)}
         {#if node._tag === "PinnedSplit"}
           <PinnedSplitRow
@@ -218,6 +237,12 @@
 
   .header-row {
     position: relative;
+  }
+
+  /* Its own formatting context, so the margins inside don't collapse through it: they would while
+     it rests and not while it slides, and the height would jump at both ends */
+  .contents {
+    display: flow-root;
   }
 
   .header-row.searchable .header {

@@ -10,6 +10,7 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 - The side panel opens where its list was last scrolled, in each window and Space. Switching back to a Space returns to its place too.
 - A tab you click is highlighted at once, without waiting for the browser to switch to it.
+- Folders open and close as soon as you click them, their contents sliding down and back up while the folder icon opens and closes with them.
 - Theme colors can be dragged out to the edges and corners of the color field, where the most vivid colors are.
 - Pressing the middle of the grain dial switches between six textures: grain, speckle, film, lines, linen and paper.
 - When a newer version of Katip is out, a card at the bottom of the side panel tells you, the first time the side panel opens after the browser starts. You can turn this off in the settings.
@@ -19,6 +20,7 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 - サイドパネルを開き直すと、ウィンドウと Space ごとに、前にスクロールしていた位置で表示します。別の Space から戻ったときも同じです。
 - クリックしたタブを、ブラウザがそのタブに切り替わるのを待たずに、すぐハイライトします。
+- フォルダをクリックするとすぐに開閉し、中身がなめらかにスライドするのに合わせて、フォルダのアイコンも開閉します。
 - テーマの色の点を、色のエリアの端や角まで動かせるようになりました。いちばん鮮やかな色は端にあります。
 - グレインのダイヤルの中央を押すと、粒子・斑点・フィルム・斜線・リネン・紙の 6 種類のテクスチャを切り替えられます。
 - 新しいバージョンが出ていると、ブラウザを起動して初めてサイドパネルを開いたときに、下に出るカードでお知らせします。設定でオフにできます。

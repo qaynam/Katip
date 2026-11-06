@@ -6,7 +6,9 @@
   import { unseenBadgeText, unseenCount } from "../logic/live-folders"
   import { pointRect } from "../logic/menu-position"
   import { selfAndDescendantFolderIds } from "../logic/view-queries"
+  import { FolderExpansion } from "../state/folder-expansion.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
+  import { disclose } from "./disclose"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import Icon from "./Icon.svelte"
   import LiveItemRow from "./LiveItemRow.svelte"
@@ -38,13 +40,16 @@
   const failure = $derived(folder.status._tag === "Failed" ? folder.status : null)
   const title = $derived(folder.title || t("sidepanel.liveFolder.untitled"))
 
+  const expansion = new FolderExpansion(
+    () => folder.isExpanded,
+    (isExpanded) =>
+      ctx.run({ _tag: "SetFolderExpanded", bookmarkId: folder.bookmarkId, isExpanded }),
+  )
+  const isExpanded = $derived(expansion.isExpanded)
+
   const toggle = (event: MouseEvent) => {
     if (event.detail > 1) return
-    void ctx.run({
-      _tag: "SetFolderExpanded",
-      bookmarkId: folder.bookmarkId,
-      isExpanded: !folder.isExpanded,
-    })
+    void expansion.set(!isExpanded)
   }
 
   const startRename = () => {
@@ -96,7 +101,7 @@
 <li class="live-folder" class:dragged={isDragged}>
   <div
     class="header-row"
-    class:searchable={!folder.isExpanded}
+    class:searchable={!isExpanded}
     class:has-badge={unseen > 0}
     bind:this={headerRow}
   >
@@ -116,7 +121,7 @@
         class:drop-before={dropZone === "before"}
         class:drop-after={dropZone === "after"}
         type="button"
-        aria-expanded={folder.isExpanded}
+        aria-expanded={isExpanded}
         draggable="true"
         onclick={toggle}
         ondblclick={startRename}
@@ -141,54 +146,62 @@
           >
         {/if}
       </button>
-      {#if !folder.isExpanded && headerRow !== undefined}
+      {#if !isExpanded && headerRow !== undefined}
         <FolderSearchButton bookmarkId={folder.bookmarkId} anchor={headerRow} />
       {/if}
     {/if}
   </div>
 
-  {#if folder.isExpanded}
-    {#if failure !== null}
-      <div class="failure">
-        <p class="reason">{failure.reason}</p>
-        <div class="actions">
-          {#if failure.needsPermission}
-            <button type="button" onclick={() => void grantAccessAndRefresh(ctx, folder)}>
-              {t("sidepanel.liveFolder.grantAccess")}
-            </button>
-          {/if}
-          {#if failure.signInUrl !== null}
-            {@const signInUrl = failure.signInUrl}
-            <button type="button" onclick={() => openSignInPage(ctx, signInUrl)}>
-              {t("sidepanel.liveFolder.signIn")}
-            </button>
-          {/if}
-          {#if failure.needsToken}
-            <button type="button" onclick={setToken}>{t("sidepanel.liveFolder.setToken")}</button>
-          {/if}
-          {#if !failure.needsPermission && !failure.needsToken}
-            <button type="button" onclick={refresh}>{t("sidepanel.liveFolder.retry")}</button>
-          {/if}
+  {#if isExpanded}
+    <div class="contents" transition:disclose>
+      {#if failure !== null}
+        <div class="failure">
+          <p class="reason">{failure.reason}</p>
+          <div class="actions">
+            {#if failure.needsPermission}
+              <button type="button" onclick={() => void grantAccessAndRefresh(ctx, folder)}>
+                {t("sidepanel.liveFolder.grantAccess")}
+              </button>
+            {/if}
+            {#if failure.signInUrl !== null}
+              {@const signInUrl = failure.signInUrl}
+              <button type="button" onclick={() => openSignInPage(ctx, signInUrl)}>
+                {t("sidepanel.liveFolder.signIn")}
+              </button>
+            {/if}
+            {#if failure.needsToken}
+              <button type="button" onclick={setToken}>{t("sidepanel.liveFolder.setToken")}</button>
+            {/if}
+            {#if !failure.needsPermission && !failure.needsToken}
+              <button type="button" onclick={refresh}>{t("sidepanel.liveFolder.retry")}</button>
+            {/if}
+          </div>
         </div>
-      </div>
-    {/if}
-    {#if folder.items.length > 0}
-      <ul class="items">
-        {#each folder.items as item (item.id)}
-          <LiveItemRow {item} folderId={folder.bookmarkId} />
-        {/each}
-      </ul>
-    {:else if failure === null}
-      <p class="empty">
-        {folder.status._tag === "Refreshing"
-          ? t("sidepanel.liveFolder.loading")
-          : t("sidepanel.liveFolder.empty")}
-      </p>
-    {/if}
+      {/if}
+      {#if folder.items.length > 0}
+        <ul class="items">
+          {#each folder.items as item (item.id)}
+            <LiveItemRow {item} folderId={folder.bookmarkId} />
+          {/each}
+        </ul>
+      {:else if failure === null}
+        <p class="empty">
+          {folder.status._tag === "Refreshing"
+            ? t("sidepanel.liveFolder.loading")
+            : t("sidepanel.liveFolder.empty")}
+        </p>
+      {/if}
+    </div>
   {/if}
 </li>
 
 <style>
+  /* Its own formatting context, so the margins inside don't collapse through it: they would while
+     it rests and not while it slides, and the height would jump at both ends */
+  .contents {
+    display: flow-root;
+  }
+
   .live-folder {
     list-style: none;
     transition: opacity 120ms ease;

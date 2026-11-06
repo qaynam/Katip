@@ -18,6 +18,9 @@ export const launchInProfile = (
   return chromium.launchPersistentContext(userDataDir, {
     ...(executablePath === undefined ? {} : { executablePath }),
     headless: true,
+    // Folders slide open and closed over a fraction of a second, and steps that measure where rows
+    // are, such as drags, would measure them mid-slide
+    reducedMotion: "reduce",
     args: [
       `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
