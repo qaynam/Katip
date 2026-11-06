@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, type Layer, Option, Result, Schema, type Scope, Stream } from "effect"
-import { decodeExportFile } from "#modules/export"
+import { decodeExportFile, exportedThemeOf } from "#modules/export"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BrowserEvents, type PortSender } from "#platform/browser"
@@ -122,7 +122,7 @@ describe("data export", () => {
               {
                 id: home,
                 name: "Home",
-                theme: Option.getOrThrow(spaceNamed(view, "Home")).theme,
+                theme: exportedThemeOf(Option.getOrThrow(spaceNamed(view, "Home")).theme),
                 pinned: [
                   { type: "pin", title: "Mail", url: "https://mail.example.com/" },
                   {
@@ -148,7 +148,7 @@ describe("data export", () => {
               {
                 id: Option.getOrThrow(spaceNamed(view, "Work")).id,
                 name: "Work",
-                theme,
+                theme: exportedThemeOf(theme),
                 pinned: [],
                 // Creating a Space opens a blank new tab in it, which is left out
                 tabs: [],

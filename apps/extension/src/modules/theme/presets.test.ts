@@ -99,6 +99,7 @@ describe("applyPreset", () => {
     colors: [{ hue: 90, chroma: 0.8 }],
     intensity: 0.3,
     grain: 0.6,
+    texture: "linen",
   }
 
   it("changes only the colors for a color preset", () => {
@@ -107,7 +108,7 @@ describe("applyPreset", () => {
     expect(applyPreset(tuned, { _tag: "Colors", colors })).toStrictEqual({ ...tuned, colors })
   })
 
-  it("gives a gray one achromatic color and its scheme and intensity, keeping the grain", () => {
+  it("gives a gray one achromatic color and its scheme and intensity, keeping the grain and texture", () => {
     const grayed = applyPreset(tuned, { _tag: "Gray", mode: "light", intensity: 0.7 })
 
     expect(grayed).toStrictEqual({
@@ -115,6 +116,7 @@ describe("applyPreset", () => {
       colors: [{ hue: 0, chroma: 0 }],
       intensity: 0.7,
       grain: 0.6,
+      texture: "linen",
     })
   })
 })

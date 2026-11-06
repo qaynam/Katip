@@ -36,6 +36,8 @@
   <ThemeBackdrop
     background={appearance.background}
     {transitionKey}
+    grainImage={appearance.grainImage}
+    grainTileSize={appearance.grainTileSize}
     grainOpacity={appearance.grainOpacity}
   />
   {@render children()}

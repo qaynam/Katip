@@ -1,4 +1,5 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
+import { DEFAULT_TEXTURE, ThemeTexture } from "./textures"
 
 const unitInterval = Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 1 })))
 
@@ -25,8 +26,10 @@ export const SpaceTheme = Schema.Struct({
   colors: Schema.Array(ThemeColor).pipe(Schema.check(Schema.isMaxLength(MAX_THEME_COLORS))),
   /** How deep the colors are. 0 is nearly achromatic, 1 the most vivid. */
   intensity: unitInterval,
-  /** The strength of the grainy noise laid over the background. */
+  /** How strongly the texture shows over the background. */
   grain: unitInterval,
+  // Themes saved before textures could be chosen had the grain texture
+  texture: ThemeTexture.pipe(Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_TEXTURE))),
 })
 export type SpaceTheme = typeof SpaceTheme.Type
 
@@ -38,6 +41,7 @@ export const themeOf = (colors: ReadonlyArray<ThemeColor>): SpaceTheme => ({
   colors,
   intensity: DEFAULT_INTENSITY,
   grain: DEFAULT_GRAIN,
+  texture: DEFAULT_TEXTURE,
 })
 
 export const neutralTheme: SpaceTheme = themeOf([])

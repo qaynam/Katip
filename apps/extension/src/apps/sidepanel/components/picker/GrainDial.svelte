@@ -17,21 +17,36 @@
 
 <script lang="ts">
   import { Option } from "effect"
+  import type { MessageKey } from "#modules/i18n"
+  import { nextTexture, textureTileOf, type ThemeTexture } from "#modules/theme"
   import { dialValueAt, valueAfterKey } from "../../logic/picker-geometry"
   import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     value: number
+    texture: ThemeTexture
     /** While false, the tick marks are hidden and input is ignored. */
     isAvailable: boolean
     onChange: (value: number) => void
     onSettle: () => void
+    onTextureChange: (texture: ThemeTexture) => void
   }
 
-  const { value, isAvailable, onChange, onSettle }: Props = $props()
+  const { value, texture, isAvailable, onChange, onSettle, onTextureChange }: Props = $props()
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
+  const tile = $derived(textureTileOf(texture))
   let isDragging = false
+
+  const textureNames = {
+    grain: "sidepanel.theme.texture.grain",
+    speckle: "sidepanel.theme.texture.speckle",
+    film: "sidepanel.theme.texture.film",
+    lines: "sidepanel.theme.texture.lines",
+    linen: "sidepanel.theme.texture.linen",
+    paper: "sidepanel.theme.texture.paper",
+  } as const satisfies Record<ThemeTexture, MessageKey>
+  const textureLabel = $derived(t("sidepanel.theme.texture", { name: t(textureNames[texture]) }))
 
   const valueAt = (event: PointerEvent & { currentTarget: HTMLElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -72,32 +87,45 @@
   }
 </script>
 
-<div
-  class="dial"
-  role="slider"
-  tabindex={isAvailable ? 0 : -1}
-  aria-label={t("sidepanel.theme.grain")}
-  aria-valuemin={0}
-  aria-valuemax={100}
-  aria-valuenow={Math.round(value * 100)}
-  aria-disabled={!isAvailable}
-  style:--turn={value}
-  onpointerdown={grab}
-  onpointermove={drag}
-  onpointerup={release}
-  onpointercancel={release}
-  onkeydown={adjust}
-  onkeyup={onSettle}
->
-  <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
-    {#each ringDots as dot, index (index)}
-      <circle class="dot" cx={dot.x} cy={dot.y} r={dot.radius} opacity={dot.opacity} />
-    {/each}
-  </svg>
-  <span class="knob" aria-hidden="true"></span>
-  {#if isAvailable}
-    <span class="tick" data-tick></span>
-  {/if}
+<div class="dial">
+  <div
+    class="ring"
+    role="slider"
+    tabindex={isAvailable ? 0 : -1}
+    aria-label={t("sidepanel.theme.grain")}
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={Math.round(value * 100)}
+    aria-disabled={!isAvailable}
+    style:--turn={value}
+    onpointerdown={grab}
+    onpointermove={drag}
+    onpointerup={release}
+    onpointercancel={release}
+    onkeydown={adjust}
+    onkeyup={onSettle}
+  >
+    <svg class="dots" viewBox="0 0 64 64" aria-hidden="true">
+      {#each ringDots as dot, index (index)}
+        <circle class="dot" cx={dot.x} cy={dot.y} r={dot.radius} opacity={dot.opacity} />
+      {/each}
+    </svg>
+    {#if isAvailable}
+      <span class="tick" data-tick></span>
+    {/if}
+  </div>
+  <!-- A sibling of the ring rather than inside it, so pressing it never starts turning the dial -->
+  <button
+    class="knob"
+    type="button"
+    aria-label={textureLabel}
+    title={textureLabel}
+    disabled={!isAvailable}
+    style:--turn={value}
+    style:--texture-image={tile.image}
+    style:--texture-size="{tile.sizePx}px"
+    onclick={() => onTextureChange(nextTexture(texture))}
+  ></button>
 </div>
 
 <style>
@@ -106,16 +134,21 @@
     flex: none;
     width: 64px;
     height: 64px;
+  }
+
+  .ring {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     touch-action: none;
   }
 
-  .dial:focus-visible {
+  .ring:focus-visible {
     outline: 2px solid rgb(255 255 255 / 0.5);
     outline-offset: 2px;
   }
 
-  .ring {
+  .dots {
     display: block;
     width: 100%;
     height: 100%;
@@ -125,23 +158,34 @@
     fill: #fff;
   }
 
-  /* The knob shows the grain itself, stronger as the dial turns */
+  /* The knob shows the texture itself, stronger as the dial turns */
   .knob {
     position: absolute;
     inset: 11px;
+    padding: 0;
     overflow: hidden;
+    border: none;
     border-radius: 50%;
     background: rgb(255 255 255 / 0.2);
     box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.25);
   }
 
+  .knob:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.28);
+  }
+
   .knob::after {
     position: absolute;
     inset: 0;
-    background-image: var(--grain-image);
-    background-size: 120px 120px;
+    background-image: var(--texture-image);
+    background-size: var(--texture-size) var(--texture-size);
     opacity: calc(0.15 + 0.85 * var(--turn));
     content: "";
+  }
+
+  .knob:focus-visible {
+    outline: 2px solid rgb(255 255 255 / 0.5);
+    outline-offset: 2px;
   }
 
   .tick {

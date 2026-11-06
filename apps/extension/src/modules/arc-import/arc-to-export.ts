@@ -1,5 +1,5 @@
 import { Array, type Data, Option, Result } from "effect"
-import type { LatestExport } from "#modules/export"
+import { exportedThemeOf, type LatestExport } from "#modules/export"
 import { neutralTheme } from "#modules/theme"
 import {
   ArcItemKind,
@@ -203,7 +203,7 @@ const spaceOf = (sidebar: ArcSidebar, space: ArcSpaceEntry): ConvertedArcSpace =
     space: {
       id: space.id,
       name: Option.getOrElse(space.title, () => ""),
-      theme: Option.getOrElse(theme, () => neutralTheme),
+      theme: exportedThemeOf(Option.getOrElse(theme, () => neutralTheme)),
       pinned: pinned.value,
       tabs: today.value,
     },

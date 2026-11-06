@@ -7,7 +7,7 @@ import {
   SPACE_ROOT_DEPTH,
   type FolderNestingRule,
 } from "#modules/pinned"
-import type { SpaceTheme } from "#modules/theme"
+import { DEFAULT_TEXTURE, type SpaceTheme } from "#modules/theme"
 
 type FileSpace = LatestExport["spaces"][number]
 type FileNode = FileSpace["pinned"][number]
@@ -159,7 +159,8 @@ export const planSpace = (space: FileSpace, rule: FolderNestingRule): PlannedSpa
   return {
     fileId: space.id,
     name: space.name,
-    theme: space.theme,
+    // Files of version 1 were written before textures could be chosen
+    theme: { ...space.theme, texture: DEFAULT_TEXTURE },
     pinned: pinned.nodes,
     flattenedFolders: pinned.flattenedFolders,
     temporaryTabs: space.tabs.length,

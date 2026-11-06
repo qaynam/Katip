@@ -1,3 +1,9 @@
+<script lang="ts" module>
+  import { DEFAULT_TEXTURE, textureTileOf } from "#modules/theme"
+
+  const panelGrain = textureTileOf(DEFAULT_TEXTURE).image
+</script>
+
 <script lang="ts">
   import { untrack } from "svelte"
   import type { MessageKey } from "#modules/i18n"
@@ -78,6 +84,7 @@
   tabindex="-1"
   style:left="{position.x}px"
   style:top="{position.y}px"
+  style:--panel-grain={panelGrain}
   {@attach placeAndFocus}
 >
   <div class="field-area">
@@ -132,9 +139,11 @@
     />
     <GrainDial
       value={theme.grain}
+      texture={theme.texture}
       isAvailable={hasColor}
       onChange={(grain) => preview({ ...theme, grain })}
       onSettle={settle}
+      onTextureChange={(texture) => commit({ ...theme, texture })}
     />
   </div>
 </div>
@@ -165,7 +174,7 @@
   .picker::after {
     position: absolute;
     inset: 0;
-    background-image: var(--grain-image);
+    background-image: var(--panel-grain);
     background-size: 180px 180px;
     mix-blend-mode: overlay;
     opacity: 0.18;

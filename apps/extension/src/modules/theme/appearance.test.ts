@@ -8,6 +8,7 @@ import {
 } from "./appearance"
 import { fromSrgb, type Rgb } from "./oklch"
 import { themeOf, type SpaceTheme } from "./space-theme"
+import { textureTileOf, ThemeTexture } from "./textures"
 
 const yellow = themeOf([{ hue: 90, chroma: 0.8 }])
 const withMode = (theme: SpaceTheme, mode: SpaceTheme["mode"]): SpaceTheme => ({ ...theme, mode })
@@ -143,10 +144,28 @@ describe("appearanceOf", () => {
     expect([contrastOf("light") < 0, contrastOf("dark") > 0]).toStrictEqual([true, true])
   })
 
-  it("raises the noise opacity with the grain strength", () => {
+  it("raises the texture's opacity with the grain strength", () => {
     const opacityAt = (grain: number) => appearanceOf({ ...yellow, grain }, "light").grainOpacity
 
     expect(opacityAt(0) < opacityAt(0.5) && opacityAt(0.5) < opacityAt(1)).toBe(true)
+  })
+
+  it("lays the chosen texture's tile over the background, at the tile's size", () => {
+    const appearance = appearanceOf({ ...yellow, texture: "linen" }, "light")
+    const tile = textureTileOf("linen")
+
+    expect([appearance.grainImage, appearance.grainTileSize]).toStrictEqual([
+      tile.image,
+      `${tile.sizePx}px ${tile.sizePx}px`,
+    ])
+  })
+
+  it("keeps every texture's opacity within full opacity at the strongest grain", () => {
+    const opacities = ThemeTexture.literals.map(
+      (texture) => appearanceOf({ ...yellow, grain: 1, texture }, "light").grainOpacity,
+    )
+
+    expect(opacities.every((opacity) => opacity > 0 && opacity <= 1)).toBe(true)
   })
 })
 

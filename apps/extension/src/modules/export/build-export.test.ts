@@ -117,9 +117,29 @@ describe("Space", () => {
     )
 
     expect(document.spaces.map(({ id, name, theme }) => ({ id, name, theme }))).toStrictEqual([
-      { id: "work", name: "Work", theme: neutralTheme },
-      { id: "home", name: "Home", theme },
+      {
+        id: "work",
+        name: "Work",
+        theme: { mode: "auto", colors: [], intensity: 0.7, grain: 0.2 },
+      },
+      {
+        id: "home",
+        name: "Home",
+        theme: { mode: "auto", colors: [{ hue: 145, chroma: 0.6 }], intensity: 0.7, grain: 0.2 },
+      },
     ])
+  })
+
+  it("leaves the texture out of a Space's theme, as files of version 1 have no place for it", () => {
+    const theme = { ...themeOf([{ hue: 145, chroma: 0.6 }]), texture: "linen" as const }
+    const document = exported(
+      sourcesWith({
+        spaces: [{ ...space(HOME, "Home"), theme }],
+        pinnedTrees: new Map([[HOME, []]]),
+      }),
+    )
+
+    expect(Object.keys(document.spaces[0]?.theme ?? {})).not.toContain("texture")
   })
 
   it("fails rather than export with Spaces missing when a Space's pinned tree can't be read", () => {

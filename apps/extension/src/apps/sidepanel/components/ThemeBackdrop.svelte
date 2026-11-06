@@ -5,10 +5,13 @@
     background: string
     /** Fades from the previous background only when this changes; otherwise repaints at once. */
     transitionKey: string
+    /** A CSS `url()` of the texture's tile. */
+    grainImage: string
+    grainTileSize: string
     grainOpacity: number
   }
 
-  const { background, transitionKey, grainOpacity }: Props = $props()
+  const { background, transitionKey, grainImage, grainTileSize, grainOpacity }: Props = $props()
 
   interface Layer {
     readonly id: number
@@ -52,7 +55,12 @@
       onanimationend={() => dropLayersBelow(layer.id)}
     ></div>
   {/each}
-  <div class="grain" style:opacity={grainOpacity}></div>
+  <div
+    class="grain"
+    style:background-image={grainImage}
+    style:background-size={grainTileSize}
+    style:opacity={grainOpacity}
+  ></div>
 </div>
 
 <style>
@@ -79,8 +87,6 @@
   .grain {
     position: absolute;
     inset: 0;
-    background-image: var(--grain-image);
-    background-size: 200px 200px;
     transition: opacity 200ms ease;
   }
 

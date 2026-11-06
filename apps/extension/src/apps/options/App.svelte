@@ -303,7 +303,7 @@
   style:--divider={appearance.divider}
   style:--accent={appearance.accent}
 >
-  <FrameBackdrop background={appearance.background} grainOpacity={appearance.grainOpacity} />
+  <FrameBackdrop {appearance} />
 
   <header class="side">
     <h1 id={titleId}>{t("options.title")}</h1>

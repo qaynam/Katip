@@ -1,5 +1,14 @@
+import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { settleTheme, themeEquivalence, themeOf } from "./space-theme"
+import { settleTheme, SpaceTheme, themeEquivalence, themeOf } from "./space-theme"
+
+describe("SpaceTheme", () => {
+  it("reads a theme saved before textures could be chosen as having the grain texture", () => {
+    const saved = { mode: "light", colors: [], intensity: 0.5, grain: 0.3 }
+
+    expect(Schema.decodeUnknownSync(SpaceTheme)(saved).texture).toBe("grain")
+  })
+})
 
 describe("settleTheme", () => {
   it("rounds colors, intensity and grain to three decimal places", () => {

@@ -2,6 +2,7 @@ import { Array, Number, Option, Schema } from "effect"
 import {
   DEFAULT_GRAIN,
   DEFAULT_INTENSITY,
+  DEFAULT_TEXTURE,
   gradientStopPositions,
   MAX_THEME_COLORS,
   settleTheme,
@@ -191,6 +192,7 @@ const gradientThemeOf = (customInfo: unknown): Option.Option<SpaceTheme> =>
         colors,
         intensity: mappedOr(gradient.modifiers?.intensityFactor, intensityOfArc, DEFAULT_INTENSITY),
         grain: mappedOr(gradient.modifiers?.noiseFactor, grainOfArc, DEFAULT_GRAIN),
+        texture: DEFAULT_TEXTURE,
       } satisfies SpaceTheme,
       (theme) => theme.colors.length > 0,
     )

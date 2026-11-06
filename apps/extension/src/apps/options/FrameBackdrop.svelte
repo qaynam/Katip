@@ -1,9 +1,23 @@
 <script lang="ts">
-  let { background, grainOpacity }: { background: string; grainOpacity: number } = $props()
+  import type { ThemeAppearance } from "#modules/theme"
+
+  let {
+    appearance,
+  }: {
+    appearance: Pick<
+      ThemeAppearance,
+      "background" | "grainImage" | "grainTileSize" | "grainOpacity"
+    >
+  } = $props()
 </script>
 
-<div class="backdrop" aria-hidden="true" style:--backdrop-background={background}>
-  <div class="grain" style:opacity={grainOpacity}></div>
+<div class="backdrop" aria-hidden="true" style:--backdrop-background={appearance.background}>
+  <div
+    class="grain"
+    style:background-image={appearance.grainImage}
+    style:background-size={appearance.grainTileSize}
+    style:opacity={appearance.grainOpacity}
+  ></div>
 </div>
 
 <style>
@@ -19,7 +33,5 @@
   .grain {
     position: absolute;
     inset: 0;
-    background-image: var(--grain-image);
-    background-size: 200px 200px;
   }
 </style>

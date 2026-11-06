@@ -1,6 +1,7 @@
 import { Array, Match, Number } from "effect"
 import { contrastRatio, cuspOf, fromSrgb, rgbCss, toSrgb, type Oklch, type Rgb } from "./oklch"
 import type { SpaceTheme, ThemeColor, ThemeMode } from "./space-theme"
+import { textureTileOf } from "./textures"
 
 export type ColorScheme = "light" | "dark"
 
@@ -26,6 +27,9 @@ export interface ThemeAppearance {
   readonly folderFill: string
   /** The folder icon's outline and the icon chosen for a folder, drawn inside it. */
   readonly folderLine: string
+  /** The texture's tile, a CSS `url()`, repeated at {@link grainTileSize} over the background. */
+  readonly grainImage: string
+  readonly grainTileSize: string
   readonly grainOpacity: number
 }
 
@@ -154,6 +158,7 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
       : `linear-gradient(in oklab 170deg, ${gradientStops(stops.map((stop) => rgbCss(stop)))})`
   const primary = Array.headNonEmpty(colors)
   const folder = folderTones(primary, scheme)
+  const texture = textureTileOf(theme.texture)
   return {
     scheme,
     background,
@@ -171,8 +176,10 @@ export const appearanceOf = (theme: SpaceTheme, system: ColorScheme): ThemeAppea
     folderTab: css(folder.tab),
     folderFill: css(folder.fill),
     folderLine: css(folder.line),
-    // Capped so that even at the dial's maximum, faint text doesn't drown in the grain
-    grainOpacity: theme.grain * 0.6,
+    grainImage: texture.image,
+    grainTileSize: `${texture.sizePx}px ${texture.sizePx}px`,
+    // Capped so that even at the dial's maximum, faint text doesn't drown in the texture
+    grainOpacity: Math.min(1, theme.grain * 0.6 * texture.strength),
   }
 }
 

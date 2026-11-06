@@ -57,7 +57,11 @@ const urlOf = (tab: BrowserTab) =>
 
 const pageTitleOf = (tab: BrowserTab) => Option.getOrElse(tab.title, () => urlOf(tab))
 
-const themeOf = (theme: SpaceTheme): ExportedSpace["theme"] => ({
+/**
+ * A Space's theme as files of the latest version hold it. The texture is left out: version 1 files
+ * have no place for it, and older Katip versions must keep reading the files of newer ones.
+ */
+export const exportedThemeOf = (theme: SpaceTheme): ExportedSpace["theme"] => ({
   mode: theme.mode,
   colors: theme.colors.map(({ hue, chroma }) => ({ hue, chroma })),
   intensity: theme.intensity,
@@ -202,7 +206,7 @@ export const buildExport = (
             Result.succeed<ExportedSpace>({
               id: space.id,
               name: space.name,
-              theme: themeOf(space.theme),
+              theme: exportedThemeOf(space.theme),
               pinned: nodesOf(tree, sources),
               tabs: temporaryTabsOf(space, tree, openTabs, sources),
             }),

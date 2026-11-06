@@ -35,3 +35,10 @@ export {
   themeEquivalence,
   themeOf,
 } from "./space-theme"
+export {
+  DEFAULT_TEXTURE,
+  nextTexture,
+  textureTileOf,
+  ThemeTexture,
+  type TextureTile,
+} from "./textures"

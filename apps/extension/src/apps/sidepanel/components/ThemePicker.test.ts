@@ -25,6 +25,7 @@ const tunedTheme: SpaceTheme = {
   colors: [yellow],
   intensity: 0.3,
   grain: 0.6,
+  texture: "lines",
 }
 
 const openPicker = async (theme: SpaceTheme) => {
@@ -63,6 +64,14 @@ describe("The picker before a color is chosen", () => {
     expect(within(picker).getByRole("slider", { name: "Color intensity" }).ariaDisabled).toBe(
       "true",
     )
+  })
+
+  it("can't change the texture until there is a color to lay it over", async () => {
+    const { picker } = await openPicker(neutralTheme)
+
+    expect(
+      within(picker).getByRole<HTMLButtonElement>("button", { name: "Texture: Grain" }).disabled,
+    ).toBe(true)
   })
 
   it("can neither add nor remove colors", async () => {
@@ -232,6 +241,18 @@ describe("The picker after a color is chosen", () => {
     await fireEvent.keyUp(dial, { key: "End" })
 
     expect(sentThemes(connection.sentCommands).at(-1)).toStrictEqual({ ...tunedTheme, grain: 1 })
+  })
+
+  it("changes the texture when the middle of the dial is pressed, going round to the first after the last", async () => {
+    const { connection, picker } = await openPicker({ ...tunedTheme, texture: "linen" })
+
+    await fireEvent.click(within(picker).getByRole("button", { name: "Texture: Linen" }))
+    await fireEvent.click(within(picker).getByRole("button", { name: "Texture: Paper" }))
+
+    expect(sentThemes(connection.sentCommands).map((theme) => theme?.texture)).toStrictEqual([
+      "paper",
+      "grain",
+    ])
   })
 
   it("sends the theme in the chosen mode", async () => {
