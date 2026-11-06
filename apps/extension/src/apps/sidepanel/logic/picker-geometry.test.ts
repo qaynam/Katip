@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   dialValueAt,
   FIELD_EDGE_INSET_PX,
+  fieldOffsetOf,
   pickerPointAt,
   pointAfterKey,
   sliderValueAt,
@@ -10,25 +11,62 @@ import {
 } from "./picker-geometry"
 
 const field = { width: 300, height: 248 }
-const radius = field.height / 2 - FIELD_EDGE_INSET_PX
+const reach = {
+  x: field.width / 2 - FIELD_EDGE_INSET_PX,
+  y: field.height / 2 - FIELD_EDGE_INSET_PX,
+}
+const distanceOf = ({ x, y }: { x: number; y: number }) => Math.hypot(x, y)
 
 describe("Positions in the color field", () => {
   it("maps the field's center to the circle's center", () => {
     expect(pickerPointAt({ x: 150, y: 124 }, field)).toStrictEqual({ x: 0, y: 0 })
   })
 
-  it("uses half the shorter side minus the edge inset as the circle's radius", () => {
-    expect(pickerPointAt({ x: 150 + radius, y: 124 }, field)).toStrictEqual({ x: 1, y: 0 })
+  it("reaches the circle's edge just inside each side of the field", () => {
+    const points = [
+      pickerPointAt({ x: 150 + reach.x, y: 124 }, field),
+      pickerPointAt({ x: 150, y: 124 - reach.y }, field),
+    ]
+
+    expect(points).toStrictEqual([
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+    ])
   })
 
-  it("maps up on screen to up on the circle", () => {
-    expect(pickerPointAt({ x: 150, y: 124 - radius / 2 }, field)).toStrictEqual({ x: 0, y: 0.5 })
+  it("reaches the circle's edge in the field's corners too", () => {
+    const corner = pickerPointAt({ x: FIELD_EDGE_INSET_PX, y: FIELD_EDGE_INSET_PX }, field)
+
+    expect(distanceOf(corner)).toBeCloseTo(1)
+  })
+
+  it("keeps the direction from the center, so up on screen is up on the circle", () => {
+    const point = pickerPointAt({ x: 150 + 30, y: 124 - 40 }, field)
+
+    expect(Math.atan2(point.y, point.x)).toBeCloseTo(Math.atan2(40, 30))
+  })
+
+  it("places each point's dot where pressing would pick it", () => {
+    const offsets = [
+      { x: 150, y: 124 },
+      { x: 150 + reach.x, y: 124 },
+      { x: 60, y: 200 },
+      { x: FIELD_EDGE_INSET_PX, y: field.height - FIELD_EDGE_INSET_PX },
+    ]
+
+    const roundTrips = offsets.map((offset) => fieldOffsetOf(pickerPointAt(offset, field), field))
+
+    roundTrips.forEach((roundTrip, index) => {
+      expect(roundTrip.x).toBeCloseTo(offsets[index]?.x ?? Number.NaN)
+      expect(roundTrip.y).toBeCloseTo(offsets[index]?.y ?? Number.NaN)
+    })
   })
 
   it("gives finite positions even for a field with no size", () => {
     const point = pickerPointAt({ x: 10, y: 10 }, { width: 0, height: 0 })
+    const offset = fieldOffsetOf({ x: 0.5, y: 0.5 }, { width: 0, height: 0 })
 
-    expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true)
+    expect([point.x, point.y, offset.x, offset.y].every(Number.isFinite)).toBe(true)
   })
 })
 

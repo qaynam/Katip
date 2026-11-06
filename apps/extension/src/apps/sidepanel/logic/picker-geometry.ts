@@ -2,23 +2,48 @@ import { Number, Option } from "effect"
 import type { PickerPoint } from "#modules/theme"
 import type { Point, Size } from "./menu-position"
 
-// The mode switch overlaps the top of the field and the add/remove color buttons overlap the
-// bottom. The circle's edge sits inside those button bands so that the dot never ends up under
-// a button, even on the most saturated color (the edge)
-export const FIELD_EDGE_INSET_PX = 56
+// A dot's center stops this far in from the field's edge, so even the large primary dot stays whole
+// inside the field
+export const FIELD_EDGE_INSET_PX = 20
 
-const fieldRadius = (field: Size) =>
-  Math.max(1, Math.min(field.width, field.height) / 2 - FIELD_EDGE_INSET_PX)
+/** Half the width and height of the rectangle that dot centers can reach. */
+const reachOf = (field: Size) => ({
+  x: Math.max(1, field.width / 2 - FIELD_EDGE_INSET_PX),
+  y: Math.max(1, field.height / 2 - FIELD_EDGE_INSET_PX),
+})
+
+/** How far `direction` (a unit vector) can go from the field's center before leaving the reach. */
+const reachAlong = (direction: PickerPoint, field: Size) => {
+  const reach = reachOf(field)
+  return 1 / Math.max(Math.abs(direction.x) / reach.x, Math.abs(direction.y) / reach.y)
+}
 
 /**
- * Converts an offset from the field's top-left corner into picker circle coordinates (origin
- * at the center, y pointing up).
+ * Converts an offset from the field's top-left corner into a point of the picker circle (origin at
+ * the center, y pointing up).
+ *
+ * The point keeps the offset's direction from the field's center, so the hue under the pointer is
+ * the one the field's hue wheel shows there. Its distance from the center reaches 1 on the edge of
+ * the rectangle dots can reach, so the most vivid colors lie along all four sides of the field and
+ * in its corners.
  */
 export const pickerPointAt = (offset: Point, field: Size): PickerPoint => {
-  const radius = fieldRadius(field)
+  const fromCenter = { x: offset.x - field.width / 2, y: field.height / 2 - offset.y }
+  const distance = Math.hypot(fromCenter.x, fromCenter.y)
+  if (distance === 0) return { x: 0, y: 0 }
+  const direction = { x: fromCenter.x / distance, y: fromCenter.y / distance }
+  const share = distance / reachAlong(direction, field)
+  return { x: direction.x * share, y: direction.y * share }
+}
+
+/** Where the dot of `point` sits, as an offset from the field's top-left corner. */
+export const fieldOffsetOf = (point: PickerPoint, field: Size): Point => {
+  const share = Math.hypot(point.x, point.y)
+  const direction = share === 0 ? { x: 0, y: 0 } : { x: point.x / share, y: point.y / share }
+  const distance = share === 0 ? 0 : share * reachAlong(direction, field)
   return {
-    x: (offset.x - field.width / 2) / radius,
-    y: (field.height / 2 - offset.y) / radius,
+    x: field.width / 2 + direction.x * distance,
+    y: field.height / 2 - direction.y * distance,
   }
 }
 

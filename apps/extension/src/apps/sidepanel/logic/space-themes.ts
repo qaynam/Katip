@@ -61,7 +61,7 @@ const WHEEL_STEP_DEGREES = 30
 
 /**
  * CSS background that faintly tints the color field's dot grid with the color picked at each
- * position. It fades toward neutral at the center.
+ * position. It fades toward neutral at the center, reaching the full colors at the field's sides.
  */
 export const hueWheelBackground = (): string => {
   // conic-gradient goes clockwise from where `from` points, the right here, so each stop takes the
@@ -73,5 +73,5 @@ export const hueWheelBackground = (): string => {
     return `${swatchOf(edge)} ${angle}deg`
   })
   const center = swatchOf({ hue: 0, chroma: 0 })
-  return `radial-gradient(circle closest-side, ${center}, transparent), conic-gradient(from 90deg, ${stops.join(", ")})`
+  return `radial-gradient(closest-side, ${center}, transparent), conic-gradient(from 90deg, ${stops.join(", ")})`
 }

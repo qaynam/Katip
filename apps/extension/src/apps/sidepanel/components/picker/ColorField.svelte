@@ -8,7 +8,8 @@
 <script lang="ts">
   import { Option } from "effect"
   import { colorAtPoint, moveColor, pointOfColor, swatchOf, type ThemeColor } from "#modules/theme"
-  import { FIELD_EDGE_INSET_PX, pickerPointAt, pointAfterKey } from "../../logic/picker-geometry"
+  import type { Size } from "../../logic/menu-position"
+  import { fieldOffsetOf, pickerPointAt, pointAfterKey } from "../../logic/picker-geometry"
   import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
@@ -23,7 +24,19 @@
   const t = $derived(ctx.translator.t)
 
   let field = $state<HTMLDivElement>()
+  let size = $state<Size>({ width: 0, height: 0 })
   let draggedIndex: number | null = null
+
+  // Not followed with a ResizeObserver: the picker keeps its size while open, unless the side panel
+  // itself is resized
+  const measure = (node: HTMLElement) => {
+    const update = () => {
+      size = { width: node.clientWidth, height: node.clientHeight }
+    }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }
 
   const colorUnder = (event: PointerEvent): ThemeColor => {
     const bounds = field?.getBoundingClientRect() ?? { left: 0, top: 0, width: 0, height: 0 }
@@ -71,7 +84,7 @@
   class="field"
   role="group"
   aria-label={t("sidepanel.theme.colors")}
-  style:--edge-inset="{FIELD_EDGE_INSET_PX}px"
+  {@attach measure}
   onpointerdown={grab}
   onpointermove={drag}
   onpointerup={release}
@@ -83,7 +96,7 @@
     <p class="hint">{t("sidepanel.theme.colorHint")}</p>
   {/if}
   {#each colors as color, index (index)}
-    {@const point = pointOfColor(color)}
+    {@const offset = fieldOffsetOf(pointOfColor(color), size)}
     <button
       class="point"
       class:primary={index === PRIMARY_INDEX}
@@ -92,8 +105,8 @@
         ? t("sidepanel.theme.primaryColor")
         : t("sidepanel.theme.nthColor", { n: index + 1 })}
       data-color-index={index}
-      style:--x={point.x}
-      style:--y={point.y}
+      style:left="{offset.x}px"
+      style:top="{offset.y}px"
       style:--swatch={swatchOf(color)}
       onkeydown={(event) => nudge(event, index, color)}
       onkeyup={onSettle}
@@ -103,11 +116,8 @@
 
 <style>
   .field {
-    --radius: calc(min(100cqw, 100cqh) / 2 - var(--edge-inset));
-
     position: absolute;
     inset: 0;
-    container-type: size;
     overflow: hidden;
     border-radius: inherit;
     touch-action: none;
@@ -147,8 +157,6 @@
     --size: 22px;
 
     position: absolute;
-    top: calc(50% - var(--y) * var(--radius));
-    left: calc(50% + var(--x) * var(--radius));
     width: var(--size);
     height: var(--size);
     padding: 0;

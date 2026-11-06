@@ -50,7 +50,8 @@ const fieldOf = (picker: HTMLElement) => {
   return field
 }
 const fieldCenter = { x: 150, y: 134 }
-const fieldRadius = Math.min(fieldCenter.x, fieldCenter.y) - FIELD_EDGE_INSET_PX
+/** How far from the center dots go in each direction, where the most vivid colors are. */
+const reach = { x: fieldCenter.x - FIELD_EDGE_INSET_PX, y: fieldCenter.y - FIELD_EDGE_INSET_PX }
 
 describe("The picker before a color is chosen", () => {
   it("explains how to choose a color and hides the intensity thumb and the grain ticks", async () => {
@@ -77,7 +78,7 @@ describe("The picker before a color is chosen", () => {
   it("sends a theme whose primary color is the one at the pressed position in the field", async () => {
     const { connection, picker } = await openPicker(neutralTheme)
     const field = fieldOf(picker)
-    const at = { clientX: fieldCenter.x + fieldRadius, clientY: fieldCenter.y, pointerId: 1 }
+    const at = { clientX: fieldCenter.x + reach.x, clientY: fieldCenter.y, pointerId: 1 }
 
     await fireEvent.pointerDown(field, at)
     await fireEvent.pointerUp(field, at)
@@ -86,6 +87,21 @@ describe("The picker before a color is chosen", () => {
       ...neutralTheme,
       colors: [colorAtPoint({ x: 1, y: 0 })],
     })
+  })
+
+  it("picks the most vivid color in a corner of the field, as at its sides", async () => {
+    const { connection, picker } = await openPicker(neutralTheme)
+    const field = fieldOf(picker)
+    const at = {
+      clientX: fieldCenter.x - reach.x,
+      clientY: fieldCenter.y - reach.y,
+      pointerId: 1,
+    }
+
+    await fireEvent.pointerDown(field, at)
+    await fireEvent.pointerUp(field, at)
+
+    expect(sentThemes(connection.sentCommands).at(-1)?.colors[0]?.chroma).toBeCloseTo(1)
   })
 })
 
@@ -114,10 +130,10 @@ describe("The picker after a color is chosen", () => {
     await fireEvent.pointerDown(field, pointerAt(10))
     await fireEvent.pointerMove(field, pointerAt(20))
     await fireEvent.pointerMove(field, pointerAt(30))
-    await fireEvent.pointerUp(field, pointerAt(fieldRadius / 2))
+    await fireEvent.pointerUp(field, pointerAt(reach.y / 2))
 
     expect(sentThemes(connection.sentCommands).map((theme) => theme?.colors)).toStrictEqual([
-      [colorAtPoint({ x: 0, y: 10 / fieldRadius })],
+      [colorAtPoint({ x: 0, y: 10 / reach.y })],
       [colorAtPoint({ x: 0, y: 0.5 })],
     ])
   })
@@ -128,7 +144,7 @@ describe("The picker after a color is chosen", () => {
 
     await fireEvent.pointerDown(field, {
       clientX: fieldCenter.x,
-      clientY: fieldCenter.y + fieldRadius,
+      clientY: fieldCenter.y + reach.y,
       pointerId: 1,
     })
 
@@ -141,7 +157,7 @@ describe("The picker after a color is chosen", () => {
     const { connection, picker } = await openPicker({ ...tunedTheme, colors: harmony })
     const field = fieldOf(picker)
     const second = within(picker).getByRole("button", { name: "Color 2" })
-    const at = { clientX: fieldCenter.x, clientY: fieldCenter.y - fieldRadius / 2, pointerId: 1 }
+    const at = { clientX: fieldCenter.x, clientY: fieldCenter.y - reach.y / 2, pointerId: 1 }
 
     await fireEvent.pointerDown(second, at)
     await fireEvent.pointerUp(field, at)
