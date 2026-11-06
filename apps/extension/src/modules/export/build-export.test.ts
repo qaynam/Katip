@@ -442,7 +442,7 @@ describe("Favorites", () => {
 })
 
 describe("settings", () => {
-  it("are exported field by field, all of them", () => {
+  it("are exported field by field, all that version 1 files hold", () => {
     const settings = {
       newTabsOnTop: false,
       showAllOpenTabsInCollapsedFolders: true,
@@ -451,6 +451,7 @@ describe("settings", () => {
       defaultSpaceId: HOME,
       locale: "zh",
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
+      checkForUpdates: false,
     } as const
 
     expect(exported(sourcesWith({ settings })).settings).toStrictEqual({

@@ -8,6 +8,7 @@
     type MessageKey,
   } from "#modules/i18n"
   import { neutralTheme } from "#modules/theme"
+  import type { Release } from "#modules/updates"
   import type { CommandOutcome, SidebarCommand, SidebarView } from "#protocol"
   import Sidebar from "./components/Sidebar.svelte"
   import ThemedSurface from "./components/ThemedSurface.svelte"
@@ -16,6 +17,7 @@
   import type { OriginAccess } from "./connection/origin-access"
   import type { ScrollPositions } from "./connection/scroll-positions"
   import type { SidebarConnection, Undelivered } from "./connection/sidebar-connection"
+  import type { UpdateNotices } from "./connection/update-notices"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
   import { findActiveSpace } from "./logic/view-queries"
   import { PendingActivation } from "./state/pending-activation.svelte"
@@ -32,6 +34,7 @@
     browserLanguages: ReadonlyArray<string>
     faviconUrl?: FaviconResolver
     scrollPositions: ScrollPositions
+    updateNotices: UpdateNotices
     onReload?: () => void
   }
 
@@ -42,6 +45,7 @@
     browserLanguages,
     faviconUrl = noFaviconResolver,
     scrollPositions,
+    updateNotices,
     onReload = () => location.reload(),
   }: Props = $props()
 
@@ -54,6 +58,16 @@
   $effect(() => {
     document.documentElement.lang = translator.languageTag
   })
+
+  let updateNotice = $state.raw<Release | null>(null)
+  $effect(() => {
+    void updateNotices.pending().then((release) => (updateNotice = release))
+  })
+
+  const dismissUpdate = () => {
+    if (updateNotice !== null) updateNotices.dismiss(updateNotice.version)
+    updateNotice = null
+  }
 
   let receivedView = $state.raw<SidebarView | null>(null)
   const pendingActivation = new PendingActivation()
@@ -100,6 +114,8 @@
     {originAccess}
     {faviconUrl}
     {scrollPositions}
+    {updateNotice}
+    onDismissUpdate={dismissUpdate}
     {onReload}
   />
 {:else}

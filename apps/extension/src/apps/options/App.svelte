@@ -19,6 +19,7 @@
     type SettingsPatch,
   } from "#modules/settings"
   import { appearanceOf, type ColorScheme } from "#modules/theme"
+  import { Updates, type UpdateStatus } from "#modules/updates"
   import { Tabs } from "#platform/browser"
   import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
   import {
@@ -49,11 +50,14 @@
   let {
     runtime,
     version,
+    releasedAt,
     repositoryUrl,
     browserLanguages,
   }: {
     runtime: OptionsRuntime
     version: string
+    /** When the running version was released, in ISO 8601. Null when unknown. */
+    releasedAt: string | null
     repositoryUrl: string | null
     /** BCP 47 language tags in order of preference, like `navigator.languages`. */
     browserLanguages: ReadonlyArray<string>
@@ -96,6 +100,13 @@
   let isExporting = $state(false)
   let hideDoneNoteTimer: ReturnType<typeof setTimeout> | undefined
 
+  type UpdateCheck =
+    | { readonly _tag: "NotChecked" }
+    | { readonly _tag: "Checking" }
+    | { readonly _tag: "Checked"; readonly status: UpdateStatus }
+    | { readonly _tag: "Failed" }
+  let updateCheck = $state.raw<UpdateCheck>({ _tag: "NotChecked" })
+
   const translator = $derived(
     makeTranslator(resolveLocale(settings?.locale ?? "auto", browserLanguages)),
   )
@@ -122,6 +133,30 @@
   ])
 
   const appearance = $derived(appearanceOf(SETTINGS_THEME, systemScheme))
+
+  const dateOf = (isoDate: string) =>
+    new Intl.DateTimeFormat(translator.languageTag, { dateStyle: "long" }).format(new Date(isoDate))
+
+  const availableRelease = $derived(
+    updateCheck._tag === "Checked" && updateCheck.status._tag === "Available"
+      ? updateCheck.status.release
+      : null,
+  )
+
+  const updateNote = $derived.by((): string | undefined => {
+    switch (updateCheck._tag) {
+      case "NotChecked":
+        return undefined
+      case "Checking":
+        return t("options.updates.checking")
+      case "Failed":
+        return t("options.updates.failed")
+      case "Checked":
+        return updateCheck.status._tag === "UpToDate"
+          ? t("options.updates.upToDate")
+          : t("options.updates.available", { version: updateCheck.status.release.version })
+    }
+  })
 
   /** `null` when no key is assigned, `undefined` while the assigned keys aren't known. */
   const keyOf = (command: string): string | null | undefined =>
@@ -280,6 +315,14 @@
     if (Exit.isFailure(opened)) announce("ShortcutsUnavailable")
   }
 
+  const checkForUpdates = async () => {
+    updateCheck = { _tag: "Checking" }
+    const checked = await runtime.runPromiseExit(Updates.use((updates) => updates.check))
+    updateCheck = Exit.isSuccess(checked)
+      ? { _tag: "Checked", status: checked.value }
+      : { _tag: "Failed" }
+  }
+
   const exportData = async () => {
     isExporting = true
     const exported = await runtime.runPromiseExit(downloadExportFile)
@@ -347,9 +390,55 @@
           </SettingsSection>
 
           <SettingsSection heading={t("options.about.heading")}>
-            <SettingRow label={t("options.version.label")} labelsControl={false}>
+            <SettingRow
+              label={t("options.version.label")}
+              description={releasedAt === null
+                ? undefined
+                : t("options.version.released", { date: dateOf(releasedAt) })}
+              labelsControl={false}
+            >
               {#snippet children(control)}
                 <span {...control} class="value">{version}</span>
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.updates.label")}
+              description={updateNote}
+              labelsControl={false}
+            >
+              {#snippet children(control)}
+                {#if availableRelease !== null}
+                  <a
+                    {...control}
+                    class="value link"
+                    href={availableRelease.pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("options.updates.openRelease")}
+                    <Glyph name="external" size={12} />
+                  </a>
+                {:else}
+                  <PushButton
+                    {...control}
+                    disabled={updateCheck._tag === "Checking"}
+                    onclick={checkForUpdates}
+                  >
+                    {t("options.updates.check")}
+                  </PushButton>
+                {/if}
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.updates.automatic.label")}
+              description={t("options.updates.automatic.description")}
+            >
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.checkForUpdates}
+                  onchange={(checked) => save({ checkForUpdates: checked })}
+                />
               {/snippet}
             </SettingRow>
             {#if repositoryUrl !== null}

@@ -17,7 +17,7 @@
     children,
   }: {
     label: string
-    description?: string
+    description?: string | undefined
     disabled?: boolean
     /**
      * When `false`, the label doesn't name the control. For controls named by their own text,

@@ -1,18 +1,27 @@
 import { Option, Schema } from "effect"
 import { mount } from "svelte"
 import { LocalePreference } from "#modules/i18n"
+import { REPOSITORY_URL, type Release } from "#modules/updates"
 import { SIDEBAR_PORT_NAME, type SidebarCommand } from "#protocol"
 import App from "../sidepanel/App.svelte"
 import { createMemoryLocalePreferences } from "../sidepanel/connection/locale-preferences"
 import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
 import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../sidepanel/connection/memory-scroll-positions"
+import { createMemoryUpdateNotices } from "../sidepanel/connection/memory-update-notices"
 import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
 import { respondInFixture } from "./fixture-backend"
 import { fixtureView } from "./fixture-view"
 
 const DEFAULT_EXTENSION_ID = "hggfdjnidgfpigakapgkgolnjemijaed"
+
+// Told about when the address has ?update, to look at the card that tells about a newer release
+const harnessRelease: Release = {
+  version: "9.9.9",
+  pageUrl: `${REPOSITORY_URL}/releases`,
+  publishedAt: null,
+}
 
 type Mode = "fixture" | "extension"
 
@@ -127,6 +136,7 @@ if (connection === null) {
       localePreferences,
       browserLanguages: navigator.languages,
       scrollPositions: createMemoryScrollPositions(),
+      updateNotices: createMemoryUpdateNotices(params.has("update") ? harnessRelease : null),
     },
   })
 }

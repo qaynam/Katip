@@ -13,6 +13,18 @@ export const options = {
   "options.language.footnote": "Automatic matches your browser’s language.",
   "options.about.heading": "About Katip",
   "options.version.label": "Version",
+  "options.version.released": "Released on {date}",
+  "options.updates.label": "Updates",
+  "options.updates.check": "Check for Updates",
+  "options.updates.checking": "Checking…",
+  "options.updates.upToDate": "Katip is up to date.",
+  "options.updates.available":
+    "Version {version} is available. Download it from its release page and load it over this one.",
+  "options.updates.openRelease": "Open release page",
+  "options.updates.failed": "Couldn’t reach GitHub. Wait a moment, then try again.",
+  "options.updates.automatic.label": "Check for updates automatically",
+  "options.updates.automatic.description":
+    "The first time the side panel opens after the browser starts, Katip asks GitHub for its latest release and tells you if it’s newer. Nothing from Katip is sent.",
   "options.github.label": "GitHub",
 
   "options.tabs.heading": "Tabs",

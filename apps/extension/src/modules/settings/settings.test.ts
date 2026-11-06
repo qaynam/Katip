@@ -7,7 +7,7 @@ const decodeStored = Schema.decodeUnknownSync(Settings)
 const encodeForStorage = Schema.encodeSync(Settings)
 
 describe("defaults", () => {
-  it("start with new tabs on top, every other feature off, and the browser's language", () => {
+  it("start with new tabs on top and update checks on, every other feature off, and the browser's language", () => {
     expect(defaultSettings).toStrictEqual({
       newTabsOnTop: true,
       showAllOpenTabsInCollapsedFolders: false,
@@ -16,6 +16,7 @@ describe("defaults", () => {
       defaultSpaceId: null,
       locale: "auto",
       pageShortcuts: { copyUrl: false, copyMarkdownLink: false },
+      checkForUpdates: true,
     })
   })
 })
@@ -30,6 +31,7 @@ describe("reading stored settings", () => {
       defaultSpaceId: SpaceId.make("work"),
       locale: "zh",
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
+      checkForUpdates: false,
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)

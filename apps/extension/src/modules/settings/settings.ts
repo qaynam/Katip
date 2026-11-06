@@ -62,6 +62,8 @@ export const Settings = withDefaultsOfAllFields(
     defaultSpaceId: withDefault(Schema.NullOr(SpaceId), null),
     locale: withDefault(LocalePreference, "auto"),
     pageShortcuts: PageShortcutSettings,
+    /** Whether the side panel asks GitHub for a newer release once each browser session. */
+    checkForUpdates: withDefault(Schema.Boolean, true),
   }),
 )
 export type Settings = typeof Settings.Type

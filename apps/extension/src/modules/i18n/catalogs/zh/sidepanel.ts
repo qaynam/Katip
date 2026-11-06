@@ -7,6 +7,9 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.connection.notConnected": "尚未连接到 Katip。请稍候再试。",
   "sidepanel.time.justNow": "刚刚",
   "sidepanel.toast.dismiss": "关闭通知",
+  "sidepanel.update.available": "Katip {version} 已发布",
+  "sidepanel.update.whatsNew": "查看新功能",
+  "sidepanel.update.dismiss": "关闭",
 
   "sidepanel.spotlight.button": "搜索",
   "sidepanel.split.pageDropHint": "在页面左侧或右侧松开，即可与当前显示的标签页分屏",

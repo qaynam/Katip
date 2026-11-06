@@ -14,6 +14,19 @@ export const options: CatalogSection<"options"> = {
   "options.language.footnote": "En automático, se usa el idioma del navegador.",
   "options.about.heading": "Acerca de Katip",
   "options.version.label": "Versión",
+  "options.version.released": "Publicada el {date}",
+  "options.updates.label": "Actualizaciones",
+  "options.updates.check": "Buscar actualizaciones",
+  "options.updates.checking": "Buscando…",
+  "options.updates.upToDate": "Katip está actualizado.",
+  "options.updates.available":
+    "La versión {version} ya está disponible. Descárgala desde su página y cárgala sobre esta.",
+  "options.updates.openRelease": "Abrir la página de la versión",
+  "options.updates.failed":
+    "No se pudo conectar con GitHub. Espera un momento y vuelve a intentarlo.",
+  "options.updates.automatic.label": "Buscar actualizaciones automáticamente",
+  "options.updates.automatic.description":
+    "La primera vez que se abre el panel lateral tras iniciar el navegador, Katip consulta a GitHub su última versión y te avisa si es más reciente. No se envía ningún dato de Katip.",
   "options.github.label": "GitHub",
 
   "options.tabs.heading": "Pestañas",

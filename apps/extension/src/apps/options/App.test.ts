@@ -3,8 +3,10 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/sve
 import { Effect, Layer, ManagedRuntime, Option, Queue, Schema, Stream } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
+import { LATEST_RELEASE_API_URL, Updates } from "#modules/updates"
 import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
+import { FakeHttp, httpResponse, unreachable } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
 import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
@@ -14,6 +16,7 @@ import { type ApplyAnswer, FakeImportServer } from "./testing/fake-import-server
 import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
 
 const VERSION = "1.2.3"
+const RELEASED_AT = "2026-11-05T10:00:00+09:00"
 const REPOSITORY_URL = "https://git.example/katip"
 
 /** Keys as macOS reports the defaults the manifest suggests. */
@@ -117,6 +120,7 @@ const makeRuntime = (
       keyboardShortcutsReporting(browserKeys),
       exportServerAnswering(exportAnswers).pipe(Layer.provide(browser)),
       FakeImportServer.layer.pipe(Layer.provide(browser)),
+      Updates.layer(VERSION).pipe(Layer.provideMerge(FakeHttp.layer), Layer.provide(browser)),
     ),
   )
   runtimes.push(runtime)
@@ -136,7 +140,13 @@ const renderOptions = async ({
     runtime.runPromise(SettingsRepository.use((repository) => repository.update(patch)))
   if (runtimeOptions.rejectedStorageOperation === undefined) await update(saved)
   render(App, {
-    props: { runtime, version: VERSION, repositoryUrl: REPOSITORY_URL, browserLanguages },
+    props: {
+      runtime,
+      version: VERSION,
+      releasedAt: RELEASED_AT,
+      repositoryUrl: REPOSITORY_URL,
+      browserLanguages,
+    },
   })
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
@@ -153,6 +163,27 @@ const renderOptions = async ({
     downloaded: () => runtime.runPromise(FakeFileDownloads.use((downloads) => downloads.saved)),
     answerImportsWith: (answer: ApplyAnswer) =>
       runtime.runPromise(FakeImportServer.use((server) => server.answerImportsWith(answer))),
+    /** Makes GitHub answer update checks with `version` as the latest release, null for no answer. */
+    publishOnGitHub: (version: string | null) =>
+      runtime.runPromise(
+        FakeHttp.use((http) =>
+          http.route(LATEST_RELEASE_API_URL, (request) =>
+            version === null
+              ? unreachable(request)
+              : Effect.succeed(
+                  httpResponse(
+                    200,
+                    JSON.stringify({
+                      tag_name: `v${version}`,
+                      html_url: `https://github.com/qaynam/Katip/releases/tag/v${version}`,
+                      published_at: "2026-11-20T09:00:00Z",
+                    }),
+                  ),
+                ),
+          ),
+        ),
+      ),
+    githubRequests: () => runtime.runPromise(FakeHttp.use((http) => http.requests)),
   }
 }
 
@@ -452,6 +483,69 @@ describe("loading failure", () => {
     expect(
       await screen.findByText("Couldn’t load your settings. Reload this page to try again."),
     ).toBeTruthy()
+  })
+})
+
+describe("updates", () => {
+  it("shows when the running version was released", async () => {
+    await renderLoaded()
+
+    expect(screen.getByText("Released on November 5, 2026")).toBeTruthy()
+  })
+
+  it("says Katip is up to date when GitHub's latest release is the running version", async () => {
+    const { publishOnGitHub } = await renderLoaded()
+    await publishOnGitHub(VERSION)
+
+    await fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }))
+
+    expect(await screen.findByText("Katip is up to date.")).toBeTruthy()
+  })
+
+  it("names a newer version and links to its release page, opening it in a new tab", async () => {
+    const { publishOnGitHub } = await renderLoaded()
+    await publishOnGitHub("1.3.0")
+
+    await fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }))
+
+    const link = await screen.findByRole("link", { name: "Open release page" })
+    expect(screen.getByText(/^Version 1\.3\.0 is available\./)).toBeTruthy()
+    expect([link.getAttribute("href"), link.getAttribute("target")]).toStrictEqual([
+      "https://github.com/qaynam/Katip/releases/tag/v1.3.0",
+      "_blank",
+    ])
+  })
+
+  it("says GitHub couldn't be reached, leaving the button to try again", async () => {
+    const { publishOnGitHub, githubRequests } = await renderLoaded()
+    await publishOnGitHub(null)
+    const check = screen.getByRole("button", { name: "Check for Updates" })
+
+    await fireEvent.click(check)
+    expect(
+      await screen.findByText("Couldn’t reach GitHub. Wait a moment, then try again."),
+    ).toBeTruthy()
+    await fireEvent.click(check)
+
+    await waitFor(async () => {
+      expect(await githubRequests()).toHaveLength(2)
+    })
+  })
+
+  it("asks GitHub nothing until the button is pressed", async () => {
+    const { githubRequests } = await renderLoaded()
+
+    expect(await githubRequests()).toStrictEqual([])
+  })
+
+  it("turns automatic checks off, saving at once", async () => {
+    const { readSaved } = await renderLoaded()
+
+    await fireEvent.click(switchNamed("Check for updates automatically"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).checkForUpdates).toBe(false)
+    })
   })
 })
 

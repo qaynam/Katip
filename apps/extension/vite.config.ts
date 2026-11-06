@@ -1,4 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte"
+import { execFileSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig, type Plugin, runnerImport } from "vite"
@@ -68,10 +69,24 @@ const stampDevBuild = (): Plugin => ({
   },
 })
 
+// The settings page shows it as the version's release date. Not the time of the build itself, so
+// building the same commit again gives the same date
+const commitDate = (): string => {
+  try {
+    return execFileSync("git", ["log", "-1", "--format=%cI"], {
+      cwd: fromRoot("."),
+      encoding: "utf8",
+    }).trim()
+  } catch {
+    return ""
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const buildMode: BuildMode = mode === "development" ? "development" : "production"
   return {
     root: fromRoot("./src/apps"),
+    define: { "import.meta.env.KATIP_COMMITTED_AT": JSON.stringify(commitDate()) },
     plugins: [
       svelte({ configFile: fromRoot("./svelte.config.js") }),
       emitManifest(buildMode),

@@ -8,6 +8,9 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     "background に接続していません。少し待ってからやり直してください",
   "sidepanel.time.justNow": "たった今",
   "sidepanel.toast.dismiss": "通知を閉じる",
+  "sidepanel.update.available": "Katip {version} が出ました",
+  "sidepanel.update.whatsNew": "新しくなった点を見る",
+  "sidepanel.update.dismiss": "閉じる",
 
   "sidepanel.spotlight.button": "検索",
   "sidepanel.split.pageDropHint": "ページの左か右で離すと、表示中のタブと画面分割します",

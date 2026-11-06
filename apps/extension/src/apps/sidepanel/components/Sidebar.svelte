@@ -2,6 +2,7 @@
   import { Option } from "effect"
   import { untrack } from "svelte"
   import type { Translator } from "#modules/i18n"
+  import type { Release } from "#modules/updates"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { OriginAccess } from "../connection/origin-access"
   import type { ScrollPositions } from "../connection/scroll-positions"
@@ -37,6 +38,7 @@
   import ThemePicker from "./ThemePicker.svelte"
   import Toasts from "./Toasts.svelte"
   import Tooltip from "./Tooltip.svelte"
+  import UpdateCard from "./UpdateCard.svelte"
 
   interface Props {
     view: SidebarView
@@ -47,6 +49,9 @@
     originAccess: OriginAccess
     faviconUrl: FaviconResolver
     scrollPositions: ScrollPositions
+    /** A newer release to tell about, or null for none. */
+    updateNotice: Release | null
+    onDismissUpdate: () => void
     onReload: () => void
   }
 
@@ -59,6 +64,8 @@
     originAccess,
     faviconUrl,
     scrollPositions,
+    updateNotice,
+    onDismissUpdate,
     onReload,
   }: Props = $props()
 
@@ -205,6 +212,17 @@
       <Toasts {toasts} {translator} />
       {#if view.canSplit && drag.source !== null && openTabOf(drag.source) !== null}
         <p class="page-drop-hint">{translator.t("sidepanel.split.pageDropHint")}</p>
+      {/if}
+      {#if updateNotice !== null}
+        {@const release = updateNotice}
+        <UpdateCard
+          {release}
+          onOpen={() => {
+            void run({ _tag: "OpenUrl", windowId: view.windowId, url: release.pageUrl })
+            onDismissUpdate()
+          }}
+          onDismiss={onDismissUpdate}
+        />
       {/if}
       <BottomBar
         spaces={view.spaces}

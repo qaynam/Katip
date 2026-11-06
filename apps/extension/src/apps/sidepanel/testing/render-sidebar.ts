@@ -3,6 +3,7 @@ import { fireEvent, render } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { beforeEach, vi } from "vitest"
 import type { LocalePreference } from "#modules/i18n"
+import type { Release } from "#modules/updates"
 import type { SidebarCommand, SidebarView } from "#protocol"
 import App from "../App.svelte"
 import {
@@ -12,6 +13,7 @@ import {
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../connection/memory-scroll-positions"
+import { createMemoryUpdateNotices } from "../connection/memory-update-notices"
 import type { ScrollPositions } from "../connection/scroll-positions"
 
 // jsdom has no layout and doesn't implement scrollIntoView
@@ -30,6 +32,8 @@ export const renderSidebar = async (
     readonly browserLanguages?: ReadonlyArray<string>
     /** Pass the same one to two renders to reopen the side panel. Empty by default. */
     readonly scrollPositions?: ScrollPositions
+    /** The newer release the side panel is told about. None by default. */
+    readonly updateNotice?: Release | null
   } = {},
 ) => {
   const {
@@ -37,6 +41,7 @@ export const renderSidebar = async (
     locale = "en",
     browserLanguages = [],
     scrollPositions = createMemoryScrollPositions(),
+    updateNotice = null,
     ...connectionOptions
   } = options
   const connection = createMemoryConnection({
@@ -45,6 +50,7 @@ export const renderSidebar = async (
   })
   const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
   const localePreferences = createMemoryLocalePreferences(locale)
+  const updateNotices = createMemoryUpdateNotices(updateNotice)
   const onReload = vi.fn()
   const result = render(App, {
     props: {
@@ -53,6 +59,7 @@ export const renderSidebar = async (
       localePreferences,
       browserLanguages,
       scrollPositions,
+      updateNotices,
       onReload,
     },
   })
@@ -61,6 +68,7 @@ export const renderSidebar = async (
     ...result,
     connection,
     originAccess,
+    updateNotices,
     onReload,
     /** Simulates changing the language setting while the panel stays open. */
     changeLocale: async (preference: LocalePreference) => {

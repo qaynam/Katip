@@ -176,7 +176,8 @@ export const exportedSettingsOf = (settings: Settings): LatestExport["settings"]
  * @remarks
  * The GitHub token, what live folders fetched, which folders are open, the archive and the records
  * for restoring tabs aren't exported. Neither are tabs in incognito windows, tabs showing Katip's
- * own pages, or blank new tabs.
+ * own pages, or blank new tabs. Settings and themes added after version 1, such as whether to check
+ * for updates and a theme's texture, have no place in its files and are left out too.
  *
  * @returns {@link PinnedTreeUnavailable} when any Space's pinned tree couldn't be read, so that no
  *   file is left with some Spaces' pins missing without anyone noticing.

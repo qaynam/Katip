@@ -9,6 +9,9 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     "Todavía no hay conexión con Katip. Espera un momento y vuelve a intentarlo.",
   "sidepanel.time.justNow": "Justo ahora",
   "sidepanel.toast.dismiss": "Descartar",
+  "sidepanel.update.available": "Katip {version} ya está disponible",
+  "sidepanel.update.whatsNew": "Ver las novedades",
+  "sidepanel.update.dismiss": "Descartar",
 
   "sidepanel.spotlight.button": "Buscar",
   "sidepanel.split.pageDropHint":

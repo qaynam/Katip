@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: November 3, 2026_
+_Last updated: November 6, 2026_
 
 Katip is a browser extension that organizes your tabs into Spaces in the side panel. This policy explains what data Katip handles and where it goes. In short: Katip has no server, collects nothing, and sends nothing to its developer or to anyone else.
 
@@ -16,7 +16,11 @@ If you have turned on sync in your browser (for example Chrome Sync), your brows
 
 ## Network requests
 
-Katip makes network requests only for **live folders**, and only after you create one and allow access to that site:
+Katip makes network requests only to check for updates and for live folders.
+
+**Update checks**: the first time the side panel opens after your browser starts, and whenever you press "Check for Updates" in Katip's settings, Katip asks `api.github.com` which release of Katip is the latest. The request carries no data from Katip and no cookies; like any request, it lets GitHub see your IP address and your browser. You can turn the automatic check off in Katip's settings.
+
+**Live folders** make requests only after you create one and allow access to that site:
 
 - **Gmail live folders** read your Gmail inbox or label feed from `mail.google.com`, using the session you are already signed in with in your browser.
 - **GitHub live folders** read search results from `github.com`, using the session you are already signed in with, or from `api.github.com`.
@@ -52,7 +56,7 @@ If this policy changes, the new version will be published at this address with a
 
 # プライバシーポリシー（日本語）
 
-_最終更新: 2026 年 11 月 3 日_
+_最終更新: 2026 年 11 月 6 日_
 
 Katip は、サイドパネルでタブを Space ごとに整理するブラウザの拡張機能です。Katip はサーバーを持たず、データを集めず、開発者を含む誰にも何も送りません。
 
@@ -68,7 +72,11 @@ Katip が保存するものは、すべてお使いのブラウザの中にあ�
 
 ## 通信
 
-Katip が通信するのは **ライブフォルダ** だけで、ライブフォルダを作り、そのサイトへのアクセスを許可した後に限ります。
+Katip が通信するのは、アップデートの確認とライブフォルダのときだけです。
+
+**アップデートの確認**: ブラウザを起動して初めてサイドパネルを開いたときと、Katip の設定で「アップデートを確認」を押したときに、Katip の最新のリリースを `api.github.com` に問い合わせます。この通信は Katip のデータも Cookie も含みません。ほかの通信と同じく、IP アドレスとブラウザの種類は GitHub に伝わります。自動の確認は Katip の設定で止められます。
+
+**ライブフォルダ** は、ライブフォルダを作り、そのサイトへのアクセスを許可した後に限り通信します。
 
 - **Gmail のライブフォルダ**: ブラウザでログイン済みのセッションを使い、`mail.google.com` から受信トレイやラベルのフィードを読みます。
 - **GitHub のライブフォルダ**: ログイン済みのセッションを使って `github.com` から、または `api.github.com` から検索結果を読みます。

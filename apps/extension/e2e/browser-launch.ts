@@ -21,6 +21,9 @@ export const launchInProfile = (
     args: [
       `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
+      // The side panel asks GitHub for the latest release when it opens. Tests must depend neither
+      // on the network nor on GitHub's rate limit, and a newer release mustn't put a card in the way
+      "--host-resolver-rules=MAP api.github.com ~NOTFOUND",
       ...args,
     ],
   })

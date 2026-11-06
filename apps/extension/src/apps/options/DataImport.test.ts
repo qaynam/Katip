@@ -11,7 +11,9 @@ import {
 import { makeTranslator } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
 import { themeOf } from "#modules/theme"
+import { Updates } from "#modules/updates"
 import { FakeBrowser } from "#platform/browser-testing"
+import { FakeHttp } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import type { ImportClientMessage } from "#protocol"
 import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
@@ -59,6 +61,7 @@ const renderImport = () => {
       FakeFileDownloads.layer,
       KeyboardShortcuts.layerTest({}),
       FakeImportServer.layer.pipe(Layer.provide(browser)),
+      Updates.layer("1.2.3").pipe(Layer.provide(Layer.mergeAll(FakeHttp.layer, browser))),
     ),
   )
   runtimes.push(runtime)

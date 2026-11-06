@@ -13,6 +13,17 @@ export const options: CatalogSection<"options"> = {
   "options.language.footnote": "选择“自动”时，将跟随浏览器的语言。",
   "options.about.heading": "关于 Katip",
   "options.version.label": "版本",
+  "options.version.released": "发布于 {date}",
+  "options.updates.label": "更新",
+  "options.updates.check": "检查更新",
+  "options.updates.checking": "正在检查…",
+  "options.updates.upToDate": "Katip 已是最新版本。",
+  "options.updates.available": "版本 {version} 已发布。请从发布页面下载，并覆盖当前版本重新加载。",
+  "options.updates.openRelease": "打开发布页面",
+  "options.updates.failed": "无法连接 GitHub。请稍后再试。",
+  "options.updates.automatic.label": "自动检查更新",
+  "options.updates.automatic.description":
+    "浏览器启动后首次打开侧边栏时，Katip 会向 GitHub 查询最新版本，如有更新会提示你。不会发送任何 Katip 数据。",
   "options.github.label": "GitHub",
 
   "options.tabs.heading": "标签页",

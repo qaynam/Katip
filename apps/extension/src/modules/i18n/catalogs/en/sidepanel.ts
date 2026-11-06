@@ -7,6 +7,9 @@ export const sidepanel = {
   "sidepanel.connection.notConnected": "Not connected to Katip yet. Wait a moment, then try again.",
   "sidepanel.time.justNow": "Just now",
   "sidepanel.toast.dismiss": "Dismiss",
+  "sidepanel.update.available": "Katip {version} is available",
+  "sidepanel.update.whatsNew": "See what’s new",
+  "sidepanel.update.dismiss": "Dismiss",
 
   "sidepanel.spotlight.button": "Search",
   "sidepanel.split.pageDropHint":
