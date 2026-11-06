@@ -17,15 +17,22 @@ const hueTurn = (from: number, to: number) => normalizeHue(to - from + 180) - 18
 // upper left
 const HUE_AT_RIGHT = 29
 
+// Not the edge for the most vivid colors, which is where color wheels usually put them: in Arc's
+// picker, which Katip's follows, colors are most vivid at the center and pale toward white at the
+// edge
+const chromaAtDistance = (distance: number) => 1 - distance
+const distanceOfChroma = (chroma: number) => 1 - chroma
+
 /** A point outside the circle gives the color on the edge in the same direction. */
 export const colorAtPoint = ({ x, y }: PickerPoint): ThemeColor => ({
   hue: normalizeHue(HUE_AT_RIGHT - (Math.atan2(y, x) * 180) / Math.PI),
-  chroma: Number.clamp(Math.hypot(x, y), { minimum: 0, maximum: 1 }),
+  chroma: chromaAtDistance(Number.clamp(Math.hypot(x, y), { minimum: 0, maximum: 1 })),
 })
 
 export const pointOfColor = ({ hue, chroma }: ThemeColor): PickerPoint => {
   const radians = ((HUE_AT_RIGHT - hue) * Math.PI) / 180
-  return { x: chroma * Math.cos(radians), y: chroma * Math.sin(radians) }
+  const distance = distanceOfChroma(chroma)
+  return { x: distance * Math.cos(radians), y: distance * Math.sin(radians) }
 }
 
 /**

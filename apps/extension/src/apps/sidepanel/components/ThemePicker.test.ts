@@ -98,7 +98,18 @@ describe("The picker before a color is chosen", () => {
     })
   })
 
-  it("picks the most vivid color in a corner of the field, as at its sides", async () => {
+  it("picks the most vivid color at the center of the field", async () => {
+    const { connection, picker } = await openPicker(neutralTheme)
+    const field = fieldOf(picker)
+    const at = { clientX: fieldCenter.x, clientY: fieldCenter.y, pointerId: 1 }
+
+    await fireEvent.pointerDown(field, at)
+    await fireEvent.pointerUp(field, at)
+
+    expect(sentThemes(connection.sentCommands).at(-1)?.colors[0]?.chroma).toBe(1)
+  })
+
+  it("picks the palest color in a corner of the field, as at its sides", async () => {
     const { connection, picker } = await openPicker(neutralTheme)
     const field = fieldOf(picker)
     const at = {
@@ -110,7 +121,7 @@ describe("The picker before a color is chosen", () => {
     await fireEvent.pointerDown(field, at)
     await fireEvent.pointerUp(field, at)
 
-    expect(sentThemes(connection.sentCommands).at(-1)?.colors[0]?.chroma).toBeCloseTo(1)
+    expect(sentThemes(connection.sentCommands).at(-1)?.colors[0]?.chroma).toBeCloseTo(0)
   })
 })
 
@@ -179,7 +190,7 @@ describe("The picker after a color is chosen", () => {
   it("moves the color dot with the arrow keys", async () => {
     const { connection, picker } = await openPicker({
       ...tunedTheme,
-      colors: [{ hue: 0, chroma: 0 }],
+      colors: [{ hue: 0, chroma: 1 }],
     })
     const primary = within(picker).getByRole("button", { name: "Primary color" })
 

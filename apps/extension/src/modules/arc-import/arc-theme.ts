@@ -64,13 +64,13 @@ const decodeUnitInterval = Schema.decodeUnknownOption(
 )
 const decodeScheme = Schema.decodeUnknownOption(Schema.Literals(["light", "dark"]))
 
-// Not copied as they are: Arc paints a clear tint even with no intensity, and its noise is weaker
-// than Katip's grain, so the same numbers painted imported Spaces nearly grey and grainier than
-// Arc. The mappings were fitted to Retina screenshots of Arc's window in the light scheme. Katip's
-// colors at intensity 0.6 come closest to Arc's with no intensity, so Arc's range maps onto the
-// upper part of Katip's, and Katip's grain at about 0.25 varies the brightness from pixel to pixel
-// as much as Arc's noise at 0.5
-const INTENSITY_AT_NO_ARC_INTENSITY = 0.6
+// Not copied as they are: Arc still paints a faint tint with no intensity, and its noise is weaker
+// than Katip's grain, so the same numbers painted imported Spaces greyer and grainier than Arc. The
+// mappings were fitted to Retina screenshots of Arc's window in the light scheme. With no intensity,
+// Arc paints the same colors with about 0.28 of the chroma it paints at full intensity, which
+// Katip does at intensity 0.2, and Katip's grain at about 0.25 varies the brightness from pixel to
+// pixel as much as Arc's noise at 0.5
+const INTENSITY_AT_NO_ARC_INTENSITY = 0.2
 const GRAIN_PER_ARC_NOISE = 0.5
 
 const colorsIn = (entries: ReadonlyArray<unknown>) =>

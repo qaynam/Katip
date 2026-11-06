@@ -672,7 +672,7 @@ describe("convertArcSidebar", () => {
           { hue: expect.closeTo(264.57, 1), chroma: expect.closeTo(0.639, 2) },
           { hue: expect.closeTo(306.93, 1), chroma: expect.closeTo(0.271, 2) },
         ],
-        intensity: 0.8,
+        intensity: 0.6,
         grain: 0.15,
       })
     })
@@ -789,8 +789,8 @@ describe("convertArcSidebar", () => {
     describe("intensity and grain", () => {
       it.each([
         [1, 0.5, { intensity: 1, grain: 0.25 }],
-        [0.8, 0.8, { intensity: 0.92, grain: 0.4 }],
-        [0, 0, { intensity: 0.6, grain: 0 }],
+        [0.8, 0.8, { intensity: 0.84, grain: 0.4 }],
+        [0, 0, { intensity: 0.2, grain: 0 }],
       ])(
         "maps Arc's intensity %d and noise %d to the Katip values that look alike",
         (intensityFactor, noiseFactor, expected) => {

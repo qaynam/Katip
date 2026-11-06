@@ -8,9 +8,9 @@ export const ThemeMode = Schema.Literals(["auto", "light", "dark"])
 export type ThemeMode = typeof ThemeMode.Type
 
 /**
- * One color of a theme. It is the point in the picker's circle itself: the angle is the hue and the
- * distance from the center the chroma. The lightness and depth actually painted come from the light
- * or dark scheme and the intensity.
+ * One color of a theme. It is the point in the picker's circle itself: the angle is the hue, and the
+ * chroma is highest at the center and falls to 0 at the edge. The lightness and depth actually
+ * painted come from the light or dark scheme and the intensity.
  */
 export const ThemeColor = Schema.Struct({
   hue: Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 360 }))),

@@ -49,22 +49,30 @@ const towardCusp = (base: number, hue: number, share: number): Oklch => {
   }
 }
 
-// Not one lightness for every hue: a tint of yellow at the same lightness as a tint of purple
-// looks grey and dim beside it. Tints lean toward the hue's most vivid color, so yellows stay light
-// and purples deepen. Lightness stays in a range where text on the background is readable, and
-// intensity mostly moves chroma; letting it move lightness far would flip the text between black
-// and white within one theme
+/** The highest chroma sRGB can show at `lightness` in `hue`, on a straight line to its cusp. */
+const maxChromaAt = (lightness: number, hue: number) => {
+  const cusp = cuspOf(hue)
+  return lightness <= cusp.lightness
+    ? (cusp.chroma * lightness) / cusp.lightness
+    : (cusp.chroma * (1 - lightness)) / (1 - cusp.lightness)
+}
+
+// The light scheme was fitted to the sidebar Arc paints, sampled from a screen recording and from
+// screenshots: the same lightness for every hue, falling from about 0.92 for a color at the picker's
+// edge to about 0.66 for one at its center, with the chroma that share of the hue's most vivid
+// color. Lower intensity lets less of the color through, as Arc's translucency does. The dark scheme
+// keeps the lightness in a narrow band, so white text stays readable on every hue
 const backgroundTone = (color: ThemeColor, scheme: ColorScheme, intensity: number): Oklch =>
   Match.value(scheme).pipe(
-    // The chroma's square root, roughly: pale colors kept to a straight share of their chroma
-    // came out nearly grey, though a pale cream is still meant to read as cream
-    Match.when("light", () =>
-      towardCusp(
-        0.95 - 0.08 * intensity,
-        color.hue,
-        (0.04 + 0.33 * intensity) * color.chroma ** 0.6,
-      ),
-    ),
+    Match.when("light", () => {
+      const share = color.chroma * (0.1 + 0.9 * intensity)
+      const lightness = 0.92 - 0.26 * share
+      return {
+        lightness,
+        chroma: Math.min(share * cuspOf(color.hue).chroma, maxChromaAt(lightness, color.hue)),
+        hue: color.hue,
+      }
+    }),
     Match.when("dark", () => ({
       lightness: 0.22 + 0.09 * intensity,
       chroma: color.chroma * (0.02 + 0.12 * intensity),

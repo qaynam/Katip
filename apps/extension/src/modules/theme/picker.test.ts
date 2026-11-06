@@ -13,15 +13,19 @@ describe("picker points and colors", () => {
     const below = colorAtPoint({ x: 0, y: -1 })
     const left = colorAtPoint({ x: -1, y: 0 })
 
-    expect([right, below, left].map(rounded)).toStrictEqual([
-      { hue: 29, chroma: 1 },
-      { hue: 119, chroma: 1 },
-      { hue: 209, chroma: 1 },
+    expect([right, below, left].map(rounded).map((color) => color.hue)).toStrictEqual([
+      29, 119, 209,
     ])
   })
 
-  it("take the distance from the center as the chroma", () => {
-    expect(rounded(colorAtPoint({ x: 0.5, y: 0 })).chroma).toBe(0.5)
+  it("are most vivid at the center and pale toward the edge", () => {
+    const chromas = [
+      { x: 0, y: 0 },
+      { x: 0.25, y: 0 },
+      { x: 0, y: 1 },
+    ].map((point) => rounded(colorAtPoint(point)).chroma)
+
+    expect(chromas).toStrictEqual([1, 0.75, 0])
   })
 
   it("give a point outside the circle the edge color in the same direction", () => {

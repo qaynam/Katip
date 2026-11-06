@@ -84,10 +84,10 @@ describe("suggestedTheme", () => {
 })
 
 describe("hueWheelBackground", () => {
-  it("tints each direction, clockwise from the right, with the color picked at the edge there", () => {
+  it("tints each direction, clockwise from the right, with the most vivid color of the hue picked there", () => {
     const background = hueWheelBackground()
     const stopAt = (angle: number, point: { x: number; y: number }) =>
-      `${swatchOf(colorAtPoint(point))} ${angle}deg`
+      `${swatchOf({ hue: colorAtPoint(point).hue, chroma: 1 })} ${angle}deg`
 
     expect(background).toContain("from 90deg")
     expect(
@@ -95,5 +95,11 @@ describe("hueWheelBackground", () => {
         (stop) => background.includes(stop),
       ),
     ).toBe(true)
+  })
+
+  it("pales the tint toward the palest color at the sides", () => {
+    expect(hueWheelBackground()).toContain(
+      `radial-gradient(closest-side, transparent, ${swatchOf({ hue: 0, chroma: 0 })})`,
+    )
   })
 })

@@ -4,6 +4,18 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
+## Unreleased
+
+### English
+
+- The theme picker works like Arc's: colors are most vivid at the center of the color field and pale toward white at its edges, and the most vivid colors paint the side panel far more richly than before. Saved themes keep their colors, but their dots move to match, and vivid themes are painted deeper.
+- Spaces moved over from Arc come in closer to how Arc paints them at low intensity.
+
+### 日本語
+
+- テーマの色の選び方を Arc と同じにしました。色のエリアの中心ほど鮮やかで、端に行くほど白くなります。いちばん鮮やかな色は、以前よりずっと濃くサイドパネルを塗ります。保存済みのテーマの色はそのままですが、点の位置はそれに合わせて動き、鮮やかなテーマは濃く表示されます。
+- Arc から移した Space の色の強さが低いときに、Arc の見え方により近くなりました。
+
 ## 1.3.0 — 2026-11-06
 
 ### English

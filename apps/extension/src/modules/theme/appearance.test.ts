@@ -86,13 +86,30 @@ describe("appearanceOf", () => {
     ])
   })
 
-  it("paints a light tint of yellow lighter than one of purple at the same chroma and intensity", () => {
+  it("paints every hue at the same lightness for the same chroma and intensity in the light scheme", () => {
     const lightnessOf = (hue: number) =>
       oklchOfCss(
         appearanceOf(withMode(themeOf([{ hue, chroma: 0.6 }]), "light"), "light").background,
       ).lightness
 
-    expect(lightnessOf(100)).toBeGreaterThan(lightnessOf(300) + 0.03)
+    expect(Math.abs(lightnessOf(100) - lightnessOf(300))).toBeLessThan(0.01)
+  })
+
+  it("paints a more vivid color deeper in the light scheme, from near-white for the palest", () => {
+    const backgroundOf = (chroma: number) =>
+      oklchOfCss(
+        appearanceOf(
+          { ...withMode(themeOf([{ hue: 350, chroma }]), "light"), intensity: 1 },
+          "light",
+        ).background,
+      )
+    const [palest, vivid] = [backgroundOf(0), backgroundOf(1)]
+
+    expect([palest.lightness > 0.88, palest.chroma < 0.01]).toStrictEqual([true, true])
+    expect([vivid.lightness < palest.lightness - 0.15, vivid.chroma > 0.18]).toStrictEqual([
+      true,
+      true,
+    ])
   })
 
   it("keeps dark text on every hue at the most vivid chroma and full intensity in the light scheme", () => {
