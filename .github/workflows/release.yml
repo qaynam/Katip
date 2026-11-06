@@ -62,7 +62,9 @@ jobs:
         with:
           subject-path: apps/extension/.release/katip-${{ needs.version.outputs.version }}.zip
       # Not GitHub's generated notes: they list merged pull requests, and changes land on main
-      # without any, which left only a compare link. CHANGELOG.md is written for people using Katip
+      # without any, which left only a compare link. CHANGELOG.md is written for people using Katip.
+      # Generating notes also titled the release; without them the title is given, or GitHub shows
+      # the tag and the subject of its commit in its place
       - name: Take the version's notes from CHANGELOG.md
         env:
           VERSION: ${{ needs.version.outputs.version }}
@@ -78,5 +80,5 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --clobber
             gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --verify-tag --notes-file "$notes"
+            gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$notes"
           fi
