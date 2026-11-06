@@ -18,6 +18,7 @@
   import type { SidebarConnection, Undelivered } from "./connection/sidebar-connection"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
   import { findActiveSpace } from "./logic/view-queries"
+  import { PendingActivation } from "./state/pending-activation.svelte"
   import { ToastQueue } from "./state/toast-queue.svelte"
 
   interface Props {
@@ -54,14 +55,18 @@
     document.documentElement.lang = translator.languageTag
   })
 
-  let view = $state.raw<SidebarView | null>(null)
+  let receivedView = $state.raw<SidebarView | null>(null)
+  const pendingActivation = new PendingActivation()
+  const view = $derived(receivedView === null ? null : pendingActivation.shown(receivedView))
   const activeSpace = $derived(view === null ? null : Option.getOrNull(findActiveSpace(view)))
   const toasts = new ToastQueue()
 
   $effect(() =>
     connection.listen((event) => {
-      if (event._tag === "ViewUpdated") view = event.view
-      else toasts.show(event.message)
+      if (event._tag === "ViewUpdated") {
+        receivedView = event.view
+        pendingActivation.settleWith(event.view)
+      } else toasts.show(event.message)
     }),
   )
 
@@ -71,12 +76,16 @@
   } as const satisfies Record<Undelivered["reason"], MessageKey>
 
   const run = async (command: SidebarCommand): Promise<CommandOutcome> => {
+    if (command._tag === "ActivateTab") pendingActivation.start(command.tabId)
     const result = await connection.run(command)
     const outcome: CommandOutcome =
       result._tag === "Undelivered"
         ? { _tag: "Failed", reason: translator.t(undeliveredMessages[result.reason]) }
         : result
-    if (outcome._tag === "Failed") toasts.show(outcome.reason, "error")
+    if (outcome._tag === "Failed") {
+      toasts.show(outcome.reason, "error")
+      if (command._tag === "ActivateTab") pendingActivation.fail(command.tabId)
+    }
     return outcome
   }
 </script>
