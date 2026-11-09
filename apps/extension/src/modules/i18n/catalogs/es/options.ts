@@ -57,6 +57,41 @@ export const options: CatalogSection<"options"> = {
     "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",
   "options.spotlight.history.denied": "No se permitió el acceso al historial de navegación.",
 
+  "options.spotlight.bangs.label": "Buscar en sitios con bangs",
+  "options.spotlight.bangs.footnote":
+    "Escribe ! y el atajo de un sitio en Spotlight para buscar en ese sitio, como !gh katip para GitHub o !w para Wikipedia. Los atajos son los bangs de Kagi, tal como los incluye Helium.",
+  "options.commands.heading": "Comandos",
+  "options.commands.footnote":
+    "Estos comandos aparecen entre los comandos de Spotlight. Dale a uno una palabra clave para usarlo escribiendo ! y la palabra clave. Pon %s en su URL para buscar lo que escribas después de la palabra clave.",
+  "options.commands.add": "Añadir comando",
+  "options.commands.restoreDefaults": "Restaurar comandos predeterminados",
+  "options.commands.edit": "Editar",
+  "options.commands.remove": "Eliminar",
+  "options.commands.editLabel": "Editar {title}",
+  "options.commands.removeLabel": "Eliminar {title}",
+  "options.commands.save": "Guardar",
+  "options.commands.newHeading": "Nuevo comando",
+  "options.commands.editHeading": "Editar comando",
+  "options.commands.field.site": "Buscar un sitio",
+  "options.commands.field.sitePlaceholder": "GitHub, YouTube, MDN…",
+  "options.commands.field.siteDescription":
+    "Rellena una búsqueda del sitio a partir de la lista de bangs.",
+  "options.commands.noSites": "No hay sitios que coincidan",
+  "options.commands.field.title": "Nombre",
+  "options.commands.field.url": "URL",
+  "options.commands.field.urlDescription":
+    "Pon %s donde va lo que escribas después de la palabra clave.",
+  "options.commands.field.keyword": "Palabra clave",
+  "options.commands.field.keywordDescription":
+    "Puede omitirse en un comando que solo abre una página.",
+  "options.commands.searchTitle": "Buscar en {site}",
+  "options.commands.problem.titleMissing": "Escribe un nombre.",
+  "options.commands.problem.urlInvalid": "Escribe una dirección web, como https://example.com/.",
+  "options.commands.problem.keywordInvalid": "Usa una palabra clave sin espacios ni !.",
+  "options.commands.problem.keywordMissing":
+    "Un comando que busca necesita una palabra clave tras la que escribir la búsqueda.",
+  "options.commands.problem.keywordTaken": "Otro comando ya usa esta palabra clave.",
+
   "options.shortcuts.heading": "Atajos",
   "options.shortcuts.intro":
     "Las teclas se asignan en la página de combinaciones de teclas de extensiones de Chrome.",

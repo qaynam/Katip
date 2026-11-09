@@ -336,6 +336,87 @@ describe("a command row", () => {
   })
 })
 
+describe("bangs", () => {
+  const githubSuggestion: SpotlightResult = {
+    _tag: "BangSuggestion",
+    siteName: "GitHub",
+    trigger: "gh",
+    iconPageUrl: "https://github.com/",
+  }
+  const githubSearch: SpotlightResult = {
+    _tag: "SiteSearch",
+    siteName: "GitHub",
+    query: "katip",
+    url: "https://github.com/search?q=katip",
+    iconPageUrl: "https://github.com/",
+  }
+  const searchLinear: SpotlightResult = {
+    _tag: "SiteCommand",
+    title: "Search Linear",
+    url: "https://linear.app/search?q=%s",
+    keyword: "lin",
+    searches: true,
+    iconPageUrl: "https://linear.app/",
+  }
+  const respondWithBangs = (query: string, mode: SpotlightMode) =>
+    mode === "Actions"
+      ? [searchLinear]
+      : query === "!g"
+        ? [githubSuggestion]
+        : query === "!gh katip"
+          ? [githubSearch, webSearch(query)]
+          : []
+
+  it("a suggestion chosen with Enter fills in its bang and searches for it, opening nothing", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!g")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect([(input as HTMLInputElement).value, connection.searches.at(-1)]).toStrictEqual([
+      "!gh ",
+      { query: "!gh ", mode: "All" },
+    ])
+    expect(connection.chosen).toStrictEqual([])
+  })
+
+  it("a suggestion is filled in with Tab too, which the hints say", async () => {
+    const { input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!g")
+    await settle()
+    expect(screen.getByText("Fill In")).toBeTruthy()
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect((input as HTMLInputElement).value).toBe("!gh ")
+  })
+
+  it("a site search is opened by the background on Enter", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh katip")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(connection.chosen).toStrictEqual([githubSearch])
+  })
+
+  it("a command that searches, chosen in command mode, fills in its keyword in the usual search", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithBangs })
+    await fireEvent.keyDown(input, { key: "Tab" })
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect([(input as HTMLInputElement).value, connection.searches.at(-1)]).toStrictEqual([
+      "!lin ",
+      { query: "!lin ", mode: "All" },
+    ])
+    expect(screen.queryByText("Commands")).toBeNull()
+  })
+})
+
 describe("a history row", () => {
   it("shows when the page was last visited", async () => {
     renderSpotlight({ respond: () => [historyPage("Blog post", 3)] })

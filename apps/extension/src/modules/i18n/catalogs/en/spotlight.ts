@@ -22,6 +22,7 @@ export const spotlight = {
   "spotlight.kind.command": "Command",
   "spotlight.kind.openUrl": "Open",
   "spotlight.kind.searchWeb": "Web Search",
+  "spotlight.kind.siteSearch": "Site Search",
 
   "spotlight.detail.favorites": "Favorites",
   "spotlight.detail.notInSpace": "Not in a Space",
@@ -31,9 +32,12 @@ export const spotlight = {
   "spotlight.detail.splitView": "Split View",
   "spotlight.detail.openInNewTab": "Open in a new tab",
   "spotlight.detail.searchTheWeb": "Search with your default search engine",
+  "spotlight.detail.searchSite": "Search {site}",
+  "spotlight.detail.openSite": "Open {site}",
   "spotlight.time.justNow": "Just now",
 
   "spotlight.hint.commands": "Commands",
+  "spotlight.hint.complete": "Fill In",
   "spotlight.hint.select": "Select",
   "spotlight.hint.open": "Open",
   "spotlight.hint.back": "Back",

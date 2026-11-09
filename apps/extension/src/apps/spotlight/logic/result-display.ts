@@ -1,8 +1,10 @@
 import { Array, Match, Option } from "effect"
+import { inputForTrigger } from "#modules/bangs"
 import type { MessageKey, Translator } from "#modules/i18n"
 import { swatchOf } from "#modules/theme"
 import type { SpotlightResult } from "#protocol"
-import { readableUrl } from "./readable-url"
+import { type ActionGlyph, actionGlyphOf } from "./action-glyph"
+import { hostOf, readableUrl } from "./readable-url"
 import { relativeTimeLabel } from "./relative-time"
 
 export type ResultIcon =
@@ -14,7 +16,7 @@ export type ResultIcon =
     }
   | { readonly _tag: "Swatch"; readonly color: string }
   | { readonly _tag: "Search" }
-  | { readonly _tag: "Command" }
+  | { readonly _tag: "Glyph"; readonly glyph: ActionGlyph }
 
 export interface ResultDisplay {
   readonly title: string
@@ -49,6 +51,9 @@ const kindLabels = {
   Bookmark: "spotlight.kind.bookmark",
   History: "spotlight.kind.history",
   Action: "spotlight.kind.command",
+  SiteCommand: "spotlight.kind.command",
+  SiteSearch: "spotlight.kind.siteSearch",
+  BangSuggestion: "spotlight.kind.siteSearch",
   OpenUrl: "spotlight.kind.openUrl",
   SearchWeb: "spotlight.kind.searchWeb",
 } as const satisfies Record<SpotlightResult["_tag"], MessageKey>
@@ -143,9 +148,40 @@ export const displayOf = (
       title: command.title,
       detail: "",
       kindLabel,
-      icon: { _tag: "Command" },
+      icon: { _tag: "Glyph", glyph: actionGlyphOf(command.action) },
       shortcut: command.shortcut,
     }),
+    SiteCommand: (command) =>
+      withoutShortcut({
+        title: command.title,
+        // A command that searches has %s in its URL, which says nothing to the reader; its host
+        // and keyword do
+        detail: command.searches
+          ? joinDetail([
+              command.keyword === null ? null : `!${command.keyword}`,
+              Option.getOrNull(hostOf(command.iconPageUrl)),
+            ])
+          : readableUrl(command.url),
+        kindLabel,
+        icon: favicon(command.iconPageUrl, command.title),
+      }),
+    SiteSearch: (search) =>
+      withoutShortcut({
+        title: search.query === "" ? search.siteName : search.query,
+        detail:
+          search.query === ""
+            ? t("spotlight.detail.openSite", { site: search.siteName })
+            : t("spotlight.detail.searchSite", { site: search.siteName }),
+        kindLabel,
+        icon: favicon(search.iconPageUrl, search.siteName),
+      }),
+    BangSuggestion: (suggestion) =>
+      withoutShortcut({
+        title: suggestion.siteName,
+        detail: `!${suggestion.trigger}`,
+        kindLabel,
+        icon: favicon(suggestion.iconPageUrl, suggestion.siteName),
+      }),
     OpenUrl: ({ url }) =>
       withoutShortcut({
         title: url,
@@ -161,6 +197,18 @@ export const displayOf = (
         icon: { _tag: "Search" },
       }),
   })
+}
+
+/**
+ * What choosing the result types into Spotlight rather than opening anything: a bang ready for its
+ * query. Null for a result that opens or runs something.
+ */
+export const completionOf = (result: SpotlightResult): string | null => {
+  if (result._tag === "BangSuggestion") return inputForTrigger(result.trigger)
+  if (result._tag === "SiteCommand" && result.searches && result.keyword !== null) {
+    return inputForTrigger(result.keyword)
+  }
+  return null
 }
 
 /** Whether the result matched the query. Opening a URL and searching the web show up regardless. */

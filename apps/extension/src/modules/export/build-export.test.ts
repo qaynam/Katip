@@ -452,6 +452,7 @@ describe("settings", () => {
       locale: "zh",
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
       checkForUpdates: false,
+      bangs: false,
     } as const
 
     expect(exported(sourcesWith({ settings })).settings).toStrictEqual({

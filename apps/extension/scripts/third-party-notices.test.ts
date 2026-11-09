@@ -64,4 +64,21 @@ describe("the third-party notices", () => {
       "No license file is included in the package; its license is MIT.",
     )
   })
+
+  it("end with the notices of bundled data, in the order given", () => {
+    const parent = mkdtempSync(join(tmpdir(), "katip-notices-"))
+    const alpha = packageAt(parent, { name: "alpha", version: "1.0.0", license: "MIT" }, "Alpha")
+
+    const notices = thirdPartyNotices(
+      [alpha],
+      [
+        { name: "Bangs, from Kagi", licenseText: "MIT License\n\nCopyright (c) Kagi\n" },
+        { name: "Other data", licenseText: "Other license" },
+      ],
+    )
+
+    expect(notices.indexOf("alpha 1.0.0")).toBeLessThan(notices.indexOf("Bangs, from Kagi"))
+    expect(notices).toContain("Bangs, from Kagi\n\nMIT License\n\nCopyright (c) Kagi\n\n---")
+    expect(notices.trimEnd().endsWith("Other data\n\nOther license")).toBe(true)
+  })
 })

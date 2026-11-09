@@ -8,7 +8,7 @@
   import type { SpotlightConnection } from "./connection/spotlight-connection"
   import { spotlightAppearance } from "./logic/appearance"
   import type { FaviconResolver } from "./logic/favicon"
-  import { isMatchedCandidate } from "./logic/result-display"
+  import { completionOf, isMatchedCandidate } from "./logic/result-display"
   import { selectionStepOf, stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
 
@@ -43,6 +43,10 @@
 
   const appearance = $derived(spotlightAppearance(spaceTheme, systemScheme))
   const hasMatches = $derived(results.some(isMatchedCandidate))
+  const selectedCompletion = $derived.by(() => {
+    const selected = results[selectedIndex]
+    return selected === undefined ? null : completionOf(selected)
+  })
 
   // Responses may arrive out of order, and an earlier query's must not overwrite a later one's
   let latestSearch = 0
@@ -64,9 +68,22 @@
     hasLoaded = true
   }
 
+  // What to search for is typed next, so the bang is filled in rather than anything opened
+  const complete = (completion: string) => {
+    mode = "All"
+    query = completion
+    input?.focus()
+    void search(completion, "All")
+  }
+
   let isChoosing = false
   const choose = async (result: SpotlightResult | undefined) => {
     if (result === undefined || isChoosing) return
+    const completion = completionOf(result)
+    if (completion !== null) {
+      complete(completion)
+      return
+    }
     isChoosing = true
     const outcome = await connection.choose(result)
     isChoosing = false
@@ -94,7 +111,13 @@
     }
     switch (event.key) {
       case "Tab":
-        if (query !== "" || hasModifier(event)) return
+        if (hasModifier(event)) return
+        if (selectedCompletion !== null) {
+          event.preventDefault()
+          complete(selectedCompletion)
+          return
+        }
+        if (query !== "") return
         event.preventDefault()
         if (mode === "All") switchMode("Actions")
         return
@@ -211,7 +234,9 @@
     {/if}
 
     <footer class="hints" aria-hidden="true">
-      {#if mode === "All" && query === ""}
+      {#if selectedCompletion !== null}
+        <span><kbd>tab</kbd>{t("spotlight.hint.complete")}</span>
+      {:else if mode === "All" && query === ""}
         <span><kbd>tab</kbd>{t("spotlight.hint.commands")}</span>
       {/if}
       <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>

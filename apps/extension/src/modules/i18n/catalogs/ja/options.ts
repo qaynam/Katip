@@ -53,6 +53,40 @@ export const options: CatalogSection<"options"> = {
     "オンにすると、閲覧履歴を読む許可を求めます。オフにすると、その許可を外します。",
   "options.spotlight.history.denied": "閲覧履歴へのアクセスが許可されませんでした",
 
+  "options.spotlight.bangs.label": "bangs でサイトを検索する",
+  "options.spotlight.bangs.footnote":
+    "Spotlight で ! に続けてサイトの短縮名を打つと、そのサイトを検索できます。たとえば !gh katip で GitHub を、!w で Wikipedia を検索します。短縮名の一覧は、Helium が同梱している Kagi の bangs です。",
+  "options.commands.heading": "コマンド",
+  "options.commands.footnote":
+    "これらのコマンドは Spotlight のコマンドの一覧に出ます。キーワードを付けると、! に続けてキーワードを打って実行できます。URL に %s を入れると、キーワードのあとに打った言葉で検索します。",
+  "options.commands.add": "コマンドを追加",
+  "options.commands.restoreDefaults": "既定のコマンドを戻す",
+  "options.commands.edit": "編集",
+  "options.commands.remove": "削除",
+  "options.commands.editLabel": "「{title}」を編集",
+  "options.commands.removeLabel": "「{title}」を削除",
+  "options.commands.save": "保存",
+  "options.commands.newHeading": "新しいコマンド",
+  "options.commands.editHeading": "コマンドを編集",
+  "options.commands.field.site": "サイトを探す",
+  "options.commands.field.sitePlaceholder": "GitHub、YouTube、MDN など",
+  "options.commands.field.siteDescription": "bangs の一覧から、そのサイトの検索を埋めます。",
+  "options.commands.noSites": "一致するサイトはありません",
+  "options.commands.field.title": "名前",
+  "options.commands.field.url": "URL",
+  "options.commands.field.urlDescription":
+    "キーワードのあとに打った言葉を入れる場所に %s を書きます。",
+  "options.commands.field.keyword": "キーワード",
+  "options.commands.field.keywordDescription": "ページを開くだけのコマンドなら省けます。",
+  "options.commands.searchTitle": "{site} で検索",
+  "options.commands.problem.titleMissing": "名前を入力してください",
+  "options.commands.problem.urlInvalid":
+    "https://example.com/ のような Web のアドレスを入力してください",
+  "options.commands.problem.keywordInvalid": "空白や ! を含まないキーワードにしてください",
+  "options.commands.problem.keywordMissing":
+    "検索するコマンドには、検索する言葉を続けて打つためのキーワードが必要です",
+  "options.commands.problem.keywordTaken": "このキーワードはほかのコマンドが使っています",
+
   "options.shortcuts.heading": "ショートカット",
   "options.shortcuts.intro": "キーは Chrome の拡張機能のショートカット設定で割り当てます。",
   "options.shortcuts.open": "Chrome で変更",

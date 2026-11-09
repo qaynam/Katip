@@ -22,6 +22,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.kind.command": "命令",
   "spotlight.kind.openUrl": "打开",
   "spotlight.kind.searchWeb": "网络搜索",
+  "spotlight.kind.siteSearch": "站内搜索",
 
   "spotlight.detail.favorites": "收藏",
   "spotlight.detail.notInSpace": "不属于任何空间",
@@ -31,9 +32,12 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.detail.splitView": "拆分视图",
   "spotlight.detail.openInNewTab": "在新标签页中打开",
   "spotlight.detail.searchTheWeb": "使用默认搜索引擎搜索",
+  "spotlight.detail.searchSite": "在 {site} 中搜索",
+  "spotlight.detail.openSite": "打开 {site}",
   "spotlight.time.justNow": "刚刚",
 
   "spotlight.hint.commands": "命令",
+  "spotlight.hint.complete": "补全",
   "spotlight.hint.select": "选择",
   "spotlight.hint.open": "打开",
   "spotlight.hint.back": "返回",

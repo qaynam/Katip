@@ -11,10 +11,12 @@ import {
   Stream,
 } from "effect"
 import { ArchiveRepository } from "#modules/archive"
+import { BangCatalog } from "#modules/bangs"
 import { takeFavoriteSnapshot } from "#modules/favorites"
 import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
+import { SiteCommands } from "#modules/site-commands"
 import { desiredGroupsFor, TabGroupSync } from "#modules/tab-group-sync"
 import { takeSnapshot } from "#modules/workspace"
 import { Array, Order } from "effect"
@@ -277,6 +279,8 @@ export const applicationLayer = Layer.mergeAll(SidebarHub.layer, SpotlightHub.la
       KatipState.layer,
       PinnedBookmarks.layer,
       SettingsRepository.layer,
+      SiteCommands.layer,
+      BangCatalog.layer,
       ArchiveRepository.layer,
       TabGroupSync.layer,
       LiveFolders.layer,

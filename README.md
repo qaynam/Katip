@@ -16,7 +16,7 @@ Katip turns Chrome's side panel into a sidebar that organizes your tabs into Spa
 - **Split view**: drop one tab onto another to open them side by side, and pin the pair to reopen it later (Chrome 155 or later).
 - **Favorites**: the pages you keep at hand in every window, shown as a row of icons at the top. Each opens as a Chrome pinned tab, and stays in Favorites when that tab is closed.
 - **Live folders**: a folder that lists your Gmail inbox or label, or your GitHub review requests, pull requests, issues or mentions, using the session you're already signed in with.
-- **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only.
+- **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only. Type a bang such as `!gh katip` to search a site directly, and add commands of your own in the settings that open a page or search a site by a keyword.
 - **Archive**: temporary tabs you haven't used for a while are closed and kept in the archive, so you can bring them back.
 - **Keyboard shortcuts**: open the side panel, Spotlight, and copy the current URL or a Markdown link. Assign your own keys at `chrome://extensions/shortcuts`.
 - **Import and export**: export everything to a versioned JSON file, import it again, or move over from Arc (see below).
@@ -76,6 +76,7 @@ Then open `chrome://extensions`, turn on Developer mode, choose **Load unpacked*
 | `pnpm test:e2e`                               | End-to-end tests in a real Chromium (Playwright)                           |
 | `pnpm package`                                | Production build zipped into `apps/extension/.release/katip-<version>.zip` |
 | `node apps/extension/scripts/render-brand.ts` | Regenerate the brand SVGs and PNGs, and the extension icons                |
+| `node apps/extension/scripts/update-bangs.ts` | Replace the bundled bangs with Helium's current list                       |
 
 ### Tests
 
@@ -135,7 +136,7 @@ Paths in this section are under `apps/extension/`.
 - **The background is the only writer.** Pages never change Chrome or storage themselves. They send commands over a port (`src/protocol/` defines every message with Effect Schema), and the background runs them one at a time, then publishes a fresh view of each window to the pages that subscribe to it.
 - **Domain logic is pure.** `src/modules/` holds the rules (how tabs join Spaces, how pins map to bookmarks, how a view is projected, the export file format) as plain functions and Effect services with no direct `chrome.*` access. Each module exposes one entry point, imported as `#modules/<name>`.
 - **Chrome sits behind services.** `src/platform/` wraps each Chrome API in an Effect service with a live layer and a fake, which is what lets the whole background run in tests. The browser contract tests check that the two behave the same.
-- **Where data lives.** Pinned tabs and folders are bookmarks under a "Katip" folder, so Chrome Sync carries them. Settings are in `storage.sync`, Spaces and per-folder details in `storage.local`, and which tab belongs to which Space in `storage.session`.
+- **Where data lives.** Pinned tabs and folders are bookmarks under a "Katip" folder, so Chrome Sync carries them. Settings are in `storage.sync`, Spaces, Spotlight's commands and per-folder details in `storage.local`, and which tab belongs to which Space in `storage.session`. The list of bangs ships with the extension in `src/modules/bangs/data/`; Katip never downloads it.
 
 A command from the side panel, end to end:
 
@@ -215,7 +216,7 @@ Issues and pull requests are welcome. A few conventions keep the code easy to fo
 
 ## Releasing
 
-Set the version in `apps/extension/package.json` (the manifest takes it from there), and rename the Unreleased section of [CHANGELOG.md](CHANGELOG.md) to that version and the date, as in `## 1.3.0 — 2026-11-20`. Commit both, then push a tag:
+Set the version in `apps/extension/package.json` (the manifest takes it from there), and rename the Unreleased section of [CHANGELOG.md](CHANGELOG.md) to that version and the date, as in `## 1.3.0 — 2026-11-20`. Run `node apps/extension/scripts/update-bangs.ts` to bring the bundled bangs up to date with Helium's list. Commit everything, then push a tag:
 
 ```sh
 git tag v1.0.0

@@ -65,6 +65,31 @@ export const SpotlightResult = Schema.TaggedUnion({
     // The assigned keys as written for display, such as "⇧⌘C". null when no key is assigned
     shortcut: Schema.NullOr(Schema.String),
   },
+  // A command that opens a site, from those Katip comes with or those added in the settings
+  SiteCommand: {
+    // In the display language for one Katip comes with, as typed for an added one
+    title: Schema.String,
+    // The page it opens, with %s where the query goes for one that searches
+    url: Schema.String,
+    // What follows ! to use it with a query. null for a command without one
+    keyword: Schema.NullOr(Schema.String),
+    // Whether it searches for a query, which only its keyword can pass
+    searches: Schema.Boolean,
+    // A page of the site, for its favicon
+    iconPageUrl: Schema.String,
+  },
+  // A search of one site, from a bang or a command's keyword typed with ! before or after the query
+  SiteSearch: {
+    siteName: Schema.String,
+    // Empty when nothing was typed besides the bang, which opens the site
+    query: Schema.String,
+    // The page to open, with the query filled in
+    url: Schema.String,
+    iconPageUrl: Schema.String,
+  },
+  // A bang the trigger being typed after ! can become. Choosing it fills in the trigger, ready for a
+  // query, rather than opening anything
+  BangSuggestion: { siteName: Schema.String, trigger: Schema.String, iconPageUrl: Schema.String },
   OpenUrl: { url: Schema.String },
   SearchWeb: { query: Schema.String },
 })

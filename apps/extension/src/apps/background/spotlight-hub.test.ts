@@ -1,13 +1,25 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, Option, Queue, Ref, Schema, type Scope, Stream } from "effect"
 import type { Action } from "#modules/actions"
+import { makeTranslator } from "#modules/i18n"
 import { SettingsRepository } from "#modules/settings"
+import {
+  CommandKeyword,
+  CommandTitle,
+  CommandUrl,
+  DEFAULT_SITE_COMMANDS,
+  SiteCommandId,
+  SiteCommands,
+  withCommandAdded,
+  withCommandRemoved,
+} from "#modules/site-commands"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
 import { BookmarkId, type PortSender, Tabs, type WindowId, Windows } from "#platform/browser"
 import { fakeSearchUrl, FakeBrowser, makePortPair } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHistory } from "#platform/history"
+import { FakeHttp, httpResponse } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { FakePermissions } from "#platform/permissions"
 import { FakeScripting } from "#platform/scripting"
@@ -32,6 +44,7 @@ import { SidebarHub } from "./sidebar-hub"
 import { runSpotlightChoice } from "./spotlight-choice"
 import { SpotlightHub } from "./spotlight-hub"
 import { openSpotlight } from "./spotlight-window"
+import bundledBangsUrl from "../../modules/bangs/data/bangs.json?url"
 import { backgroundTestLayer } from "./testing/background-harness"
 
 const testLayerWith = (shortcuts: Layer.Layer<KeyboardShortcuts>) =>
@@ -160,6 +173,8 @@ const run = (command: SidebarCommand) =>
   )
 
 const BOOKMARKS_BAR = BookmarkId.make("1")
+
+const english = makeTranslator("en")
 
 describe("Spotlight search", () => {
   it.effect(
@@ -584,7 +599,7 @@ const firstOf = <A>(found: ReadonlyArray<A>) =>
 
 describe("Spotlight commands", () => {
   it.effect(
-    "searching commands only lists the available commands in a set order, even with no input",
+    "searching commands only lists the available commands in a set order, the site commands last, even with no input",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -596,7 +611,11 @@ describe("Spotlight commands", () => {
           const { results } = yield* spotlight.search("", "Actions")
 
           expect(
-            results.map((result) => (result._tag === "Action" ? result.title : result._tag)),
+            results.map((result) =>
+              result._tag === "Action" || result._tag === "SiteCommand"
+                ? result.title
+                : result._tag,
+            ),
           ).toStrictEqual([
             "Copy URL",
             "Copy URL as Markdown Link",
@@ -606,6 +625,7 @@ describe("Spotlight commands", () => {
             "Mute Tab",
             "Close All Temporary Tabs",
             "Open Settings",
+            ...DEFAULT_SITE_COMMANDS.map((command) => english.t(command.title)),
           ])
         }),
       ),
@@ -961,6 +981,234 @@ describe("Spotlight history results", () => {
         expect(opened.map(({ url, spaceName }) => [url, spaceName])).toStrictEqual([
           ["https://katip.example/docs", "Home"],
         ])
+      }),
+    ),
+  )
+})
+
+describe("Spotlight site commands", () => {
+  const siteCommands = ofTag("SiteCommand")
+
+  it.effect("a normal search finds a site command by its title", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("linear")
+
+        expect(siteCommands(results)).toStrictEqual([
+          {
+            _tag: "SiteCommand",
+            title: "New Linear Issue",
+            url: "https://linear.new",
+            keyword: null,
+            searches: false,
+            iconPageUrl: "https://linear.app/",
+          },
+        ])
+      }),
+    ),
+  )
+
+  it.effect("a site command removed in the settings is no longer offered", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+        yield* initialize
+        yield* (yield* SiteCommands).update((list) =>
+          withCommandRemoved(list, { _tag: "Default", id: "linear-issue" }),
+        )
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("linear")
+
+        expect(siteCommands(results)).toStrictEqual([])
+      }),
+    ),
+  )
+
+  it.effect("choosing a site command opens its page in a new tab of the calling window", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+        const command = yield* firstOf(siteCommands((yield* spotlight.search("linear")).results))
+
+        yield* spotlight.choose(command)
+
+        const [active] = yield* (yield* Tabs).query({ windowId, active: true })
+        expect(active?.url).toStrictEqual(Option.some("https://linear.new"))
+      }),
+    ),
+  )
+})
+
+describe("Spotlight bangs", () => {
+  const siteSearches = ofTag("SiteSearch")
+  const suggestions = ofTag("BangSuggestion")
+
+  const bundleBangs = FakeHttp.use((http) =>
+    http.route(bundledBangsUrl, () =>
+      Effect.succeed(
+        httpResponse(
+          200,
+          JSON.stringify([
+            ["GitHub", ["gh", "github"], "https://github.com/search?q=%s"],
+            ["GitLab", ["gl", "gitlab"], "https://gitlab.com/search?search=%s"],
+          ]),
+        ),
+      ),
+    ),
+  )
+
+  const addCommand = (keyword: string, url: string) =>
+    SiteCommands.use((commands) =>
+      commands.update((list) =>
+        withCommandAdded(list, {
+          id: SiteCommandId.make(keyword),
+          title: CommandTitle.make(`Search ${keyword}`),
+          url: CommandUrl.make(url),
+          keyword: CommandKeyword.make(keyword),
+        }),
+      ),
+    )
+
+  const spotlightOverOneWindow = Effect.gen(function* () {
+    const { windowId } = yield* (yield* FakeBrowser).seedWindow({ tabs: [{}] })
+    yield* initialize
+    return { windowId, spotlight: yield* connectSpotlight(windowId) }
+  })
+
+  it.effect("a bang typed before or after the query puts a search of its site first", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const before = (yield* spotlight.search("!gh effect ts")).results
+        const after = (yield* spotlight.search("effect ts !gh")).results
+
+        const githubSearch: SpotlightResult = {
+          _tag: "SiteSearch",
+          siteName: "GitHub",
+          query: "effect ts",
+          url: "https://github.com/search?q=effect+ts",
+          iconPageUrl: "https://github.com/",
+        }
+        expect([before[0], after[0]]).toStrictEqual([githubSearch, githubSearch])
+      }),
+    ),
+  )
+
+  it.effect("a trigger being typed is followed by the bangs it can become", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!g")
+
+        expect(
+          suggestions(results).map(({ siteName, trigger }) => [siteName, trigger]),
+        ).toStrictEqual([
+          ["GitHub", "gh"],
+          ["GitLab", "gl"],
+        ])
+      }),
+    ),
+  )
+
+  it.effect("with bangs turned off in the settings, the bundled bangs do nothing", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        yield* (yield* SettingsRepository).update({ bangs: false })
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!gh katip")
+
+        expect([...siteSearches(results), ...suggestions(results)]).toStrictEqual([])
+      }),
+    ),
+  )
+
+  it.effect("a command's keyword is a bang of its own, even with bangs turned off", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* (yield* SettingsRepository).update({ bangs: false })
+        yield* addCommand("lin", "https://linear.app/search?q=%s")
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!lin login bug")
+
+        expect(siteSearches(results).map(({ siteName, url }) => [siteName, url])).toStrictEqual([
+          ["Search lin", "https://linear.app/search?q=login+bug"],
+        ])
+      }),
+    ),
+  )
+
+  it.effect("a command's keyword takes the place of the same trigger in the bundled bangs", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        yield* addCommand("gh", "https://github.example/search?q=%s")
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!gh katip")
+
+        expect(siteSearches(results).map(({ url }) => url)).toStrictEqual([
+          "https://github.example/search?q=katip",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("a search without a ! doesn't read the bundled bangs", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        yield* spotlight.search("katip")
+
+        expect(yield* (yield* FakeHttp).requests).toStrictEqual([])
+      }),
+    ),
+  )
+
+  it.effect("when the bundled bangs can't be read, a command's keyword still works", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* addCommand("lin", "https://linear.app/search?q=%s")
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!lin bug")
+
+        expect(siteSearches(results).map(({ url }) => url)).toStrictEqual([
+          "https://linear.app/search?q=bug",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("choosing a site search opens its page in a new tab of the calling window", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        const { windowId, spotlight } = yield* spotlightOverOneWindow
+        const search = yield* firstOf(siteSearches((yield* spotlight.search("!gh katip")).results))
+
+        yield* spotlight.choose(search)
+
+        const [active] = yield* (yield* Tabs).query({ windowId, active: true })
+        expect(active?.url).toStrictEqual(Option.some("https://github.com/search?q=katip"))
       }),
     ),
   )

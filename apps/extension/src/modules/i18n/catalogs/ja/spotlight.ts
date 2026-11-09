@@ -22,6 +22,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.kind.command": "コマンド",
   "spotlight.kind.openUrl": "開く",
   "spotlight.kind.searchWeb": "ウェブで検索",
+  "spotlight.kind.siteSearch": "サイト内検索",
 
   "spotlight.detail.favorites": "Favorites",
   "spotlight.detail.notInSpace": "Space に属さないタブ",
@@ -31,9 +32,12 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.detail.splitView": "分割ビュー",
   "spotlight.detail.openInNewTab": "新しいタブで開く",
   "spotlight.detail.searchTheWeb": "既定の検索エンジンで検索",
+  "spotlight.detail.searchSite": "{site} で検索",
+  "spotlight.detail.openSite": "{site} を開く",
   "spotlight.time.justNow": "たった今",
 
   "spotlight.hint.commands": "コマンド",
+  "spotlight.hint.complete": "補完",
   "spotlight.hint.select": "選択",
   "spotlight.hint.open": "開く",
   "spotlight.hint.back": "戻る",

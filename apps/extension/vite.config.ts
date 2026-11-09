@@ -57,7 +57,12 @@ const emitThirdPartyNotices = (): Plugin => ({
     this.emitFile({
       type: "asset",
       fileName: "THIRD_PARTY_NOTICES.txt",
-      source: thirdPartyNotices(roots),
+      source: thirdPartyNotices(roots, [
+        {
+          name: "The list of bangs, from Kagi's bangs (https://github.com/kagisearch/bangs) as Helium ships them",
+          licenseText: readFileSync(fromRoot("./src/modules/bangs/data/LICENSE"), "utf8"),
+        },
+      ]),
     })
   },
 })

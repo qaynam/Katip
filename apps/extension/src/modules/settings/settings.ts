@@ -64,6 +64,8 @@ export const Settings = withDefaultsOfAllFields(
     pageShortcuts: PageShortcutSettings,
     /** Whether the side panel asks GitHub for a newer release once each browser session. */
     checkForUpdates: withDefault(Schema.Boolean, true),
+    /** Whether Spotlight searches a site when a bang from the bundled list is typed, as in `!gh`. */
+    bangs: withDefault(Schema.Boolean, true),
   }),
 )
 export type Settings = typeof Settings.Type

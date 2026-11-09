@@ -4,6 +4,22 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
+## Unreleased
+
+### English
+
+- Spotlight's commands have icons.
+- Spotlight has commands for creating things on popular sites, such as a new Google Doc, Linear issue or GitHub repository. You can remove them, and add your own in the settings: a command opens a page, or searches a site for what you type after its keyword.
+- Bangs: type `!` and a site's shortcut in Spotlight, as in `!gh katip`, to search that site directly. Typing `!g` suggests the bangs it can become. The bangs are Kagi's, as Helium ships them, and can be turned off in the settings.
+- When adding a command in the settings, you can pick a site from the list of bangs to fill in its search.
+
+### 日本語
+
+- Spotlight のコマンドにアイコンを付けました。
+- 新しい Google ドキュメント、Linear の Issue、GitHub のリポジトリなど、よく使うサイトで何かを作るコマンドを Spotlight に加えました。これらは消せます。設定で自分のコマンドも追加でき、ページを開くか、キーワードに続けて打った言葉でサイトを検索できます。
+- bangs: Spotlight で `!gh katip` のように `!` に続けてサイトの短縮名を打つと、そのサイトを直接検索します。`!g` まで打つと候補が出ます。bangs の一覧は Helium が同梱している Kagi のもので、設定でオフにできます。
+- 設定でコマンドを追加するときに、bangs の一覧からサイトを選んで検索の URL を埋められます。
+
 ## 1.4.0 — 2026-11-06
 
 ### English

@@ -181,6 +181,12 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
     Bookmark: ({ url }) => openUrl(callerWindowId, url),
     History: ({ url }) => openUrl(callerWindowId, url),
     Action: ({ action }) => runAction(callerWindowId, action),
+    // Spotlight fills in the keyword of a command that searches instead of sending it; one sent
+    // anyway has no query to search for, so it opens the site
+    SiteCommand: ({ url, searches, iconPageUrl }) =>
+      openUrl(callerWindowId, searches ? iconPageUrl : url),
+    SiteSearch: ({ url }) => openUrl(callerWindowId, url),
+    BangSuggestion: ({ iconPageUrl }) => openUrl(callerWindowId, iconPageUrl),
     OpenUrl: ({ url }) => openUrl(callerWindowId, url),
     SearchWeb: ({ query }) => searchWeb(callerWindowId, query),
   }).pipe(

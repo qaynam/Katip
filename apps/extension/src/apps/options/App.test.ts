@@ -2,7 +2,9 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte"
 import { Effect, Layer, ManagedRuntime, Option, Queue, Schema, Stream } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
+import { BangCatalog, DEFAULT_BANG_FORMAT } from "#modules/bangs"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
+import { SiteCommands } from "#modules/site-commands"
 import { LATEST_RELEASE_API_URL, Updates } from "#modules/updates"
 import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
@@ -26,6 +28,21 @@ const DEFAULT_KEYS: Readonly<Record<string, string>> = {
   "copy-current-url": "⇧⌘C",
   "copy-current-url-as-markdown": "⌃⇧⌘C",
 }
+
+const BUNDLED_BANGS = [
+  {
+    name: "GitHub",
+    triggers: ["gh", "github"] as const,
+    template: "https://github.com/search?q=%s",
+    format: DEFAULT_BANG_FORMAT,
+  },
+  {
+    name: "GitLab",
+    triggers: ["gl", "gitlab"] as const,
+    template: "https://gitlab.com/search?search=%s",
+    format: DEFAULT_BANG_FORMAT,
+  },
+]
 
 const runtimes: Array<{ dispose: () => Promise<void> }> = []
 
@@ -114,6 +131,8 @@ const makeRuntime = (
   const runtime = ManagedRuntime.make(
     Layer.mergeAll(
       SettingsRepository.layer.pipe(Layer.provide(storage)),
+      SiteCommands.layer.pipe(Layer.provide(storage)),
+      BangCatalog.layerTest(BUNDLED_BANGS),
       browser,
       FakeOptionalPermissions.layer,
       FakeFileDownloads.layer,
@@ -146,10 +165,12 @@ const renderOptions = async ({
       releasedAt: RELEASED_AT,
       repositoryUrl: REPOSITORY_URL,
       browserLanguages,
+      faviconUrl: () => null,
     },
   })
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
+    readCommands: () => runtime.runPromise(SiteCommands.use((commands) => commands.get)),
     saveElsewhere: update,
     browser: <A>(use: (browser: FakeBrowser["Service"]) => Effect.Effect<A, unknown>) =>
       runtime.runPromise(FakeBrowser.use(use)),
@@ -760,6 +781,172 @@ describe("browsing history search", () => {
     await waitFor(() => {
       expect(historySwitch().checked).toBe(false)
     })
+  })
+})
+
+describe("bangs", () => {
+  it("are on until turned off, which is saved", async () => {
+    const { readSaved } = await renderLoaded()
+    await openCategory("Spotlight")
+    expect(switchNamed("Search sites with bangs").checked).toBe(true)
+
+    await fireEvent.click(switchNamed("Search sites with bangs"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).bangs).toBe(false)
+    })
+  })
+})
+
+describe("site commands", () => {
+  const renderCommands = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("Spotlight")
+    await screen.findByRole("heading", { name: "Commands" })
+    return rendered
+  }
+
+  const commandList = () =>
+    within(screen.getByRole("region", { name: "Commands" })).getAllByRole("listitem")
+
+  const commandTitles = () =>
+    commandList().map((item) => item.querySelector(".title")?.textContent ?? "")
+
+  const commandForm = (name: string) => screen.getByRole("form", { name })
+
+  const fillIn = (form: HTMLElement, label: string, value: string) =>
+    fireEvent.input(within(form).getByLabelText(label), { target: { value } })
+
+  it("lists the commands Katip comes with", async () => {
+    await renderCommands()
+
+    expect(commandTitles().slice(0, 3)).toStrictEqual([
+      "New Google Doc",
+      "New Google Sheet",
+      "New Google Slide",
+    ])
+  })
+
+  it("removing one takes it off the list until the defaults are restored", async () => {
+    const { readCommands } = await renderCommands()
+
+    await fireEvent.click(screen.getByRole("button", { name: "Remove New Google Doc" }))
+
+    await waitFor(() => expect(commandTitles()).not.toContain("New Google Doc"))
+    expect((await readCommands()).removedDefaults).toStrictEqual(["google-doc"])
+
+    await fireEvent.click(screen.getByRole("button", { name: "Restore Default Commands" }))
+
+    await waitFor(() => expect(commandTitles()[0]).toBe("New Google Doc"))
+    expect(screen.queryByRole("button", { name: "Restore Default Commands" })).toBeNull()
+  })
+
+  it("adding one from a site in the list of bangs fills in a search of that site", async () => {
+    const { readCommands } = await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const form = commandForm("New Command")
+
+    await fillIn(form, "Find a Site", "git")
+    await fireEvent.click(await within(form).findByRole("button", { name: /GitHub/ }))
+
+    expect(
+      ["Name", "URL", "Keyword"].map(
+        (label) => within(form).getByLabelText<HTMLInputElement>(label).value,
+      ),
+    ).toStrictEqual(["Search GitHub", "https://github.com/search?q=%s", "gh"])
+
+    await fireEvent.click(within(form).getByRole("button", { name: "Save" }))
+
+    await waitFor(() => expect(commandTitles().at(-1)).toBe("Search GitHub"))
+    const saved = await readCommands()
+    expect(saved.added.map(({ title, url, keyword }) => [title, url, keyword])).toStrictEqual([
+      ["Search GitHub", "https://github.com/search?q=%s", "gh"],
+    ])
+    expect(screen.queryByRole("form", { name: "New Command" })).toBeNull()
+  })
+
+  it("adding one typed by hand saves it once it is complete", async () => {
+    const { readCommands } = await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const form = commandForm("New Command")
+
+    await fillIn(form, "Name", "Intranet")
+    await fillIn(form, "URL", "intranet.example/home")
+    await fireEvent.click(within(form).getByRole("button", { name: "Save" }))
+
+    await waitFor(async () => {
+      expect((await readCommands()).added.map(({ url }) => url)).toStrictEqual([
+        "https://intranet.example/home",
+      ])
+    })
+  })
+
+  it("isn't saved while something is missing, and says what", async () => {
+    const { readCommands } = await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const form = commandForm("New Command")
+
+    await fillIn(form, "URL", "https://linear.app/search?q=%s")
+    await fireEvent.click(within(form).getByRole("button", { name: "Save" }))
+
+    expect(within(form).getByText("Enter a name.")).toBeTruthy()
+    expect(
+      within(form).getByText("A command that searches needs a keyword to type the search after."),
+    ).toBeTruthy()
+    expect(within(form).getByLabelText("Name").getAttribute("aria-invalid")).toBe("true")
+    expect((await readCommands()).added).toStrictEqual([])
+  })
+
+  it("can't take a keyword another command has", async () => {
+    await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const first = commandForm("New Command")
+    await fillIn(first, "Name", "Search Linear")
+    await fillIn(first, "URL", "https://linear.app/search?q=%s")
+    await fillIn(first, "Keyword", "lin")
+    await fireEvent.click(within(first).getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(commandTitles().at(-1)).toBe("Search Linear"))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const second = commandForm("New Command")
+    await fillIn(second, "Name", "Linear again")
+    await fillIn(second, "URL", "https://linear.app/")
+    await fillIn(second, "Keyword", "!LIN")
+    await fireEvent.click(within(second).getByRole("button", { name: "Save" }))
+
+    expect(within(second).getByText("Another command has this keyword.")).toBeTruthy()
+  })
+
+  it("editing one changes it where it is listed", async () => {
+    const { readCommands } = await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const adding = commandForm("New Command")
+    await fillIn(adding, "Name", "Intranet")
+    await fillIn(adding, "URL", "https://intranet.example/")
+    await fireEvent.click(within(adding).getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(commandTitles().at(-1)).toBe("Intranet"))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Intranet" }))
+    const editing = commandForm("Edit Command")
+    await fillIn(editing, "Name", "Company Intranet")
+    await fireEvent.click(within(editing).getByRole("button", { name: "Save" }))
+
+    await waitFor(() => expect(commandTitles().at(-1)).toBe("Company Intranet"))
+    expect((await readCommands()).added.map(({ title }) => title)).toStrictEqual([
+      "Company Intranet",
+    ])
+  })
+
+  it("Escape gives up adding one", async () => {
+    const { readCommands } = await renderCommands()
+    await fireEvent.click(screen.getByRole("button", { name: "Add Command" }))
+    const form = commandForm("New Command")
+    await fillIn(form, "Name", "Half done")
+
+    await fireEvent.keyDown(within(form).getByLabelText("Name"), { key: "Escape" })
+
+    expect(screen.queryByRole("form", { name: "New Command" })).toBeNull()
+    expect((await readCommands()).added).toStrictEqual([])
   })
 })
 

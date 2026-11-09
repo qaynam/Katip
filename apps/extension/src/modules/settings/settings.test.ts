@@ -17,6 +17,7 @@ describe("defaults", () => {
       locale: "auto",
       pageShortcuts: { copyUrl: false, copyMarkdownLink: false },
       checkForUpdates: true,
+      bangs: true,
     })
   })
 })
@@ -32,6 +33,7 @@ describe("reading stored settings", () => {
       locale: "zh",
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
       checkForUpdates: false,
+      bangs: false,
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)

@@ -23,6 +23,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.kind.command": "Comando",
   "spotlight.kind.openUrl": "Abrir",
   "spotlight.kind.searchWeb": "Búsqueda web",
+  "spotlight.kind.siteSearch": "Búsqueda en el sitio",
 
   "spotlight.detail.favorites": "Favoritos",
   "spotlight.detail.notInSpace": "Fuera de los espacios",
@@ -32,9 +33,12 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.detail.splitView": "Vista dividida",
   "spotlight.detail.openInNewTab": "Abrir en una pestaña nueva",
   "spotlight.detail.searchTheWeb": "Buscar con tu buscador predeterminado",
+  "spotlight.detail.searchSite": "Buscar en {site}",
+  "spotlight.detail.openSite": "Abrir {site}",
   "spotlight.time.justNow": "Justo ahora",
 
   "spotlight.hint.commands": "Comandos",
+  "spotlight.hint.complete": "Completar",
   "spotlight.hint.select": "Seleccionar",
   "spotlight.hint.open": "Abrir",
   "spotlight.hint.back": "Volver",

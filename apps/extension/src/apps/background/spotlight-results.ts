@@ -1,5 +1,14 @@
 import { Array, Clock, Effect, Match, Option, pipe } from "effect"
 import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
+import {
+  BangCatalog,
+  bangIndexOf,
+  bangSearchIn,
+  bangSuggestionsFor,
+  emptyBangIndex,
+  layeredIndex,
+  siteUrlOf,
+} from "#modules/bangs"
 import type { Favorite } from "#modules/favorites"
 import { makeTranslator } from "#modules/i18n"
 import {
@@ -9,6 +18,13 @@ import {
   type PinnedTree,
 } from "#modules/pinned"
 import { type PageShortcutSettings, SettingsRepository } from "#modules/settings"
+import {
+  bangsOfSiteCommands,
+  type ListedSiteCommand,
+  listedSiteCommands,
+  searchesWithQuery,
+  SiteCommands,
+} from "#modules/site-commands"
 import type { Space, SpaceId } from "#modules/space"
 import { type SearchCandidate, searchSpotlight, type SpotlightEntry } from "#modules/spotlight"
 import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
@@ -31,6 +47,7 @@ import { currentTranslator } from "./translation"
 
 const RESULT_LIMIT = 40
 const HISTORY_LIMIT = 50
+const BANG_SUGGESTION_LIMIT = 5
 
 interface ResultCandidate extends SearchCandidate {
   readonly result: SpotlightResult
@@ -360,6 +377,78 @@ const actionCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId) 
   })
 })
 
+const siteCommandCandidate = (
+  command: ListedSiteCommand,
+  englishTitle: string,
+): ResultCandidate => ({
+  kind: "Action",
+  title: command.title,
+  keywords: [
+    ...(englishTitle === command.title ? [] : [englishTitle]),
+    ...(command.keyword === null ? [] : [command.keyword]),
+  ],
+  url: "",
+  lastUsedAt: Option.none(),
+  isCurrent: false,
+  result: {
+    _tag: "SiteCommand",
+    title: command.title,
+    url: command.url,
+    keyword: command.keyword,
+    searches: searchesWithQuery(command.url),
+    iconPageUrl: command.iconPageUrl,
+  },
+})
+
+// Like the other commands, those Katip comes with can also be found by their English names
+const siteCommandCandidates = Effect.gen(function* () {
+  const list = yield* (yield* SiteCommands).get
+  const englishTitles = listedSiteCommands(list, english).map((command) => command.title)
+  return listedSiteCommands(list, yield* currentTranslator).map((command, at) =>
+    siteCommandCandidate(command, englishTitles[at] ?? command.title),
+  )
+})
+
+// The keywords of the commands come before the bundled bangs, so a keyword can take over a
+// trigger of the list
+const bangIndexFor = Effect.fnUntraced(function* (commands: ReadonlyArray<ListedSiteCommand>) {
+  const own = bangIndexOf(bangsOfSiteCommands(commands))
+  if (!(yield* (yield* SettingsRepository).get).bangs) return own
+  const bundled = yield* (yield* BangCatalog).contents.pipe(
+    Effect.map((contents) => contents.index),
+    Effect.catch((error) =>
+      Effect.as(Effect.logWarning("Couldn't read the bundled bangs", error), emptyBangIndex),
+    ),
+  )
+  return layeredIndex(own, bundled)
+})
+
+const bangResults = Effect.fnUntraced(function* (query: string) {
+  // Most searches have no bang, and the bundled list is only read for one that might
+  if (!query.includes("!")) return []
+  const list = yield* (yield* SiteCommands).get
+  const index = yield* bangIndexFor(listedSiteCommands(list, yield* currentTranslator))
+  const search = bangSearchIn(query, index)
+  const suggestions = bangSuggestionsFor(query, index, BANG_SUGGESTION_LIMIT + 1)
+    .filter((match) => !Option.exists(search, ({ bang }) => bang === match.bang))
+    .slice(0, BANG_SUGGESTION_LIMIT)
+  return [
+    ...Option.toArray(search).map(({ bang, query: searched, url }): SpotlightResult => ({
+      _tag: "SiteSearch",
+      siteName: bang.name,
+      query: searched,
+      url,
+      iconPageUrl: siteUrlOf(bang),
+    })),
+    ...suggestions.map(({ bang, trigger }): SpotlightResult => ({
+      _tag: "BangSuggestion",
+      siteName: bang.name,
+      trigger,
+      iconPageUrl: siteUrlOf(bang),
+    })),
+  ]
+})
+
 const toResult = (entry: SpotlightEntry<ResultCandidate>): SpotlightResult =>
   Match.valueTags(entry, {
     Candidate: ({ candidate }) => candidate.result,
@@ -383,7 +472,9 @@ const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) 
  *
  * @remarks
  * `Actions` returns commands only. `All` adds commands and browsing history (the latter only with
- * the `history` permission) only when something has been typed.
+ * the `history` permission) only when something has been typed. In `All`, a bang typed with `!`
+ * (one of a command's keywords, or one of the bundled list while bangs are on) puts its site search
+ * first, and a trigger being typed is followed by the bangs it can become.
  *
  * Never fails. When tabs or bookmarks can't be read, they're treated as having no results, and
  * only the items for opening the URL and searching the web are returned.
@@ -401,6 +492,21 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
         ),
       )
     : []
+  const siteCommands = wantsActions
+    ? yield* siteCommandCandidates.pipe(
+        Effect.catch((error) =>
+          Effect.as(Effect.logWarning("Couldn't gather the site commands", error), []),
+        ),
+      )
+    : []
+  const bangs =
+    mode === "All"
+      ? yield* bangResults(query).pipe(
+          Effect.catch((error) =>
+            Effect.as(Effect.logWarning("Couldn't look up Spotlight's bangs", error), []),
+          ),
+        )
+      : []
   const others =
     mode === "All"
       ? yield* gatherCandidates(callerWindowId, query).pipe(
@@ -411,11 +517,14 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
       : []
   const now = yield* Clock.currentTimeMillis
   return {
-    results: searchSpotlight(query, [...others, ...actions], {
-      mode,
-      now,
-      limit: RESULT_LIMIT,
-    }).map(toResult),
+    results: [
+      ...bangs,
+      ...searchSpotlight(query, [...others, ...actions, ...siteCommands], {
+        mode,
+        now,
+        limit: RESULT_LIMIT,
+      }).map(toResult),
+    ],
     spaceTheme: yield* activeSpaceTheme(callerWindowId),
   }
 })

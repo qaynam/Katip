@@ -4,7 +4,7 @@ import { neutralTheme, swatchOf, themeOf } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
 import type { SpotlightResult } from "#protocol"
 import { makeTranslator } from "#modules/i18n"
-import { displayOf, isMatchedCandidate } from "./result-display"
+import { completionOf, displayOf, isMatchedCandidate } from "./result-display"
 
 const NOW = 1_800_000_000_000
 const DAY = 24 * 60 * 60 * 1000
@@ -163,14 +163,157 @@ describe("a command's display", () => {
     expect(display(command(null)).shortcut).toBeNull()
   })
 
-  it("shows the command icon and is of the command kind", () => {
+  it("shows an icon of what the command does and is of the command kind", () => {
     const shown = display(command(null))
 
-    expect([shown.icon, shown.kindLabel]).toStrictEqual([{ _tag: "Command" }, "Command"])
+    expect([shown.icon, shown.kindLabel]).toStrictEqual([
+      { _tag: "Glyph", glyph: "link" },
+      "Command",
+    ])
+  })
+
+  it("shows each command with its own icon", () => {
+    const glyphOf = (action: Extract<SpotlightResult, { _tag: "Action" }>["action"]) =>
+      display({ _tag: "Action", action, title: "", shortcut: null }).icon
+
+    expect([
+      glyphOf({ _tag: "CloseTab" }),
+      glyphOf({ _tag: "ToggleMute" }),
+      glyphOf({ _tag: "OpenSettings" }),
+    ]).toStrictEqual([
+      { _tag: "Glyph", glyph: "close" },
+      { _tag: "Glyph", glyph: "speaker" },
+      { _tag: "Glyph", glyph: "settings" },
+    ])
   })
 
   it("is the only kind of display that has keys", () => {
     expect(display(openTab()).shortcut).toBeNull()
+  })
+})
+
+describe("a site command's display", () => {
+  const siteCommand = (
+    overrides: Partial<Extract<SpotlightResult, { _tag: "SiteCommand" }>> = {},
+  ): SpotlightResult => ({
+    _tag: "SiteCommand",
+    title: "New Linear Issue",
+    url: "https://linear.new",
+    keyword: null,
+    searches: false,
+    iconPageUrl: "https://linear.app/",
+    ...overrides,
+  })
+
+  it("shows the page it opens, the site's favicon and is of the command kind", () => {
+    const shown = display(siteCommand())
+
+    expect([shown.detail, shown.icon, shown.kindLabel]).toStrictEqual([
+      "linear.new",
+      {
+        _tag: "Favicon",
+        pageUrl: "https://linear.app/",
+        favIconUrl: null,
+        title: "New Linear Issue",
+      },
+      "Command",
+    ])
+  })
+
+  it("shows the keyword and the site of a command that searches, rather than its URL", () => {
+    const shown = display(
+      siteCommand({
+        title: "Search Linear",
+        url: "https://linear.app/search?q=%s",
+        keyword: "lin",
+        searches: true,
+      }),
+    )
+
+    expect(shown.detail).toBe("!lin · linear.app")
+  })
+})
+
+describe("a site search's display", () => {
+  const siteSearch = (query: string): SpotlightResult => ({
+    _tag: "SiteSearch",
+    siteName: "GitHub",
+    query,
+    url: "https://github.com/search?q=katip",
+    iconPageUrl: "https://github.com/",
+  })
+
+  it("takes the query as the title and names the site it searches", () => {
+    const shown = display(siteSearch("katip"))
+
+    expect([shown.title, shown.detail, shown.kindLabel]).toStrictEqual([
+      "katip",
+      "Search GitHub",
+      "Site Search",
+    ])
+  })
+
+  it("takes the site's name as the title when only the bang was typed", () => {
+    const shown = display(siteSearch(""))
+
+    expect([shown.title, shown.detail]).toStrictEqual(["GitHub", "Open GitHub"])
+  })
+})
+
+describe("a bang suggestion's display", () => {
+  it("takes the site's name as the title and shows the bang", () => {
+    const shown = display({
+      _tag: "BangSuggestion",
+      siteName: "GitHub",
+      trigger: "gh",
+      iconPageUrl: "https://github.com/",
+    })
+
+    expect([shown.title, shown.detail, shown.kindLabel]).toStrictEqual([
+      "GitHub",
+      "!gh",
+      "Site Search",
+    ])
+  })
+})
+
+describe("what choosing a result types in", () => {
+  it("is the bang of a suggestion, ready for the query", () => {
+    expect(
+      completionOf({
+        _tag: "BangSuggestion",
+        siteName: "GitHub",
+        trigger: "gh",
+        iconPageUrl: "https://github.com/",
+      }),
+    ).toBe("!gh ")
+  })
+
+  it("is the keyword of a site command that searches", () => {
+    expect(
+      completionOf({
+        _tag: "SiteCommand",
+        title: "Search Linear",
+        url: "https://linear.app/search?q=%s",
+        keyword: "lin",
+        searches: true,
+        iconPageUrl: "https://linear.app/",
+      }),
+    ).toBe("!lin ")
+  })
+
+  it("is nothing for a result that opens a page, a site command with a keyword included", () => {
+    expect([
+      completionOf({
+        _tag: "SiteCommand",
+        title: "Intranet",
+        url: "https://intranet.example/",
+        keyword: "in",
+        searches: false,
+        iconPageUrl: "https://intranet.example/",
+      }),
+      completionOf(openTab()),
+    ]).toStrictEqual([null, null])
   })
 })
 

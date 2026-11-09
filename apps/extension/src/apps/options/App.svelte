@@ -40,6 +40,7 @@
   import PushButton from "./PushButton.svelte"
   import SettingRow from "./SettingRow.svelte"
   import SettingsSection from "./SettingsSection.svelte"
+  import SiteCommandsSection from "./SiteCommandsSection.svelte"
   import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
   import ShortcutRow from "./ShortcutRow.svelte"
   import { openChromeShortcutSettings } from "./shortcut-settings"
@@ -53,6 +54,7 @@
     releasedAt,
     repositoryUrl,
     browserLanguages,
+    faviconUrl,
   }: {
     runtime: OptionsRuntime
     version: string
@@ -61,6 +63,8 @@
     repositoryUrl: string | null
     /** BCP 47 language tags in order of preference, like `navigator.languages`. */
     browserLanguages: ReadonlyArray<string>
+    /** Makes a favicon image URL from a page URL. Null where none can be made. */
+    faviconUrl: (pageUrl: string) => string | null
   } = $props()
 
   type Outcome =
@@ -553,6 +557,23 @@
               </SettingRow>
             </SettingsSection>
           {/if}
+          <SettingsSection footnote={t("options.spotlight.bangs.footnote")}>
+            <SettingRow label={t("options.spotlight.bangs.label")}>
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.bangs}
+                  onchange={(bangs) => save({ bangs })}
+                />
+              {/snippet}
+            </SettingRow>
+          </SettingsSection>
+          <SiteCommandsSection
+            {runtime}
+            {translator}
+            {faviconUrl}
+            onsave={(saved) => announce(saved ? "Saved" : "SaveFailed")}
+          />
         {:else if selected === "Shortcuts"}
           <p class="lede">{t("options.shortcuts.intro")}</p>
           <SettingsSection heading={t("options.shortcuts.openAndMove.heading")} listsTerms>

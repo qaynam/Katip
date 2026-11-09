@@ -40,15 +40,26 @@ const packageInfoOf = (root: string): PackageInfo => {
   }
 }
 
+/** Data bundled into the extension that isn't an npm package, such as the list of bangs. */
+export interface DataNotice {
+  /** What the data is and where it comes from. */
+  readonly name: string
+  readonly licenseText: string
+}
+
 /**
  * The notices for the npm packages bundled into the extension: each package's name, version,
- * license, and the license text it ships, sorted by name.
+ * license, and the license text it ships, sorted by name. The notices of bundled data follow, in
+ * the order given.
  *
  * @remarks
  * Most of these licenses (MIT among them) require their copyright and permission notice to travel
  * with every copy of the code, and the zip uploaded to the Chrome Web Store is such a copy.
  */
-export const thirdPartyNotices = (packageRoots: Iterable<string>): string => {
+export const thirdPartyNotices = (
+  packageRoots: Iterable<string>,
+  data: ReadonlyArray<DataNotice> = [],
+): string => {
   const packages = [...new Set(packageRoots)]
     .filter((root) => existsSync(join(root, "package.json")))
     .map(packageInfoOf)
@@ -60,7 +71,10 @@ export const thirdPartyNotices = (packageRoots: Iterable<string>): string => {
         `No license file is included in the package; its license is ${info.license}.`,
     ].join("\n\n"),
   )
-  return `${["Katip includes the following third-party software.", ...sections].join(
-    `\n\n${"-".repeat(72)}\n\n`,
-  )}\n`
+  const dataSections = data.map((notice) => `${notice.name}\n\n${notice.licenseText.trim()}`)
+  return `${[
+    "Katip includes the following third-party software.",
+    ...sections,
+    ...dataSections,
+  ].join(`\n\n${"-".repeat(72)}\n\n`)}\n`
 }

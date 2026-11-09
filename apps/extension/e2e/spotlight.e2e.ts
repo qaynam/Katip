@@ -95,6 +95,57 @@ test("entering a URL and pressing Enter opens it as a temporary tab of the shown
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /typed", "Page /a"])
 })
 
+test("a bang from the bundled list is offered for the trigger typed after !", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
+
+  await spotlight.getByRole("combobox").fill("!gh")
+
+  await expect(spotlight.getByRole("option").first()).toContainText("Open GitHub")
+})
+
+test("a command added in the settings searches the site for what follows its keyword", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  const settings = await context.newPage()
+  await settings.goto(new URL("options/index.html", background.url()).href)
+  await settings.getByRole("tab", { name: "Spotlight" }).click()
+  await settings.getByRole("button", { name: "Add Command" }).click()
+  const form = settings.getByRole("form", { name: "New Command" })
+  await form.getByLabel("Name").fill("Search the test site")
+  await form.getByLabel("URL").fill(`${site}/search?q=%s`)
+  await form.getByLabel("Keyword").fill("here")
+  await form.getByRole("button", { name: "Save" }).click()
+  await expect(settings.getByText("Search the test site")).toBeVisible()
+  await settings.close()
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
+
+  await spotlight.getByRole("combobox").fill("!here hello world")
+  await expect(spotlight.getByRole("option").first()).toContainText("hello world")
+  await spotlight.keyboard.press("Enter")
+
+  await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/search active"])
+  const searched = await background.evaluate(
+    async (site) =>
+      (await chrome.tabs.query({}))
+        .map((tab) => tab.pendingUrl ?? tab.url ?? "")
+        .filter((url) => url.startsWith(`${site}/search`)),
+    site,
+  )
+  expect(searched).toStrictEqual([`${site}/search?q=hello+world`])
+})
+
 test.fixme("choosing a closed pin by name opens it as that pin's tab", () => {})
 test.fixme("choosing a Space by name switches to it", () => {})
 test.fixme("choosing a bookmark opens it as a temporary tab of the shown Space", () => {})

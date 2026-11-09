@@ -9,3 +9,6 @@ apps/extension/src/modules/export/fixtures/
 .turbo/
 .astro/
 .wrangler/
+# Written one bang per line by scripts/update-bangs.ts. Reformatted, the long entries would spread
+# over several lines each, and a refreshed list would no longer diff bang by bang
+apps/extension/src/modules/bangs/data/

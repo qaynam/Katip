@@ -27,8 +27,8 @@
     <span class="swatch" style:--swatch={icon.color}></span>
   {:else if icon._tag === "Search"}
     <SearchGlyph />
-  {:else if icon._tag === "Command"}
-    <CommandGlyph />
+  {:else if icon._tag === "Glyph"}
+    <CommandGlyph glyph={icon.glyph} />
   {:else if source === undefined}
     <span class="letter">{faviconLetter(icon.pageUrl, icon.title)}</span>
   {:else}

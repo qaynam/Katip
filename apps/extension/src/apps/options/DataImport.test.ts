@@ -8,8 +8,10 @@ import {
   exportedSettingsOf,
   type LatestExport,
 } from "#modules/export"
+import { BangCatalog } from "#modules/bangs"
 import { makeTranslator } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
+import { SiteCommands } from "#modules/site-commands"
 import { themeOf } from "#modules/theme"
 import { Updates } from "#modules/updates"
 import { FakeBrowser } from "#platform/browser-testing"
@@ -57,6 +59,8 @@ const renderImport = () => {
     Layer.mergeAll(
       browser,
       SettingsRepository.layer.pipe(Layer.provide(browser)),
+      SiteCommands.layer.pipe(Layer.provide(browser)),
+      BangCatalog.layerTest([]),
       FakeOptionalPermissions.layer,
       FakeFileDownloads.layer,
       KeyboardShortcuts.layerTest({}),
