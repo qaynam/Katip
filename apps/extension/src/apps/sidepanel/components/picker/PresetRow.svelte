@@ -1,17 +1,15 @@
 <script lang="ts">
-  import type { MessageKey } from "#modules/i18n"
+  import type { MessageKey, Translator } from "#modules/i18n"
   import { presetPages, type ThemePreset } from "#modules/theme"
   import { presetSwatch } from "../../logic/space-themes"
-  import { getSidebarContext } from "../../state/sidebar-context"
   import Icon from "../Icon.svelte"
 
   interface Props {
     onPick: (preset: ThemePreset) => void
+    t: Translator["t"]
   }
 
-  const { onPick }: Props = $props()
-  const ctx = getSidebarContext()
-  const t = $derived(ctx.translator.t)
+  const { onPick, t }: Props = $props()
 
   const pageLabels = [
     "sidepanel.theme.presets.solid",

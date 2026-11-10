@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import type { Translator } from "#modules/i18n"
   import { hueWheelBackground } from "#modules/theme"
 
   const wheel = hueWheelBackground()
@@ -10,18 +11,16 @@
   import { colorAtPoint, moveColor, pointOfColor, swatchOf, type ThemeColor } from "#modules/theme"
   import type { Size } from "../../logic/menu-position"
   import { fieldOffsetOf, pickerPointAt, pointAfterKey } from "../../logic/picker-geometry"
-  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     colors: ReadonlyArray<ThemeColor>
     /** Called continuously as the value changes. onSettle follows when the drag is released. */
     onChange: (colors: ReadonlyArray<ThemeColor>) => void
     onSettle: () => void
+    t: Translator["t"]
   }
 
-  const { colors, onChange, onSettle }: Props = $props()
-  const ctx = getSidebarContext()
-  const t = $derived(ctx.translator.t)
+  const { colors, onChange, onSettle, t }: Props = $props()
 
   let field = $state<HTMLDivElement>()
   let size = $state<Size>({ width: 0, height: 0 })

@@ -17,10 +17,9 @@
 
 <script lang="ts">
   import { Option } from "effect"
-  import type { MessageKey } from "#modules/i18n"
+  import type { MessageKey, Translator } from "#modules/i18n"
   import { nextTexture, textureTileOf, type ThemeTexture } from "#modules/theme"
   import { dialValueAt, valueAfterKey } from "../../logic/picker-geometry"
-  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     value: number
@@ -30,11 +29,10 @@
     onChange: (value: number) => void
     onSettle: () => void
     onTextureChange: (texture: ThemeTexture) => void
+    t: Translator["t"]
   }
 
-  const { value, texture, isAvailable, onChange, onSettle, onTextureChange }: Props = $props()
-  const ctx = getSidebarContext()
-  const t = $derived(ctx.translator.t)
+  const { value, texture, isAvailable, onChange, onSettle, onTextureChange, t }: Props = $props()
   const tile = $derived(textureTileOf(texture))
   let isDragging = false
 

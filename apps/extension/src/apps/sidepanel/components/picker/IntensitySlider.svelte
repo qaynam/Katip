@@ -21,9 +21,9 @@
 </script>
 
 <script lang="ts">
+  import type { Translator } from "#modules/i18n"
   import { Option } from "effect"
   import { sliderValueAt, valueAfterKey } from "../../logic/picker-geometry"
-  import { getSidebarContext } from "../../state/sidebar-context"
 
   interface Props {
     value: number
@@ -31,11 +31,10 @@
     isAvailable: boolean
     onChange: (value: number) => void
     onSettle: () => void
+    t: Translator["t"]
   }
 
-  const { value, isAvailable, onChange, onSettle }: Props = $props()
-  const ctx = getSidebarContext()
-  const t = $derived(ctx.translator.t)
+  const { value, isAvailable, onChange, onSettle, t }: Props = $props()
   const id = $props.id()
   const clipId = `${id}-lit`
   let isDragging = false
