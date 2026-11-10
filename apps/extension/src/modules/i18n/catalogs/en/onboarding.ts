@@ -37,8 +37,8 @@ export const onboarding = {
     "Drag a tab to the top of the side panel, or right-click it and choose Add to Favorites. Favorites stay put whichever Space you’re in.",
 
   "onboarding.themes.title": "A color for each Space",
-  "onboarding.themes.try": "Try it here: drag around the circle, and “{space}” takes on the color.",
-  "onboarding.themes.wheel": "Color of “{space}”",
+  "onboarding.themes.try":
+    "Try it here, in the same editor the side panel opens: “{space}” takes on what you pick.",
   "onboarding.themes.body":
     "Open the Space menu next to a Space’s name and choose Edit Theme. The side panel takes on the color you pick, so you can tell your Spaces apart at a glance.",
 

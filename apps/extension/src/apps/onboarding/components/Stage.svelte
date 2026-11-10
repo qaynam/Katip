@@ -5,6 +5,7 @@
     glow = "work",
     short = false,
     decorative = true,
+    fitsContent = false,
     children,
   }: {
     /** Which pair of Space colors glows behind the picture, as on Katip's website. */
@@ -13,11 +14,18 @@
     short?: boolean
     /** False for a picture that can be used, which then must not be hidden from screen readers. */
     decorative?: boolean
+    /** Takes the height of what is in it, for something too tall to be scaled into the frame. */
+    fitsContent?: boolean
     children: Snippet
   } = $props()
 </script>
 
-<div class="stage {glow}" class:short aria-hidden={decorative ? "true" : undefined}>
+<div
+  class="stage {glow}"
+  class:short
+  class:fits={fitsContent}
+  aria-hidden={decorative ? "true" : undefined}
+>
   {@render children()}
 </div>
 
@@ -37,6 +45,12 @@
 
   .short {
     aspect-ratio: 32 / 9;
+  }
+
+  .fits {
+    aspect-ratio: auto;
+    padding: 28px 24px;
+    container-type: normal;
   }
 
   .stage::before {

@@ -37,8 +37,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "把标签页拖到侧边栏顶部，或右键点击并选择“添加到收藏”。无论你在哪个空间，收藏都在同一个地方。",
 
   "onboarding.themes.title": "每个空间一种颜色",
-  "onboarding.themes.try": "在这里试试：在圆上拖动，“{space}”就会换上那个颜色。",
-  "onboarding.themes.wheel": "“{space}”的颜色",
+  "onboarding.themes.try": "在这里试试，和侧边栏里是同一个编辑器：你选的会用在“{space}”上。",
   "onboarding.themes.body":
     "打开空间名称旁边的空间菜单，选择“编辑主题”。侧边栏会换上你选的颜色，让你一眼就能分清各个空间。",
 

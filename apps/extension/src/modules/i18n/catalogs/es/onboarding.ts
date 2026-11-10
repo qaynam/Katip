@@ -38,8 +38,8 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "Arrastra una pestaña a la parte superior del panel lateral, o haz clic derecho y elige Añadir a Favoritos. Los Favoritos siguen ahí en cualquier espacio.",
 
   "onboarding.themes.title": "Un color para cada espacio",
-  "onboarding.themes.try": "Pruébalo aquí: arrastra por el círculo y «{space}» tomará el color.",
-  "onboarding.themes.wheel": "Color de «{space}»",
+  "onboarding.themes.try":
+    "Pruébalo aquí, con el mismo editor que abre el panel lateral: «{space}» toma lo que elijas.",
   "onboarding.themes.body":
     "Abre el menú del espacio junto a su nombre y elige Editar tema. El panel lateral toma el color que elijas, así distingues tus espacios de un vistazo.",
 

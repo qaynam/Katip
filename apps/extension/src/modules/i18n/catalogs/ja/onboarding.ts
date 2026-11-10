@@ -38,8 +38,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.themes.title": "Space ごとに色を",
   "onboarding.themes.try":
-    "ここで試せます。円の上をドラッグすると、「{space}」がその色になります。",
-  "onboarding.themes.wheel": "「{space}」の色",
+    "サイドパネルと同じエディタで、ここで試せます。選んだものが「{space}」に付きます。",
   "onboarding.themes.body":
     "Space の名前の横にある「Space のメニュー」を開き、「テーマを編集」を選びます。選んだ色がサイドパネルに付くので、どの Space にいるかがひと目でわかります。",
 

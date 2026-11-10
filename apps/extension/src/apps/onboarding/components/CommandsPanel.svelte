@@ -151,7 +151,7 @@
               </span>
               <button
                 type="button"
-                class="link"
+                class="text-button"
                 aria-label={t("options.commands.editLabel", { title: command.title })}
                 onclick={() => (editing = { _tag: "Editing", command })}
               >
@@ -159,7 +159,7 @@
               </button>
               <button
                 type="button"
-                class="link"
+                class="text-button"
                 aria-label={t("options.commands.removeLabel", { title: command.title })}
                 onclick={() => remove(command.ref)}
               >

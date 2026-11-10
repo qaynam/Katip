@@ -155,6 +155,13 @@
 
 <main class="onboarding">
   {#if copy === null}
+    <!-- Faint colors drifting behind the welcome, in the Space colors of Katip's website -->
+    <div class="mesh" aria-hidden="true">
+      <span class="blob blue"></span>
+      <span class="blob violet"></span>
+      <span class="blob coral"></span>
+      <span class="blob pink"></span>
+    </div>
     <section class="welcome">
       <img class="app-icon" src="/icons/icon-128.png" width="128" height="128" alt="" />
       <h1 bind:this={heading} tabindex="-1">{t("onboarding.welcome.title")}</h1>
@@ -175,7 +182,7 @@
           {t("onboarding.progress", { current: position, total: TOURED_STEPS.length })}
         </p>
         {#if isOptional(step)}
-          <button type="button" class="link" onclick={() => go(stepAfterSkipping(step))}>
+          <button type="button" class="text-button" onclick={() => go(stepAfterSkipping(step))}>
             {t("onboarding.skip")}
           </button>
         {/if}
@@ -204,8 +211,8 @@
                 theme={activeSpace.theme}
                 spaceName={activeSpace.name}
                 {scheme}
-                wheelLabel={t("onboarding.themes.wheel", { space: activeSpace.name })}
-                onsettle={(theme) => void connection.run({ _tag: "SetSpaceTheme", spaceId, theme })}
+                {t}
+                onsave={(theme) => void connection.run({ _tag: "SetSpaceTheme", spaceId, theme })}
               />
             {/if}
           {:else if step === "LiveFolders"}
@@ -349,6 +356,7 @@
       0 0 0 1px rgb(0 0 0 / 0.07), 0 24px 60px rgb(0 0 0 / 0.13), 0 6px 16px rgb(0 0 0 / 0.05);
     --card-shadow: 0 0 0 1px rgb(0 0 0 / 0.05), 0 12px 32px rgb(0 0 0 / 0.05);
     --glow-strength: 0.75;
+    --mesh-strength: 0.3;
 
     display: grid;
     place-items: center;
@@ -379,6 +387,7 @@
         0 0 0 1px rgb(255 255 255 / 0.1), 0 24px 60px rgb(0 0 0 / 0.55), 0 6px 16px rgb(0 0 0 / 0.3);
       --card-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
       --glow-strength: 0.45;
+      --mesh-strength: 0.18;
     }
   }
 
@@ -392,7 +401,74 @@
     outline: none;
   }
 
+  .mesh {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    opacity: var(--mesh-strength);
+    pointer-events: none;
+  }
+
+  .blob {
+    position: absolute;
+    width: 70vmax;
+    height: 70vmax;
+    border-radius: 50%;
+    filter: blur(70px);
+    animation: drift 28s ease-in-out infinite alternate;
+  }
+
+  .blue {
+    top: -30vmax;
+    left: -20vmax;
+    background: radial-gradient(circle, #86b3f5 0%, transparent 62%);
+  }
+
+  .violet {
+    top: -25vmax;
+    right: -25vmax;
+    background: radial-gradient(circle, #b4a9f2 0%, transparent 62%);
+    animation-duration: 34s;
+    animation-delay: -8s;
+  }
+
+  .coral {
+    bottom: -35vmax;
+    left: -10vmax;
+    background: radial-gradient(circle, #f7a184 0%, transparent 62%);
+    animation-duration: 31s;
+    animation-delay: -15s;
+  }
+
+  .pink {
+    right: -20vmax;
+    bottom: -30vmax;
+    background: radial-gradient(circle, #ee9cc2 0%, transparent 62%);
+    animation-duration: 37s;
+    animation-delay: -4s;
+  }
+
+  @keyframes drift {
+    0% {
+      translate: 0 0;
+      scale: 1;
+    }
+    33% {
+      translate: 12vmax 6vmax;
+      scale: 1.12;
+    }
+    66% {
+      translate: -6vmax 14vmax;
+      scale: 0.92;
+    }
+    100% {
+      translate: 8vmax -8vmax;
+      scale: 1.06;
+    }
+  }
+
   .welcome {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -633,26 +709,28 @@
     cursor: default;
   }
 
-  .onboarding :global(.primary) {
+  /* The buttons' classes are made distinct so that the side panel's theme editor, shown in the
+     theme step, keeps its own look */
+  .onboarding :global(.button.primary) {
     background: var(--button);
     color: #ffffff;
   }
 
-  .onboarding :global(.primary:hover) {
+  .onboarding :global(.button.primary:hover) {
     background: var(--button-hover);
   }
 
-  .onboarding :global(.secondary) {
+  .onboarding :global(.button.secondary) {
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--card-shadow);
   }
 
-  .onboarding :global(.secondary:hover:not(:disabled)) {
+  .onboarding :global(.button.secondary:hover:not(:disabled)) {
     color: var(--accent);
   }
 
-  .onboarding :global(.link) {
+  .onboarding :global(.text-button) {
     padding: 0.25rem 0.5rem;
     border: none;
     border-radius: 0.5rem;
@@ -693,7 +771,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .step,
-    .app-icon {
+    .app-icon,
+    .blob {
       animation: none;
     }
   }

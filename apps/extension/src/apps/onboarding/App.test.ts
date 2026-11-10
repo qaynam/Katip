@@ -243,16 +243,18 @@ describe("the steps that show around", () => {
 })
 
 describe("the theme step", () => {
-  it("colors the Space shown beside the page, there and then", async () => {
+  it("changes the Space shown beside the page with the side panel's own theme editor", async () => {
     const { connection } = await renderOnboarding()
     await goTo("A color for each Space")
 
-    await fireEvent.keyDown(screen.getByRole("slider", { name: "Color of “Work”" }), {
-      key: "ArrowRight",
-    })
+    await fireEvent.click(screen.getByRole("radio", { name: "Light" }))
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "SetSpaceTheme", spaceId: "Work", theme: themeOf([{ hue: 260, chroma: 0.6 }]) },
+      {
+        _tag: "SetSpaceTheme",
+        spaceId: "Work",
+        theme: { ...themeOf([{ hue: 250, chroma: 0.6 }]), mode: "light" },
+      },
     ])
   })
 })
