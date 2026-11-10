@@ -133,15 +133,9 @@
     border-radius: 6px;
     background: none;
     color: var(--text-muted);
-    opacity: 0;
     transition:
-      opacity 120ms ease,
+      color 120ms ease,
       background-color 120ms ease;
-  }
-
-  .space-title:hover .more,
-  .more:focus-visible {
-    opacity: 1;
   }
 
   .more:hover {

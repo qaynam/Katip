@@ -113,13 +113,9 @@
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 600;
-    opacity: 0;
-    transition: opacity 140ms ease;
-  }
-
-  :global(.sidebar:hover) .clear,
-  .clear:focus-visible {
-    opacity: 1;
+    transition:
+      color 140ms ease,
+      background-color 140ms ease;
   }
 
   .clear:hover {
