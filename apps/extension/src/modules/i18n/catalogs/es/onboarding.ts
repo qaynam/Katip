@@ -38,16 +38,23 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "Arrastra una pestaña a la parte superior del panel lateral, o haz clic derecho y elige Añadir a Favoritos. Los Favoritos siguen ahí en cualquier espacio.",
 
   "onboarding.themes.title": "Un color para cada espacio",
+  "onboarding.themes.try": "Pruébalo aquí: arrastra por el círculo y «{space}» tomará el color.",
+  "onboarding.themes.wheel": "Color de «{space}»",
   "onboarding.themes.body":
     "Abre el menú del espacio junto a su nombre y elige Editar tema. El panel lateral toma el color que elijas, así distingues tus espacios de un vistazo.",
 
   "onboarding.liveFolders.title": "Carpetas que se mantienen al día solas",
+  "onboarding.liveFolders.into": "Se añaden a «{space}», entre sus pestañas fijadas.",
+  "onboarding.liveFolders.gmail": "Correo sin leer",
+  "onboarding.liveFolders.add": "Añadir",
+  "onboarding.liveFolders.added": "Añadida",
+  "onboarding.liveFolders.failed": "No se pudo añadir la carpeta en vivo.",
   "onboarding.liveFolders.body":
     "Elige Añadir carpeta en vivo en el menú del espacio para seguir tu correo sin leer de Gmail, o tus solicitudes de revisión, pull requests, issues y menciones de GitHub. Se actualizan solas.",
 
   "onboarding.bangs.title": "Busca en cualquier sitio con un bang",
   "onboarding.bangs.body":
-    "En Spotlight, escribe ! y el atajo de un sitio, como !gh katip para GitHub o !w para Wikipedia. Puedes añadir tus propios comandos en la configuración.",
+    "En Spotlight, escribe ! y el atajo de un sitio, como !gh katip para GitHub o !w para Wikipedia. Abajo están los comandos que trae Katip: puedes cambiarlos y añadir los tuyos.",
 
   "onboarding.done.title": "Todo listo",
   "onboarding.done.body": "Puedes volver a ver este recorrido desde la configuración de Katip.",

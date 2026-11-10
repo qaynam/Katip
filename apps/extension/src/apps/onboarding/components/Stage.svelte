@@ -4,17 +4,20 @@
   let {
     glow = "work",
     short = false,
+    decorative = true,
     children,
   }: {
     /** Which pair of Space colors glows behind the picture, as on Katip's website. */
     glow?: "work" | "personal"
     /** For a step with much to read below the picture, so that the step still fits the window. */
     short?: boolean
+    /** False for a picture that can be used, which then must not be hidden from screen readers. */
+    decorative?: boolean
     children: Snippet
   } = $props()
 </script>
 
-<div class="stage {glow}" class:short aria-hidden="true">
+<div class="stage {glow}" class:short aria-hidden={decorative ? "true" : undefined}>
   {@render children()}
 </div>
 

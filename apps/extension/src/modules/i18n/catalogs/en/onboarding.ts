@@ -37,16 +37,23 @@ export const onboarding = {
     "Drag a tab to the top of the side panel, or right-click it and choose Add to Favorites. Favorites stay put whichever Space you’re in.",
 
   "onboarding.themes.title": "A color for each Space",
+  "onboarding.themes.try": "Try it here: drag around the circle, and “{space}” takes on the color.",
+  "onboarding.themes.wheel": "Color of “{space}”",
   "onboarding.themes.body":
     "Open the Space menu next to a Space’s name and choose Edit Theme. The side panel takes on the color you pick, so you can tell your Spaces apart at a glance.",
 
   "onboarding.liveFolders.title": "Folders that keep themselves up to date",
+  "onboarding.liveFolders.into": "Added to “{space}”, in its pinned tabs.",
+  "onboarding.liveFolders.gmail": "Unread mail",
+  "onboarding.liveFolders.add": "Add",
+  "onboarding.liveFolders.added": "Added",
+  "onboarding.liveFolders.failed": "Couldn’t add the live folder.",
   "onboarding.liveFolders.body":
     "Choose Add Live Folder in the Space menu to follow your unread mail in Gmail, or your review requests, pull requests, issues and mentions on GitHub. They refresh on their own.",
 
   "onboarding.bangs.title": "Search any site with a bang",
   "onboarding.bangs.body":
-    "In Spotlight, type ! and a site’s shortcut, as in !gh katip for GitHub or !w for Wikipedia. You can add commands of your own in the settings.",
+    "In Spotlight, type ! and a site’s shortcut, as in !gh katip for GitHub or !w for Wikipedia. Below are the commands Katip comes with, which you can change, and you can add your own.",
 
   "onboarding.done.title": "You’re all set",
   "onboarding.done.body": "You can take this tour again from Katip’s settings.",

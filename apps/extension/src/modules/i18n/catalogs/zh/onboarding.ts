@@ -37,16 +37,23 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "把标签页拖到侧边栏顶部，或右键点击并选择“添加到收藏”。无论你在哪个空间，收藏都在同一个地方。",
 
   "onboarding.themes.title": "每个空间一种颜色",
+  "onboarding.themes.try": "在这里试试：在圆上拖动，“{space}”就会换上那个颜色。",
+  "onboarding.themes.wheel": "“{space}”的颜色",
   "onboarding.themes.body":
     "打开空间名称旁边的空间菜单，选择“编辑主题”。侧边栏会换上你选的颜色，让你一眼就能分清各个空间。",
 
   "onboarding.liveFolders.title": "会自己更新的文件夹",
+  "onboarding.liveFolders.into": "添加到“{space}”的固定标签页中。",
+  "onboarding.liveFolders.gmail": "未读邮件",
+  "onboarding.liveFolders.add": "添加",
+  "onboarding.liveFolders.added": "已添加",
+  "onboarding.liveFolders.failed": "无法添加实时文件夹。",
   "onboarding.liveFolders.body":
     "在空间菜单中选择“添加实时文件夹”，即可关注 Gmail 中的未读邮件，或 GitHub 上的审查请求、拉取请求、议题和提及。它们会自动刷新。",
 
   "onboarding.bangs.title": "用 bang 搜索任何网站",
   "onboarding.bangs.body":
-    "在 Spotlight 中输入 ! 和网站的简称，例如 GitHub 用 !gh katip，维基百科用 !w。你也可以在设置中添加自己的命令。",
+    "在 Spotlight 中输入 ! 和网站的简称，例如 GitHub 用 !gh katip，维基百科用 !w。下面是 Katip 自带的命令，你可以修改它们，也可以添加自己的。",
 
   "onboarding.done.title": "一切就绪",
   "onboarding.done.body": "你可以在 Katip 的设置中再次查看这个导览。",

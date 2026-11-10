@@ -2,10 +2,16 @@ import "@testing-library/svelte/vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte"
 import { Effect, Layer, ManagedRuntime, Option } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { type Bang, BangCatalog, DEFAULT_BANG_FORMAT } from "#modules/bangs"
 import { makeTranslator } from "#modules/i18n"
 import { SettingsRepository } from "#modules/settings"
+import { SiteCommands } from "#modules/site-commands"
+import { themeOf } from "#modules/theme"
 import { FakeBrowser } from "#platform/browser-testing"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
+import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
+import { sidebarView, spaceView } from "../sidepanel/testing/view-builders"
 import App from "./App.svelte"
 
 type Keys = Readonly<Record<string, string>>
@@ -17,18 +23,32 @@ const SUGGESTED: Keys = {
   "copy-current-url-as-markdown": "⌃⇧M",
 }
 
+const BUNDLED_BANGS: ReadonlyArray<Bang> = [
+  {
+    name: "GitHub",
+    triggers: ["gh"],
+    template: "https://github.com/search?q=%s",
+    format: DEFAULT_BANG_FORMAT,
+  },
+]
+
 const runtimes: Array<{ dispose: () => Promise<void> }> = []
 
 afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()))
 })
 
-const renderOnboarding = async ({ assigned = SUGGESTED }: { assigned?: Keys } = {}) => {
+const renderOnboarding = async ({
+  assigned = SUGGESTED,
+  grantsAccess = true,
+}: { assigned?: Keys; grantsAccess?: boolean } = {}) => {
   const browserKeys = { current: assigned }
   const browser = FakeBrowser.layer
   const runtime = ManagedRuntime.make(
     Layer.mergeAll(
       SettingsRepository.layer.pipe(Layer.provide(browser)),
+      SiteCommands.layer.pipe(Layer.provide(browser)),
+      BangCatalog.layerTest(BUNDLED_BANGS),
       Layer.succeed(
         KeyboardShortcuts,
         KeyboardShortcuts.of({
@@ -47,6 +67,12 @@ const renderOnboarding = async ({ assigned = SUGGESTED }: { assigned?: Keys } = 
   await runtime.runPromise(FakeBrowser.use((fake) => fake.seedWindow({ tabs: [{}] })))
   const openSidePanel = vi.fn(async () => {})
   const close = vi.fn()
+  const connection = createMemoryConnection({
+    view: sidebarView({
+      spaces: [spaceView("Work", { theme: themeOf([{ hue: 250, chroma: 0.6 }]) })],
+    }),
+  })
+  const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
   render(App, {
     props: {
       runtime,
@@ -54,11 +80,17 @@ const renderOnboarding = async ({ assigned = SUGGESTED }: { assigned?: Keys } = 
       optionsPageUrl: "chrome-extension://katip-test/options/index.html",
       openSidePanel,
       close,
+      connection,
+      originAccess,
+      faviconUrl: () => null,
     },
   })
   return {
     openSidePanel,
     close,
+    connection,
+    originAccess,
+    readCommands: () => runtime.runPromise(SiteCommands.use((commands) => commands.get)),
     reassignKeysInChrome: (keys: Keys) => {
       browserKeys.current = keys
     },
@@ -206,6 +238,88 @@ describe("the steps that show around", () => {
 
     await waitFor(async () => {
       expect((await readSettings()).bangs).toBe(false)
+    })
+  })
+})
+
+describe("the theme step", () => {
+  it("colors the Space shown beside the page, there and then", async () => {
+    const { connection } = await renderOnboarding()
+    await goTo("A color for each Space")
+
+    await fireEvent.keyDown(screen.getByRole("slider", { name: "Color of “Work”" }), {
+      key: "ArrowRight",
+    })
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SetSpaceTheme", spaceId: "Work", theme: themeOf([{ hue: 260, chroma: 0.6 }]) },
+    ])
+  })
+})
+
+describe("the live folder step", () => {
+  it("adds a live folder to the Space shown, once access to the site is allowed", async () => {
+    const { connection, originAccess } = await renderOnboarding()
+    await goTo("Folders that keep themselves up to date")
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Add", description: "GitHub · Review Requests" }),
+    )
+
+    expect(await screen.findByText("Added")).toBeTruthy()
+    expect([originAccess.requestedOrigins, connection.sentCommands]).toStrictEqual([
+      [["https://github.com/*"]],
+      [
+        {
+          _tag: "CreateLiveFolder",
+          spaceId: "Work",
+          parentId: null,
+          source: { _tag: "GitHub", query: "review-requested" },
+        },
+      ],
+    ])
+  })
+
+  it("says so when access to the site isn't allowed, adding nothing", async () => {
+    const { connection } = await renderOnboarding({ grantsAccess: false })
+    await goTo("Folders that keep themselves up to date")
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Add", description: "Gmail · Unread mail" }),
+    )
+
+    expect(await screen.findByText(/access to Gmail wasn’t allowed/)).toBeTruthy()
+    expect(connection.sentCommands).toStrictEqual([])
+  })
+})
+
+describe("the commands in the bangs step", () => {
+  it("lists the commands Katip comes with, which can be removed there", async () => {
+    const { readCommands } = await renderOnboarding()
+    await goTo("Search any site with a bang")
+
+    await fireEvent.click(await screen.findByRole("button", { name: "Remove New Google Doc" }))
+
+    await waitFor(async () => {
+      expect((await readCommands()).removedDefaults).toStrictEqual(["google-doc"])
+    })
+  })
+
+  it("adds a command filled in from the list of bangs", async () => {
+    const { readCommands } = await renderOnboarding()
+    await goTo("Search any site with a bang")
+    await fireEvent.click(await screen.findByRole("button", { name: "Add Command" }))
+
+    await fireEvent.input(screen.getByLabelText("Find a Site"), { target: { value: "git" } })
+    await fireEvent.click(await screen.findByRole("button", { name: "GitHub !gh" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(async () => {
+      expect(
+        (await readCommands()).added.map(({ title, url, keyword }) => ({ title, url, keyword })),
+      ).toStrictEqual([
+        { title: "Search GitHub", url: "https://github.com/search?q=%s", keyword: "gh" },
+      ])
     })
   })
 })

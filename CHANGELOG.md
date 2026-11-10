@@ -13,7 +13,7 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 - Spotlight comes in three sizes, picked in the settings from a picture of each: Compact shows the search field alone until you type, Normal is as before, and Large is wider.
 - Where Spotlight opens can be chosen in the settings, by dragging it over a picture of the browser window. It comes to rest at the center and the edges.
 - The Space menu button and the button that clears temporary tabs are always shown, not only when the pointer is over the side panel.
-- A welcome tour opens when Katip is installed. It shows where Katip lives, checks that Chrome gave Katip the keyboard shortcuts it suggests and helps fix any that went to another extension, then shows Favorites, themes, live folders, bangs and importing from Arc, each with an animated picture. The steps after setting up can be skipped, and the tour can be taken again from the settings.
+- A welcome tour opens when Katip is installed. It shows where Katip lives, checks that Chrome gave Katip the keyboard shortcuts it suggests and helps fix any that went to another extension, then shows Favorites, themes, live folders, bangs and importing from Arc, each with an animated picture. A Space's color can be tried out, live folders added and Spotlight's commands changed right in the tour. It appears in the browser's language, light or dark as the browser is. The steps after setting up can be skipped, and the tour can be taken again from the settings.
 
 ### 日本語
 
@@ -22,7 +22,7 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 - Spotlight の大きさを 3 つから選べるようにしました。設定で、それぞれを描いた絵から選びます。コンパクトは打ち始めるまで検索欄だけを表示し、標準はこれまでどおり、大きめは横に広くなります。
 - Spotlight を開く位置を設定で選べるようにしました。ブラウザのウィンドウを描いた絵の上で Spotlight をドラッグします。中央と端ではぴたりと止まります。
 - Space のメニューのボタンと、一時タブを片付けるボタンを、ポインタがサイドパネルの上にないときも表示するようにしました。
-- Katip を入れたときに、ようこそツアーが開くようにしました。Katip の場所を案内し、Katip が求めるキーボードショートカットを Chrome が割り当てたかを確かめ、ほかの拡張機能に取られたものを直す手助けをします。続いて Favorites、テーマ、ライブフォルダ、bangs、Arc からの読み込みを、動く絵とともに紹介します。設定のあとのステップは飛ばせ、ツアーは設定からもう一度見られます。
+- Katip を入れたときに、ようこそツアーが開くようにしました。Katip の場所を案内し、Katip が求めるキーボードショートカットを Chrome が割り当てたかを確かめ、ほかの拡張機能に取られたものを直す手助けをします。続いて Favorites、テーマ、ライブフォルダ、bangs、Arc からの読み込みを、動く絵とともに紹介します。Space の色をその場で試したり、ライブフォルダを追加したり、Spotlight のコマンドを変えたりもできます。ツアーはブラウザの言語で、ブラウザに合わせてライトかダークで表示されます。設定のあとのステップは飛ばせ、ツアーは設定からもう一度見られます。
 
 ## 1.5.0 — 2026-11-10
 

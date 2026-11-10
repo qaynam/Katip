@@ -37,16 +37,24 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "タブをサイドパネルの上のほうへドラッグするか、右クリックして「Favorites に追加」を選びます。Favorites は、どの Space にいても同じ場所にあります。",
 
   "onboarding.themes.title": "Space ごとに色を",
+  "onboarding.themes.try":
+    "ここで試せます。円の上をドラッグすると、「{space}」がその色になります。",
+  "onboarding.themes.wheel": "「{space}」の色",
   "onboarding.themes.body":
     "Space の名前の横にある「Space のメニュー」を開き、「テーマを編集」を選びます。選んだ色がサイドパネルに付くので、どの Space にいるかがひと目でわかります。",
 
   "onboarding.liveFolders.title": "ひとりでに新しくなるフォルダ",
+  "onboarding.liveFolders.into": "「{space}」のピン留めタブに追加します。",
+  "onboarding.liveFolders.gmail": "未読メール",
+  "onboarding.liveFolders.add": "追加",
+  "onboarding.liveFolders.added": "追加しました",
+  "onboarding.liveFolders.failed": "ライブフォルダを追加できませんでした。",
   "onboarding.liveFolders.body":
     "「Space のメニュー」の「ライブフォルダを追加」から、Gmail の未読メールや、GitHub のレビュー依頼、プルリクエスト、Issue、メンションを追えます。中身は自動で更新されます。",
 
   "onboarding.bangs.title": "bangs でどのサイトも検索",
   "onboarding.bangs.body":
-    "Spotlight で ! に続けてサイトの短縮名を打ちます。GitHub なら !gh katip、Wikipedia なら !w です。自分のコマンドも設定で追加できます。",
+    "Spotlight で ! に続けてサイトの短縮名を打ちます。GitHub なら !gh katip、Wikipedia なら !w です。下に Katip に入っているコマンドが並んでいて、変えたり、自分のものを足したりできます。",
 
   "onboarding.done.title": "準備ができました",
   "onboarding.done.body": "このツアーは、Katip の設定からもう一度見られます。",

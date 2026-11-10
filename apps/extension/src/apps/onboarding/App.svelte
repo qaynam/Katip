@@ -2,6 +2,8 @@
   import { Effect } from "effect"
   import { onMount, tick } from "svelte"
   import type { Translator } from "#modules/i18n"
+  import type { ColorScheme } from "#modules/theme"
+  import type { SidebarView } from "#protocol"
   import { type Settings, type SettingsPatch, SettingsRepository } from "#modules/settings"
   import { Tabs } from "#platform/browser"
   import { KeyboardShortcuts, openChromeShortcutSettings } from "#platform/keyboard-shortcuts"
@@ -26,6 +28,12 @@
   import ShortcutsScene from "./scenes/ShortcutsScene.svelte"
   import SidePanelScene from "./scenes/SidePanelScene.svelte"
   import ThemesScene from "./scenes/ThemesScene.svelte"
+  import type { OriginAccess } from "../sidepanel/connection/origin-access"
+  import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
+  import CommandsPanel from "./components/CommandsPanel.svelte"
+  import LiveFolderChoices from "./components/LiveFolderChoices.svelte"
+  import ThemeTryOn from "./components/ThemeTryOn.svelte"
+  import { currentSystemScheme, watchSystemScheme } from "./system-scheme"
 
   interface Props {
     runtime: OnboardingRuntime
@@ -39,9 +47,22 @@
     openSidePanel: () => Promise<void>
     /** Closes this page. */
     close: () => void
+    /** The background, as the side panel talks to it, for the steps that change a Space. */
+    connection: SidebarConnection
+    originAccess: OriginAccess
+    faviconUrl: (pageUrl: string) => string | null
   }
 
-  const { runtime, translator, optionsPageUrl, openSidePanel, close }: Props = $props()
+  const {
+    runtime,
+    translator,
+    optionsPageUrl,
+    openSidePanel,
+    close,
+    connection,
+    originAccess,
+    faviconUrl,
+  }: Props = $props()
   const t = $derived(translator.t)
 
   // Every step but the welcome, which comes first and stands apart from the rest
@@ -80,6 +101,17 @@
     assigned = nowAssigned
     suggested = nowSuggested
   }
+
+  let view = $state.raw<SidebarView | null>(null)
+  const activeSpace = $derived(view?.spaces.find((space) => space.id === view?.activeSpaceId))
+  $effect(() =>
+    connection.listen((event) => {
+      if (event._tag === "ViewUpdated") view = event.view
+    }),
+  )
+
+  let scheme = $state<ColorScheme>(currentSystemScheme())
+  $effect(() => watchSystemScheme((changed) => (scheme = changed)))
 
   onMount(() => {
     runtime.runPromise(SettingsRepository.use((repository) => repository.get)).then(
@@ -164,7 +196,18 @@
           {:else if step === "Favorites"}
             <FavoritesScene />
           {:else if step === "Themes"}
-            <ThemesScene />
+            {#if activeSpace === undefined}
+              <ThemesScene />
+            {:else}
+              {@const spaceId = activeSpace.id}
+              <ThemeTryOn
+                theme={activeSpace.theme}
+                spaceName={activeSpace.name}
+                {scheme}
+                wheelLabel={t("onboarding.themes.wheel", { space: activeSpace.name })}
+                onsettle={(theme) => void connection.run({ _tag: "SetSpaceTheme", spaceId, theme })}
+              />
+            {/if}
           {:else if step === "LiveFolders"}
             <LiveFoldersScene />
           {:else if step === "Bangs"}
@@ -239,11 +282,25 @@
                   {t("onboarding.arcImport.open")}
                 </button>
               </div>
-            {:else if step === "Bangs" && settings !== null}
-              <label class="setting">
-                <span>{t("options.spotlight.bangs.label")}</span>
-                <Toggle checked={settings.bangs} onchange={(bangs) => save({ bangs })} />
-              </label>
+            {:else if step === "Themes" && activeSpace !== undefined}
+              <p class="note">{t("onboarding.themes.try", { space: activeSpace.name })}</p>
+            {:else if step === "LiveFolders" && activeSpace !== undefined}
+              <LiveFolderChoices
+                {t}
+                spaceId={activeSpace.id}
+                spaceName={activeSpace.name}
+                run={connection.run}
+                {originAccess}
+                {faviconUrl}
+              />
+            {:else if step === "Bangs"}
+              {#if settings !== null}
+                <label class="setting">
+                  <span>{t("options.spotlight.bangs.label")}</span>
+                  <Toggle checked={settings.bangs} onchange={(bangs) => save({ bangs })} />
+                </label>
+              {/if}
+              <CommandsPanel {runtime} {translator} {faviconUrl} />
             {/if}
           </div>
         </div>
@@ -432,7 +489,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-width: 40rem;
   }
 
   .copy h1 {
@@ -547,7 +603,7 @@
     gap: 0.75rem;
   }
 
-  .button {
+  .onboarding :global(.button) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -566,26 +622,37 @@
       color 140ms ease;
   }
 
-  .primary {
+  .onboarding :global(.button.small) {
+    min-height: 2.125rem;
+    padding: 0.375rem 1rem;
+    font-size: 0.9375rem;
+  }
+
+  .onboarding :global(.button:disabled) {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .onboarding :global(.primary) {
     background: var(--button);
     color: #ffffff;
   }
 
-  .primary:hover {
+  .onboarding :global(.primary:hover) {
     background: var(--button-hover);
   }
 
-  .secondary {
+  .onboarding :global(.secondary) {
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--card-shadow);
   }
 
-  .secondary:hover {
+  .onboarding :global(.secondary:hover:not(:disabled)) {
     color: var(--accent);
   }
 
-  .link {
+  .onboarding :global(.link) {
     padding: 0.25rem 0.5rem;
     border: none;
     border-radius: 0.5rem;
