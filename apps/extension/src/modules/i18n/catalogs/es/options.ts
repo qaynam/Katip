@@ -30,6 +30,8 @@ export const options: CatalogSection<"options"> = {
   "options.updates.automatic.description":
     "La primera vez que se abre el panel lateral tras iniciar el navegador, Katip consulta a GitHub su última versión y te avisa si es más reciente. No se envía ningún dato de Katip.",
   "options.github.label": "GitHub",
+  "options.welcome.label": "Primeros pasos",
+  "options.welcome.open": "Ver el recorrido",
 
   "options.tabs.heading": "Pestañas",
   "options.newTabsOnTop.label": "Mostrar las pestañas nuevas arriba",

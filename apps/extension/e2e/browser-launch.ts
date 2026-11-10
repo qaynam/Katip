@@ -1,4 +1,4 @@
-import { chromium, type BrowserContext, type Worker } from "@playwright/test"
+import { chromium, type BrowserContext, type Page, type Worker } from "@playwright/test"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -53,3 +53,23 @@ export const launchWithExtension = async (
 
 export const extensionWorkerOf = async (context: BrowserContext): Promise<Worker> =>
   context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
+
+const isOnboarding = (page: Page) => page.url().includes("/onboarding/index.html")
+
+/** The page Katip opens in a tab when it is installed, once it has opened. */
+export const onboardingPageOf = async (context: BrowserContext): Promise<Page> => {
+  for (let waited = 0; waited < 10_000; waited += 50) {
+    const opened = context.pages().find(isOnboarding)
+    if (opened !== undefined) return opened
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  throw new Error("Katip's onboarding didn't open")
+}
+
+/**
+ * Closes the onboarding a fresh install opens, so that a test starts from the browser as the
+ * person left it.
+ */
+export const closeOnboarding = async (context: BrowserContext): Promise<void> => {
+  await (await onboardingPageOf(context)).close()
+}

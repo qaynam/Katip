@@ -1311,6 +1311,72 @@ describe("Spotlight", () => {
   )
 })
 
+describe("onboarding", () => {
+  const onboardingTabs = Tabs.use((tabs) =>
+    Effect.map(tabs.query({}), (all) =>
+      all.filter((tab) =>
+        Option.contains(tab.url, "chrome-extension://katip-test/onboarding/index.html"),
+      ),
+    ),
+  )
+
+  it.live("opens in a tab when Katip is first installed", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+
+        yield* fake.emit({
+          _tag: "RuntimeInstalled",
+          reason: "install",
+          previousVersion: Option.none(),
+        })
+
+        const opened = yield* eventually(
+          Effect.map(onboardingTabs, (tabs) =>
+            tabs.length > 0 ? Option.some(tabs) : Option.none(),
+          ),
+        )
+        expect(opened).toHaveLength(1)
+      }),
+    ),
+  )
+
+  it.live("doesn't open when Katip is updated", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { tabIds } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+
+        yield* fake.emit({
+          _tag: "RuntimeInstalled",
+          reason: "update",
+          previousVersion: Option.some("1.5.0"),
+        })
+        // Events are handled in the order they come, so once a later event has taken effect, the
+        // update has been handled too
+        const tab = yield* (yield* Tabs).get(tabIds[0])
+        yield* fake.emit({
+          _tag: "CommandTriggered",
+          command: "open-spotlight",
+          tab: Option.some(tab),
+        })
+        yield* eventually(
+          Effect.map(fake.snapshot, ({ windows }) =>
+            windows.some((window) => Option.contains(window.type, "popup"))
+              ? Option.some(true)
+              : Option.none(),
+          ),
+        )
+
+        expect(yield* onboardingTabs).toStrictEqual([])
+      }),
+    ),
+  )
+})
+
 describe("copy shortcuts", () => {
   const pageNoticesIn = (tabId: TabId) =>
     Effect.map(

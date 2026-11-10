@@ -2,7 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test"
 import { cp, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { extensionWorkerOf, launchInProfile } from "./browser-launch"
+import { closeOnboarding, extensionWorkerOf, launchInProfile } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 import { expect, test } from "./fixtures"
 import { openPages, temporaryTitles } from "./sidebar-actions"
@@ -28,6 +28,7 @@ test("an update unzipped into another folder is the same extension, keeping its 
   await cp(EXTENSION_DIR, updateDir, { recursive: true })
   try {
     const installed = await launchInProfile(profile, EXTENSION_DIR)
+    await closeOnboarding(installed)
     const before = await openSidebarIn(installed)
     await openPages(before.background, [`${site}/a`, `${site}/b`])
     await expect(temporaryTitles(before.sidebar)).toHaveCount(2)

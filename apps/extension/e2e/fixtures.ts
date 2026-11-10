@@ -1,7 +1,7 @@
 import { test as base, type BrowserContext, type Page, type Worker } from "@playwright/test"
 import { createServer } from "node:http"
 import type { AddressInfo } from "node:net"
-import { extensionWorkerOf, launchWithExtension } from "./browser-launch"
+import { extensionWorkerOf, launchWithExtension, onboardingPageOf } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 
 interface KatipFixtures {
@@ -51,10 +51,19 @@ export const test = base.extend<KatipFixtures>({
     await use(await extensionWorkerOf(context))
   },
 
+  // In the tab the onboarding opened in: Katip keeps its own pages out of Spaces, so the tab joins
+  // none, while the blank tab Chrome starts with joined the current Space when Katip started, and
+  // is closed so the Space starts empty
   sidebar: async ({ context, background }, use) => {
     const extensionId = new URL(background.url()).host
-    const page = context.pages()[0] ?? (await context.newPage())
+    const page = await onboardingPageOf(context)
     await page.goto(`chrome-extension://${extensionId}/sidepanel/index.html`)
+    await Promise.all(
+      context
+        .pages()
+        .filter((each) => each !== page)
+        .map((each) => each.close()),
+    )
     await use(page)
   },
 })

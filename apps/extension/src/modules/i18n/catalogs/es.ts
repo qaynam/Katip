@@ -6,6 +6,7 @@ import { sidepanel } from "./es/sidepanel"
 import { spotlight } from "./es/spotlight"
 import { background } from "./es/background"
 import { manifest } from "./es/manifest"
+import { onboarding } from "./es/onboarding"
 
 export const es: Catalog = {
   ...common,
@@ -15,4 +16,5 @@ export const es: Catalog = {
   ...spotlight,
   ...background,
   ...manifest,
+  ...onboarding,
 }

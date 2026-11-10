@@ -26,6 +26,8 @@ export const options: CatalogSection<"options"> = {
   "options.updates.automatic.description":
     "浏览器启动后首次打开侧边栏时，Katip 会向 GitHub 查询最新版本，如有更新会提示你。不会发送任何 Katip 数据。",
   "options.github.label": "GitHub",
+  "options.welcome.label": "入门",
+  "options.welcome.open": "查看导览",
 
   "options.tabs.heading": "标签页",
   "options.newTabsOnTop.label": "在顶部显示新标签页",

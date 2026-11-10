@@ -28,6 +28,8 @@ export const options: CatalogSection<"options"> = {
   "options.updates.automatic.description":
     "ブラウザを起動して初めてサイドパネルを開いたときに、GitHub に最新のリリースを問い合わせ、新しいバージョンがあればお知らせします。Katip のデータは何も送りません。",
   "options.github.label": "GitHub",
+  "options.welcome.label": "はじめかた",
+  "options.welcome.open": "ツアーを見る",
 
   "options.tabs.heading": "タブ",
   "options.newTabsOnTop.label": "新しいタブを一番上に表示",

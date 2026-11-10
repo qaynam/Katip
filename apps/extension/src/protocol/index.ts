@@ -1,5 +1,6 @@
 export { EXPORT_PORT_NAME, ExportClientMessage, ExportServerMessage } from "./export-port"
 export { IMPORT_PORT_NAME, ImportClientMessage, ImportServerMessage } from "./import-port"
+export { ONBOARDING_PAGE_PATH, onboardingPageUrl } from "./onboarding-page"
 export { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "./sidebar-command"
 export {
   ClientMessage,

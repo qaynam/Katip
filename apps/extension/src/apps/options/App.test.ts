@@ -79,6 +79,7 @@ const keyboardShortcutsReporting = (browserKeys: { current: AssignedKeys }) =>
           ? Effect.fail(new BrowserApiError({ api: "commands.getAll", cause: new Error("gone") }))
           : Effect.succeed(new Map(Object.entries(browserKeys.current))),
       ),
+      suggested: Effect.succeed(new Map()),
       isMac: Effect.succeed(true),
     }),
   )
@@ -518,6 +519,24 @@ describe("loading failure", () => {
     expect(
       await screen.findByText("Couldn’t load your settings. Reload this page to try again."),
     ).toBeTruthy()
+  })
+})
+
+describe("the tour", () => {
+  it("can be taken again, opening in a new tab", async () => {
+    const { browser } = await renderLoaded()
+    await browser((fake) => fake.seedWindow({ tabs: [{}] }))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Show the Tour" }))
+
+    await waitFor(async () => {
+      const { tabs } = await browser((fake) => fake.snapshot)
+      expect(
+        tabs
+          .flatMap((tab) => Option.toArray(tab.url))
+          .filter((url) => url.endsWith("/onboarding/index.html")),
+      ).toHaveLength(1)
+    })
   })
 })
 

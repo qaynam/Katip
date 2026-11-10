@@ -10,7 +10,12 @@ export default defineConfig({
           name: "core",
           environment: "node",
           include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
-          exclude: ["src/apps/sidepanel/**", "src/apps/options/**", "src/apps/spotlight/**"],
+          exclude: [
+            "src/apps/sidepanel/**",
+            "src/apps/options/**",
+            "src/apps/spotlight/**",
+            "src/apps/onboarding/**",
+          ],
         },
       },
       {
@@ -24,6 +29,7 @@ export default defineConfig({
             "src/apps/sidepanel/**/*.test.ts",
             "src/apps/options/**/*.test.ts",
             "src/apps/spotlight/**/*.test.ts",
+            "src/apps/onboarding/**/*.test.ts",
           ],
         },
       },

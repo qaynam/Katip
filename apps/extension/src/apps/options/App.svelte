@@ -21,7 +21,8 @@
   import { appearanceOf, type ColorScheme } from "#modules/theme"
   import { Updates, type UpdateStatus } from "#modules/updates"
   import { Tabs } from "#platform/browser"
-  import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+  import { KeyboardShortcuts, openChromeShortcutSettings } from "#platform/keyboard-shortcuts"
+  import { onboardingPageUrl } from "#protocol"
   import {
     CATEGORIES,
     type Category,
@@ -44,7 +45,6 @@
   import SpotlightSizePicker from "./SpotlightSizePicker.svelte"
   import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
   import ShortcutRow from "./ShortcutRow.svelte"
-  import { openChromeShortcutSettings } from "./shortcut-settings"
   import StatusNote, { type Note } from "./StatusNote.svelte"
   import Switch from "./Switch.svelte"
   import { currentSystemScheme, watchSystemScheme } from "./system-scheme"
@@ -339,6 +339,11 @@
     updateCheck = Exit.isSuccess(checked) ? checked.value : { _tag: "Failed" }
   }
 
+  const showTour = () =>
+    void runtime.runPromise(
+      Tabs.use((tabs) => tabs.create({ url: onboardingPageUrl(location.origin) })),
+    )
+
   const exportData = async () => {
     isExporting = true
     const exported = await runtime.runPromiseExit(downloadExportFile)
@@ -455,6 +460,11 @@
                   checked={current.checkForUpdates}
                   onchange={(checked) => save({ checkForUpdates: checked })}
                 />
+              {/snippet}
+            </SettingRow>
+            <SettingRow label={t("options.welcome.label")} labelsControl={false}>
+              {#snippet children(control)}
+                <PushButton {...control} onclick={showTour}>{t("options.welcome.open")}</PushButton>
               {/snippet}
             </SettingRow>
             {#if repositoryUrl !== null}

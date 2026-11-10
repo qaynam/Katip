@@ -6,6 +6,7 @@ import { sidepanel } from "./en/sidepanel"
 import { spotlight } from "./en/spotlight"
 import { background } from "./en/background"
 import { manifest } from "./en/manifest"
+import { onboarding } from "./en/onboarding"
 
 export const en = {
   ...common,
@@ -15,4 +16,5 @@ export const en = {
   ...spotlight,
   ...background,
   ...manifest,
+  ...onboarding,
 } as const satisfies Readonly<Record<string, Message>>

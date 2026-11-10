@@ -28,6 +28,8 @@ export const options = {
   "options.updates.automatic.description":
     "The first time the side panel opens after the browser starts, Katip asks GitHub for its latest release and tells you if it’s newer. Nothing from Katip is sent.",
   "options.github.label": "GitHub",
+  "options.welcome.label": "Getting started",
+  "options.welcome.open": "Show the Tour",
 
   "options.tabs.heading": "Tabs",
   "options.newTabsOnTop.label": "Show new tabs at the top",

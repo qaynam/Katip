@@ -18,7 +18,7 @@ Katip turns Chrome's side panel into a sidebar that organizes your tabs into Spa
 - **Live folders**: a folder that lists your Gmail inbox or label, or your GitHub review requests, pull requests, issues or mentions, using the session you're already signed in with.
 - **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only. Type a bang such as `!gh katip` to search a site directly, and add commands of your own in the settings that open a page or search a site by a keyword. Pick its size, from compact to large, in the settings.
 - **Archive**: temporary tabs you haven't used for a while are closed and kept in the archive, so you can bring them back.
-- **Keyboard shortcuts**: open the side panel, Spotlight, and copy the current URL or a Markdown link. Assign your own keys at `chrome://extensions/shortcuts`.
+- **Keyboard shortcuts**: open the side panel, Spotlight, and copy the current URL or a Markdown link. Assign your own keys at `chrome://extensions/shortcuts`. The welcome tour that opens on install checks that Chrome gave Katip its keys, since Chrome gives a key only to the first extension that asks for it.
 - **Import and export**: export everything to a versioned JSON file, import it again, or move over from Arc (see below).
 - **Languages**: English, Japanese, Simplified Chinese and Spanish.
 
@@ -164,7 +164,7 @@ The repository is a pnpm workspace run with Turborepo; the commands above work f
 apps/
   extension/      the Chrome extension
     src/
-      apps/       entry points: background, sidepanel, spotlight, options, offscreen, dev-harness
+      apps/       entry points: background, sidepanel, spotlight, options, onboarding, offscreen, dev-harness
       modules/    domain logic, one directory per module
       platform/   Chrome API services, the fake browser and the browser contract
       protocol/   messages between pages and the background

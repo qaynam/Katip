@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { keysOfShortcut } from "./shortcut-keys"
+  import { keysOfShortcut } from "#platform/keyboard-shortcuts"
 
   let {
     id,
