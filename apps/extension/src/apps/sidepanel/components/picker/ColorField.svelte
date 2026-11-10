@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { hueWheelBackground } from "../../logic/space-themes"
+  import { hueWheelBackground } from "#modules/theme"
 
   const wheel = hueWheelBackground()
   const PRIMARY_INDEX = 0

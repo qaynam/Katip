@@ -7,6 +7,7 @@ export {
   type ColorScheme,
   type ThemeAppearance,
 } from "./appearance"
+export { hueWheelBackground } from "./hue-wheel"
 export type { Rgb } from "./oklch"
 export {
   addHarmonyColor,
