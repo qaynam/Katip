@@ -81,6 +81,8 @@ export const SpotlightResult = Schema.TaggedUnion({
   // A search of one site, from a bang or a command's keyword typed with ! before or after the query
   SiteSearch: {
     siteName: Schema.String,
+    // The trigger or keyword as typed, which Tab fills in while nothing follows it
+    trigger: Schema.String,
     // Empty when nothing was typed besides the bang, which opens the site
     query: Schema.String,
     // The page to open, with the query filled in

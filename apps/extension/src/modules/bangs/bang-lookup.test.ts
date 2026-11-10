@@ -21,6 +21,7 @@ describe("the site search an input asks for", () => {
     expect(bangSearchIn("effect ts !gh", index)).toStrictEqual(
       Option.some({
         bang: github,
+        trigger: "gh",
         query: "effect ts",
         url: "https://github.com/search?q=effect+ts",
       }),
@@ -37,6 +38,12 @@ describe("the site search an input asks for", () => {
     expect(Option.map(bangSearchIn("!nope cats !w", index), (search) => search.url)).toStrictEqual(
       Option.some("https://wikipedia.org/w/index.php?search=!nope+cats"),
     )
+  })
+
+  it("keeps the trigger as typed, among the bang's others", () => {
+    expect(
+      Option.map(bangSearchIn("!github katip", index), (search) => search.trigger),
+    ).toStrictEqual(Option.some("github"))
   })
 
   it("is none when no bang written is known", () => {

@@ -205,6 +205,7 @@ export const displayOf = (
  */
 export const completionOf = (result: SpotlightResult): string | null => {
   if (result._tag === "BangSuggestion") return inputForTrigger(result.trigger)
+  if (result._tag === "SiteSearch" && result.query === "") return inputForTrigger(result.trigger)
   if (result._tag === "SiteCommand" && result.searches && result.keyword !== null) {
     return inputForTrigger(result.keyword)
   }

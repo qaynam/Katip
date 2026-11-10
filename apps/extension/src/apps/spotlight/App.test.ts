@@ -398,6 +398,7 @@ describe("bangs", () => {
   const githubSearch: SpotlightResult = {
     _tag: "SiteSearch",
     siteName: "GitHub",
+    trigger: "gh",
     query: "katip",
     url: "https://github.com/search?q=katip",
     iconPageUrl: "https://github.com/",
@@ -417,7 +418,9 @@ describe("bangs", () => {
         ? [githubSuggestion]
         : query === "!gh katip"
           ? [githubSearch, webSearch(query)]
-          : []
+          : query === "!gh"
+            ? [{ ...githubSearch, query: "", url: "https://github.com/" }, webSearch(query)]
+            : []
 
   it("a suggestion chosen with Enter fills in its bang and searches for it, opening nothing", async () => {
     const { connection, input } = renderSpotlight({ respond: respondWithBangs })
@@ -442,6 +445,26 @@ describe("bangs", () => {
     await fireEvent.keyDown(input, { key: "Tab" })
 
     expect((input as HTMLInputElement).value).toBe("!gh ")
+  })
+
+  it("a whole trigger with nothing after it is filled in with Tab, ready for what to search", async () => {
+    const { input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect((input as HTMLInputElement).value).toBe("!gh ")
+  })
+
+  it("Tab with nothing to fill in keeps the search field focused, and leaves it as typed", async () => {
+    const { input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh katip")
+    await settle()
+
+    const notCancelled = await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect([notCancelled, (input as HTMLInputElement).value]).toStrictEqual([false, "!gh katip"])
   })
 
   it("a site search is opened by the background on Enter", async () => {

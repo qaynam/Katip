@@ -1097,6 +1097,7 @@ describe("Spotlight bangs", () => {
         const githubSearch: SpotlightResult = {
           _tag: "SiteSearch",
           siteName: "GitHub",
+          trigger: "gh",
           query: "effect ts",
           url: "https://github.com/search?q=effect+ts",
           iconPageUrl: "https://github.com/",

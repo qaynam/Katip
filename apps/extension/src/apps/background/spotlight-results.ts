@@ -433,9 +433,10 @@ const bangResults = Effect.fnUntraced(function* (query: string) {
     .filter((match) => !Option.exists(search, ({ bang }) => bang === match.bang))
     .slice(0, BANG_SUGGESTION_LIMIT)
   return [
-    ...Option.toArray(search).map(({ bang, query: searched, url }): SpotlightResult => ({
+    ...Option.toArray(search).map(({ bang, trigger, query: searched, url }): SpotlightResult => ({
       _tag: "SiteSearch",
       siteName: bang.name,
+      trigger,
       query: searched,
       url,
       iconPageUrl: siteUrlOf(bang),

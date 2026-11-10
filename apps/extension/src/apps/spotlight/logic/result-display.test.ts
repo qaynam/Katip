@@ -238,6 +238,7 @@ describe("a site search's display", () => {
   const siteSearch = (query: string): SpotlightResult => ({
     _tag: "SiteSearch",
     siteName: "GitHub",
+    trigger: "gh",
     query,
     url: "https://github.com/search?q=katip",
     iconPageUrl: "https://github.com/",
@@ -300,6 +301,32 @@ describe("what choosing a result types in", () => {
         iconPageUrl: "https://linear.app/",
       }),
     ).toBe("!lin ")
+  })
+
+  it("is the bang of a site search with nothing typed after it yet, ready for the query", () => {
+    expect(
+      completionOf({
+        _tag: "SiteSearch",
+        siteName: "YouTube",
+        trigger: "yt",
+        query: "",
+        url: "https://www.youtube.com/",
+        iconPageUrl: "https://www.youtube.com/",
+      }),
+    ).toBe("!yt ")
+  })
+
+  it("is nothing for a site search that has its query, which choosing opens", () => {
+    expect(
+      completionOf({
+        _tag: "SiteSearch",
+        siteName: "YouTube",
+        trigger: "yt",
+        query: "lofi",
+        url: "https://www.youtube.com/results?search_query=lofi",
+        iconPageUrl: "https://www.youtube.com/",
+      }),
+    ).toBeNull()
   })
 
   it("is nothing for a result that opens a page, a site command with a keyword included", () => {

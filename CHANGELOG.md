@@ -4,6 +4,16 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
+## Unreleased
+
+### English
+
+- In Spotlight, Tab fills in a bang typed in full, such as `!yt`, ready for what to search, as it does for a suggested one. With nothing to fill in, Tab leaves the search field as it is instead of moving away from it.
+
+### 日本語
+
+- Spotlight で `!yt` のようにトリガーを最後まで打ったときも、候補を選んだときと同じく Tab で検索の入力に入れるようにしました。補完するものがないときの Tab は、検索欄から離れず何もしません。
+
 ## 1.6.0 — 2026-11-10
 
 ### English

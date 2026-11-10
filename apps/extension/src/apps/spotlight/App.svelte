@@ -129,14 +129,11 @@
     switch (event.key) {
       case "Tab":
         if (hasModifier(event)) return
-        if (selectedCompletion !== null) {
-          event.preventDefault()
-          complete(selectedCompletion)
-          return
-        }
-        if (query !== "") return
+        // Never left to the browser: it would move the focus out of the search field, where
+        // nothing else is meant to be reached with Tab
         event.preventDefault()
-        if (mode === "All") switchMode("Actions")
+        if (selectedCompletion !== null) complete(selectedCompletion)
+        else if (query === "" && mode === "All") switchMode("Actions")
         return
       case "Backspace":
         if (mode !== "Actions" || query !== "") return

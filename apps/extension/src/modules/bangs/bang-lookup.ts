@@ -6,6 +6,8 @@ import { bangUrl } from "./bang-url"
 
 export interface BangSearch {
   readonly bang: Bang
+  /** The trigger as typed, one of the bang's. */
+  readonly trigger: string
   /** What the bang searches for; empty when nothing was typed besides it. */
   readonly query: string
   /** The page to open. */
@@ -15,7 +17,12 @@ export interface BangSearch {
 /** The site search the input asks for: the first bang written in it that the index knows. */
 export const bangSearchIn = (input: string, index: BangIndex): Option.Option<BangSearch> =>
   Array.findFirst(bangRequestsIn(input), ({ trigger, query }) =>
-    Option.map(index.find(trigger), (bang) => ({ bang, query, url: bangUrl(bang, query) })),
+    Option.map(index.find(trigger), (bang) => ({
+      bang,
+      trigger,
+      query,
+      url: bangUrl(bang, query),
+    })),
   )
 
 /**
