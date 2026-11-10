@@ -57,6 +57,18 @@ describe("the manifest's keyboard shortcuts", () => {
 
     expect(withKeys.length).toBeLessThanOrEqual(4)
   })
+
+  it("are suggested by no command of a development build, which would take them from the release installed beside it", () => {
+    const { commands = {} } = buildManifest("development", "1.0.0")
+
+    expect(Object.values(commands).filter((command) => command.suggested_key)).toStrictEqual([])
+  })
+
+  it("leave every command of a development build listed, for keys assigned by hand", () => {
+    expect(Object.keys(buildManifest("development", "1.0.0").commands ?? {})).toStrictEqual(
+      Object.keys(buildManifest("production", "1.0.0").commands ?? {}),
+    )
+  })
 })
 
 describe("the manifest's translations", () => {

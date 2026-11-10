@@ -159,10 +159,15 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
   action: { default_title: "Katip", default_icon: EXTENSION_ICONS },
   background: { service_worker: "background.js", type: "module" },
   options_page: "options/index.html",
+  // Chrome won't give a suggested key to an extension when another one already holds it, even a
+  // disabled one, and its shortcuts page still shows the suggestion as if assigned. A development
+  // build installed beside the release would take the release's keys that way, so it suggests none
   commands: Object.fromEntries(
     Object.entries(commands).map(([name, { description, ...command }]) => [
       name,
-      { ...command, description: localized(description) },
+      mode === "development"
+        ? { description: localized(description) }
+        : { ...command, description: localized(description) },
     ]),
   ),
   // Not left to Chrome: without a key, Chrome takes the ID from the folder the extension is loaded
