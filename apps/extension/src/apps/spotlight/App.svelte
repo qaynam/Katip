@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte"
   import type { Translator } from "#modules/i18n"
-  import { SPOTLIGHT_LAYOUTS, type SpotlightSize } from "#modules/spotlight"
+  import {
+    SPOTLIGHT_LAYOUTS,
+    SPOTLIGHT_SEARCH_HEIGHT,
+    type SpotlightSize,
+  } from "#modules/spotlight"
   import type { ColorScheme, SpaceTheme } from "#modules/theme"
   import type { SpotlightMode, SpotlightResult } from "#protocol"
   import ResultRow from "./components/ResultRow.svelte"
@@ -20,9 +24,14 @@
     close: () => void
     translator: Translator
     size: SpotlightSize
+    /**
+     * Shrinks the window to the search field, or opens it out again. Called only for a size
+     * whose window collapses.
+     */
+    setCollapsed: (collapsed: boolean) => void
   }
 
-  const { connection, faviconUrl, close, translator, size }: Props = $props()
+  const { connection, faviconUrl, close, translator, size, setCollapsed }: Props = $props()
   const t = $derived(translator.t)
 
   const RESULTS_ID = "spotlight-results"
@@ -44,6 +53,12 @@
   $effect(() => watchSystemScheme((scheme) => (systemScheme = scheme)))
 
   const appearance = $derived(spotlightAppearance(spaceTheme, systemScheme))
+  const collapses = $derived(SPOTLIGHT_LAYOUTS[size].collapses)
+  // Until something is typed, commands are asked for, or there is something to say
+  const isCollapsed = $derived(collapses && mode === "All" && query === "" && notice === null)
+  $effect(() => {
+    if (collapses) setCollapsed(isCollapsed)
+  })
   const hasMatches = $derived(results.some(isMatchedCandidate))
   const selectedCompletion = $derived.by(() => {
     const selected = results[selectedIndex]
@@ -156,9 +171,7 @@
 <div
   class="spotlight"
   data-scheme={appearance.scheme}
-  data-size={size}
-  style:--search-height="{SPOTLIGHT_LAYOUTS[size].searchHeight}px"
-  style:--row-height="{SPOTLIGHT_LAYOUTS[size].rowHeight}px"
+  style:--search-height="{SPOTLIGHT_SEARCH_HEIGHT}px"
   style:--background={appearance.background}
   style:--text={appearance.text}
   style:--text-muted={appearance.mutedText}
@@ -179,7 +192,7 @@
         aria-label={mode === "Actions"
           ? t("spotlight.commands.label")
           : t("spotlight.search.label")}
-        aria-expanded="true"
+        aria-expanded={!isCollapsed}
         aria-controls={RESULTS_ID}
         aria-autocomplete="list"
         aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
@@ -197,58 +210,61 @@
       <span class="spinner" class:visible={isSearching && hasLoaded} aria-hidden="true"></span>
     </div>
 
-    <div class="body">
-      {#if !hasLoaded}
-        <p class="message" role="status">{t("spotlight.loading")}</p>
-      {:else if !hasMatches}
-        <p class="message" role="status">
-          {mode === "Actions"
-            ? t("spotlight.empty.noMatchingCommands")
-            : query.trim() === ""
-              ? t("spotlight.empty.noRecentTabs")
-              : t("spotlight.empty.noMatches")}
-        </p>
+    {#if !isCollapsed}
+      <div class="body">
+        {#if !hasLoaded}
+          <p class="message" role="status">{t("spotlight.loading")}</p>
+        {:else if !hasMatches}
+          <p class="message" role="status">
+            {mode === "Actions"
+              ? t("spotlight.empty.noMatchingCommands")
+              : query.trim() === ""
+                ? t("spotlight.empty.noRecentTabs")
+                : t("spotlight.empty.noMatches")}
+          </p>
+        {/if}
+        {#if results.length > 0}
+          <div
+            bind:this={list}
+            id={RESULTS_ID}
+            class="results"
+            role="listbox"
+            aria-label={t("spotlight.results.label")}
+          >
+            {#each results as result, index (index)}
+              <ResultRow
+                id={optionId(index)}
+                {result}
+                isSelected={index === selectedIndex}
+                now={respondedAt}
+                {translator}
+                showsKind={mode === "All"}
+                {faviconUrl}
+                onchoose={() => choose(result)}
+                onpoint={() => (selectedIndex = index)}
+              />
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      {#if notice !== null}
+        <p class="notice" role="alert">{notice}</p>
       {/if}
-      {#if results.length > 0}
-        <div
-          bind:this={list}
-          id={RESULTS_ID}
-          class="results"
-          role="listbox"
-          aria-label={t("spotlight.results.label")}
+
+      <footer class="hints" aria-hidden="true">
+        {#if selectedCompletion !== null}
+          <span><kbd>tab</kbd>{t("spotlight.hint.complete")}</span>
+        {:else if mode === "All" && query === ""}
+          <span><kbd>tab</kbd>{t("spotlight.hint.commands")}</span>
+        {/if}
+        <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>
+        <span><kbd>↵</kbd>{t("spotlight.hint.open")}</span>
+        <span
+          ><kbd>esc</kbd>{mode === "Actions" ? t("spotlight.hint.back") : t("common.close")}</span
         >
-          {#each results as result, index (index)}
-            <ResultRow
-              id={optionId(index)}
-              {result}
-              isSelected={index === selectedIndex}
-              now={respondedAt}
-              {translator}
-              showsKind={mode === "All"}
-              detailBesideTitle={size === "Compact"}
-              {faviconUrl}
-              onchoose={() => choose(result)}
-              onpoint={() => (selectedIndex = index)}
-            />
-          {/each}
-        </div>
-      {/if}
-    </div>
-
-    {#if notice !== null}
-      <p class="notice" role="alert">{notice}</p>
+      </footer>
     {/if}
-
-    <footer class="hints" aria-hidden="true">
-      {#if selectedCompletion !== null}
-        <span><kbd>tab</kbd>{t("spotlight.hint.complete")}</span>
-      {:else if mode === "All" && query === ""}
-        <span><kbd>tab</kbd>{t("spotlight.hint.commands")}</span>
-      {/if}
-      <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>
-      <span><kbd>↵</kbd>{t("spotlight.hint.open")}</span>
-      <span><kbd>esc</kbd>{mode === "Actions" ? t("spotlight.hint.back") : t("common.close")}</span>
-    </footer>
   </main>
 </div>
 
@@ -256,13 +272,6 @@
   .spotlight {
     --selected-surface: color-mix(in srgb, var(--accent) 24%, transparent);
     --icon-tile: color-mix(in srgb, var(--text) 8%, transparent);
-
-    --query-size: 20px;
-    --row-padding-block: 6px;
-    --row-gap: 12px;
-    --title-size: 14px;
-    --detail-size: 12px;
-    --icon-tile-size: 28px;
 
     box-sizing: border-box;
     height: 100vh;
@@ -272,24 +281,6 @@
     font-size: 13px;
     line-height: 1.35;
     -webkit-font-smoothing: antialiased;
-  }
-
-  .spotlight[data-size="Compact"] {
-    --query-size: 17px;
-    --row-padding-block: 4px;
-    --row-gap: 10px;
-    --title-size: 13px;
-    --detail-size: 12px;
-    --icon-tile-size: 24px;
-  }
-
-  .spotlight[data-size="Large"] {
-    --query-size: 23px;
-    --row-padding-block: 8px;
-    --row-gap: 14px;
-    --title-size: 15.5px;
-    --detail-size: 13px;
-    --icon-tile-size: 32px;
   }
 
   .spotlight[data-scheme="light"] {
@@ -350,7 +341,7 @@
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-size: var(--query-size);
+    font-size: 20px;
     font-weight: 500;
     caret-color: var(--accent);
   }

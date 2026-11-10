@@ -454,6 +454,7 @@ describe("settings", () => {
       checkForUpdates: false,
       bangs: false,
       spotlightSize: "Large",
+      spotlightPosition: { x: 0.5, y: 0.3 },
     } as const
 
     expect(exported(sourcesWith({ settings })).settings).toStrictEqual({

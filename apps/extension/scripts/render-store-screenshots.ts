@@ -16,6 +16,7 @@ import { extensionWorkerOf, launchWithExtension } from "../e2e/browser-launch.ts
 import { EXTENSION_DIR } from "../e2e/extension-dir.ts"
 import { sidepanel as enSidepanel } from "../src/modules/i18n/catalogs/en/sidepanel.ts"
 import { sidepanel as jaSidepanel } from "../src/modules/i18n/catalogs/ja/sidepanel.ts"
+import { DEFAULT_SPOTLIGHT_POSITION } from "../src/modules/spotlight/spotlight-size.ts"
 import { spotlightBoundsOver } from "../src/modules/spotlight/window-placement.ts"
 import {
   CANVAS,
@@ -55,7 +56,7 @@ const OUTPUT_DIR = fromRoot("store")
 const ARC_SIDEBAR_FIXTURE = fromRoot("src/modules/arc-import/fixtures/arc-sidebar.json")
 
 /** Where Katip opens Spotlight's window over the browser window in the screenshots. */
-const SPOTLIGHT = spotlightBoundsOver(STAGE, "Normal")
+const SPOTLIGHT = spotlightBoundsOver(STAGE, "Normal", DEFAULT_SPOTLIGHT_POSITION)
 
 const SIDEPANEL_LABELS = { en: enSidepanel, ja: jaSidepanel } as const
 

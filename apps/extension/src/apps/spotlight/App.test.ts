@@ -4,6 +4,7 @@ import { tick } from "svelte"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { type Locale, makeTranslator } from "#modules/i18n"
 import { SpaceName } from "#modules/space"
+import type { SpotlightSize } from "#modules/spotlight"
 import { TabId } from "#platform/browser"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
 import App from "./App.svelte"
@@ -50,19 +51,25 @@ const respondByMode = (query: string, mode: SpotlightMode) =>
 
 const threeTabs = [tab(1, "Mail"), tab(2, "Calendar"), tab(3, "Docs")]
 
-const renderSpotlight = (options: FakeConnectionOptions = {}, locale: Locale = "en") => {
+const renderSpotlight = (
+  options: FakeConnectionOptions = {},
+  locale: Locale = "en",
+  size: SpotlightSize = "Normal",
+) => {
   const connection = createFakeConnection(options)
   const close = vi.fn()
+  const setCollapsed = vi.fn<(collapsed: boolean) => void>()
   render(App, {
     props: {
       connection,
       faviconUrl: () => null,
       close,
       translator: makeTranslator(locale),
-      size: "Normal",
+      size,
+      setCollapsed,
     },
   })
-  return { connection, close, input: screen.getByRole("combobox") }
+  return { connection, close, setCollapsed, input: screen.getByRole("combobox") }
 }
 
 const optionNames = () => screen.getAllByRole("option").map((option) => option.textContent ?? "")
@@ -77,6 +84,45 @@ const settle = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   await tick()
 }
+
+describe("a compact Spotlight", () => {
+  it("shows the search field alone until something is typed, then opens out to the results", async () => {
+    const { connection, setCollapsed, input } = renderSpotlight({}, "en", "Compact")
+    await connection.answer("", threeTabs)
+    await settle()
+    const whileEmpty = [screen.queryAllByRole("option").length, setCollapsed.mock.lastCall]
+
+    type(input, "Mail")
+    await connection.answer("Mail", [tab(1, "Mail")])
+    await settle()
+
+    expect([
+      whileEmpty,
+      [screen.queryAllByRole("option").length, setCollapsed.mock.lastCall],
+    ]).toStrictEqual([
+      [0, [true]],
+      [1, [false]],
+    ])
+  })
+
+  it("opens out for the commands, asked for with Tab", async () => {
+    const { connection, setCollapsed, input } = renderSpotlight({}, "en", "Compact")
+    await connection.answer("", threeTabs)
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Tab" })
+
+    expect(setCollapsed.mock.lastCall).toStrictEqual([false])
+  })
+
+  it("never collapses at the normal size", async () => {
+    const { connection, setCollapsed } = renderSpotlight()
+    await connection.answer("", threeTabs)
+    await settle()
+
+    expect([screen.getAllByRole("option").length, setCollapsed.mock.calls]).toStrictEqual([3, []])
+  })
+})
 
 describe("on opening", () => {
   it("searches with an empty query and shows loading until the response arrives", () => {

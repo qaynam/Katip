@@ -18,6 +18,7 @@
     type Settings,
     type SettingsPatch,
   } from "#modules/settings"
+  import { DEFAULT_SPOTLIGHT_POSITION } from "#modules/spotlight"
   import { appearanceOf, type ColorScheme } from "#modules/theme"
   import { Updates, type UpdateStatus } from "#modules/updates"
   import { Tabs } from "#platform/browser"
@@ -42,6 +43,7 @@
   import SettingRow from "./SettingRow.svelte"
   import SettingsSection from "./SettingsSection.svelte"
   import SiteCommandsSection from "./SiteCommandsSection.svelte"
+  import SpotlightPositionPicker from "./SpotlightPositionPicker.svelte"
   import SpotlightSizePicker from "./SpotlightSizePicker.svelte"
   import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
   import ShortcutRow from "./ShortcutRow.svelte"
@@ -574,6 +576,21 @@
               onchange={(spotlightSize) => save({ spotlightSize })}
             />
           </SettingsSection>
+          <SettingsSection>
+            <SpotlightPositionPicker
+              label={t("options.spotlight.position.label")}
+              instructions={t("options.spotlight.position.instructions")}
+              valueText={(across, down) => t("options.spotlight.position.value", { across, down })}
+              size={current.spotlightSize}
+              value={current.spotlightPosition}
+              onchange={(spotlightPosition) => save({ spotlightPosition })}
+            />
+            <div class="section-actions">
+              <PushButton onclick={() => save({ spotlightPosition: DEFAULT_SPOTLIGHT_POSITION })}>
+                {t("options.spotlight.position.reset")}
+              </PushButton>
+            </div>
+          </SettingsSection>
           {#if searchesHistory !== null}
             <SettingsSection footnote={t("options.spotlight.history.footnote")}>
               <SettingRow label={t("options.spotlight.history.label")}>
@@ -659,6 +676,11 @@
 </div>
 
 <style>
+  .section-actions {
+    display: flex;
+    margin-top: 12px;
+  }
+
   .katip-options {
     isolation: isolate;
     display: grid;

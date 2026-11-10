@@ -54,7 +54,13 @@ export const options: CatalogSection<"options"> = {
   "options.spotlight.size.Compact": "紧凑",
   "options.spotlight.size.Normal": "标准",
   "options.spotlight.size.Large": "大",
-  "options.spotlight.size.footnote": "下次打开 Spotlight 时生效。紧凑模式下，每条结果只占一行。",
+  "options.spotlight.size.footnote":
+    "下次打开 Spotlight 时生效。紧凑模式下，输入之前只显示搜索框，输入后再展开。",
+  "options.spotlight.position.label": "位置",
+  "options.spotlight.position.instructions":
+    "把 Spotlight 拖到你希望它在浏览器窗口上打开的位置，或选中后用方向键移动。它会停在中央和边缘。",
+  "options.spotlight.position.value": "水平 {across}%，垂直 {down}%",
+  "options.spotlight.position.reset": "恢复默认位置",
   "options.spotlight.history.label": "同时搜索浏览历史记录",
   "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
   "options.spotlight.history.denied": "未获得访问浏览历史记录的权限。",

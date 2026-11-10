@@ -7,7 +7,7 @@ const decodeStored = Schema.decodeUnknownSync(Settings)
 const encodeForStorage = Schema.encodeSync(Settings)
 
 describe("defaults", () => {
-  it("start with new tabs on top, update checks and bangs on, every other feature off, the browser's language and Spotlight at its normal size", () => {
+  it("start with new tabs on top, update checks and bangs on, every other feature off, the browser's language and Spotlight at its normal size and place", () => {
     expect(defaultSettings).toStrictEqual({
       newTabsOnTop: true,
       showAllOpenTabsInCollapsedFolders: false,
@@ -19,6 +19,7 @@ describe("defaults", () => {
       checkForUpdates: true,
       bangs: true,
       spotlightSize: "Normal",
+      spotlightPosition: { x: 0.5, y: 0.3 },
     })
   })
 })
@@ -36,6 +37,7 @@ describe("reading stored settings", () => {
       checkForUpdates: false,
       bangs: false,
       spotlightSize: "Compact",
+      spotlightPosition: { x: 0.2, y: 0.6 },
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)
@@ -71,6 +73,12 @@ describe("reading stored settings", () => {
     const settings = decodeStored({ autoArchive: true, newTabsOnTop: false })
 
     expect(settings).toStrictEqual({ ...defaultSettings, newTabsOnTop: false })
+  })
+
+  it("with a Spotlight position outside the window, opens Spotlight where it opens by default", () => {
+    const settings = decodeStored({ spotlightPosition: { x: 1.5, y: 0.3 }, syncTabGroups: true })
+
+    expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
   })
 
   it("with a Spotlight size this version doesn't know, opens Spotlight at its normal size", () => {

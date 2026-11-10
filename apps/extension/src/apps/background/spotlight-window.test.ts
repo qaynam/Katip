@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Layer, Option, type Scope } from "effect"
 import { SettingsRepository } from "#modules/settings"
-import { spotlightBoundsOver } from "#modules/spotlight"
+import { DEFAULT_SPOTLIGHT_POSITION, spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import { callerWindowOfSpotlight } from "#protocol"
@@ -48,22 +48,51 @@ describe("opening Spotlight", () => {
           yield* openSpotlight(windowId)
 
           const [popup] = yield* popupWindows
-          expect(popup?.bounds).toStrictEqual(Option.some(spotlightBoundsOver(bounds, "Normal")))
+          expect(popup?.bounds).toStrictEqual(
+            Option.some(spotlightBoundsOver(bounds, "Normal", DEFAULT_SPOTLIGHT_POSITION)),
+          )
         }),
       ),
     )
 
-    it.effect("opens at the size chosen in the settings", () =>
+    it.effect("opens at the size and in the place chosen in the settings", () =>
       inBackground(
         Effect.gen(function* () {
           const fake = yield* FakeBrowser
           const { windowId } = yield* fake.seedWindow({ tabs: [{}], bounds })
-          yield* SettingsRepository.use((settings) => settings.update({ spotlightSize: "Large" }))
+          const position = { x: 0.1, y: 0.8 }
+          yield* SettingsRepository.use((settings) =>
+            settings.update({ spotlightSize: "Large", spotlightPosition: position }),
+          )
 
           yield* openSpotlight(windowId)
 
           const [popup] = yield* popupWindows
-          expect(popup?.bounds).toStrictEqual(Option.some(spotlightBoundsOver(bounds, "Large")))
+          expect(popup?.bounds).toStrictEqual(
+            Option.some(spotlightBoundsOver(bounds, "Large", position)),
+          )
+        }),
+      ),
+    )
+
+    it.effect("opens compact as the search field alone, where its full window would start", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{}], bounds })
+          yield* SettingsRepository.use((settings) => settings.update({ spotlightSize: "Compact" }))
+
+          yield* openSpotlight(windowId)
+
+          const [popup] = yield* popupWindows
+          const full = spotlightBoundsOver(bounds, "Compact", DEFAULT_SPOTLIGHT_POSITION)
+          const opened = Option.getOrThrow(popup?.bounds ?? Option.none())
+          expect([opened.left, opened.top, opened.width]).toStrictEqual([
+            full.left,
+            full.top,
+            full.width,
+          ])
+          expect(opened.height).toBeLessThan(120)
         }),
       ),
     )

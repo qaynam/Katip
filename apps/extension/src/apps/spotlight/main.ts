@@ -2,6 +2,7 @@ import { Effect, Layer, Option } from "effect"
 import { mount } from "svelte"
 import { makeTranslator, resolveLocale } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
+import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT } from "#modules/spotlight"
 import { Storage, WindowId } from "#platform/browser"
 import { callerWindowOfSpotlight, SPOTLIGHT_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
@@ -42,6 +43,7 @@ const callerWindowId = await Option.match(callerWindowOfSpotlight(location.href)
   onNone: lastFocusedNormalWindow,
 })
 const { locale, spotlightSize } = await settings
+const spotlightWindow = await chrome.windows.getCurrent()
 const translator = makeTranslator(resolveLocale(locale, navigator.languages))
 document.documentElement.lang = translator.languageTag
 
@@ -56,6 +58,16 @@ if (callerWindowId === null) {
       close: () => window.close(),
       translator,
       size: spotlightSize,
+      setCollapsed: (collapsed: boolean) => {
+        if (spotlightWindow.id === undefined) return
+        // What the window has beyond the page is its title bar, whose height differs by system
+        const titleBar = window.outerHeight - window.innerHeight
+        void chrome.windows.update(spotlightWindow.id, {
+          height: collapsed
+            ? SPOTLIGHT_SEARCH_HEIGHT + titleBar
+            : SPOTLIGHT_LAYOUTS[spotlightSize].window.height,
+        })
+      },
     },
   })
 }

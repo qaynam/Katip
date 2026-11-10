@@ -10,14 +10,18 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 - When GitHub is limiting requests from your network, checking for updates in the settings says so and when to try again, instead of saying GitHub couldn’t be reached.
 - Spotlight fills its window, without a margin and frame of its own inside it.
-- Spotlight comes in three sizes, Compact, Normal and Large, picked in the settings from a picture of each. Compact puts each result on a single line.
+- Spotlight comes in three sizes, picked in the settings from a picture of each: Compact shows the search field alone until you type, Normal is as before, and Large is wider.
+- Where Spotlight opens can be chosen in the settings, by dragging it over a picture of the browser window. It comes to rest at the center and the edges.
+- The Space menu button and the button that clears temporary tabs are always shown, not only when the pointer is over the side panel.
 - A welcome tour opens when Katip is installed. It shows where Katip lives, checks that Chrome gave Katip the keyboard shortcuts it suggests and helps fix any that went to another extension, then shows Favorites, themes, live folders, bangs and importing from Arc, each with an animated picture. The steps after setting up can be skipped, and the tour can be taken again from the settings.
 
 ### 日本語
 
 - GitHub がネットワークからのリクエストを制限しているときは、設定のアップデート確認が「GitHub に接続できませんでした」ではなく、制限されていることと、いつ試し直せばよいかを表示します。
 - Spotlight がウィンドウいっぱいに広がるようにしました。内側の余白と枠をなくしました。
-- Spotlight の大きさを、コンパクト・標準・大きめの 3 つから選べるようにしました。設定で、それぞれの見た目を描いた絵から選びます。コンパクトでは、結果を 1 件ずつ 1 行にまとめます。
+- Spotlight の大きさを 3 つから選べるようにしました。設定で、それぞれを描いた絵から選びます。コンパクトは打ち始めるまで検索欄だけを表示し、標準はこれまでどおり、大きめは横に広くなります。
+- Spotlight を開く位置を設定で選べるようにしました。ブラウザのウィンドウを描いた絵の上で Spotlight をドラッグします。中央と端ではぴたりと止まります。
+- Space のメニューのボタンと、一時タブを片付けるボタンを、ポインタがサイドパネルの上にないときも表示するようにしました。
 - Katip を入れたときに、ようこそツアーが開くようにしました。Katip の場所を案内し、Katip が求めるキーボードショートカットを Chrome が割り当てたかを確かめ、ほかの拡張機能に取られたものを直す手助けをします。続いて Favorites、テーマ、ライブフォルダ、bangs、Arc からの読み込みを、動く絵とともに紹介します。設定のあとのステップは飛ばせ、ツアーは設定からもう一度見られます。
 
 ## 1.5.0 — 2026-11-10

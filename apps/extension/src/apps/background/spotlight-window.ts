@@ -1,16 +1,21 @@
 import { Array, Effect, Option } from "effect"
 import { SettingsRepository } from "#modules/settings"
-import { spotlightBoundsOver } from "#modules/spotlight"
-import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
+import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT, spotlightBoundsOver } from "#modules/spotlight"
+import { type BrowserTab, Tabs, type WindowBounds, type WindowId, Windows } from "#platform/browser"
 import { callerWindowOfSpotlight, SPOTLIGHT_PAGE_PATH, spotlightPageUrl } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { urlOf } from "./tab-admission"
+
+// The title bar's height differs between systems, which only the page can measure. It sets the
+// height exactly once loaded; this keeps the window from opening visibly taller than that
+const TITLE_BAR_ALLOWANCE = 28
 
 const isSpotlightPage = (extensionOrigin: string) => (tab: BrowserTab) =>
   urlOf(tab).startsWith(new URL(SPOTLIGHT_PAGE_PATH, extensionOrigin).href)
 
 /**
- * Opens Spotlight over the `callerWindowId` window, at the size chosen in the settings.
+ * Opens Spotlight over the `callerWindowId` window, at the size and in the place chosen in the
+ * settings.
  *
  * @remarks
  * If Spotlight is already open for that window, brings it to the front instead of opening another.
@@ -34,14 +39,17 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowI
   }
   const caller = yield* windows.get(callerWindowId)
   if (!Option.contains(caller.type, "normal")) return
-  const { spotlightSize } = yield* (yield* SettingsRepository).get
+  const { spotlightSize, spotlightPosition } = yield* (yield* SettingsRepository).get
+  const boundsOver = (callerBounds: WindowBounds) => {
+    const full = spotlightBoundsOver(callerBounds, spotlightSize, spotlightPosition)
+    return SPOTLIGHT_LAYOUTS[spotlightSize].collapses
+      ? { ...full, height: SPOTLIGHT_SEARCH_HEIGHT + TITLE_BAR_ALLOWANCE }
+      : full
+  }
   yield* windows.create({
     url: spotlightPageUrl(origin, callerWindowId),
     type: "popup",
     focused: true,
-    ...Option.getOrElse(
-      Option.map(caller.bounds, (bounds) => spotlightBoundsOver(bounds, spotlightSize)),
-      () => ({}),
-    ),
+    ...Option.getOrElse(Option.map(caller.bounds, boundsOver), () => ({})),
   })
 })

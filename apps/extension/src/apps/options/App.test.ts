@@ -853,6 +853,39 @@ describe("Spotlight size", () => {
   })
 })
 
+describe("Spotlight position", () => {
+  const spotlightIn = () => screen.getByRole("button", { name: /^Position: / })
+
+  it("starts centered across and above the middle", async () => {
+    await renderLoaded()
+    await openCategory("Spotlight")
+
+    expect(spotlightIn().getAttribute("aria-label")).toBe("Position: 50% across, 30% down")
+  })
+
+  it("moves with the arrow keys, saving at once", async () => {
+    const { readSaved } = await renderLoaded()
+    await openCategory("Spotlight")
+
+    await fireEvent.keyDown(spotlightIn(), { key: "ArrowLeft", shiftKey: true })
+
+    await waitFor(async () => {
+      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.4, y: 0.3 })
+    })
+  })
+
+  it("goes back to where it opens by default", async () => {
+    const { readSaved } = await renderLoaded({ saved: { spotlightPosition: { x: 0, y: 1 } } })
+    await openCategory("Spotlight")
+
+    await fireEvent.click(screen.getByRole("button", { name: "Reset Position" }))
+
+    await waitFor(async () => {
+      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.5, y: 0.3 })
+    })
+  })
+})
+
 describe("bangs", () => {
   it("are on until turned off, which is saved", async () => {
     const { readSaved } = await renderLoaded()

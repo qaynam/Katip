@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { SPOTLIGHT_LAYOUTS, SpotlightSize } from "#modules/spotlight"
+  import {
+    SPOTLIGHT_LAYOUTS,
+    SPOTLIGHT_ROW_HEIGHT,
+    SPOTLIGHT_SEARCH_HEIGHT,
+    SpotlightSize,
+  } from "#modules/spotlight"
 
   let {
     legend,
@@ -22,18 +27,21 @@
   const TITLE_BAR = 28 * SCALE
   const HINTS = 30 * SCALE
 
+  // A compact Spotlight is drawn as it opens, with the search field alone
   const pictureOf = (size: SpotlightSize) => {
     const layout = SPOTLIGHT_LAYOUTS[size]
+    const fullHeight = layout.window.height * SCALE
+    const searchHeight = SPOTLIGHT_SEARCH_HEIGHT * SCALE
+    const height = layout.collapses ? TITLE_BAR + searchHeight : fullHeight
     const width = layout.window.width * SCALE
-    const height = layout.window.height * SCALE
     const x = (VIEW.width - width) / 2
-    const y = (VIEW.height - height) * 0.3
-    const search = { y: y + TITLE_BAR, height: layout.searchHeight * SCALE }
-    const rowHeight = layout.rowHeight * SCALE
+    const y = (VIEW.height - fullHeight) * 0.3
+    const search = { y: y + TITLE_BAR, height: searchHeight }
+    const rowHeight = SPOTLIGHT_ROW_HEIGHT * SCALE
     const rowsTop = search.y + search.height + 1.2
-    const rowCount = Math.floor((y + height - HINTS - rowsTop) / rowHeight)
+    const rowCount = layout.collapses ? 0 : Math.floor((y + height - HINTS - rowsTop) / rowHeight)
     const rows = Array.from({ length: rowCount }, (_, index) => rowsTop + index * rowHeight)
-    return { x, y, width, height, search, rowHeight, rows, detailBesideTitle: size === "Compact" }
+    return { x, y, width, height, search, rowHeight, rows }
   }
 </script>
 
@@ -107,41 +115,22 @@
               height={icon}
               rx="0.8"
             />
-            {#if picture.detailBesideTitle}
-              <rect
-                class="ink"
-                x={picture.x + 5.5 + icon}
-                y={middle - 0.9}
-                width={picture.width * 0.3}
-                height="1.8"
-                rx="0.9"
-              />
-              <rect
-                class="faint-ink"
-                x={picture.x + 7 + icon + picture.width * 0.3}
-                y={middle - 0.8}
-                width={picture.width * 0.24}
-                height="1.6"
-                rx="0.8"
-              />
-            {:else}
-              <rect
-                class="ink"
-                x={picture.x + 5.5 + icon}
-                y={middle - 2.4}
-                width={picture.width * 0.42}
-                height="1.8"
-                rx="0.9"
-              />
-              <rect
-                class="faint-ink"
-                x={picture.x + 5.5 + icon}
-                y={middle + 0.9}
-                width={picture.width * 0.3}
-                height="1.6"
-                rx="0.8"
-              />
-            {/if}
+            <rect
+              class="ink"
+              x={picture.x + 5.5 + icon}
+              y={middle - 2.4}
+              width={picture.width * 0.42}
+              height="1.8"
+              rx="0.9"
+            />
+            <rect
+              class="faint-ink"
+              x={picture.x + 5.5 + icon}
+              y={middle + 0.9}
+              width={picture.width * 0.3}
+              height="1.6"
+              rx="0.8"
+            />
           {/each}
         </svg>
         <span class="choice">
