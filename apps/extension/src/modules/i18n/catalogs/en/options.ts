@@ -22,6 +22,8 @@ export const options = {
     "Version {version} is available. Download it from its release page and load it over this one.",
   "options.updates.openRelease": "Open release page",
   "options.updates.failed": "Couldn’t reach GitHub. Wait a moment, then try again.",
+  "options.updates.limited":
+    "GitHub is limiting requests from your network for now. Try again after {time}.",
   "options.updates.automatic.label": "Check for updates automatically",
   "options.updates.automatic.description":
     "The first time the side panel opens after the browser starts, Katip asks GitHub for its latest release and tells you if it’s newer. Nothing from Katip is sent.",

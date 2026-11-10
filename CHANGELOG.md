@@ -4,6 +4,16 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
+## Unreleased
+
+### English
+
+- When GitHub is limiting requests from your network, checking for updates in the settings says so and when to try again, instead of saying GitHub couldn’t be reached.
+
+### 日本語
+
+- GitHub がネットワークからのリクエストを制限しているときは、設定のアップデート確認が「GitHub に接続できませんでした」ではなく、制限されていることと、いつ試し直せばよいかを表示します。
+
 ## 1.5.0 — 2026-11-10
 
 ### English

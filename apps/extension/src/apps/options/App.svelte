@@ -109,6 +109,7 @@
     | { readonly _tag: "Checking" }
     | { readonly _tag: "Checked"; readonly status: UpdateStatus }
     | { readonly _tag: "Failed" }
+    | { readonly _tag: "Limited"; readonly until: number }
   let updateCheck = $state.raw<UpdateCheck>({ _tag: "NotChecked" })
 
   const translator = $derived(
@@ -141,6 +142,9 @@
   const dateOf = (isoDate: string) =>
     new Intl.DateTimeFormat(translator.languageTag, { dateStyle: "long" }).format(new Date(isoDate))
 
+  const timeOf = (epochMillis: number) =>
+    new Intl.DateTimeFormat(translator.languageTag, { timeStyle: "short" }).format(epochMillis)
+
   const availableRelease = $derived(
     updateCheck._tag === "Checked" && updateCheck.status._tag === "Available"
       ? updateCheck.status.release
@@ -155,6 +159,8 @@
         return t("options.updates.checking")
       case "Failed":
         return t("options.updates.failed")
+      case "Limited":
+        return t("options.updates.limited", { time: timeOf(updateCheck.until) })
       case "Checked":
         return updateCheck.status._tag === "UpToDate"
           ? t("options.updates.upToDate")
@@ -321,10 +327,15 @@
 
   const checkForUpdates = async () => {
     updateCheck = { _tag: "Checking" }
-    const checked = await runtime.runPromiseExit(Updates.use((updates) => updates.check))
-    updateCheck = Exit.isSuccess(checked)
-      ? { _tag: "Checked", status: checked.value }
-      : { _tag: "Failed" }
+    const checked = await runtime.runPromiseExit(
+      Updates.use((updates) => updates.check).pipe(
+        Effect.map((status): UpdateCheck => ({ _tag: "Checked", status })),
+        Effect.catchTag("UpdateCheckLimited", ({ until }) =>
+          Effect.succeed<UpdateCheck>({ _tag: "Limited", until }),
+        ),
+      ),
+    )
+    updateCheck = Exit.isSuccess(checked) ? checked.value : { _tag: "Failed" }
   }
 
   const exportData = async () => {

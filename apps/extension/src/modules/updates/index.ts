@@ -5,4 +5,4 @@ export {
   releaseOfResponse,
   REPOSITORY_URL,
 } from "./release"
-export { UpdateCheckFailed, Updates, type UpdateStatus } from "./updates"
+export { UpdateCheckFailed, UpdateCheckLimited, Updates, type UpdateStatus } from "./updates"

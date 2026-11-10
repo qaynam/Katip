@@ -204,6 +204,20 @@ const renderOptions = async ({
           ),
         ),
       ),
+    /** Makes GitHub turn update checks away, as it does past its rate limit, until `until`. */
+    limitOnGitHub: (until: Date) =>
+      runtime.runPromise(
+        FakeHttp.use((http) =>
+          http.route(LATEST_RELEASE_API_URL, () =>
+            Effect.succeed(
+              httpResponse(403, "{}", {
+                "x-ratelimit-remaining": "0",
+                "x-ratelimit-reset": String(until.getTime() / 1000),
+              }),
+            ),
+          ),
+        ),
+      ),
     githubRequests: () => runtime.runPromise(FakeHttp.use((http) => http.requests)),
   }
 }
@@ -551,6 +565,19 @@ describe("updates", () => {
     await waitFor(async () => {
       expect(await githubRequests()).toHaveLength(2)
     })
+  })
+
+  it("says GitHub is limiting requests rather than unreachable, and when to try again", async () => {
+    const { limitOnGitHub } = await renderLoaded()
+    await limitOnGitHub(new Date(2026, 10, 10, 12, 54))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }))
+
+    expect(
+      await screen.findByText(
+        "GitHub is limiting requests from your network for now. Try again after 12:54 PM.",
+      ),
+    ).toBeTruthy()
   })
 
   it("asks GitHub nothing until the button is pressed", async () => {

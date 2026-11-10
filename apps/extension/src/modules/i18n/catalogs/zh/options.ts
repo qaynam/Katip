@@ -21,6 +21,7 @@ export const options: CatalogSection<"options"> = {
   "options.updates.available": "版本 {version} 已发布。请从发布页面下载，并覆盖当前版本重新加载。",
   "options.updates.openRelease": "打开发布页面",
   "options.updates.failed": "无法连接 GitHub。请稍后再试。",
+  "options.updates.limited": "GitHub 目前正在限制来自你所在网络的请求。请在 {time} 之后再试。",
   "options.updates.automatic.label": "自动检查更新",
   "options.updates.automatic.description":
     "浏览器启动后首次打开侧边栏时，Katip 会向 GitHub 查询最新版本，如有更新会提示你。不会发送任何 Katip 数据。",

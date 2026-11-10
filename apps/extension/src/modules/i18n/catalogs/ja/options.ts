@@ -22,6 +22,8 @@ export const options: CatalogSection<"options"> = {
     "バージョン {version} が出ています。リリースページからダウンロードし、いまの Katip に上書きして読み込んでください。",
   "options.updates.openRelease": "リリースページを開く",
   "options.updates.failed": "GitHub に接続できませんでした。少し待ってからもう一度試してください。",
+  "options.updates.limited":
+    "GitHub がいま、このネットワークからのリクエストを制限しています。{time} を過ぎてからもう一度試してください。",
   "options.updates.automatic.label": "アップデートを自動で確認",
   "options.updates.automatic.description":
     "ブラウザを起動して初めてサイドパネルを開いたときに、GitHub に最新のリリースを問い合わせ、新しいバージョンがあればお知らせします。Katip のデータは何も送りません。",

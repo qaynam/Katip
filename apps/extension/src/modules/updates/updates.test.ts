@@ -1,9 +1,10 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Layer, Option } from "effect"
+import { TestClock } from "effect/testing"
 import { FakeBrowser } from "#platform/browser-testing"
 import { FakeHttp, httpResponse, unreachable } from "#platform/http"
 import { LATEST_RELEASE_API_URL } from "./release"
-import { UpdateCheckFailed, Updates } from "./updates"
+import { UpdateCheckFailed, UpdateCheckLimited, Updates } from "./updates"
 
 const layerFor = (installedVersion: string) =>
   Updates.layer(installedVersion).pipe(
@@ -62,6 +63,40 @@ describe("Checking for updates", () => {
         new UpdateCheckFailed({ reason: "Unreachable" }),
         new UpdateCheckFailed({ reason: "UnexpectedReply" }),
       ])
+    }).pipe(Effect.provide(layerFor("1.2.0"))),
+  )
+
+  it.effect("tells when GitHub limits the requests from the network, and until when", () =>
+    Effect.gen(function* () {
+      yield* FakeHttp.use((http) =>
+        http.route(LATEST_RELEASE_API_URL, () =>
+          Effect.succeed(
+            httpResponse(403, "{}", {
+              "x-ratelimit-remaining": "0",
+              "x-ratelimit-reset": "1794282837",
+            }),
+          ),
+        ),
+      )
+
+      const error = yield* Effect.flip(Updates.use((updates) => updates.check))
+
+      expect(error).toStrictEqual(new UpdateCheckLimited({ until: 1794282837000 }))
+    }).pipe(Effect.provide(layerFor("1.2.0"))),
+  )
+
+  it.effect("counts a limit told by retry-after from the time of the check", () =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(1_000_000)
+      yield* FakeHttp.use((http) =>
+        http.route(LATEST_RELEASE_API_URL, () =>
+          Effect.succeed(httpResponse(429, "{}", { "retry-after": "60" })),
+        ),
+      )
+
+      const error = yield* Effect.flip(Updates.use((updates) => updates.check))
+
+      expect(error).toStrictEqual(new UpdateCheckLimited({ until: 1_060_000 }))
     }).pipe(Effect.provide(layerFor("1.2.0"))),
   )
 

@@ -1,6 +1,6 @@
 import { Clock, Context, Effect, Layer, Option, Schema } from "effect"
 import { Storage } from "#platform/browser"
-import { Http } from "#platform/http"
+import { Http, type HttpResponse } from "#platform/http"
 import { isLaterVersion, LATEST_RELEASE_API_URL, Release, releaseOfResponse } from "./release"
 
 export type UpdateStatus =
@@ -12,6 +12,33 @@ export class UpdateCheckFailed extends Schema.TaggedError<UpdateCheckFailed>()(
   "UpdateCheckFailed",
   { reason: Schema.Literals(["Unreachable", "UnexpectedReply"]) },
 ) {}
+
+/**
+ * GitHub turned the check away because of how many requests came from the same network, which
+ * other apps and people sharing that network count toward as well.
+ */
+export class UpdateCheckLimited extends Schema.TaggedError<UpdateCheckLimited>()(
+  "UpdateCheckLimited",
+  {
+    /** When GitHub takes requests again, in milliseconds since the epoch. */
+    until: Schema.Number,
+  },
+) {}
+
+const secondsIn = (header: string | undefined): Option.Option<number> => {
+  const seconds = Number(header)
+  return header === undefined || !Number.isFinite(seconds) ? Option.none() : Option.some(seconds)
+}
+
+// The signals GitHub documents for its rate limits. A 403 without them is some other refusal
+const limitLiftsAt = (response: HttpResponse, now: number): Option.Option<number> => {
+  if (response.status !== 403 && response.status !== 429) return Option.none()
+  const retryAfter = secondsIn(response.headers["retry-after"])
+  if (Option.isSome(retryAfter)) return Option.some(now + retryAfter.value * 1000)
+  return response.headers["x-ratelimit-remaining"] === "0"
+    ? Option.map(secondsIn(response.headers["x-ratelimit-reset"]), (reset) => reset * 1000)
+    : Option.none()
+}
 
 const LatestCheck = Schema.Struct({ release: Release, checkedAt: Schema.Number })
 type LatestCheck = typeof LatestCheck.Type
@@ -26,12 +53,12 @@ export class Updates extends Context.Service<
   Updates,
   {
     /** Asks GitHub for the latest release now. */
-    readonly check: Effect.Effect<UpdateStatus, UpdateCheckFailed>
+    readonly check: Effect.Effect<UpdateStatus, UpdateCheckFailed | UpdateCheckLimited>
     /**
      * The release to tell about when the side panel opens: a later version than the one installed
      * that hasn't been dismissed. Asks GitHub only for the first time in a browser session.
      */
-    readonly notice: Effect.Effect<Option.Option<Release>, UpdateCheckFailed>
+    readonly notice: Effect.Effect<Option.Option<Release>, UpdateCheckFailed | UpdateCheckLimited>
     /** Stops telling about `version` until the browser restarts. */
     readonly dismiss: (version: string) => Effect.Effect<void>
   }
@@ -57,14 +84,16 @@ export class Updates extends Context.Service<
               credentials: "omit",
             })
             .pipe(Effect.mapError(() => new UpdateCheckFailed({ reason: "Unreachable" })))
+          const checkedAt = yield* Clock.currentTimeMillis
+          const limitLifts = limitLiftsAt(response, checkedAt)
+          if (Option.isSome(limitLifts)) {
+            return yield* new UpdateCheckLimited({ until: limitLifts.value })
+          }
           const release = response.status === 200 ? releaseOfResponse(response.body) : Option.none()
           if (Option.isNone(release)) {
             return yield* new UpdateCheckFailed({ reason: "UnexpectedReply" })
           }
-          const latest: LatestCheck = {
-            release: release.value,
-            checkedAt: yield* Clock.currentTimeMillis,
-          }
+          const latest: LatestCheck = { release: release.value, checkedAt }
           // Not failing the check over it: the answer is already in hand, and the next side panel
           // opened only asks GitHub again
           yield* session
