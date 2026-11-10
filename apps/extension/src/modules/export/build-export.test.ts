@@ -453,6 +453,7 @@ describe("settings", () => {
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
       checkForUpdates: false,
       bangs: false,
+      spotlightSize: "Large",
     } as const
 
     expect(exported(sourcesWith({ settings })).settings).toStrictEqual({

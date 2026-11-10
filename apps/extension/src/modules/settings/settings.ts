@@ -1,6 +1,7 @@
 import { Effect, Option, Schema } from "effect"
 import { LocalePreference } from "#modules/i18n"
 import { SpaceId } from "#modules/space"
+import { SpotlightSize } from "#modules/spotlight"
 
 // Not validation of the whole Struct alone: one broken field would reset every field to its
 // default. Falling back per field also copes with values saved by older versions and with fields
@@ -66,6 +67,7 @@ export const Settings = withDefaultsOfAllFields(
     checkForUpdates: withDefault(Schema.Boolean, true),
     /** Whether Spotlight searches a site when a bang from the bundled list is typed, as in `!gh`. */
     bangs: withDefault(Schema.Boolean, true),
+    spotlightSize: withDefault(SpotlightSize, "Normal"),
   }),
 )
 export type Settings = typeof Settings.Type

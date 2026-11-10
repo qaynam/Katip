@@ -50,6 +50,12 @@ export const options: CatalogSection<"options"> = {
     "最後に表示してからこの時間が過ぎた一時タブを閉じて、アーカイブに記録します。アーカイブからはあとで開き直せます。ピン留め・Favorites・音声を再生中・表示中のタブは閉じません。",
 
   "options.spotlight.heading": "Spotlight",
+  "options.spotlight.size.label": "サイズ",
+  "options.spotlight.size.Compact": "コンパクト",
+  "options.spotlight.size.Normal": "標準",
+  "options.spotlight.size.Large": "大きめ",
+  "options.spotlight.size.footnote":
+    "次に Spotlight を開いたときから変わります。コンパクトでは、結果を 1 件ずつ 1 行にまとめます。",
   "options.spotlight.history.label": "閲覧履歴も検索する",
   "options.spotlight.history.footnote":
     "オンにすると、閲覧履歴を読む許可を求めます。オフにすると、その許可を外します。",

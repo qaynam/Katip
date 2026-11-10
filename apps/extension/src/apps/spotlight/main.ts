@@ -1,7 +1,7 @@
 import { Effect, Layer, Option } from "effect"
 import { mount } from "svelte"
 import { makeTranslator, resolveLocale } from "#modules/i18n"
-import { SettingsRepository } from "#modules/settings"
+import { defaultSettings, SettingsRepository } from "#modules/settings"
 import { Storage, WindowId } from "#platform/browser"
 import { callerWindowOfSpotlight, SPOTLIGHT_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
@@ -28,12 +28,11 @@ const lastFocusedNormalWindow = async () => {
   return window.id === undefined ? null : WindowId.make(window.id)
 }
 
-// Falls back to the browser's language, so that Spotlight still opens when the settings can't be
-// read
-const localePreference = Effect.runPromise(
-  SettingsRepository.use((settings) => settings.get).pipe(
-    Effect.map((settings) => settings.locale),
-    Effect.orElseSucceed(() => "auto" as const),
+// Falls back to the defaults, the browser's language among them, so that Spotlight still opens
+// when the settings can't be read
+const settings = Effect.runPromise(
+  SettingsRepository.use((repository) => repository.get).pipe(
+    Effect.orElseSucceed(() => defaultSettings),
     Effect.provide(SettingsRepository.layer.pipe(Layer.provide(Storage.layer))),
   ),
 )
@@ -42,7 +41,8 @@ const callerWindowId = await Option.match(callerWindowOfSpotlight(location.href)
   onSome: (windowId) => Promise.resolve(windowId),
   onNone: lastFocusedNormalWindow,
 })
-const translator = makeTranslator(resolveLocale(await localePreference, navigator.languages))
+const { locale, spotlightSize } = await settings
+const translator = makeTranslator(resolveLocale(locale, navigator.languages))
 document.documentElement.lang = translator.languageTag
 
 if (callerWindowId === null) {
@@ -55,6 +55,7 @@ if (callerWindowId === null) {
       faviconUrl,
       close: () => window.close(),
       translator,
+      size: spotlightSize,
     },
   })
 }

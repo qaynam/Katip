@@ -14,6 +14,8 @@
     translator: Translator
     /** Whether to show the kind at the right end. Hidden when every row is known to be one kind. */
     showsKind?: boolean
+    /** Puts the detail on the title's line, after it, rather than on a line of its own. */
+    detailBesideTitle?: boolean
     faviconUrl: FaviconResolver
     onchoose: () => void
     /** Called when the mouse points at the row, to move the selection to it. */
@@ -27,6 +29,7 @@
     now,
     translator,
     showsKind = true,
+    detailBesideTitle = false,
     faviconUrl,
     onchoose,
     onpoint,
@@ -49,7 +52,7 @@
   onclick={onchoose}
 >
   <ResultIcon icon={display.icon} {faviconUrl} />
-  <span class="text">
+  <span class="text" class:beside={detailBesideTitle}>
     <span class="title">{display.title}</span>
     {#if display.detail !== ""}
       <span class="detail">{display.detail}</span>
@@ -67,10 +70,10 @@
   .row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--row-gap, 12px);
     width: 100%;
-    min-height: 48px;
-    padding: 6px 12px 6px 10px;
+    min-height: var(--row-height, 48px);
+    padding: var(--row-padding-block, 6px) 12px var(--row-padding-block, 6px) 10px;
     border: none;
     border-radius: 10px;
     background: transparent;
@@ -93,6 +96,23 @@
     min-width: 0;
   }
 
+  .text.beside {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  /* The title keeps its whole width first; the detail takes what is left, down to nothing */
+  .text.beside .title {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .text.beside .detail {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   .title,
   .detail {
     overflow: hidden;
@@ -101,13 +121,13 @@
   }
 
   .title {
-    font-size: 14px;
+    font-size: var(--title-size, 14px);
     font-weight: 600;
   }
 
   .detail {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--detail-size, 12px);
   }
 
   .kind {

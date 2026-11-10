@@ -16,7 +16,7 @@ Katip turns Chrome's side panel into a sidebar that organizes your tabs into Spa
 - **Split view**: drop one tab onto another to open them side by side, and pin the pair to reopen it later (Chrome 155 or later).
 - **Favorites**: the pages you keep at hand in every window, shown as a row of icons at the top. Each opens as a Chrome pinned tab, and stays in Favorites when that tab is closed.
 - **Live folders**: a folder that lists your Gmail inbox or label, or your GitHub review requests, pull requests, issues or mentions, using the session you're already signed in with.
-- **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only. Type a bang such as `!gh katip` to search a site directly, and add commands of your own in the settings that open a page or search a site by a keyword.
+- **Spotlight**: one search box for open tabs, pins, Spaces, history and the web, plus commands such as "Copy URL", "Pin tab" or "Move to Space". Press Tab on an empty box to search commands only. Type a bang such as `!gh katip` to search a site directly, and add commands of your own in the settings that open a page or search a site by a keyword. Pick its size, from compact to large, in the settings.
 - **Archive**: temporary tabs you haven't used for a while are closed and kept in the archive, so you can bring them back.
 - **Keyboard shortcuts**: open the side panel, Spotlight, and copy the current URL or a Markdown link. Assign your own keys at `chrome://extensions/shortcuts`.
 - **Import and export**: export everything to a versioned JSON file, import it again, or move over from Arc (see below).
@@ -66,7 +66,7 @@ pnpm install
 pnpm dev        # rebuilds apps/extension/dist/ on every change; the loaded extension reloads itself
 ```
 
-Then open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**, and select `apps/extension/dist/`. The development build is named "Katip (dev)".
+Then open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**, and select `apps/extension/dist/`. The development build is named "Katip (dev)". It suggests no keyboard shortcuts, since Chrome would otherwise give them to whichever copy of Katip was installed first and leave the other without; assign its keys at `chrome://extensions/shortcuts` if you want them.
 
 | Command                                       | What it does                                                               |
 | --------------------------------------------- | -------------------------------------------------------------------------- |

@@ -48,6 +48,11 @@ export const options: CatalogSection<"options"> = {
     "超过这段时间未查看的临时标签页会被关闭并保存到归档中，之后可以从归档重新打开。已固定的标签页、收藏的标签页、正在播放音频的标签页以及当前查看的标签页不会被关闭。",
 
   "options.spotlight.heading": "Spotlight",
+  "options.spotlight.size.label": "大小",
+  "options.spotlight.size.Compact": "紧凑",
+  "options.spotlight.size.Normal": "标准",
+  "options.spotlight.size.Large": "大",
+  "options.spotlight.size.footnote": "下次打开 Spotlight 时生效。紧凑模式下，每条结果只占一行。",
   "options.spotlight.history.label": "同时搜索浏览历史记录",
   "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
   "options.spotlight.history.denied": "未获得访问浏览历史记录的权限。",

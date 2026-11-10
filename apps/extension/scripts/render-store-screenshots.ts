@@ -55,9 +55,7 @@ const OUTPUT_DIR = fromRoot("store")
 const ARC_SIDEBAR_FIXTURE = fromRoot("src/modules/arc-import/fixtures/arc-sidebar.json")
 
 /** Where Katip opens Spotlight's window over the browser window in the screenshots. */
-const SPOTLIGHT = spotlightBoundsOver(STAGE)
-/** The margin between Spotlight's window and the panel in it. */
-const SPOTLIGHT_INSET = 10
+const SPOTLIGHT = spotlightBoundsOver(STAGE, "Normal")
 
 const SIDEPANEL_LABELS = { en: enSidepanel, ja: jaSidepanel } as const
 
@@ -422,13 +420,6 @@ const browserWindow = (box: Box, sidebar: string, pages: string | readonly [stri
     ].join(""),
   )
 
-const SPOTLIGHT_PANEL: Box = {
-  left: SPOTLIGHT.left + SPOTLIGHT_INSET,
-  top: SPOTLIGHT.top + SPOTLIGHT_INSET,
-  width: SPOTLIGHT.width - SPOTLIGHT_INSET * 2,
-  height: SPOTLIGHT.height - SPOTLIGHT_INSET * 2,
-}
-
 const screenshotsOf = (captures: Captures, pages: PageCaptures) =>
   [
     {
@@ -440,7 +431,7 @@ const screenshotsOf = (captures: Captures, pages: PageCaptures) =>
       file: "2-spotlight",
       shot: "spotlight",
       window: browserWindow(STAGE, captures.sidebarSpaces, pages.roadmap),
-      overlay: image(captures.spotlight, SPOTLIGHT_PANEL, "floating"),
+      overlay: image(captures.spotlight, SPOTLIGHT, "floating"),
     },
     {
       file: "3-split-view",

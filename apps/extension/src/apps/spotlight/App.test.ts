@@ -54,7 +54,13 @@ const renderSpotlight = (options: FakeConnectionOptions = {}, locale: Locale = "
   const connection = createFakeConnection(options)
   const close = vi.fn()
   render(App, {
-    props: { connection, faviconUrl: () => null, close, translator: makeTranslator(locale) },
+    props: {
+      connection,
+      faviconUrl: () => null,
+      close,
+      translator: makeTranslator(locale),
+      size: "Normal",
+    },
   })
   return { connection, close, input: screen.getByRole("combobox") }
 }

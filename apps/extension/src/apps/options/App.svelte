@@ -41,6 +41,7 @@
   import SettingRow from "./SettingRow.svelte"
   import SettingsSection from "./SettingsSection.svelte"
   import SiteCommandsSection from "./SiteCommandsSection.svelte"
+  import SpotlightSizePicker from "./SpotlightSizePicker.svelte"
   import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
   import ShortcutRow from "./ShortcutRow.svelte"
   import { openChromeShortcutSettings } from "./shortcut-settings"
@@ -555,6 +556,14 @@
             </SettingRow>
           </SettingsSection>
         {:else if selected === "Spotlight"}
+          <SettingsSection footnote={t("options.spotlight.size.footnote")}>
+            <SpotlightSizePicker
+              legend={t("options.spotlight.size.label")}
+              value={current.spotlightSize}
+              labelOf={(size) => t(`options.spotlight.size.${size}`)}
+              onchange={(spotlightSize) => save({ spotlightSize })}
+            />
+          </SettingsSection>
           {#if searchesHistory !== null}
             <SettingsSection footnote={t("options.spotlight.history.footnote")}>
               <SettingRow label={t("options.spotlight.history.label")}>

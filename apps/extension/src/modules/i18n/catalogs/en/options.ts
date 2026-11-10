@@ -50,6 +50,12 @@ export const options = {
     "Temporary tabs you haven’t viewed for this long are closed and saved to the archive, where you can reopen them later. Pinned tabs, Favorites, tabs playing audio, and the tab you’re viewing are never closed.",
 
   "options.spotlight.heading": "Spotlight",
+  "options.spotlight.size.label": "Size",
+  "options.spotlight.size.Compact": "Compact",
+  "options.spotlight.size.Normal": "Normal",
+  "options.spotlight.size.Large": "Large",
+  "options.spotlight.size.footnote":
+    "Takes effect the next time Spotlight opens. Compact puts each result on a single line.",
   "options.spotlight.history.label": "Search browsing history too",
   "options.spotlight.history.footnote":
     "Turning this on asks for permission to read your browsing history. Turning it off removes the permission.",

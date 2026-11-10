@@ -9,10 +9,14 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 ### English
 
 - When GitHub is limiting requests from your network, checking for updates in the settings says so and when to try again, instead of saying GitHub couldn’t be reached.
+- Spotlight fills its window, without a margin and frame of its own inside it.
+- Spotlight comes in three sizes, Compact, Normal and Large, picked in the settings from a picture of each. Compact puts each result on a single line.
 
 ### 日本語
 
 - GitHub がネットワークからのリクエストを制限しているときは、設定のアップデート確認が「GitHub に接続できませんでした」ではなく、制限されていることと、いつ試し直せばよいかを表示します。
+- Spotlight がウィンドウいっぱいに広がるようにしました。内側の余白と枠をなくしました。
+- Spotlight の大きさを、コンパクト・標準・大きめの 3 つから選べるようにしました。設定で、それぞれの見た目を描いた絵から選びます。コンパクトでは、結果を 1 件ずつ 1 行にまとめます。
 
 ## 1.5.0 — 2026-11-10
 

@@ -49,9 +49,9 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    width: var(--icon-tile-size, 28px);
+    height: var(--icon-tile-size, 28px);
+    border-radius: calc(var(--icon-tile-size, 28px) * 0.28);
     background: var(--icon-tile);
     color: var(--text);
   }

@@ -811,6 +811,29 @@ describe("browsing history search", () => {
   })
 })
 
+describe("Spotlight size", () => {
+  const sizeNamed = (name: string) =>
+    within(screen.getByRole("group", { name: "Size" })).getByRole<HTMLInputElement>("radio", {
+      name,
+    })
+
+  it("is normal until another size is picked, which is saved at once", async () => {
+    const { readSaved } = await renderLoaded()
+    await openCategory("Spotlight")
+    expect(["Compact", "Normal", "Large"].map((name) => sizeNamed(name).checked)).toStrictEqual([
+      false,
+      true,
+      false,
+    ])
+
+    await fireEvent.click(sizeNamed("Large"))
+
+    await waitFor(async () => {
+      expect((await readSaved()).spotlightSize).toBe("Large")
+    })
+  })
+})
+
 describe("bangs", () => {
   it("are on until turned off, which is saved", async () => {
     const { readSaved } = await renderLoaded()

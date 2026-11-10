@@ -7,7 +7,7 @@ const decodeStored = Schema.decodeUnknownSync(Settings)
 const encodeForStorage = Schema.encodeSync(Settings)
 
 describe("defaults", () => {
-  it("start with new tabs on top and update checks on, every other feature off, and the browser's language", () => {
+  it("start with new tabs on top, update checks and bangs on, every other feature off, the browser's language and Spotlight at its normal size", () => {
     expect(defaultSettings).toStrictEqual({
       newTabsOnTop: true,
       showAllOpenTabsInCollapsedFolders: false,
@@ -18,6 +18,7 @@ describe("defaults", () => {
       pageShortcuts: { copyUrl: false, copyMarkdownLink: false },
       checkForUpdates: true,
       bangs: true,
+      spotlightSize: "Normal",
     })
   })
 })
@@ -34,6 +35,7 @@ describe("reading stored settings", () => {
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
       checkForUpdates: false,
       bangs: false,
+      spotlightSize: "Compact",
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)
@@ -69,6 +71,12 @@ describe("reading stored settings", () => {
     const settings = decodeStored({ autoArchive: true, newTabsOnTop: false })
 
     expect(settings).toStrictEqual({ ...defaultSettings, newTabsOnTop: false })
+  })
+
+  it("with a Spotlight size this version doesn't know, opens Spotlight at its normal size", () => {
+    const settings = decodeStored({ spotlightSize: "Huge", syncTabGroups: true })
+
+    expect(settings).toStrictEqual({ ...defaultSettings, syncTabGroups: true })
   })
 
   it.each(["fr", "zh-CN", 1, null])(

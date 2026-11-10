@@ -54,6 +54,12 @@ export const options: CatalogSection<"options"> = {
     "Las pestañas temporales que no hayas visto durante este tiempo se cierran y se guardan en el archivo, desde donde puedes volver a abrirlas. Las pestañas fijadas, los Favoritos, las pestañas que reproducen audio y la pestaña que estás viendo nunca se cierran.",
 
   "options.spotlight.heading": "Spotlight",
+  "options.spotlight.size.label": "Tamaño",
+  "options.spotlight.size.Compact": "Compacto",
+  "options.spotlight.size.Normal": "Normal",
+  "options.spotlight.size.Large": "Grande",
+  "options.spotlight.size.footnote":
+    "Se aplica la próxima vez que se abra Spotlight. En compacto, cada resultado ocupa una sola línea.",
   "options.spotlight.history.label": "Buscar también en el historial",
   "options.spotlight.history.footnote":
     "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Layer, Option, type Scope } from "effect"
+import { SettingsRepository } from "#modules/settings"
 import { spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
@@ -47,7 +48,22 @@ describe("opening Spotlight", () => {
           yield* openSpotlight(windowId)
 
           const [popup] = yield* popupWindows
-          expect(popup?.bounds).toStrictEqual(Option.some(spotlightBoundsOver(bounds)))
+          expect(popup?.bounds).toStrictEqual(Option.some(spotlightBoundsOver(bounds, "Normal")))
+        }),
+      ),
+    )
+
+    it.effect("opens at the size chosen in the settings", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{}], bounds })
+          yield* SettingsRepository.use((settings) => settings.update({ spotlightSize: "Large" }))
+
+          yield* openSpotlight(windowId)
+
+          const [popup] = yield* popupWindows
+          expect(popup?.bounds).toStrictEqual(Option.some(spotlightBoundsOver(bounds, "Large")))
         }),
       ),
     )

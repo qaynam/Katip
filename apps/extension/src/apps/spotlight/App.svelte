@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte"
   import type { Translator } from "#modules/i18n"
+  import { SPOTLIGHT_LAYOUTS, type SpotlightSize } from "#modules/spotlight"
   import type { ColorScheme, SpaceTheme } from "#modules/theme"
   import type { SpotlightMode, SpotlightResult } from "#protocol"
   import ResultRow from "./components/ResultRow.svelte"
@@ -18,9 +19,10 @@
     /** Closes Spotlight's window. */
     close: () => void
     translator: Translator
+    size: SpotlightSize
   }
 
-  const { connection, faviconUrl, close, translator }: Props = $props()
+  const { connection, faviconUrl, close, translator, size }: Props = $props()
   const t = $derived(translator.t)
 
   const RESULTS_ID = "spotlight-results"
@@ -154,6 +156,9 @@
 <div
   class="spotlight"
   data-scheme={appearance.scheme}
+  data-size={size}
+  style:--search-height="{SPOTLIGHT_LAYOUTS[size].searchHeight}px"
+  style:--row-height="{SPOTLIGHT_LAYOUTS[size].rowHeight}px"
   style:--background={appearance.background}
   style:--text={appearance.text}
   style:--text-muted={appearance.mutedText}
@@ -220,6 +225,7 @@
               now={respondedAt}
               {translator}
               showsKind={mode === "All"}
+              detailBesideTitle={size === "Compact"}
               {faviconUrl}
               onchoose={() => choose(result)}
               onpoint={() => (selectedIndex = index)}
@@ -251,9 +257,15 @@
     --selected-surface: color-mix(in srgb, var(--accent) 24%, transparent);
     --icon-tile: color-mix(in srgb, var(--text) 8%, transparent);
 
+    --query-size: 20px;
+    --row-padding-block: 6px;
+    --row-gap: 12px;
+    --title-size: 14px;
+    --detail-size: 12px;
+    --icon-tile-size: 28px;
+
     box-sizing: border-box;
     height: 100vh;
-    padding: 10px;
     overflow: hidden;
     background: var(--background);
     color: var(--text);
@@ -262,18 +274,32 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  .spotlight[data-size="Compact"] {
+    --query-size: 17px;
+    --row-padding-block: 4px;
+    --row-gap: 10px;
+    --title-size: 13px;
+    --detail-size: 12px;
+    --icon-tile-size: 24px;
+  }
+
+  .spotlight[data-size="Large"] {
+    --query-size: 23px;
+    --row-padding-block: 8px;
+    --row-gap: 14px;
+    --title-size: 15.5px;
+    --detail-size: 13px;
+    --icon-tile-size: 32px;
+  }
+
   .spotlight[data-scheme="light"] {
     color-scheme: light;
     --glass-bg: rgb(255 255 255 / 0.62);
-    --glass-border: rgb(0 0 0 / 0.08);
-    --glass-shadow: 0 14px 36px rgb(0 0 0 / 0.14), 0 2px 6px rgb(0 0 0 / 0.06);
   }
 
   .spotlight[data-scheme="dark"] {
     color-scheme: dark;
     --glass-bg: rgb(30 30 36 / 0.62);
-    --glass-border: rgb(255 255 255 / 0.1);
-    --glass-shadow: 0 16px 40px rgb(0 0 0 / 0.4), 0 2px 6px rgb(0 0 0 / 0.22);
   }
 
   .spotlight :global(*),
@@ -287,12 +313,7 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    border: 0.5px solid var(--glass-border);
-    border-radius: 14px;
     background: var(--glass-bg);
-    box-shadow: var(--glass-shadow);
-    -webkit-backdrop-filter: blur(28px) saturate(1.6);
-    backdrop-filter: blur(28px) saturate(1.6);
   }
 
   .search {
@@ -300,7 +321,7 @@
     flex: none;
     align-items: center;
     gap: 12px;
-    height: 60px;
+    height: var(--search-height);
     padding: 0 18px;
     border-bottom: 1px solid var(--divider);
   }
@@ -329,7 +350,7 @@
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-size: 20px;
+    font-size: var(--query-size);
     font-weight: 500;
     caret-color: var(--accent);
   }
