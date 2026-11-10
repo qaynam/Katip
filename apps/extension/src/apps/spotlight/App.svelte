@@ -158,6 +158,11 @@
   const onkeydown = (event: KeyboardEvent) => {
     // While an input method is composing, Enter and the arrow keys confirm text and pick candidates
     if (event.isComposing) return
+    // The results are hidden then, and nothing unseen is selected or opened
+    if (isCollapsed && (event.key === "Enter" || selectionStepOf(event) !== null)) {
+      event.preventDefault()
+      return
+    }
     const step = selectionStepOf(event)
     if (step !== null) {
       event.preventDefault()

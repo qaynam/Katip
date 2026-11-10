@@ -10,11 +10,13 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 - While a bang is typed, Spotlight suggests the bundled bangs again, as before 1.6.1, with the commands in your list that have a keyword first. A `!` alone suggests those commands, and bangs are suggested in command mode too.
 - Typing `!` in Spotlight no longer flashes the results found for the text before it.
+- Pressing Enter in a compact Spotlight before typing anything no longer switches to a recent tab it isn't showing.
 
 ### 日本語
 
 - bangs を打っている途中の候補に、1.6.1 より前と同じく同梱の bangs も出るように戻しました。リストのコマンドのうちキーワードのあるものが先頭に出ます。`!` だけのときはそれらのコマンドを出し、コマンドモードでも bangs の候補を出します。
 - Spotlight で `!` を打ったときに、その前の言葉で見つかった結果が一瞬映らないようにしました。
+- コンパクトの Spotlight で何も打たずに Enter を押すと、表示されていない最近のタブに切り替わってしまう問題を直しました。
 
 ## 1.6.1 — 2026-11-10
 

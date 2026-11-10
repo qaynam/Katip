@@ -115,6 +115,17 @@ describe("a compact Spotlight", () => {
     expect(setCollapsed.mock.lastCall).toStrictEqual([false])
   })
 
+  it("opens nothing on Enter while it shows the search field alone", async () => {
+    const { connection, close, input } = renderSpotlight({}, "en", "Compact")
+    await connection.answer("", threeTabs)
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "ArrowDown" })
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect([connection.chosen, close.mock.calls.length]).toStrictEqual([[], 0])
+  })
+
   it("never collapses at the normal size", async () => {
     const { connection, setCollapsed } = renderSpotlight()
     await connection.answer("", threeTabs)
