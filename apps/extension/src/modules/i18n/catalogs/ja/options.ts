@@ -70,7 +70,7 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "bangs でサイトを検索する",
   "options.spotlight.bangs.footnote":
-    "Spotlight で ! に続けてサイトの短縮名を打つと、そのサイトを検索できます。たとえば !gh katip で GitHub を、!w で Wikipedia を検索します。短縮名の一覧は、Helium が同梱している Kagi の bangs です。",
+    "Spotlight で ! に続けてサイトの短縮名を打つと、そのサイトを検索できます。たとえば !gh katip で GitHub を、!w で Wikipedia を検索します。短縮名の一覧は、Helium が同梱している Kagi の bangs です。打っている途中の候補には、下のコマンドだけが出ます。",
   "options.commands.heading": "コマンド",
   "options.commands.footnote":
     "これらのコマンドは Spotlight のコマンドの一覧に出ます。キーワードを付けると、! に続けてキーワードを打って実行できます。URL に %s を入れると、キーワードのあとに打った言葉で検索します。",

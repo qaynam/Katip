@@ -3,6 +3,8 @@ import type { Message } from "../../message"
 export const spotlight = {
   "spotlight.search.label": "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
   "spotlight.search.placeholder": "Search or enter a URL",
+  "spotlight.bang.placeholder": "What to search for",
+  "spotlight.bang.label": "{site}: what to search for",
   "spotlight.commands.badge": "Commands",
   "spotlight.commands.label": "Search commands",
   "spotlight.commands.placeholder": "Search commands",

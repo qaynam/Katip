@@ -70,7 +70,7 @@ export const options = {
 
   "options.spotlight.bangs.label": "Search sites with bangs",
   "options.spotlight.bangs.footnote":
-    "Type ! and a site’s shortcut in Spotlight to search that site, such as !gh katip for GitHub or !w for Wikipedia. The shortcuts are Kagi’s bangs, as Helium ships them.",
+    "Type ! and a site’s shortcut in Spotlight to search that site, such as !gh katip for GitHub or !w for Wikipedia. The shortcuts are Kagi’s bangs, as Helium ships them. Only the commands below are suggested as you type.",
   "options.commands.heading": "Commands",
   "options.commands.footnote":
     "These commands are listed among Spotlight’s commands. Give one a keyword to run it by typing ! and the keyword. Put %s in its URL to search for what you type after the keyword.",

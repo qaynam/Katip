@@ -411,6 +411,11 @@ describe("bangs", () => {
     searches: true,
     iconPageUrl: "https://linear.app/",
   }
+  const githubOwnSearch: SpotlightResult = {
+    ...githubSearch,
+    query: "",
+    url: "https://github.com/",
+  }
   const respondWithBangs = (query: string, mode: SpotlightMode) =>
     mode === "Actions"
       ? [searchLinear]
@@ -418,25 +423,28 @@ describe("bangs", () => {
         ? [githubSuggestion]
         : query === "!gh katip"
           ? [githubSearch, webSearch(query)]
-          : query === "!gh"
-            ? [{ ...githubSearch, query: "", url: "https://github.com/" }, webSearch(query)]
+          : query === "!gh" || query === "!gh "
+            ? [githubOwnSearch, webSearch(query)]
             : []
 
-  it("a suggestion chosen with Enter fills in its bang and searches for it, opening nothing", async () => {
+  const field = () => screen.getByRole("combobox") as HTMLInputElement
+
+  it("a suggestion chosen with Enter puts Spotlight in its site, before an empty field, opening nothing", async () => {
     const { connection, input } = renderSpotlight({ respond: respondWithBangs })
     await type(input, "!g")
     await settle()
 
     await fireEvent.keyDown(input, { key: "Enter" })
 
-    expect([(input as HTMLInputElement).value, connection.searches.at(-1)]).toStrictEqual([
-      "!gh ",
-      { query: "!gh ", mode: "All" },
-    ])
+    expect([
+      field().value,
+      field().getAttribute("aria-label"),
+      connection.searches.at(-1),
+    ]).toStrictEqual(["", "GitHub: what to search for", { query: "!gh ", mode: "All" }])
     expect(connection.chosen).toStrictEqual([])
   })
 
-  it("a suggestion is filled in with Tab too, which the hints say", async () => {
+  it("a suggestion is entered with Tab too, which the hints say", async () => {
     const { input } = renderSpotlight({ respond: respondWithBangs })
     await type(input, "!g")
     await settle()
@@ -444,17 +452,71 @@ describe("bangs", () => {
 
     await fireEvent.keyDown(input, { key: "Tab" })
 
-    expect((input as HTMLInputElement).value).toBe("!gh ")
+    expect(field().getAttribute("aria-label")).toBe("GitHub: what to search for")
   })
 
-  it("a whole trigger with nothing after it is filled in with Tab, ready for what to search", async () => {
+  it("a whole trigger with nothing after it is entered with Tab", async () => {
     const { input } = renderSpotlight({ respond: respondWithBangs })
     await type(input, "!gh")
     await settle()
 
     await fireEvent.keyDown(input, { key: "Tab" })
 
-    expect((input as HTMLInputElement).value).toBe("!gh ")
+    expect([field().value, field().getAttribute("aria-label")]).toStrictEqual([
+      "",
+      "GitHub: what to search for",
+    ])
+  })
+
+  it("a whole trigger followed by a space is entered as it is typed", async () => {
+    const { input } = renderSpotlight({ respond: respondWithBangs })
+
+    await type(input, "!gh ")
+    await settle()
+
+    expect([field().value, field().getAttribute("aria-label")]).toStrictEqual([
+      "",
+      "GitHub: what to search for",
+    ])
+  })
+
+  it("in a site, what is typed searches the site, which is all that is offered", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh")
+    await settle()
+    await fireEvent.keyDown(input, { key: "Tab" })
+    await settle()
+
+    await type(input, "katip")
+    await settle()
+
+    expect([connection.searches.at(-1), optionNames().length]).toStrictEqual([
+      { query: "!gh katip", mode: "All" },
+      1,
+    ])
+  })
+
+  it("Backspace in the empty field leaves the site, giving back its bang to change", async () => {
+    const { input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh ")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Backspace" })
+
+    expect([field().value, field().getAttribute("aria-label")]).toStrictEqual([
+      "!gh",
+      "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
+    ])
+  })
+
+  it("Escape leaves the site rather than closing Spotlight", async () => {
+    const { close, input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh ")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Escape" })
+
+    expect([field().value, close.mock.calls.length]).toStrictEqual(["!gh", 0])
   })
 
   it("Tab with nothing to fill in keeps the search field focused, and leaves it as typed", async () => {
@@ -477,15 +539,25 @@ describe("bangs", () => {
     expect(connection.chosen).toStrictEqual([githubSearch])
   })
 
-  it("a command that searches, chosen in command mode, fills in its keyword in the usual search", async () => {
+  it("a site search with nothing typed after its bang opens the site on Enter", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithBangs })
+    await type(input, "!gh")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(connection.chosen).toStrictEqual([githubOwnSearch])
+  })
+
+  it("a command that searches, chosen in command mode, puts Spotlight in its site", async () => {
     const { connection, input } = renderSpotlight({ respond: respondWithBangs })
     await fireEvent.keyDown(input, { key: "Tab" })
     await settle()
 
     await fireEvent.keyDown(input, { key: "Enter" })
 
-    expect([(input as HTMLInputElement).value, connection.searches.at(-1)]).toStrictEqual([
-      "!lin ",
+    expect([field().getAttribute("aria-label"), connection.searches.at(-1)]).toStrictEqual([
+      "Search Linear: what to search for",
       { query: "!lin ", mode: "All" },
     ])
     expect(screen.queryByText("Commands")).toBeNull()

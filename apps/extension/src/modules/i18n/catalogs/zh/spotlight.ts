@@ -3,6 +3,8 @@ import type { CatalogSection } from "../../catalog"
 export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.search.label": "搜索标签页、已固定的标签页、空间、书签、历史记录和命令",
   "spotlight.search.placeholder": "搜索或输入网址",
+  "spotlight.bang.placeholder": "要搜索的内容",
+  "spotlight.bang.label": "{site}：要搜索的内容",
   "spotlight.commands.badge": "命令",
   "spotlight.commands.label": "搜索命令",
   "spotlight.commands.placeholder": "搜索命令",

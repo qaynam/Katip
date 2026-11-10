@@ -411,25 +411,32 @@ const siteCommandCandidates = Effect.gen(function* () {
 
 // The keywords of the commands come before the bundled bangs, so a keyword can take over a
 // trigger of the list
-const bangIndexFor = Effect.fnUntraced(function* (commands: ReadonlyArray<ListedSiteCommand>) {
+/**
+ * The bangs the input can search with, and the ones offered while a trigger is typed. The bundled
+ * bangs search when typed in full, but only the list of commands is offered: the bundled list is
+ * thousands of sites, and the ones people use are the ones they keep in the list.
+ */
+const bangIndexesFor = Effect.fnUntraced(function* (commands: ReadonlyArray<ListedSiteCommand>) {
   const own = bangIndexOf(bangsOfSiteCommands(commands))
-  if (!(yield* (yield* SettingsRepository).get).bangs) return own
+  if (!(yield* (yield* SettingsRepository).get).bangs) return { searched: own, offered: own }
   const bundled = yield* (yield* BangCatalog).contents.pipe(
     Effect.map((contents) => contents.index),
     Effect.catch((error) =>
       Effect.as(Effect.logWarning("Couldn't read the bundled bangs", error), emptyBangIndex),
     ),
   )
-  return layeredIndex(own, bundled)
+  return { searched: layeredIndex(own, bundled), offered: own }
 })
 
 const bangResults = Effect.fnUntraced(function* (query: string) {
   // Most searches have no bang, and the bundled list is only read for one that might
   if (!query.includes("!")) return []
   const list = yield* (yield* SiteCommands).get
-  const index = yield* bangIndexFor(listedSiteCommands(list, yield* currentTranslator))
-  const search = bangSearchIn(query, index)
-  const suggestions = bangSuggestionsFor(query, index, BANG_SUGGESTION_LIMIT + 1)
+  const { searched, offered } = yield* bangIndexesFor(
+    listedSiteCommands(list, yield* currentTranslator),
+  )
+  const search = bangSearchIn(query, searched)
+  const suggestions = bangSuggestionsFor(query, offered, BANG_SUGGESTION_LIMIT + 1)
     .filter((match) => !Option.exists(search, ({ bang }) => bang === match.bang))
     .slice(0, BANG_SUGGESTION_LIMIT)
   return [

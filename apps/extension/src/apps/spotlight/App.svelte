@@ -13,7 +13,13 @@
   import type { SpotlightConnection } from "./connection/spotlight-connection"
   import { spotlightAppearance } from "./logic/appearance"
   import type { FaviconResolver } from "./logic/favicon"
-  import { completionOf, isMatchedCandidate } from "./logic/result-display"
+  import {
+    type BangMode,
+    bangModeOf,
+    bangModeOnChoosing,
+    isMatchedCandidate,
+    searchTextIn,
+  } from "./logic/result-display"
   import { selectionStepOf, stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
 
@@ -39,6 +45,8 @@
 
   let query = $state("")
   let mode = $state<SpotlightMode>("All")
+  // The site a bang put Spotlight in: what is typed then searches that site
+  let bangMode = $state.raw<BangMode | null>(null)
   let results = $state.raw<ReadonlyArray<SpotlightResult>>([])
   let spaceTheme = $state.raw<SpaceTheme | null>(null)
   let respondedAt = $state(Date.now())
@@ -55,14 +63,16 @@
   const appearance = $derived(spotlightAppearance(spaceTheme, systemScheme))
   const collapses = $derived(SPOTLIGHT_LAYOUTS[size].collapses)
   // Until something is typed, commands are asked for, or there is something to say
-  const isCollapsed = $derived(collapses && mode === "All" && query === "" && notice === null)
+  const isCollapsed = $derived(
+    collapses && mode === "All" && bangMode === null && query === "" && notice === null,
+  )
   $effect(() => {
     if (collapses) setCollapsed(isCollapsed)
   })
   const hasMatches = $derived(results.some(isMatchedCandidate))
-  const selectedCompletion = $derived.by(() => {
+  const selectedBangMode = $derived.by(() => {
     const selected = results[selectedIndex]
-    return selected === undefined ? null : completionOf(selected)
+    return selected === undefined || bangMode !== null ? null : bangModeOf(selected)
   })
 
   // Responses may arrive out of order, and an earlier query's must not overwrite a later one's
@@ -79,26 +89,54 @@
     }
     notice = null
     respondedAt = Date.now()
-    results = response.results
     spaceTheme = response.spaceTheme
     selectedIndex = 0
     hasLoaded = true
+    const typedBang = /^!(\S+) $/.exec(text)?.[1]
+    const [first] = response.results
+    // A whole trigger followed by a space is taken as choosing it, the way it is in the browser's
+    // address bar
+    if (
+      bangMode === null &&
+      searchMode === "All" &&
+      first?._tag === "SiteSearch" &&
+      first.trigger === typedBang &&
+      first.query === ""
+    ) {
+      bangMode = bangModeOf(first)
+      query = ""
+    }
+    // In a site's mode only the site's search is offered: the rest matched the bang's text
+    results =
+      bangMode === null
+        ? response.results
+        : response.results.filter((result) => result._tag === "SiteSearch")
   }
 
-  // What to search for is typed next, so the bang is filled in rather than anything opened
-  const complete = (completion: string) => {
+  const searchTyped = () => search(searchTextIn(bangMode, query), mode)
+
+  // What to search for is typed next, so the site is entered rather than anything opened
+  const enterBangMode = (site: BangMode) => {
     mode = "All"
-    query = completion
+    bangMode = site
+    query = ""
     input?.focus()
-    void search(completion, "All")
+    void searchTyped()
+  }
+
+  // The bang goes back into the field as typed, to be changed or kept
+  const leaveBangMode = (site: BangMode) => {
+    bangMode = null
+    query = `!${site.trigger}`
+    void searchTyped()
   }
 
   let isChoosing = false
   const choose = async (result: SpotlightResult | undefined) => {
     if (result === undefined || isChoosing) return
-    const completion = completionOf(result)
-    if (completion !== null) {
-      complete(completion)
+    const site = bangModeOnChoosing(result)
+    if (site !== null) {
+      enterBangMode(site)
       return
     }
     isChoosing = true
@@ -132,10 +170,15 @@
         // Never left to the browser: it would move the focus out of the search field, where
         // nothing else is meant to be reached with Tab
         event.preventDefault()
-        if (selectedCompletion !== null) complete(selectedCompletion)
-        else if (query === "" && mode === "All") switchMode("Actions")
+        if (selectedBangMode !== null) enterBangMode(selectedBangMode)
+        else if (query === "" && mode === "All" && bangMode === null) switchMode("Actions")
         return
       case "Backspace":
+        if (bangMode !== null && query === "") {
+          event.preventDefault()
+          leaveBangMode(bangMode)
+          return
+        }
         if (mode !== "Actions" || query !== "") return
         event.preventDefault()
         switchMode("All")
@@ -146,7 +189,8 @@
         return
       case "Escape":
         event.preventDefault()
-        if (mode === "Actions") switchMode("All")
+        if (bangMode !== null) leaveBangMode(bangMode)
+        else if (mode === "Actions") switchMode("All")
         else close()
         return
     }
@@ -180,6 +224,12 @@
       <span class="search-glyph"><SearchGlyph size={20} /></span>
       {#if mode === "Actions"}
         <span class="mode-chip">{t("spotlight.commands.badge")}</span>
+      {:else if bangMode !== null}
+        {@const icon = faviconUrl(bangMode.iconPageUrl)}
+        <span class="mode-chip site-chip">
+          {#if icon !== null}<img src={icon} alt="" width="14" height="14" />{/if}
+          {bangMode.siteName}
+        </span>
       {/if}
       <input
         bind:this={input}
@@ -188,20 +238,24 @@
         role="combobox"
         aria-label={mode === "Actions"
           ? t("spotlight.commands.label")
-          : t("spotlight.search.label")}
+          : bangMode !== null
+            ? t("spotlight.bang.label", { site: bangMode.siteName })
+            : t("spotlight.search.label")}
         aria-expanded={!isCollapsed}
         aria-controls={RESULTS_ID}
         aria-autocomplete="list"
         aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
         placeholder={mode === "Actions"
           ? t("spotlight.commands.placeholder")
-          : t("spotlight.search.placeholder")}
+          : bangMode !== null
+            ? t("spotlight.bang.placeholder")
+            : t("spotlight.search.placeholder")}
         autocomplete="off"
         spellcheck="false"
         value={query}
         oninput={(event) => {
           query = event.currentTarget.value
-          void search(query, mode)
+          void searchTyped()
         }}
       />
       <span class="spinner" class:visible={isSearching && hasLoaded} aria-hidden="true"></span>
@@ -250,15 +304,17 @@
       {/if}
 
       <footer class="hints" aria-hidden="true">
-        {#if selectedCompletion !== null}
+        {#if selectedBangMode !== null}
           <span><kbd>tab</kbd>{t("spotlight.hint.complete")}</span>
-        {:else if mode === "All" && query === ""}
+        {:else if mode === "All" && query === "" && bangMode === null}
           <span><kbd>tab</kbd>{t("spotlight.hint.commands")}</span>
         {/if}
         <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>
         <span><kbd>↵</kbd>{t("spotlight.hint.open")}</span>
         <span
-          ><kbd>esc</kbd>{mode === "Actions" ? t("spotlight.hint.back") : t("common.close")}</span
+          ><kbd>esc</kbd>{mode === "Actions" || bangMode !== null
+            ? t("spotlight.hint.back")
+            : t("common.close")}</span
         >
       </footer>
     {/if}
@@ -316,6 +372,16 @@
 
   .search-glyph {
     color: var(--text-muted);
+  }
+
+  .site-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .site-chip img {
+    border-radius: 3px;
   }
 
   .mode-chip {

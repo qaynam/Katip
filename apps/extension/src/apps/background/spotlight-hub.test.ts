@@ -1107,22 +1107,22 @@ describe("Spotlight bangs", () => {
     ),
   )
 
-  it.effect("a trigger being typed is followed by the bangs it can become", () =>
-    inBackground(
-      Effect.gen(function* () {
-        yield* bundleBangs
-        const { spotlight } = yield* spotlightOverOneWindow
+  it.effect(
+    "a trigger being typed is followed by the commands in the list it can become, not by the bundled bangs",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* bundleBangs
+          yield* addCommand("gitea", "https://gitea.example/search?q=%s")
+          const { spotlight } = yield* spotlightOverOneWindow
 
-        const { results } = yield* spotlight.search("!g")
+          const { results } = yield* spotlight.search("!g")
 
-        expect(
-          suggestions(results).map(({ siteName, trigger }) => [siteName, trigger]),
-        ).toStrictEqual([
-          ["GitHub", "gh"],
-          ["GitLab", "gl"],
-        ])
-      }),
-    ),
+          expect(
+            suggestions(results).map(({ siteName, trigger }) => [siteName, trigger]),
+          ).toStrictEqual([["Search gitea", "gitea"]])
+        }),
+      ),
   )
 
   it.effect("with bangs turned off in the settings, the bundled bangs do nothing", () =>

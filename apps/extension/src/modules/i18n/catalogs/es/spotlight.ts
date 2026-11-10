@@ -4,6 +4,8 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.search.label":
     "Buscar pestañas, pestañas fijadas, espacios, marcadores, historial y comandos",
   "spotlight.search.placeholder": "Busca o escribe una URL",
+  "spotlight.bang.placeholder": "Qué buscar",
+  "spotlight.bang.label": "{site}: qué buscar",
   "spotlight.commands.badge": "Comandos",
   "spotlight.commands.label": "Buscar comandos",
   "spotlight.commands.placeholder": "Buscar comandos",

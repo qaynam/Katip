@@ -74,7 +74,7 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "Buscar en sitios con bangs",
   "options.spotlight.bangs.footnote":
-    "Escribe ! y el atajo de un sitio en Spotlight para buscar en ese sitio, como !gh katip para GitHub o !w para Wikipedia. Los atajos son los bangs de Kagi, tal como los incluye Helium.",
+    "Escribe ! y el atajo de un sitio en Spotlight para buscar en ese sitio, como !gh katip para GitHub o !w para Wikipedia. Los atajos son los bangs de Kagi, tal como los incluye Helium. Mientras escribes, solo se sugieren los comandos de abajo.",
   "options.commands.heading": "Comandos",
   "options.commands.footnote":
     "Estos comandos aparecen entre los comandos de Spotlight. Dale a uno una palabra clave para usarlo escribiendo ! y la palabra clave. Pon %s en su URL para buscar lo que escribas después de la palabra clave.",

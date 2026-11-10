@@ -199,18 +199,43 @@ export const displayOf = (
   })
 }
 
-/**
- * What choosing the result types into Spotlight rather than opening anything: a bang ready for its
- * query. Null for a result that opens or runs something.
- */
-export const completionOf = (result: SpotlightResult): string | null => {
-  if (result._tag === "BangSuggestion") return inputForTrigger(result.trigger)
-  if (result._tag === "SiteSearch" && result.query === "") return inputForTrigger(result.trigger)
-  if (result._tag === "SiteCommand" && result.searches && result.keyword !== null) {
-    return inputForTrigger(result.keyword)
-  }
-  return null
+/** A site that a bang or a command's keyword searches, which Spotlight can be put in to type a query for. */
+export interface BangMode {
+  /** The trigger or keyword, written after ! to search the site. */
+  readonly trigger: string
+  readonly siteName: string
+  /** A page of the site, for its favicon. */
+  readonly iconPageUrl: string
 }
+
+/** The site Tab puts Spotlight in from the result, ready for the query. Null for anything else. */
+export const bangModeOf = (result: SpotlightResult): BangMode | null => {
+  switch (result._tag) {
+    case "BangSuggestion":
+      return { trigger: result.trigger, siteName: result.siteName, iconPageUrl: result.iconPageUrl }
+    case "SiteSearch":
+      return result.query === ""
+        ? { trigger: result.trigger, siteName: result.siteName, iconPageUrl: result.iconPageUrl }
+        : null
+    case "SiteCommand":
+      return result.searches && result.keyword !== null
+        ? { trigger: result.keyword, siteName: result.title, iconPageUrl: result.iconPageUrl }
+        : null
+    default:
+      return null
+  }
+}
+
+/**
+ * The site choosing the result puts Spotlight in, rather than opening anything. A site search is
+ * opened even with nothing typed after its bang, which opens the site itself.
+ */
+export const bangModeOnChoosing = (result: SpotlightResult): BangMode | null =>
+  result._tag === "SiteSearch" ? null : bangModeOf(result)
+
+/** What Spotlight searches for: in a site's mode, its bang followed by what is typed. */
+export const searchTextIn = (mode: BangMode | null, typed: string): string =>
+  mode === null ? typed : inputForTrigger(mode.trigger) + typed
 
 /** Whether the result matched the query. Opening a URL and searching the web show up regardless. */
 export const isMatchedCandidate = (result: SpotlightResult): boolean =>

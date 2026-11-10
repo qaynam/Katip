@@ -4,7 +4,13 @@ import { neutralTheme, swatchOf, themeOf } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
 import type { SpotlightResult } from "#protocol"
 import { makeTranslator } from "#modules/i18n"
-import { completionOf, displayOf, isMatchedCandidate } from "./result-display"
+import {
+  bangModeOf,
+  bangModeOnChoosing,
+  displayOf,
+  isMatchedCandidate,
+  searchTextIn,
+} from "./result-display"
 
 const NOW = 1_800_000_000_000
 const DAY = 24 * 60 * 60 * 1000
@@ -278,21 +284,31 @@ describe("a bang suggestion's display", () => {
   })
 })
 
-describe("what choosing a result types in", () => {
-  it("is the bang of a suggestion, ready for the query", () => {
-    expect(
-      completionOf({
-        _tag: "BangSuggestion",
-        siteName: "GitHub",
-        trigger: "gh",
-        iconPageUrl: "https://github.com/",
-      }),
-    ).toBe("!gh ")
+describe("the site a result puts Spotlight in", () => {
+  const youtube = { trigger: "yt", siteName: "YouTube", iconPageUrl: "https://www.youtube.com/" }
+  const siteSearch = (query: string): SpotlightResult => ({
+    _tag: "SiteSearch",
+    siteName: "YouTube",
+    trigger: "yt",
+    query,
+    url: "https://www.youtube.com/",
+    iconPageUrl: "https://www.youtube.com/",
   })
 
-  it("is the keyword of a site command that searches", () => {
+  it("is the site of a suggested bang", () => {
     expect(
-      completionOf({
+      bangModeOf({
+        _tag: "BangSuggestion",
+        siteName: "YouTube",
+        trigger: "yt",
+        iconPageUrl: "https://www.youtube.com/",
+      }),
+    ).toStrictEqual(youtube)
+  })
+
+  it("is the site of a command that searches, named after the command", () => {
+    expect(
+      bangModeOf({
         _tag: "SiteCommand",
         title: "Search Linear",
         url: "https://linear.app/search?q=%s",
@@ -300,38 +316,27 @@ describe("what choosing a result types in", () => {
         searches: true,
         iconPageUrl: "https://linear.app/",
       }),
-    ).toBe("!lin ")
+    ).toStrictEqual({
+      trigger: "lin",
+      siteName: "Search Linear",
+      iconPageUrl: "https://linear.app/",
+    })
   })
 
-  it("is the bang of a site search with nothing typed after it yet, ready for the query", () => {
-    expect(
-      completionOf({
-        _tag: "SiteSearch",
-        siteName: "YouTube",
-        trigger: "yt",
-        query: "",
-        url: "https://www.youtube.com/",
-        iconPageUrl: "https://www.youtube.com/",
-      }),
-    ).toBe("!yt ")
+  it("is, with Tab, the site of a site search with nothing typed after its bang yet", () => {
+    expect([bangModeOf(siteSearch("")), bangModeOf(siteSearch("lofi"))]).toStrictEqual([
+      youtube,
+      null,
+    ])
   })
 
-  it("is nothing for a site search that has its query, which choosing opens", () => {
-    expect(
-      completionOf({
-        _tag: "SiteSearch",
-        siteName: "YouTube",
-        trigger: "yt",
-        query: "lofi",
-        url: "https://www.youtube.com/results?search_query=lofi",
-        iconPageUrl: "https://www.youtube.com/",
-      }),
-    ).toBeNull()
+  it("is none, on choosing, for a site search, which opens the site even with nothing to search", () => {
+    expect(bangModeOnChoosing(siteSearch(""))).toBeNull()
   })
 
-  it("is nothing for a result that opens a page, a site command with a keyword included", () => {
+  it("is none for a result that opens a page, a site command with a keyword included", () => {
     expect([
-      completionOf({
+      bangModeOf({
         _tag: "SiteCommand",
         title: "Intranet",
         url: "https://intranet.example/",
@@ -339,8 +344,17 @@ describe("what choosing a result types in", () => {
         searches: false,
         iconPageUrl: "https://intranet.example/",
       }),
-      completionOf(openTab()),
+      bangModeOf(openTab()),
     ]).toStrictEqual([null, null])
+  })
+})
+
+describe("what Spotlight searches for", () => {
+  it("is what is typed, or in a site's mode, its bang followed by what is typed", () => {
+    expect([
+      searchTextIn(null, "lofi"),
+      searchTextIn({ trigger: "yt", siteName: "YouTube", iconPageUrl: "" }, "lofi"),
+    ]).toStrictEqual(["lofi", "!yt lofi"])
   })
 })
 

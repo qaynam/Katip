@@ -8,11 +8,13 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 ### English
 
-- In Spotlight, Tab fills in a bang typed in full, such as `!yt`, ready for what to search, as it does for a suggested one. With nothing to fill in, Tab leaves the search field as it is instead of moving away from it.
+- Choosing a bang in Spotlight, with Enter or Tab, or typing one in full followed by a space, such as `!yt `, puts Spotlight in that site: its name shows before the search field, as command mode's does, and what you type searches the site. Backspace in the empty field or Escape leaves it. With nothing to fill in, Tab leaves the search field as it is instead of moving away from it.
+- While a bang is typed, Spotlight suggests only the commands in your list. The bundled bangs still search when typed in full, such as `!w`.
 
 ### 日本語
 
-- Spotlight で `!yt` のようにトリガーを最後まで打ったときも、候補を選んだときと同じく Tab で検索の入力に入れるようにしました。補完するものがないときの Tab は、検索欄から離れず何もしません。
+- Spotlight で bangs を Enter か Tab で選ぶか、`!yt ` のように最後まで打ってスペースを押すと、そのサイトのモードに入るようにしました。コマンドモードと同じく検索欄の左にサイト名が出て、打った言葉でそのサイトを検索します。空の検索欄で Backspace か Esc を押すと抜けます。補完するものがないときの Tab は、検索欄から離れず何もしません。
+- bangs を打っている途中の候補には、リストにあるコマンドだけを出すようにしました。同梱の bangs も、`!w` のように最後まで打てば検索できます。
 
 ## 1.6.0 — 2026-11-10
 

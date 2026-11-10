@@ -3,6 +3,8 @@ import type { CatalogSection } from "../../catalog"
 export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.search.label": "タブ・ピン・Space・ブックマーク・履歴・コマンドを検索",
   "spotlight.search.placeholder": "検索するか URL を入力",
+  "spotlight.bang.placeholder": "検索する言葉",
+  "spotlight.bang.label": "{site}：検索する言葉",
   "spotlight.commands.badge": "コマンド",
   "spotlight.commands.label": "コマンドを検索",
   "spotlight.commands.placeholder": "コマンドを検索",
