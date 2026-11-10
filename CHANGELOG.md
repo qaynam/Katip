@@ -4,7 +4,7 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
-## Unreleased
+## 1.6.0 — 2026-11-10
 
 ### English
 
