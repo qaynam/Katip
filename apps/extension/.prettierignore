@@ -1,0 +1,6 @@
+# Prettier reads the ignore file of the folder it runs in, so run from here it would miss the
+# repository's and reformat these. They are kept as written, for the reasons given there
+dist/
+.e2e/
+src/modules/export/fixtures/
+src/modules/bangs/data/
