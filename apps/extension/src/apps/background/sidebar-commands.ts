@@ -531,6 +531,9 @@ const tabCommands = {
 
   CloseTab: ({ tabId }: { tabId: TabId }) => Tabs.use((tabs) => tabs.remove([tabId])),
 
+  SetTabMuted: ({ tabId, muted }: { tabId: TabId; muted: boolean }) =>
+    Tabs.use((tabs) => tabs.update(tabId, { muted })),
+
   // Not an override for a pinned tab: a pin's name is its bookmark's title, so the bookmark is
   // renamed. An empty name goes back to the page's title, as removing an override does
   RenameTab: Effect.fnUntraced(function* ({ tabId, title }: { tabId: TabId; title: string }) {

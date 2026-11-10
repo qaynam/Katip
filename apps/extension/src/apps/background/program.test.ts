@@ -533,6 +533,29 @@ describe("tabs", () => {
   )
 })
 
+describe("muting from the side panel", () => {
+  it.live("mutes the tab, and unmutes it", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId, tabIds } = yield* fake.seedWindow({
+          tabs: [{ url: "https://a.example/" }],
+        })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+        const isMuted = Effect.map((yield* Tabs).get(tabIds[0]), (tab) => tab.muted)
+
+        yield* sidebar.run({ _tag: "SetTabMuted", tabId: tabIds[0], muted: true })
+        const afterMuting = yield* isMuted
+        yield* sidebar.run({ _tag: "SetTabMuted", tabId: tabIds[0], muted: false })
+
+        expect([afterMuting, yield* isMuted]).toStrictEqual([true, false])
+      }),
+    ),
+  )
+})
+
 describe("tabs opened from another tab", () => {
   const temporaryUrls = (view: SidebarView) =>
     Option.map(spaceNamed(view, "Home"), (space) => temporaryTabsIn(space).map((tab) => tab.url))

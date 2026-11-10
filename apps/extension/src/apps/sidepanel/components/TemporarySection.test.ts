@@ -60,6 +60,38 @@ describe("Temporary tab rows", () => {
     expect(connection.sentCommands).toStrictEqual([{ _tag: "CloseTab", tabId: TabId.make(2) }])
   })
 
+  it("mutes a tab playing sound with its speaker, and unmutes a muted one", async () => {
+    const { connection } = await renderSidebar(
+      viewWithTabs(tabView(1, { isAudible: true }), tabView(2, { isMuted: true })),
+    )
+
+    await fireEvent.click(within(rowOf("Tab 1")).getByRole("button", { name: "Mute Tab" }))
+    await fireEvent.click(within(rowOf("Tab 2")).getByRole("button", { name: "Unmute Tab" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SetTabMuted", tabId: TabId.make(1), muted: true },
+      { _tag: "SetTabMuted", tabId: TabId.make(2), muted: false },
+    ])
+  })
+
+  it("mutes one half of a split view with that half's speaker", async () => {
+    const { connection } = await renderSidebar(
+      viewWithEntries([
+        temporarySplit(
+          9,
+          tabView(1, { title: "Reddit" }),
+          tabView(2, { title: "Google", isAudible: true }),
+        ),
+      ]),
+    )
+
+    await fireEvent.click(screen.getByRole("button", { name: "Mute Tab" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SetTabMuted", tabId: TabId.make(2), muted: true },
+    ])
+  })
+
   it("closes the tab on middle click", async () => {
     const { connection } = await renderSidebar(viewWithTabs(tabView(1)))
 

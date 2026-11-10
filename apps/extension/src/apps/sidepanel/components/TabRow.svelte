@@ -205,13 +205,26 @@
   {/if}
 
   {#if isAudible || isMuted}
-    <span
-      class="audio"
-      role="img"
-      aria-label={t(isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
-    >
-      <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
-    </span>
+    {#if tabId === null}
+      <span
+        class="audio"
+        role="img"
+        aria-label={t(isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
+      >
+        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
+      </span>
+    {:else}
+      {@const label = t(isMuted ? "actions.unmuteTab" : "actions.muteTab")}
+      <button
+        class="audio"
+        type="button"
+        aria-label={label}
+        title={label}
+        onclick={() => void ctx.run({ _tag: "SetTabMuted", tabId, muted: !isMuted })}
+      >
+        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
+      </button>
+    {/if}
   {/if}
 
   {#if onClose !== undefined && !isEditing}
@@ -356,7 +369,17 @@
     flex: none;
     place-items: center;
     width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
     color: var(--text-muted);
+  }
+
+  button.audio:hover {
+    background: var(--surface-hover);
+    color: var(--text);
   }
 
   .close {

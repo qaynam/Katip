@@ -43,6 +43,9 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("OpenNewTab", { windowId: WindowId }),
   Schema.TaggedStruct("ActivateTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTab", { tabId: TabId }),
+  // The state to set rather than a toggle, so a press made on a view that is behind does what it
+  // showed
+  Schema.TaggedStruct("SetTabMuted", { tabId: TabId, muted: Schema.Boolean }),
   // An empty title clears the tab's custom name
   Schema.TaggedStruct("RenameTab", { tabId: TabId, title: Schema.String }),
   Schema.TaggedStruct("MoveTabToSpace", { tabId: TabId, spaceId: SpaceId }),
