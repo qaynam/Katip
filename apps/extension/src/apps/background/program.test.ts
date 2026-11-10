@@ -80,9 +80,7 @@ describe("startup", () => {
     ),
   )
 
-  // Suspected product bug, kept as `fails` until fixed: Chrome unpins a Favorite right before closing
-  // it, so the closing tab is admitted as a temporary tab and consumes the restore record
-  it.live.fails(
+  it.live(
     "closing a Favorite right after a restart leaves the restore record for a tab opened later with the same URL",
     () =>
       inBackground(

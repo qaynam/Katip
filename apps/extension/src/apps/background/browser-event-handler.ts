@@ -11,6 +11,7 @@ import {
 import {
   admitCreatedTab,
   admitTab,
+  admitUnpinnedTab,
   forgetPendingTab,
   placeOnceUrlIsKnown,
   settleProvisionalTab,
@@ -36,7 +37,8 @@ const handleTabUpdated = Effect.fnUntraced(function* (
     return
   }
   if (changes.url !== undefined) yield* settleProvisionalTab(tab)
-  if (changes.pinned === false || changes.url !== undefined) yield* admitTab(tab)
+  if (changes.url !== undefined) yield* admitTab(tab)
+  else if (changes.pinned === false) yield* admitUnpinnedTab(tab)
   if (changes.url !== undefined) yield* placeOnceUrlIsKnown(tab)
 })
 

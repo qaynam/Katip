@@ -66,11 +66,11 @@ const claimFromRestoreQueue = Effect.fnUntraced(function* (tab: BrowserTab, url:
   return true
 })
 
-const admit = Effect.fnUntraced(function* (tab: BrowserTab) {
+const admit = Effect.fnUntraced(function* (tab: BrowserTab, claimsRestoreRecord = true) {
   const state = yield* KatipState
   if (Option.isSome(spaceOf(yield* state.workspace.get, tab.id)) || tab.pinned) return "Skipped"
   const url = urlOf(tab)
-  if (yield* claimFromRestoreQueue(tab, url)) return "Restored"
+  if (claimsRestoreRecord && (yield* claimFromRestoreQueue(tab, url))) return "Restored"
   const context = yield* placementContext
   yield* state.workspace.update((workspace) => trackTab(workspace, newTabFrom(tab), context))
   if (url === "" && (yield* state.restoreQueue.get) !== null) {
@@ -87,6 +87,15 @@ const admit = Effect.fnUntraced(function* (tab: BrowserTab) {
  * the same tab.
  */
 export const admitTab = (tab: BrowserTab) => Effect.asVoid(admit(tab))
+
+/**
+ * Places a tab Chrome has just unpinned, as {@link admitTab} does, but never by a restore record.
+ *
+ * @remarks
+ * Chrome unpins a Favorite's tab right before closing it. Claiming a record then would spend it on
+ * a tab about to close, and the tab it was kept for, opened after, would lose its Space.
+ */
+export const admitUnpinnedTab = (tab: BrowserTab) => Effect.asVoid(admit(tab, false))
 
 const placementBelowOpener = (
   workspace: Workspace,
