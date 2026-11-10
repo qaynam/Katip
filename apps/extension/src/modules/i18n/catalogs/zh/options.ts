@@ -67,7 +67,7 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "使用 bangs 搜索网站",
   "options.spotlight.bangs.footnote":
-    "在 Spotlight 中输入 ! 和网站的简称即可搜索该网站，例如用 !gh katip 搜索 GitHub，用 !w 搜索维基百科。这些简称来自 Helium 内置的 Kagi bangs。输入时只会建议下面的命令。",
+    "在 Spotlight 中输入 ! 和网站的简称即可搜索该网站，例如用 !gh katip 搜索 GitHub，用 !w 搜索维基百科。这些简称来自 Helium 内置的 Kagi bangs。下面带关键词的命令会优先建议。",
   "options.commands.heading": "命令",
   "options.commands.footnote":
     "这些命令会列在 Spotlight 的命令中。为命令设置关键词后，输入 ! 和关键词即可使用。在网址中加入 %s，即可搜索你在关键词后输入的内容。",

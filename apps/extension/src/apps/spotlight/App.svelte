@@ -255,6 +255,14 @@
         value={query}
         oninput={(event) => {
           query = event.currentTarget.value
+          // A ! starts a bang: what was found for the text before it would flash by until the
+          // answer comes, so only what bangs found stays up meanwhile
+          if (bangMode === null && query.trimStart().startsWith("!")) {
+            results = results.filter(
+              (result) => result._tag === "SiteSearch" || result._tag === "BangSuggestion",
+            )
+            selectedIndex = 0
+          }
           void searchTyped()
         }}
       />

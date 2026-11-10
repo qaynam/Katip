@@ -2,12 +2,14 @@ import { Array, Clock, Effect, Match, Option, pipe } from "effect"
 import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
 import {
   BangCatalog,
+  type BangIndex,
   bangIndexOf,
   bangSearchIn,
   bangSuggestionsFor,
   emptyBangIndex,
   layeredIndex,
   siteUrlOf,
+  triggerBeingTyped,
 } from "#modules/bangs"
 import type { Favorite } from "#modules/favorites"
 import { makeTranslator } from "#modules/i18n"
@@ -411,32 +413,40 @@ const siteCommandCandidates = Effect.gen(function* () {
 
 // The keywords of the commands come before the bundled bangs, so a keyword can take over a
 // trigger of the list
-/**
- * The bangs the input can search with, and the ones offered while a trigger is typed. The bundled
- * bangs search when typed in full, but only the list of commands is offered: the bundled list is
- * thousands of sites, and the ones people use are the ones they keep in the list.
- */
+/** The bangs of the commands in the list, and those over the bundled ones when bangs are on. */
 const bangIndexesFor = Effect.fnUntraced(function* (commands: ReadonlyArray<ListedSiteCommand>) {
   const own = bangIndexOf(bangsOfSiteCommands(commands))
-  if (!(yield* (yield* SettingsRepository).get).bangs) return { searched: own, offered: own }
+  if (!(yield* (yield* SettingsRepository).get).bangs) return { own, all: own }
   const bundled = yield* (yield* BangCatalog).contents.pipe(
     Effect.map((contents) => contents.index),
     Effect.catch((error) =>
       Effect.as(Effect.logWarning("Couldn't read the bundled bangs", error), emptyBangIndex),
     ),
   )
-  return { searched: layeredIndex(own, bundled), offered: own }
+  return { own, all: layeredIndex(own, bundled) }
 })
+
+/**
+ * The bangs offered while a trigger is typed: the commands in the list first, the ones people keep
+ * at hand, then the rest. A ! alone offers the list's commands alone, as every bundled bang would
+ * match it.
+ */
+const offeredBangs = (query: string, own: BangIndex, all: BangIndex, limit: number) => {
+  if (Option.contains(triggerBeingTyped(query), "")) return own.startingWith("", limit)
+  const fromList = bangSuggestionsFor(query, own, limit)
+  const rest = bangSuggestionsFor(query, all, limit + fromList.length).filter(
+    (match) => !fromList.some((listed) => listed.bang === match.bang),
+  )
+  return [...fromList, ...rest].slice(0, limit)
+}
 
 const bangResults = Effect.fnUntraced(function* (query: string) {
   // Most searches have no bang, and the bundled list is only read for one that might
   if (!query.includes("!")) return []
   const list = yield* (yield* SiteCommands).get
-  const { searched, offered } = yield* bangIndexesFor(
-    listedSiteCommands(list, yield* currentTranslator),
-  )
-  const search = bangSearchIn(query, searched)
-  const suggestions = bangSuggestionsFor(query, offered, BANG_SUGGESTION_LIMIT + 1)
+  const { own, all } = yield* bangIndexesFor(listedSiteCommands(list, yield* currentTranslator))
+  const search = bangSearchIn(query, all)
+  const suggestions = offeredBangs(query, own, all, BANG_SUGGESTION_LIMIT + 1)
     .filter((match) => !Option.exists(search, ({ bang }) => bang === match.bang))
     .slice(0, BANG_SUGGESTION_LIMIT)
   return [
@@ -507,14 +517,12 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
         ),
       )
     : []
-  const bangs =
-    mode === "All"
-      ? yield* bangResults(query).pipe(
-          Effect.catch((error) =>
-            Effect.as(Effect.logWarning("Couldn't look up Spotlight's bangs", error), []),
-          ),
-        )
-      : []
+  // In command mode too: a bang typed there is chosen into the usual search
+  const bangs = yield* bangResults(query).pipe(
+    Effect.catch((error) =>
+      Effect.as(Effect.logWarning("Couldn't look up Spotlight's bangs", error), []),
+    ),
+  )
   const others =
     mode === "All"
       ? yield* gatherCandidates(callerWindowId, query).pipe(
@@ -524,6 +532,11 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
         )
       : []
   const now = yield* Clock.currentTimeMillis
+  // A ! alone is a bang about to be typed: pages with a ! in them, or a web search for it, would
+  // only stand between it and the bangs
+  if (query.trim() === "!") {
+    return { results: bangs, spaceTheme: yield* activeSpaceTheme(callerWindowId) }
+  }
   return {
     results: [
       ...bangs,

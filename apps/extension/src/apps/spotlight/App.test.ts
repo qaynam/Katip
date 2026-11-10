@@ -519,6 +519,17 @@ describe("bangs", () => {
     expect([field().value, close.mock.calls.length]).toStrictEqual(["!gh", 0])
   })
 
+  it("a ! takes down what was found for the text before it, without waiting for the answer", async () => {
+    const { connection, input } = renderSpotlight()
+    await connection.answer("", threeTabs)
+    await settle()
+
+    await type(input, "!")
+    await settle()
+
+    expect(screen.queryAllByRole("option")).toStrictEqual([])
+  })
+
   it("Tab with nothing to fill in keeps the search field focused, and leaves it as typed", async () => {
     const { input } = renderSpotlight({ respond: respondWithBangs })
     await type(input, "!gh katip")

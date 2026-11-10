@@ -1108,7 +1108,7 @@ describe("Spotlight bangs", () => {
   )
 
   it.effect(
-    "a trigger being typed is followed by the commands in the list it can become, not by the bundled bangs",
+    "a trigger being typed is followed by the bangs it can become, the commands in the list first",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -1120,9 +1120,41 @@ describe("Spotlight bangs", () => {
 
           expect(
             suggestions(results).map(({ siteName, trigger }) => [siteName, trigger]),
-          ).toStrictEqual([["Search gitea", "gitea"]])
+          ).toStrictEqual([
+            ["Search gitea", "gitea"],
+            ["GitHub", "gh"],
+            ["GitLab", "gl"],
+          ])
         }),
       ),
+  )
+
+  it.effect("a ! alone offers the commands in the list that have a keyword, and nothing else", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        yield* addCommand("lin", "https://linear.app/search?q=%s")
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!")
+
+        expect(results.map((result) => result._tag)).toStrictEqual(["BangSuggestion"])
+        expect(suggestions(results).map(({ trigger }) => trigger)).toStrictEqual(["lin"])
+      }),
+    ),
+  )
+
+  it.effect("a trigger typed in command mode is followed by the bangs it can become too", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* bundleBangs
+        const { spotlight } = yield* spotlightOverOneWindow
+
+        const { results } = yield* spotlight.search("!g", "Actions")
+
+        expect(suggestions(results).map(({ trigger }) => trigger)).toStrictEqual(["gh", "gl"])
+      }),
+    ),
   )
 
   it.effect("with bangs turned off in the settings, the bundled bangs do nothing", () =>

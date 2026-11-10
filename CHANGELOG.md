@@ -4,6 +4,18 @@ What changed for people using Katip, version by version. Each version's section 
 
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
 
+## Unreleased
+
+### English
+
+- While a bang is typed, Spotlight suggests the bundled bangs again, as before 1.6.1, with the commands in your list that have a keyword first. A `!` alone suggests those commands, and bangs are suggested in command mode too.
+- Typing `!` in Spotlight no longer flashes the results found for the text before it.
+
+### 日本語
+
+- bangs を打っている途中の候補に、1.6.1 より前と同じく同梱の bangs も出るように戻しました。リストのコマンドのうちキーワードのあるものが先頭に出ます。`!` だけのときはそれらのコマンドを出し、コマンドモードでも bangs の候補を出します。
+- Spotlight で `!` を打ったときに、その前の言葉で見つかった結果が一瞬映らないようにしました。
+
 ## 1.6.1 — 2026-11-10
 
 ### English
