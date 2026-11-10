@@ -230,7 +230,7 @@
 
   <div class="buttons">
     <button type="button" onclick={oncancel}>{t("common.cancel")}</button>
-    <button type="submit" class="primary">{t("options.commands.save")}</button>
+    <button type="submit">{t("options.commands.save")}</button>
   </div>
 </form>
 
@@ -270,14 +270,9 @@
     padding: 0 10px;
     border: 0.5px solid var(--control-edge);
     border-radius: 7px;
-    outline: none;
     background: var(--control-face);
     box-shadow: var(--control-depth);
     font-weight: 400;
-  }
-
-  input:focus-visible {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   }
 
   input[aria-invalid="true"] {
@@ -387,11 +382,5 @@
 
   .buttons button:active {
     opacity: 0.7;
-  }
-
-  .buttons .primary {
-    border-color: transparent;
-    background: var(--accent);
-    color: #ffffff;
   }
 </style>
