@@ -7,8 +7,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/PRIVACY.md",
         "$TURBO_ROOT$/assets/brand/**",
-        "$TURBO_ROOT$/apps/extension/store/screenshots/**",
-        "$TURBO_ROOT$/apps/extension/store/promo/**"
+        "$TURBO_ROOT$/apps/extension/store/website-screenshots/**",
+        "$TURBO_ROOT$/apps/extension/store/social/**"
       ]
     },
     "test": {
