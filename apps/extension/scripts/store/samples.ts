@@ -141,7 +141,7 @@ export interface Caption {
   readonly subtitle: string
 }
 
-export type Shot = "spaces" | "spotlight" | "split" | "arc" | "themes"
+export type Shot = "spaces" | "spotlight" | "split" | "arc" | "themes" | "bangs"
 
 export interface LocaleSamples {
   readonly lang: "en" | "ja"
@@ -182,6 +182,11 @@ const en: LocaleSamples = {
       eyebrow: "Themes",
       title: "Colors and themes for every Space",
       subtitle: "Give each Space its own colors, a gradient, and a light or dark look.",
+    },
+    bangs: {
+      eyebrow: "Bangs",
+      title: "Search any site with a bang",
+      subtitle: "Type ! and a site’s shortcut in Spotlight to search that site straight away.",
     },
   },
   spaceNames: { work: "Work", personal: "Personal", reading: "Reading", studio: "Studio" },
@@ -343,6 +348,11 @@ const ja: LocaleSamples = {
       title: "Space ごとに、色とテーマを",
       subtitle: "Space それぞれに、色やグラデーション、ライトとダークを選べます。",
     },
+    bangs: {
+      eyebrow: "bangs",
+      title: "どのサイトも、bangs で検索",
+      subtitle: "Spotlight で ! に続けてサイトの短縮名を打てば、そのサイトをすぐに検索。",
+    },
   },
   spaceNames: { work: "仕事", personal: "プライベート", reading: "読書", studio: "制作" },
   folderNames: {
@@ -481,7 +491,25 @@ export const temporaryTabsOf = (key: SpaceKey): ReadonlyArray<PageKey> =>
   SPACES.find((space) => space.key === key)?.tabs ?? []
 
 /** Every sample URL, so their icons can be cached before anything shows them. */
-export const ALL_URLS: ReadonlyArray<string> = Object.values(URLS)
+/**
+ * Commands with a keyword, added for the bangs screenshot, where a ! typed alone lists them. Each
+ * searches its sample site, whose name it takes.
+ */
+export const BANG_COMMANDS = [
+  { host: "docs.example.com", keyword: "docs" },
+  { host: "tracker.example.com", keyword: "tr" },
+  { host: "maps.example.com", keyword: "maps" },
+  { host: "news.example.com", keyword: "news" },
+  { host: "recipes.example.com", keyword: "food" },
+] as const
+
+/** The page a command of {@link BANG_COMMANDS} shows the icon of: its site's top page. */
+export const bangSiteUrlOf = (command: (typeof BANG_COMMANDS)[number]) => `http://${command.host}/`
+
+export const ALL_URLS: ReadonlyArray<string> = [
+  ...Object.values(URLS),
+  ...BANG_COMMANDS.map(bangSiteUrlOf),
+]
 
 /** A Katip export file holding the sample Spaces and Favorites, in `samples`' language. */
 export const sampleExport = (samples: LocaleSamples): ExportV1 => {

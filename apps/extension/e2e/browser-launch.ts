@@ -1,4 +1,10 @@
-import { chromium, type BrowserContext, type Page, type Worker } from "@playwright/test"
+import {
+  chromium,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+  type Worker,
+} from "@playwright/test"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -8,15 +14,18 @@ import { join } from "node:path"
  * Uses the executable in `KATIP_E2E_CHROME` when set.
  *
  * @param args - More command line switches for Chrome.
+ * @param display - The pixel density pages render at, when not the usual one.
  */
 export const launchInProfile = (
   userDataDir: string,
   extensionDir: string,
   args: ReadonlyArray<string> = [],
+  display: Pick<BrowserContextOptions, "deviceScaleFactor"> = {},
 ): Promise<BrowserContext> => {
   const executablePath = process.env.KATIP_E2E_CHROME
   return chromium.launchPersistentContext(userDataDir, {
     ...(executablePath === undefined ? {} : { executablePath }),
+    ...display,
     headless: true,
     // Folders slide open and closed over a fraction of a second, and steps that measure where rows
     // are, such as drags, would measure them mid-slide
@@ -39,9 +48,10 @@ export const launchInProfile = (
 export const launchWithExtension = async (
   extensionDir: string,
   args: ReadonlyArray<string> = [],
+  display: Pick<BrowserContextOptions, "deviceScaleFactor"> = {},
 ): Promise<{ readonly context: BrowserContext; readonly close: () => Promise<void> }> => {
   const userDataDir = await mkdtemp(join(tmpdir(), "katip-e2e-"))
-  const context = await launchInProfile(userDataDir, extensionDir, args)
+  const context = await launchInProfile(userDataDir, extensionDir, args, display)
   return {
     context,
     close: async () => {

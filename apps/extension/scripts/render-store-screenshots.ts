@@ -39,6 +39,8 @@ import {
 } from "./store/canvas.ts"
 import {
   ALL_URLS,
+  BANG_COMMANDS,
+  bangSiteUrlOf,
   LOCALES,
   sampleExport,
   temporaryTabsOf,
@@ -53,6 +55,10 @@ import { SITES, sampleFontFile, samplePageHtml, siteIconSvg } from "./store/site
 const fromRoot = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url))
 
 const OUTPUT_DIR = fromRoot("store")
+
+// The store takes screenshots at 1280×800 only. The website shows the same screenshots wider than
+// that, on screens of twice the density, where they would look blurred
+const WEBSITE_SCALE = 2
 const ARC_SIDEBAR_FIXTURE = fromRoot("src/modules/arc-import/fixtures/arc-sidebar.json")
 
 /** Where Katip opens Spotlight's window over the browser window in the screenshots. */
@@ -136,7 +142,9 @@ const setLocale = (background: Worker, locale: LocaleSamples["lang"]) =>
  * things by their English labels.
  */
 const launchSession = async (samples: LocaleSamples, args: ReadonlyArray<string>) => {
-  const { context, close } = await launchWithExtension(EXTENSION_DIR, args)
+  const { context, close } = await launchWithExtension(EXTENSION_DIR, args, {
+    deviceScaleFactor: WEBSITE_SCALE,
+  })
   const background = await extensionWorkerOf(context)
   await setLocale(background, "en")
   const origin = `chrome-extension://${new URL(background.url()).host}`
@@ -191,6 +199,23 @@ const importSamples = async (session: Session, workDir: string) => {
   await options.close()
 }
 
+// Through the settings, as people add them: the export file carries no commands
+const addBangCommands = async (session: Session) => {
+  const settings = await openKatipPage(session, "options/index.html")
+  await settings.getByRole("tab", { name: "Spotlight" }).click()
+  for (const command of BANG_COMMANDS) {
+    const name = SITES[command.host]?.name ?? command.host
+    await settings.getByRole("button", { name: "Add Command" }).click()
+    const form = settings.getByRole("form", { name: "New Command" })
+    await form.getByLabel("Name").fill(name)
+    await form.getByLabel("URL").fill(`${bangSiteUrlOf(command)}search?q=%s`)
+    await form.getByLabel("Keyword").fill(command.keyword)
+    await form.getByRole("button", { name: "Save" }).click()
+    await settings.getByText(name, { exact: true }).first().waitFor()
+  }
+  await settings.close()
+}
+
 const deleteShownSpace = async ({ sidebar }: Session) => {
   await sidebar.getByRole("button", { name: enSidepanel["sidepanel.space.menu"] }).click()
   await sidebar.getByRole("menuitem", { name: enSidepanel["sidepanel.space.delete"] }).click()
@@ -238,6 +263,7 @@ const showLanguage = async (session: Session) => {
 const seed = async (session: Session, workDir: string) => {
   await cacheFavicons(session)
   await importSamples(session, workDir)
+  await addBangCommands(session)
   await deleteShownSpace(session)
   for (const key of ["personal", "work"] as const) {
     await switchSpace(session, key, enSidepanel)
@@ -287,8 +313,26 @@ interface Captures {
   readonly sidebarSpaces: string
   readonly spotlight: string
   readonly sidebarSplit: string
+  readonly bangs: string
   readonly sidebarThemes: string
   readonly settings: string
+}
+
+/** Opens Spotlight from the side panel, types `query` and screenshots what it lists. */
+const captureSpotlight = async (session: Session, query: string, path: string) => {
+  const [spotlight] = await Promise.all([
+    session.context.waitForEvent("page", (page) => page.url().includes("/spotlight/")),
+    session.sidebar
+      .getByRole("button", { name: labelsOf(session)["sidepanel.spotlight.button"], exact: true })
+      .click(),
+  ])
+  await spotlight.setViewportSize({ width: SPOTLIGHT.width, height: SPOTLIGHT.height })
+  await spotlight.getByRole("combobox").fill(query)
+  await spotlight.getByRole("option").first().waitFor()
+  await spotlight.waitForTimeout(600)
+  await spotlight.locator("main").screenshot({ path })
+  // Spotlight closes itself once it loses focus
+  if (!spotlight.isClosed()) await spotlight.close()
 }
 
 const captureScenes = async (session: Session, workDir: string): Promise<Captures> => {
@@ -298,6 +342,7 @@ const captureScenes = async (session: Session, workDir: string): Promise<Capture
     sidebarSpaces: shot("sidebar-spaces"),
     spotlight: shot("spotlight"),
     sidebarSplit: shot("sidebar-split"),
+    bangs: shot("bangs"),
     sidebarThemes: shot("sidebar-themes"),
     settings: shot("settings"),
   }
@@ -310,19 +355,7 @@ const captureScenes = async (session: Session, workDir: string): Promise<Capture
   await settle(sidebar)
   await sidebar.screenshot({ path: files.sidebarSpaces })
 
-  const [spotlight] = await Promise.all([
-    session.context.waitForEvent("page", (page) => page.url().includes("/spotlight/")),
-    sidebar
-      .getByRole("button", { name: labelsOf(session)["sidepanel.spotlight.button"], exact: true })
-      .click(),
-  ])
-  await spotlight.setViewportSize({ width: SPOTLIGHT.width, height: SPOTLIGHT.height })
-  await spotlight.getByRole("combobox").fill(samples.spotlightQuery)
-  await spotlight.getByRole("option").first().waitFor()
-  await spotlight.waitForTimeout(600)
-  await spotlight.locator("main").screenshot({ path: files.spotlight })
-  // Spotlight closes itself once it loses focus
-  if (!spotlight.isClosed()) await spotlight.close()
+  await captureSpotlight(session, samples.spotlightQuery, files.spotlight)
 
   await pinnedRegion(session)
     .getByRole("button", { name: samples.pages.spec.title, exact: true })
@@ -330,6 +363,8 @@ const captureScenes = async (session: Session, workDir: string): Promise<Capture
   await waitUntilActive(session, URLS.spec)
   await settle(sidebar)
   await sidebar.screenshot({ path: files.sidebarSplit })
+  // A ! alone lists the commands that have a keyword
+  await captureSpotlight(session, "!", files.bangs)
 
   await switchSpace(session, "personal")
   await openPin(session, "kyoto")
@@ -372,7 +407,7 @@ const capturePages = async (
   samples: LocaleSamples,
   workDir: string,
 ): Promise<PageCaptures> => {
-  const page = await browser.newPage({ deviceScaleFactor: 1 })
+  const page = await browser.newPage({ deviceScaleFactor: WEBSITE_SCALE })
   const capture = async (key: PageKey, box: Box) => {
     const file = join(workDir, `${samples.lang}-page-${key}.png`)
     await page.setViewportSize({ width: box.width, height: box.height })
@@ -397,14 +432,20 @@ const render = async (
   html: string,
   size: { readonly width: number; readonly height: number },
   path: string,
+  { scale = 1, clip }: { readonly scale?: number; readonly clip?: Box } = {},
 ) => {
   // A file of its own, so the screenshots and fonts it refers to by file URL may load
   const source = join(workDir, "canvas.html")
   writeFileSync(source, html)
-  const page = await browser.newPage({ viewport: size, deviceScaleFactor: 1 })
+  const page = await browser.newPage({ viewport: size, deviceScaleFactor: scale })
   await page.goto(pathToFileURL(source).href)
   await page.evaluate(() => document.fonts.ready)
-  await page.screenshot({ path })
+  await page.screenshot({
+    path,
+    ...(clip === undefined
+      ? {}
+      : { clip: { x: clip.left, y: clip.top, width: clip.width, height: clip.height } }),
+  })
   await page.close()
 }
 
@@ -448,6 +489,12 @@ const screenshotsOf = (captures: Captures, pages: PageCaptures) =>
       file: "5-themes",
       shot: "themes",
       window: browserWindow(STAGE, captures.sidebarThemes, pages.kyoto),
+    },
+    {
+      file: "6-bangs",
+      shot: "bangs",
+      window: browserWindow(STAGE, captures.sidebarSplit, [pages.spec, pages.prototype]),
+      overlay: image(captures.bangs, SPOTLIGHT, "floating"),
     },
   ] as const satisfies ReadonlyArray<{
     readonly file: string
@@ -543,16 +590,23 @@ try {
       .finally(session.close)
     const pages = await capturePages(plain, samples, workDir)
     const outDir = join(OUTPUT_DIR, "screenshots", samples.lang)
-    rmSync(outDir, { recursive: true, force: true })
-    mkdirSync(outDir, { recursive: true })
+    const websiteDir = join(OUTPUT_DIR, "website-screenshots", samples.lang)
+    for (const dir of [outDir, websiteDir]) {
+      rmSync(dir, { recursive: true, force: true })
+      mkdirSync(dir, { recursive: true })
+    }
     for (const { file, shot, ...framed } of screenshotsOf(captures, pages)) {
-      await render(
-        plain,
-        workDir,
-        screenshotHtml({ lang: samples.lang, caption: samples.captions[shot], ...framed }),
-        CANVAS,
-        join(outDir, `${file}.png`),
-      )
+      const html = screenshotHtml({
+        lang: samples.lang,
+        caption: samples.captions[shot],
+        ...framed,
+      })
+      await render(plain, workDir, html, CANVAS, join(outDir, `${file}.png`))
+      // The browser window alone: the website sets the caption as text of its own
+      await render(plain, workDir, html, CANVAS, join(websiteDir, `${file}.png`), {
+        scale: WEBSITE_SCALE,
+        clip: STAGE,
+      })
     }
     if (samples.lang === "en") await renderPromos(plain, workDir, samples, captures, pages)
     await renderSocialCard(plain, workDir, samples, captures, pages)

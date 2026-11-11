@@ -1,5 +1,7 @@
 import type { WindowBounds } from "#platform/browser"
-import { SPOTLIGHT_LAYOUTS, type SpotlightPosition, type SpotlightSize } from "./spotlight-size"
+// With its extension, unlike elsewhere: scripts/render-store-screenshots.ts runs this file in Node,
+// which looks for no file by a name without one
+import { SPOTLIGHT_LAYOUTS, type SpotlightPosition, type SpotlightSize } from "./spotlight-size.ts"
 
 const MINIMUM = { width: 360, height: 240 }
 const MARGIN = 24
