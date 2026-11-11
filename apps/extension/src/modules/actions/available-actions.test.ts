@@ -22,9 +22,14 @@ const spaces = [
 
 const tabIn = (
   spaceId: SpaceId,
-  state: { readonly isPinned?: boolean; readonly isMuted?: boolean } = {},
+  state: {
+    readonly isPinned?: boolean
+    readonly isMuted?: boolean
+    readonly split?: ActionTarget["split"]
+  } = {},
 ): ActionTarget => ({
   isMuted: state.isMuted ?? false,
+  split: state.split ?? "Unsplit",
   membership: Option.some({ spaceId, isPinned: state.isPinned ?? false }),
 })
 
@@ -47,6 +52,7 @@ describe("available actions", () => {
       "Copy URL as Markdown Link",
       "Pin Tab",
       "Duplicate Tab",
+      "Split with New Tab",
       "Close Tab",
       "Mute Tab",
       "Move Tab to Work",
@@ -73,7 +79,11 @@ describe("available actions", () => {
   })
 
   it("for a tab outside every Space, leaves out pinning and moving to a Space", () => {
-    const favorite: ActionTarget = { isMuted: false, membership: Option.none() }
+    const favorite: ActionTarget = {
+      isMuted: false,
+      split: "Unavailable",
+      membership: Option.none(),
+    }
 
     expect(
       availableActions(context({ activeTab: Option.some(favorite) })).map(({ _tag }) => _tag),
@@ -86,6 +96,25 @@ describe("available actions", () => {
       "CloseTemporaryTabs",
       "OpenSettings",
     ])
+  })
+
+  it("for a tab in a split view, offers separating it instead of splitting it again", () => {
+    const tags = availableActions(
+      context({ activeTab: Option.some(tabIn(home, { split: "Split" })) }),
+    ).map(({ _tag }) => _tag)
+
+    expect([tags.includes("Unsplit"), tags.includes("SplitWithNewTab")]).toStrictEqual([
+      true,
+      false,
+    ])
+  })
+
+  it("for a tab that can't be split, offers neither splitting nor separating", () => {
+    const tags = availableActions(
+      context({ activeTab: Option.some(tabIn(home, { split: "Unavailable" })) }),
+    ).map(({ _tag }) => _tag)
+
+    expect(tags.filter((tag) => tag === "Unsplit" || tag === "SplitWithNewTab")).toStrictEqual([])
   })
 
   it("without a shown Space, leaves out closing the temporary tabs", () => {

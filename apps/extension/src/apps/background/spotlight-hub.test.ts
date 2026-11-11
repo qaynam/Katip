@@ -45,6 +45,7 @@ import { runSpotlightChoice } from "./spotlight-choice"
 import { SpotlightHub } from "./spotlight-hub"
 import { openSpotlight } from "./spotlight-window"
 import bundledBangsUrl from "../../modules/bangs/data/bangs.json?url"
+import { byIndex } from "./temporary-order"
 import { backgroundTestLayer } from "./testing/background-harness"
 
 const testLayerWith = (shortcuts: Layer.Layer<KeyboardShortcuts>) =>
@@ -621,6 +622,7 @@ describe("Spotlight commands", () => {
             "Copy URL as Markdown Link",
             "Pin Tab",
             "Duplicate Tab",
+            "Split with New Tab",
             "Close Tab",
             "Mute Tab",
             "Close All Temporary Tabs",
@@ -862,6 +864,52 @@ describe("choosing a Spotlight command", () => {
           Option.some("https://docs.example/guide"),
           Option.some("https://docs.example/guide"),
         ])
+      }),
+    ),
+  )
+
+  it.effect(
+    "choosing Split with New Tab splits the active tab with a new tab on its right, shown",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedPage
+          const spotlight = yield* connectSpotlight(windowId)
+          const split = yield* firstOf(
+            actionsOfKind("SplitWithNewTab")((yield* spotlight.search("", "Actions")).results),
+          )
+
+          yield* spotlight.choose(split)
+
+          const inWindow = Array.sort(yield* (yield* Tabs).query({ windowId }), byIndex)
+          const splitViewId = inWindow[0]?.splitViewId ?? Option.none()
+          expect(Option.isSome(splitViewId)).toBe(true)
+          expect(
+            inWindow.map((tab) => [tab.id === tabIds[0], tab.active, tab.splitViewId]),
+          ).toStrictEqual([
+            [true, false, splitViewId],
+            [false, true, splitViewId],
+          ])
+        }),
+      ),
+  )
+
+  it.effect("for a tab in a split view, choosing Separate Split Tabs separates it", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedPage
+        const spotlight = yield* connectSpotlight(windowId)
+        const split = yield* firstOf(
+          actionsOfKind("SplitWithNewTab")((yield* spotlight.search("", "Actions")).results),
+        )
+        yield* spotlight.choose(split)
+        const separate = yield* firstOf(
+          actionsOfKind("Unsplit")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        yield* spotlight.choose(separate)
+
+        expect((yield* (yield* Tabs).get(tabIds[0])).splitViewId).toStrictEqual(Option.none())
       }),
     ),
   )

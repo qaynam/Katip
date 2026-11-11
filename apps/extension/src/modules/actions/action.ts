@@ -9,6 +9,8 @@ export const Action = Schema.TaggedUnion({
   CopyMarkdownLink: {},
   TogglePin: {},
   DuplicateTab: {},
+  SplitWithNewTab: {},
+  Unsplit: {},
   CloseTab: {},
   ToggleMute: {},
   MoveTabToSpace: { spaceId: SpaceId },

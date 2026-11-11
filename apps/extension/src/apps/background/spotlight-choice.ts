@@ -116,6 +116,26 @@ const closeTemporaryTabs = Effect.fnUntraced(function* (callerWindowId: WindowId
   })
 })
 
+// The new tab goes on the right of the shown one, as a tab let go over the right of the page does
+const splitWithNewTab = Effect.fnUntraced(function* (callerWindowId: WindowId, tab: BrowserTab) {
+  const tabs = yield* Tabs
+  const created = yield* tabs.create({ windowId: tab.windowId, active: false })
+  const outcome = yield* runAsSidebarCommand(callerWindowId, {
+    _tag: "SplitTabs",
+    tabId: created.id,
+    withTabId: tab.id,
+  })
+  // Opened only to be split, it would otherwise be left behind among the tabs
+  if (outcome._tag === "Failed") yield* tabs.remove([created.id])
+  return outcome
+})
+
+const unsplit = (callerWindowId: WindowId, tab: BrowserTab) =>
+  Option.match(tab.splitViewId, {
+    onNone: () => Effect.map(translate("background.split.notFound"), failed),
+    onSome: (splitViewId) => runAsSidebarCommand(callerWindowId, { _tag: "Unsplit", splitViewId }),
+  })
+
 // Pinning, closing a tab, moving it to a Space and the like follow the same rules as from the
 // side panel
 const runAction = (callerWindowId: WindowId, action: Action) =>
@@ -130,6 +150,9 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
           finishInCaller(callerWindowId),
         ),
       ),
+    SplitWithNewTab: () =>
+      onActiveTab(callerWindowId, (tab) => splitWithNewTab(callerWindowId, tab)),
+    Unsplit: () => onActiveTab(callerWindowId, (tab) => unsplit(callerWindowId, tab)),
     CloseTab: () =>
       onActiveTab(callerWindowId, (tab) =>
         runAsSidebarCommand(callerWindowId, { _tag: "CloseTab", tabId: tab.id }),

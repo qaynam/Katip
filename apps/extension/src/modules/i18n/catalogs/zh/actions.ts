@@ -6,6 +6,8 @@ export const actions: CatalogSection<"actions"> = {
   "actions.pinTab": "固定标签页",
   "actions.unpinTab": "取消固定标签页",
   "actions.duplicateTab": "复制标签页",
+  "actions.splitWithNewTab": "与新标签页分屏",
+  "actions.unsplit": "取消分屏",
   "actions.closeTab": "关闭标签页",
   "actions.muteTab": "将标签页静音",
   "actions.unmuteTab": "取消标签页静音",

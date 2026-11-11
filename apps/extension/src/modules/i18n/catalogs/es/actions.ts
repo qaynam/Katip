@@ -6,6 +6,8 @@ export const actions: CatalogSection<"actions"> = {
   "actions.pinTab": "Fijar pestaña",
   "actions.unpinTab": "Dejar de fijar pestaña",
   "actions.duplicateTab": "Duplicar pestaña",
+  "actions.splitWithNewTab": "Dividir con una pestaña nueva",
+  "actions.unsplit": "Separar pestañas divididas",
   "actions.closeTab": "Cerrar pestaña",
   "actions.muteTab": "Silenciar pestaña",
   "actions.unmuteTab": "Activar sonido de la pestaña",

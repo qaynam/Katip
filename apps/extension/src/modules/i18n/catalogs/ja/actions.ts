@@ -6,6 +6,8 @@ export const actions: CatalogSection<"actions"> = {
   "actions.pinTab": "タブをピン留め",
   "actions.unpinTab": "タブのピン留めを外す",
   "actions.duplicateTab": "タブを複製",
+  "actions.splitWithNewTab": "新しいタブと分割",
+  "actions.unsplit": "分割を解除",
   "actions.closeTab": "タブを閉じる",
   "actions.muteTab": "タブをミュート",
   "actions.unmuteTab": "タブのミュートを解除",

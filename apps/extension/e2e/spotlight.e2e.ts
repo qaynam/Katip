@@ -1,6 +1,12 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 import { expect, test } from "./fixtures"
-import { openPages, pagesInBrowser, pinnedBookmarks, temporaryTitles } from "./sidebar-actions"
+import {
+  isSplitViewAvailable,
+  openPages,
+  pagesInBrowser,
+  pinnedBookmarks,
+  temporaryTitles,
+} from "./sidebar-actions"
 
 /**
  * Activates the tab at `url`, then opens Spotlight with the sidebar's search button.
@@ -173,6 +179,40 @@ test("in a site, Enter pressed right after typing fast searches the site for all
   await expect
     .poll(() => searchedOnSite(background, site))
     .toStrictEqual([`${site}/search?q=hello+world`])
+})
+
+test("Split with New Tab splits the active tab with a new tab on its right, shown", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  test.skip(
+    !(await isSplitViewAvailable(background)),
+    "Chrome without the split view API (154 or earlier)",
+  )
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
+
+  await choose(spotlight, "split with new tab", /^Split with New Tab/)
+
+  await expect
+    .poll(() =>
+      background.evaluate(async (site) => {
+        const split = (await chrome.tabs.query({})).filter(
+          (tab) => tab.splitViewId !== undefined && tab.splitViewId !== -1,
+        )
+        return split
+          .sort((one, other) => one.index - other.index)
+          .map((tab) => {
+            const url = tab.pendingUrl ?? tab.url ?? ""
+            const page = url.startsWith(site) ? url.slice(site.length) : "new tab"
+            return tab.active ? `${page} active` : page
+          })
+      }, site),
+    )
+    .toStrictEqual(["/a", "new tab active"])
 })
 
 test.fixme("choosing a closed pin by name opens it as that pin's tab", () => {})

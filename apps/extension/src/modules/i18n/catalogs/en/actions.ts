@@ -6,6 +6,8 @@ export const actions = {
   "actions.pinTab": "Pin Tab",
   "actions.unpinTab": "Unpin Tab",
   "actions.duplicateTab": "Duplicate Tab",
+  "actions.splitWithNewTab": "Split with New Tab",
+  "actions.unsplit": "Separate Split Tabs",
   "actions.closeTab": "Close Tab",
   "actions.muteTab": "Mute Tab",
   "actions.unmuteTab": "Unmute Tab",

@@ -12,7 +12,11 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 ### English
 
-The bundled bangs are suggested again as before 1.6.1, along with a few fixes in Spotlight and the side panel.
+Split a tab with a new one right from Spotlight, and bangs that keep up with fast typing.
+
+#### New
+
+- **Split view from Spotlight** — “Split with New Tab” shows a new tab beside the one you’re on. On a tab in a split view, “Separate Split Tabs” turns the two back into single tabs.
 
 #### Improved
 
@@ -27,7 +31,11 @@ The bundled bangs are suggested again as before 1.6.1, along with a few fixes in
 
 ### 日本語
 
-同梱の bangs を 1.6.1 より前と同じく候補に出すように戻し、Spotlight とサイドパネルのいくつかの問題を直しました。
+Spotlight から新しいタブと画面を分割できるようになり、bangs を速く打っても取りこぼさなくなりました。
+
+#### 新機能
+
+- **Spotlight から分割表示** — 「新しいタブと分割」で、いま見ているタブの右に新しいタブを並べます。分割中のタブでは「分割を解除」で 2 つのタブに戻せます。
 
 #### 改善
 

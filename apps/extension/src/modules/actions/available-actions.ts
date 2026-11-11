@@ -6,6 +6,11 @@ import type { Action } from "./action"
 export interface ActionTarget {
   readonly isMuted: boolean
   /**
+   * Whether the tab is shown side by side with another. `Unavailable` when it can't be: the browser
+   * has no split view, or the tab is a Favorite, which Chrome never splits.
+   */
+  readonly split: "Unavailable" | "Unsplit" | "Split"
+  /**
    * The Space the tab belongs to and whether it is pinned there. None for a tab outside every
    * Space, such as a Favorite.
    */
@@ -21,6 +26,12 @@ export interface ActionContext {
   readonly spaces: ReadonlyArray<{ readonly id: SpaceId; readonly name: string }>
 }
 
+const splitActions: Readonly<Record<ActionTarget["split"], ReadonlyArray<Action>>> = {
+  Unavailable: [],
+  Unsplit: [{ _tag: "SplitWithNewTab" }],
+  Split: [{ _tag: "Unsplit" }],
+}
+
 const tabActions = (target: ActionTarget, context: ActionContext): ReadonlyArray<Action> => {
   const spaceId = Option.map(target.membership, (membership) => membership.spaceId)
   return [
@@ -28,6 +39,7 @@ const tabActions = (target: ActionTarget, context: ActionContext): ReadonlyArray
     { _tag: "CopyMarkdownLink" },
     ...(Option.isSome(spaceId) ? [{ _tag: "TogglePin" } as const] : []),
     { _tag: "DuplicateTab" },
+    ...splitActions[target.split],
     { _tag: "CloseTab" },
     { _tag: "ToggleMute" },
     ...(Option.isSome(spaceId)
@@ -75,6 +87,8 @@ export const actionTitle = (
     CopyMarkdownLink: () => translator.t("actions.copyMarkdownLink"),
     TogglePin: () => translator.t(isPinned(context) ? "actions.unpinTab" : "actions.pinTab"),
     DuplicateTab: () => translator.t("actions.duplicateTab"),
+    SplitWithNewTab: () => translator.t("actions.splitWithNewTab"),
+    Unsplit: () => translator.t("actions.unsplit"),
     CloseTab: () => translator.t("actions.closeTab"),
     ToggleMute: () => translator.t(isMuted(context) ? "actions.unmuteTab" : "actions.muteTab"),
     MoveTabToSpace: ({ spaceId }) =>

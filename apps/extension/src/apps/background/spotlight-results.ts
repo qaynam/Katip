@@ -1,5 +1,11 @@
 import { Array, Clock, Effect, Match, Option, pipe } from "effect"
-import { type Action, actionTitle, availableActions, type ActionContext } from "#modules/actions"
+import {
+  type Action,
+  actionTitle,
+  availableActions,
+  type ActionContext,
+  type ActionTarget,
+} from "#modules/actions"
 import {
   BangCatalog,
   type BangIndex,
@@ -319,6 +325,8 @@ const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | 
         : null,
     TogglePin: () => assigned(KeyboardCommand.quickPinToggle),
     DuplicateTab: () => null,
+    SplitWithNewTab: () => null,
+    Unsplit: () => null,
     CloseTab: () => null,
     ToggleMute: () => null,
     MoveTabToSpace: () => null,
@@ -340,13 +348,21 @@ const shortcutEnvironment = Effect.gen(function* () {
   return { assigned, pageShortcuts } satisfies ShortcutEnvironment
 })
 
+// Chrome keeps a pinned tab, which is how a Favorite is open, out of split views
+const splitOf = (tab: BrowserTab, supportsSplitView: boolean): ActionTarget["split"] => {
+  if (!supportsSplitView || tab.pinned) return "Unavailable"
+  return Option.isSome(tab.splitViewId) ? "Split" : "Unsplit"
+}
+
 const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const state = yield* KatipState
   const workspace = yield* state.workspace.get
-  const [activeTab] = yield* (yield* Tabs).query({ windowId: callerWindowId, active: true })
+  const tabs = yield* Tabs
+  const [activeTab] = yield* tabs.query({ windowId: callerWindowId, active: true })
   return {
     activeTab: Option.map(Option.fromNullishOr(activeTab), (tab) => ({
       isMuted: tab.muted,
+      split: splitOf(tab, tabs.supportsSplitView),
       membership: Option.map(trackedTab(workspace, tab.id), ({ spaceId, pinned }) => ({
         spaceId,
         isPinned: pinned !== null,
