@@ -16,26 +16,54 @@ interface Props {
 
 const { lang, shot, alt, glow, priority = false } = Astro.props
 const image = screenshot(lang, shot)
+const MAX_WIDTH_REM = 80
+const maxWidth = `${MAX_WIDTH_REM}rem`
+
+// A whole window shrinks too far on a phone to read, so there the shot is cut down to this shape,
+// keeping the part around its focus. The media query in the style below repeats the width, as a
+// media query can't read a custom property
+const NARROW_SCREEN_REM = 40
+const NARROW_ASPECT_RATIO = 3 / 2
+const NARROW_ZOOM = image.width / image.height / NARROW_ASPECT_RATIO
+
+/** How far across each shot, from 0% at its left edge to 100% at its right, the part to keep lies. */
+const FOCUS: Readonly<Record<Shot, number>> = {
+  "1-spaces": 0,
+  "2-spotlight": 50,
+  "3-split-view": 0,
+  "4-import": 100,
+  "5-themes": 0,
+  "6-bangs": 50,
+}
+const focus = `${FOCUS[shot]}%`
+const narrowAspectRatio = String(NARROW_ASPECT_RATIO)
 ---
 
 <div class:list={["screenshot", glow, { revealed: !priority }]}>
   <Picture
     src={image}
     alt={alt}
-    widths={[544, 816, image.width]}
-    sizes={`(min-width: ${image.width + 80}px) ${image.width}px, calc(100vw - 40px)`}
+    widths={[544, 816, 1088, 1632, image.width]}
+    sizes={[
+      `(max-width: ${NARROW_SCREEN_REM}rem) calc((100vw - 2.5rem) * ${NARROW_ZOOM.toFixed(2)})`,
+      `(min-width: ${MAX_WIDTH_REM + 5}rem) ${MAX_WIDTH_REM}rem`,
+      "calc(100vw - 2.5rem)",
+    ].join(", ")}
     formats={["avif", "webp"]}
     quality={82}
     priority={priority}
   />
 </div>
 
-<style>
+<style define:vars={{ maxWidth, focus, narrowAspectRatio }}>
+  /* Wider than the text around it, reaching past the page width into the gutters on a wide
+     screen */
   .screenshot {
+    --width: min(100vw - 2 * var(--gutter), var(--maxWidth));
     position: relative;
     isolation: isolate;
-    max-width: 68rem;
-    margin-inline: auto;
+    width: var(--width);
+    margin-inline: calc((100% - var(--width)) / 2);
   }
 
   .screenshot::before {
@@ -70,6 +98,15 @@ const image = screenshot(lang, shot)
     /* The window's 14px corners, cut a hair wider so no backdrop pixel shows at the edge */
     border-radius: 1.4% / 2.65%;
     box-shadow: var(--window-shadow);
+  }
+
+  @media (max-width: 40rem) {
+    .screenshot :global(img) {
+      aspect-ratio: var(--narrowAspectRatio);
+      object-fit: cover;
+      object-position: var(--focus) 50%;
+      border-radius: 0.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {

@@ -9,6 +9,5 @@ coverage/
 .turbo/
 .astro/
 .wrangler/
-apps/web/generated/
 # The release key's private half never belongs in the repository
 *.pem

@@ -22,16 +22,13 @@ export interface SectionIntro {
   readonly lead: string
 }
 
-export interface DetailsSection extends SectionIntro {
+/** A section led by a screenshot, with a few short notes below it. */
+export interface Feature extends SectionIntro {
+  readonly screenshotAlt: string
   readonly details: ReadonlyArray<Detail>
 }
 
-export interface Feature extends DetailsSection {
-  readonly screenshotAlt: string
-}
-
-export type MoreFeature =
-  "liveFolders" | "temporaryTabs" | "shortcuts" | "tour" | "data" | "languages"
+export type MoreFeature = "liveFolders" | "temporaryTabs" | "shortcuts" | "languages"
 
 /** Where Arc keeps its sidebar file on one operating system. */
 export interface ArcFileLocation {
@@ -62,6 +59,7 @@ export interface Copy {
     readonly lead: string
     readonly note: string
     readonly screenshotAlt: string
+    readonly details: ReadonlyArray<Detail>
   }
   readonly cta: {
     readonly addToChrome: string
@@ -70,9 +68,8 @@ export interface Copy {
     /** How to install Katip before the store listing exists. */
     readonly fromRelease: RichText
   }
-  readonly spaces: DetailsSection
   readonly spotlight: Feature
-  readonly bangs: DetailsSection
+  readonly bangs: Feature
   readonly splitView: Feature
   readonly themes: Feature
   readonly more: SectionIntro & {
@@ -80,13 +77,13 @@ export interface Copy {
   }
   readonly arc: SectionIntro & {
     readonly screenshotAlt: string
-    readonly stepsTitle: string
-    readonly locationsTitle: string
     readonly steps: {
       readonly openSettings: RichText
       readonly chooseFile: RichText
       readonly import: RichText
     }
+    /** Opens the list of {@link ArcFileLocation}s, under the step that chooses the file. */
+    readonly locationsTitle: string
     readonly locations: ReadonlyArray<ArcFileLocation>
     readonly promises: ReadonlyArray<string>
   }

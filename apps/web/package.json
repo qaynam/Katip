@@ -5,8 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/crop-screenshots.ts && astro dev",
-    "build": "node scripts/crop-screenshots.ts && astro build",
+    "dev": "astro dev",
+    "build": "astro build",
     "preview": "wrangler dev",
     "deploy": "wrangler deploy",
     "test": "vitest run",
