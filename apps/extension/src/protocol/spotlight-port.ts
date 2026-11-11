@@ -105,9 +105,10 @@ export type SpotlightOutcome = typeof SpotlightOutcome.Type
 
 /**
  * `All` searches tabs, pins, history, commands and more together. `Actions` searches only
- * commands, and lists every command when the query is empty.
+ * commands, and lists every command when the query is empty. `Site` is for a query that starts
+ * with a bang, typed in the site the bang put Spotlight in: it finds the site's search alone.
  */
-export const SpotlightMode = Schema.Literals(["All", "Actions"])
+export const SpotlightMode = Schema.Literals(["All", "Actions", "Site"])
 export type SpotlightMode = typeof SpotlightMode.Type
 
 // windowId is the window that opened Spotlight, not Spotlight's own window

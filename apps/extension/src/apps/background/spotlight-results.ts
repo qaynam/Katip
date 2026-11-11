@@ -467,6 +467,13 @@ const bangResults = Effect.fnUntraced(function* (query: string) {
   ]
 })
 
+const bangResultsOrEmpty = (query: string) =>
+  bangResults(query).pipe(
+    Effect.catch((error) =>
+      Effect.as(Effect.logWarning("Couldn't look up Spotlight's bangs", error), []),
+    ),
+  )
+
 const toResult = (entry: SpotlightEntry<ResultCandidate>): SpotlightResult =>
   Match.valueTags(entry, {
     Candidate: ({ candidate }) => candidate.result,
@@ -492,7 +499,8 @@ const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) 
  * `Actions` returns commands only. `All` adds commands and browsing history (the latter only with
  * the `history` permission) only when something has been typed. In `All`, a bang typed with `!`
  * (one of a command's keywords, or one of the bundled list while bangs are on) puts its site search
- * first, and a trigger being typed is followed by the bangs it can become.
+ * first, and a trigger being typed is followed by the bangs it can become. `Site` returns the site
+ * search of the query's bang alone, or nothing when no bang in it is known.
  *
  * Never fails. When tabs or bookmarks can't be read, they're treated as having no results, and
  * only the items for opening the URL and searching the web are returned.
@@ -502,6 +510,13 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
   query: string,
   mode: SpotlightMode,
 ) {
+  if (mode === "Site") {
+    const bangs = yield* bangResultsOrEmpty(query)
+    return {
+      results: bangs.filter((result) => result._tag === "SiteSearch"),
+      spaceTheme: yield* activeSpaceTheme(callerWindowId),
+    }
+  }
   const wantsActions = mode === "Actions" || query.trim() !== ""
   const actions = wantsActions
     ? yield* actionCandidates(callerWindowId).pipe(
@@ -518,11 +533,7 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
       )
     : []
   // In command mode too: a bang typed there is chosen into the usual search
-  const bangs = yield* bangResults(query).pipe(
-    Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Couldn't look up Spotlight's bangs", error), []),
-    ),
-  )
+  const bangs = yield* bangResultsOrEmpty(query)
   const others =
     mode === "All"
       ? yield* gatherCandidates(callerWindowId, query).pipe(

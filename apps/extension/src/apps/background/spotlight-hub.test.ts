@@ -1157,6 +1157,25 @@ describe("Spotlight bangs", () => {
     ),
   )
 
+  it.effect(
+    "in a site's mode, the search finds the site's search alone, not the tabs or the web search",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* bundleBangs
+          const { windowId } = yield* (yield* FakeBrowser).seedWindow({
+            tabs: [{ url: "https://notes.example/katip", title: "katip notes" }],
+          })
+          yield* initialize
+          const spotlight = yield* connectSpotlight(windowId)
+
+          const { results } = yield* spotlight.search("!gh katip", "Site")
+
+          expect(results.map((result) => result._tag)).toStrictEqual(["SiteSearch"])
+        }),
+      ),
+  )
+
   it.effect("with bangs turned off in the settings, the bundled bangs do nothing", () =>
     inBackground(
       Effect.gen(function* () {

@@ -21,6 +21,7 @@ The bundled bangs are suggested again as before 1.6.1, along with a few fixes in
 
 #### Fixed
 
+- **Enter right after typing** — Pressing Enter right after typing opens what all of your text finds. In a site’s mode, an Enter pressed quickly could do nothing before. While you type there, Spotlight no longer looks through your tabs and history, so it no longer shows that it is searching.
 - **Enter in a compact Spotlight** — Pressing Enter before typing anything no longer switches to a recent tab that isn’t shown.
 - **Muting from the side panel** — Clicking the speaker on a tab playing sound mutes it, and clicking it again unmutes it.
 
@@ -35,6 +36,7 @@ The bundled bangs are suggested again as before 1.6.1, along with a few fixes in
 
 #### 修正
 
+- **打ってすぐの Enter** — 打ってすぐ Enter を押しても、打った言葉すべてで見つかるものを開きます。サイトのモードでは、これまで速く Enter を押すと何も起きないことがありました。サイトのモードで打っている間はタブや履歴を探さなくなり、検索中の表示も出なくなりました。
 - **コンパクトの Spotlight の Enter** — 何も打たずに Enter を押しても、表示されていない最近のタブに切り替わらなくなりました。
 - **サイドパネルからミュート** — 音の出ているタブのスピーカーを押すとミュートし、もう一度押すと解除します。
 

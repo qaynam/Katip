@@ -254,6 +254,32 @@ describe("choosing with the keyboard", () => {
     await waitFor(() => expect(close).toHaveBeenCalled())
   })
 
+  it("Enter typed before the answer to the latest input comes opens what that input finds", async () => {
+    const { connection, input } = renderSpotlight()
+    await connection.answer("", threeTabs)
+    await settle()
+
+    await type(input, "cal")
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await connection.answer("cal", [tab(2, "Calendar")])
+    await settle()
+
+    expect(connection.chosen).toStrictEqual([tab(2, "Calendar")])
+  })
+
+  it("Enter opens nothing when the answer to the latest input never comes", async () => {
+    const { connection, input } = renderSpotlight()
+    await connection.answer("", threeTabs)
+    await settle()
+
+    await type(input, "cal")
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await connection.answer("cal", [], { unreachable: true })
+    await settle()
+
+    expect(connection.chosen).toStrictEqual([])
+  })
+
   it("when the result can't be opened, shows why and stays open", async () => {
     const { close, input } = renderSpotlight({
       respond: () => threeTabs,
@@ -451,7 +477,7 @@ describe("bangs", () => {
       field().value,
       field().getAttribute("aria-label"),
       connection.searches.at(-1),
-    ]).toStrictEqual(["", "GitHub: what to search for", { query: "!gh ", mode: "All" }])
+    ]).toStrictEqual(["", "GitHub: what to search for", { query: "!gh ", mode: "Site" }])
     expect(connection.chosen).toStrictEqual([])
   })
 
@@ -491,7 +517,7 @@ describe("bangs", () => {
     ])
   })
 
-  it("in a site, what is typed searches the site, which is all that is offered", async () => {
+  it("in a site, what is typed searches the site alone, which is all that is offered", async () => {
     const { connection, input } = renderSpotlight({ respond: respondWithBangs })
     await type(input, "!gh")
     await settle()
@@ -502,9 +528,24 @@ describe("bangs", () => {
     await settle()
 
     expect([connection.searches.at(-1), optionNames().length]).toStrictEqual([
-      { query: "!gh katip", mode: "All" },
+      { query: "!gh katip", mode: "Site" },
       1,
     ])
+  })
+
+  it("in a site, Enter typed before the answer comes searches the site for all that was typed", async () => {
+    const { connection, input } = renderSpotlight()
+    await connection.answer("", [])
+    await type(input, "!gh ")
+    await connection.answer("!gh ", [githubOwnSearch])
+    await settle()
+
+    await type(input, "katip")
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await connection.answer("!gh katip", [githubSearch])
+    await settle()
+
+    expect(connection.chosen).toStrictEqual([githubSearch])
   })
 
   it("Backspace in the empty field leaves the site, giving back its bang to change", async () => {
@@ -580,7 +621,7 @@ describe("bangs", () => {
 
     expect([field().getAttribute("aria-label"), connection.searches.at(-1)]).toStrictEqual([
       "Search Linear: what to search for",
-      { query: "!lin ", mode: "All" },
+      { query: "!lin ", mode: "Site" },
     ])
     expect(screen.queryByText("Commands")).toBeNull()
   })

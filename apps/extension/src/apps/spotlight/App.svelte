@@ -10,7 +10,7 @@
   import type { SpotlightMode, SpotlightResult } from "#protocol"
   import ResultRow from "./components/ResultRow.svelte"
   import SearchGlyph from "./components/SearchGlyph.svelte"
-  import type { SpotlightConnection } from "./connection/spotlight-connection"
+  import type { SearchResponse, SpotlightConnection } from "./connection/spotlight-connection"
   import { spotlightAppearance } from "./logic/appearance"
   import type { FaviconResolver } from "./logic/favicon"
   import {
@@ -43,8 +43,11 @@
   const RESULTS_ID = "spotlight-results"
   const optionId = (index: number) => `spotlight-option-${index}`
 
+  // A site's mode is kept in bangMode, beside the usual search it is entered from
+  type ListMode = Exclude<SpotlightMode, "Site">
+
   let query = $state("")
-  let mode = $state<SpotlightMode>("All")
+  let mode = $state<ListMode>("All")
   // The site a bang put Spotlight in: what is typed then searches that site
   let bangMode = $state.raw<BangMode | null>(null)
   let results = $state.raw<ReadonlyArray<SpotlightResult>>([])
@@ -77,11 +80,25 @@
 
   // Responses may arrive out of order, and an earlier query's must not overwrite a later one's
   let latestSearch = 0
-  const search = async (text: string, searchMode: SpotlightMode) => {
+  let latestSearchSettled = Promise.resolve()
+  // The search the results shown answer
+  let shownSearch = 0
+  const search = (text: string, searchMode: SpotlightMode) => {
     const ticket = ++latestSearch
     isSearching = true
-    const response = await connection.search(text, searchMode)
-    if (ticket !== latestSearch) return
+    latestSearchSettled = connection.search(text, searchMode).then((response) => {
+      if (ticket !== latestSearch) return
+      showResponse(text, searchMode, response)
+      if (response !== null) shownSearch = ticket
+    })
+    return latestSearchSettled
+  }
+
+  const showResponse = (
+    text: string,
+    searchMode: SpotlightMode,
+    response: SearchResponse | null,
+  ) => {
     isSearching = false
     if (response === null) {
       notice = t("spotlight.unreachable")
@@ -106,14 +123,16 @@
       bangMode = bangModeOf(first)
       query = ""
     }
-    // In a site's mode only the site's search is offered: the rest matched the bang's text
+    // In a site's mode only the site's search is offered: the rest of an answer to the usual search
+    // matched the bang's text
     results =
       bangMode === null
         ? response.results
         : response.results.filter((result) => result._tag === "SiteSearch")
   }
 
-  const searchTyped = () => search(searchTextIn(bangMode, query), mode)
+  const searchTyped = () =>
+    bangMode === null ? search(query, mode) : search(searchTextIn(bangMode, query), "Site")
 
   // What to search for is typed next, so the site is entered rather than anything opened
   const enterBangMode = (site: BangMode) => {
@@ -147,7 +166,14 @@
     else notice = outcome.reason
   }
 
-  const switchMode = (next: SpotlightMode) => {
+  // Enter typed right after the text means that text, not the answer still shown for the text before
+  // it. When that text's answer never comes, the results shown are for other text and open nothing
+  const chooseSelected = async () => {
+    while (isSearching) await latestSearchSettled
+    if (shownSearch === latestSearch) void choose(results[selectedIndex])
+  }
+
+  const switchMode = (next: ListMode) => {
     mode = next
     void search(query, next)
   }
@@ -190,7 +216,7 @@
         return
       case "Enter":
         event.preventDefault()
-        void choose(results[selectedIndex])
+        void chooseSelected()
         return
       case "Escape":
         event.preventDefault()
@@ -271,7 +297,11 @@
           void searchTyped()
         }}
       />
-      <span class="spinner" class:visible={isSearching && hasLoaded} aria-hidden="true"></span>
+      <span
+        class="spinner"
+        class:visible={isSearching && hasLoaded && bangMode === null}
+        aria-hidden="true"
+      ></span>
     </div>
 
     {#if !isCollapsed}
