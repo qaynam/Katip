@@ -12,7 +12,7 @@ export type RichText = ReadonlyArray<Inline>
 
 export interface Detail {
   readonly title: string
-  readonly text: string
+  readonly text: string | RichText
 }
 
 export interface SectionIntro {
@@ -22,12 +22,16 @@ export interface SectionIntro {
   readonly lead: string
 }
 
-export interface Feature extends SectionIntro {
-  readonly screenshotAlt: string
+export interface DetailsSection extends SectionIntro {
   readonly details: ReadonlyArray<Detail>
 }
 
-export type MoreFeature = "liveFolders" | "archive" | "shortcuts" | "data" | "languages"
+export interface Feature extends DetailsSection {
+  readonly screenshotAlt: string
+}
+
+export type MoreFeature =
+  "liveFolders" | "temporaryTabs" | "shortcuts" | "tour" | "data" | "languages"
 
 /** Where Arc keeps its sidebar file on one operating system. */
 export interface ArcFileLocation {
@@ -66,18 +70,18 @@ export interface Copy {
     /** How to install Katip before the store listing exists. */
     readonly fromRelease: RichText
   }
-  readonly spaces: SectionIntro & { readonly details: ReadonlyArray<Detail> }
+  readonly spaces: DetailsSection
   readonly spotlight: Feature
+  readonly bangs: DetailsSection
   readonly splitView: Feature
   readonly themes: Feature
-  readonly more: {
-    readonly title: string
-    readonly lead: string
+  readonly more: SectionIntro & {
     readonly features: Readonly<Record<MoreFeature, Detail>>
   }
   readonly arc: SectionIntro & {
     readonly screenshotAlt: string
     readonly stepsTitle: string
+    readonly locationsTitle: string
     readonly steps: {
       readonly openSettings: RichText
       readonly chooseFile: RichText

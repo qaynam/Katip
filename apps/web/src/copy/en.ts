@@ -32,7 +32,7 @@ export const en: Copy = {
     fromRelease: [
       "Can’t wait? ",
       { link: "Download a release", href: GITHUB_RELEASES_URL },
-      " from GitHub and load it unpacked at chrome://extensions.",
+      " from GitHub and load it unpacked at chrome://extensions. Katip lets you know when a newer one is out.",
     ],
   },
   spaces: {
@@ -42,11 +42,11 @@ export const en: Copy = {
     details: [
       {
         title: "A Space for each project",
-        text: "Keep separate sets of tabs for work, side projects or hobbies. Each Space has its own pinned tabs, open tabs and colors.",
+        text: "Keep separate sets of tabs for work, side projects or hobbies. Each Space has its own pinned tabs, open tabs and colors, and can show as a Chrome tab group too.",
       },
       {
         title: "Pinned tabs and folders",
-        text: "Pins are saved as bookmarks, so Chrome Sync carries them to your other computers. Nest folders, give them icons, and drag anything anywhere.",
+        text: "Pins are saved as bookmarks, so Chrome Sync carries them to your other computers. Nest folders, give them icons, search inside them, and drag anything anywhere.",
       },
       {
         title: "Favorites",
@@ -63,15 +63,46 @@ export const en: Copy = {
     details: [
       {
         title: "One box for everything",
-        text: "Open tabs, pins, Spaces, history and the web, all from a single search box.",
+        text: "Open tabs, pins, Favorites, Spaces, bookmarks and the web, from a single search box. Your history too, if you allow it, searched on your device.",
       },
       {
         title: "Commands at hand",
-        text: "Copy the URL or a Markdown link, pin a tab, move it to another Space, and more. Press Tab on an empty box to search commands only.",
+        text: "Copy the URL or a Markdown link, pin a tab, move it to another Space, or start a new Google Doc or GitHub repository. Press Tab on an empty box to search commands only.",
       },
       {
-        title: "History, if you want it",
-        text: "Searching your history is optional and asks for permission first. The search runs on your device.",
+        title: "Your size, your place",
+        text: "In the settings, pick Compact, Normal or Large, and drag Spotlight to where it should open over the window. Compact shows just the search field until you type.",
+      },
+    ],
+  },
+  bangs: {
+    eyebrow: "Bangs",
+    title: "Search any site with a bang",
+    lead: "Type ! and a site’s shortcut in Spotlight to search that site straight away.",
+    details: [
+      {
+        title: "Thousands of sites",
+        text: [
+          "Bangs come built in: ",
+          { code: "!gh katip" },
+          " searches GitHub, ",
+          { code: "!w" },
+          " Wikipedia and ",
+          { code: "!yt" },
+          " YouTube. If you’d rather not use them, turn them off in the settings.",
+        ],
+      },
+      {
+        title: "Stay on the site",
+        text: "Choose a bang, or type one with a space after it, and the site’s name sits in the search field. What you type then searches that site, until you press Esc.",
+      },
+      {
+        title: "Your own commands",
+        text: [
+          "Add a command in the settings and give it a keyword. Typed after ",
+          { code: "!" },
+          ", it opens a page or searches a site for what follows. Pick the site from the list of bangs to fill it in.",
+        ],
       },
     ],
   },
@@ -84,7 +115,7 @@ export const en: Copy = {
     details: [
       {
         title: "Drop a tab on a tab",
-        text: "Drag one tab onto another to see the two pages side by side.",
+        text: "Drag one tab onto another, or onto the left or right of the page, to see the two side by side.",
       },
       {
         title: "Pin the pair",
@@ -109,7 +140,7 @@ export const en: Copy = {
       },
       {
         title: "Gradients or solid colors",
-        text: "Start from a preset or pick your own colors, then set the intensity and add a little grain.",
+        text: "Start from a preset, or pick a color and let the rest of the gradient follow. Then set the intensity and lay on a texture, from grain to film, linen or paper.",
       },
       {
         title: "Light, dark or auto",
@@ -118,28 +149,33 @@ export const en: Copy = {
     ],
   },
   more: {
-    title: "And more",
+    eyebrow: "And more",
+    title: "The details, taken care of",
     lead: "The small things that keep a sidebar out of your way.",
     features: {
       liveFolders: {
         title: "Live folders",
         text: "A folder that lists your Gmail inbox or a label, or your GitHub review requests, pull requests, issues and mentions, using the accounts you’re already signed in to.",
       },
-      archive: {
-        title: "Archive",
-        text: "Temporary tabs you haven’t used for a while are closed and kept in the archive, ready to bring back.",
+      temporaryTabs: {
+        title: "Temporary tabs",
+        text: "Tabs you don’t pin are temporary. Clear them with one click, or have Katip close the ones you haven’t viewed for a while and keep them in the archive.",
       },
       shortcuts: {
         title: "Keyboard shortcuts",
-        text: "Open the side panel or Spotlight, and copy the current URL or a Markdown link. Choose your own keys in Chrome’s shortcut settings.",
+        text: "Open the side panel or Spotlight, step through a Space’s tabs, pin a tab, and copy the URL or a Markdown link. Choose your own keys in Chrome’s shortcut settings.",
+      },
+      tour: {
+        title: "A tour to start",
+        text: "When you install Katip, a short tour checks that its keyboard shortcuts are set and shows you around, letting you try things as you go. Take it again from the settings.",
       },
       data: {
         title: "Export and import",
-        text: "Export everything to a file, and import it again whenever you need to.",
+        text: "Export your Spaces, pins, Favorites and settings to a file, and import them again whenever you need to.",
       },
       languages: {
         title: "Four languages",
-        text: "English, Japanese, Simplified Chinese and Spanish.",
+        text: "English, Japanese, Simplified Chinese and Spanish. Katip follows your browser’s language, or you can choose one in the settings.",
       },
     },
   },
@@ -150,6 +186,7 @@ export const en: Copy = {
     screenshotAlt:
       "Katip’s settings on the Data page, previewing an import from Arc: the Spaces to import from each Arc profile, whether to keep them as separate Spaces or combine them into one, and what will be added: 4 Spaces, 9 pinned tabs, 3 folders, 2 split views and 3 Favorites.",
     stepsTitle: "How to move over",
+    locationsTitle: "Where to find Arc’s file",
     steps: {
       openSettings: [
         "Open Katip’s settings and choose ",
@@ -182,15 +219,15 @@ export const en: Copy = {
     lead: "Katip has no server and collects nothing. Your Spaces, pins and settings live in Chrome’s own storage and bookmarks.",
     points: [
       {
-        title: "No server, no account",
-        text: "There’s nothing to sign up for. Katip sends nothing to its developer or to anyone else.",
+        title: "No account, no tracking",
+        text: "There’s nothing to sign up for, and no analytics, telemetry or ads. Katip sends nothing to its developer and loads no code from the internet.",
       },
       {
-        title: "No tracking",
-        text: "No analytics, telemetry or ads, and no code loaded from the internet.",
+        title: "Update checks you can turn off",
+        text: "Katip asks GitHub for its latest release the first time the side panel opens after the browser starts. The request carries nothing from Katip.",
       },
       {
-        title: "Live folders, when you allow them",
+        title: "Live folders, if you allow them",
         text: "Live folders talk to Gmail and GitHub directly from your browser, with the sign-in you already have, and only after you allow access to that site.",
       },
     ],

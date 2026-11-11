@@ -1,9 +1,10 @@
 ---
 import icon from "@brand/icon.svg"
-import Archive from "@phosphor-icons/core/assets/regular/archive.svg"
+import Broom from "@phosphor-icons/core/assets/regular/broom.svg"
 import Check from "@phosphor-icons/core/assets/regular/check.svg"
 import Command from "@phosphor-icons/core/assets/regular/command.svg"
 import DownloadSimple from "@phosphor-icons/core/assets/regular/download-simple.svg"
+import HandWaving from "@phosphor-icons/core/assets/regular/hand-waving.svg"
 import LockKey from "@phosphor-icons/core/assets/regular/lock-key.svg"
 import RssSimple from "@phosphor-icons/core/assets/regular/rss-simple.svg"
 import Translate from "@phosphor-icons/core/assets/regular/translate.svg"
@@ -31,9 +32,22 @@ const { lang } = Astro.props
 const copy = COPY[lang]
 
 const features = [
-  { id: "spotlight", feature: copy.spotlight, shot: "2-spotlight", glow: "work" },
-  { id: "split-view", feature: copy.splitView, shot: "3-split-view", glow: "work" },
-  { id: "themes", feature: copy.themes, shot: "5-themes", glow: "personal" },
+  {
+    id: "spotlight",
+    section: copy.spotlight,
+    screenshot: { shot: "2-spotlight", alt: copy.spotlight.screenshotAlt, glow: "work" },
+  },
+  { id: "bangs", section: copy.bangs, screenshot: null },
+  {
+    id: "split-view",
+    section: copy.splitView,
+    screenshot: { shot: "3-split-view", alt: copy.splitView.screenshotAlt, glow: "work" },
+  },
+  {
+    id: "themes",
+    section: copy.themes,
+    screenshot: { shot: "5-themes", alt: copy.themes.screenshotAlt, glow: "personal" },
+  },
 ] as const
 
 // Long paths wrap after a separator rather than in the middle of a folder name
@@ -41,8 +55,9 @@ const breakablePath = (path: string) => path.split(/(?<=[\\/])/)
 
 const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: SvgComponent }> = [
   { key: "liveFolders", Icon: RssSimple },
-  { key: "archive", Icon: Archive },
+  { key: "temporaryTabs", Icon: Broom },
   { key: "shortcuts", Icon: Command },
+  { key: "tour", Icon: HandWaving },
   { key: "data", Icon: DownloadSimple },
   { key: "languages", Icon: Translate },
 ]
@@ -75,34 +90,36 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
     <Details details={copy.spaces.details} />
   </section>
 
-  {features.map(({ id, feature, shot, glow }) => (
+  {features.map(({ id, section, screenshot }) => (
     <section id={id} class="section container" aria-labelledby={`${id}-title`}>
-      <SectionIntro intro={feature} titleId={`${id}-title`} />
-      <div class="shot">
-        <Screenshot lang={lang} shot={shot} alt={feature.screenshotAlt} glow={glow} />
-      </div>
-      <Details details={feature.details} />
+      <SectionIntro intro={section} titleId={`${id}-title`} />
+      {screenshot !== null && (
+        <div class="shot">
+          <Screenshot
+            lang={lang}
+            shot={screenshot.shot}
+            alt={screenshot.alt}
+            glow={screenshot.glow}
+          />
+        </div>
+      )}
+      <Details details={section.details} />
     </section>
   ))}
 
   <section id="more" class="section container" aria-labelledby="more-title">
-    <div class="more">
-      <div class="more-intro">
-        <h2 id="more-title">{copy.more.title}</h2>
-        <p>{copy.more.lead}</p>
-      </div>
-      <ul class="more-list">
-        {moreFeatures.map(({ key, Icon }) => (
-          <li>
-            <span class="chip" aria-hidden="true">
-              <Icon width={22} height={22} />
-            </span>
-            <h3>{copy.more.features[key].title}</h3>
-            <p>{copy.more.features[key].text}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <SectionIntro intro={copy.more} titleId="more-title" />
+    <ul class="more-list">
+      {moreFeatures.map(({ key, Icon }) => (
+        <li>
+          <span class="chip" aria-hidden="true">
+            <Icon width={22} height={22} />
+          </span>
+          <h3>{copy.more.features[key].title}</h3>
+          <p>{copy.more.features[key].text}</p>
+        </li>
+      ))}
+    </ul>
   </section>
 
   <section id="arc" class="section container" aria-labelledby="arc-title">
@@ -119,29 +136,32 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
           </li>
           <li>
             <RichText text={copy.arc.steps.chooseFile} />
-            <dl class="locations">
-              {copy.arc.locations.map((location) => (
-                <div>
-                  <dt>{location.system}</dt>
-                  <dd>
-                    <code>
-                      {breakablePath(location.path).map((part) => (
-                        <>
-                          {part}
-                          <wbr />
-                        </>
-                      ))}
-                    </code>
-                    <span>{location.hint}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
           </li>
           <li>
             <RichText text={copy.arc.steps.import} />
           </li>
         </ol>
+      </div>
+      <div>
+        <h3>{copy.arc.locationsTitle}</h3>
+        <dl class="locations">
+          {copy.arc.locations.map((location) => (
+            <div>
+              <dt>{location.system}</dt>
+              <dd>
+                <code>
+                  {breakablePath(location.path).map((part) => (
+                    <>
+                      {part}
+                      <wbr />
+                    </>
+                  ))}
+                </code>
+                <span>{location.hint}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
       <ul class="promises">
         {copy.arc.promises.map((promise) => (
@@ -254,8 +274,10 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
     padding-top: var(--section-space);
   }
 
+  /* Closer to the hero than the other sections are to each other: the hero's screenshot is this
+     section's picture */
   .spaces {
-    padding-top: clamp(4.5rem, 3rem + 4vw, 7rem);
+    padding-top: calc(var(--section-space) * 0.7);
   }
 
   .section > :global(.details),
@@ -263,38 +285,18 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
     margin-top: clamp(2.5rem, 2rem + 2vw, 3.5rem);
   }
 
-  .shot {
+  .shot,
+  .more-list {
     margin-top: clamp(2.5rem, 2rem + 2.5vw, 4rem);
   }
 
   /* And more */
 
-  .more {
+  .more-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
     gap: 1rem;
-  }
-
-  .more-intro {
-    align-self: center;
-    padding: 1rem clamp(0rem, 2vw, 1.5rem) 1rem 0;
-  }
-
-  .more-intro h2 {
-    font-size: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
-    line-height: 1.08;
-    letter-spacing: -0.028em;
-  }
-
-  .more-intro p {
-    margin-top: 0.75rem;
-    color: var(--ink-secondary);
-    font-size: 1.125rem;
-    line-height: 1.45;
-  }
-
-  .more-list {
-    display: contents;
+    padding: 0;
   }
 
   .more-list li {
@@ -328,13 +330,9 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
     line-height: 1.55;
   }
 
-  :lang(ja) :is(.more-intro h2, .more-intro p, .more-list p) {
+  :lang(ja) .more-list p {
     line-height: 1.7;
     letter-spacing: 0;
-  }
-
-  :lang(ja) .more-intro h2 {
-    line-height: 1.3;
   }
 
   /* Coming from Arc */
@@ -347,7 +345,7 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
     margin: clamp(2.5rem, 2rem + 2vw, 3.5rem) auto 0;
   }
 
-  .steps h3 {
+  .arc-guide h3 {
     font-size: 1.0625rem;
     font-weight: 600;
   }
@@ -390,7 +388,7 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
   .locations {
     display: grid;
     gap: 0.5rem;
-    margin: 0.875rem 0 0;
+    margin: 1.25rem 0 0;
   }
 
   .locations div {
@@ -425,8 +423,9 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
 
   .promises {
     display: grid;
-    gap: 1rem;
-    align-self: start;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 1rem clamp(1.5rem, 4vw, 3.5rem);
     padding: 1.5rem;
     border-radius: var(--radius-card);
     background: var(--surface);
@@ -444,6 +443,10 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
   .promises :global(svg) {
     margin-top: 0.125rem;
     color: var(--accent);
+  }
+
+  :lang(ja) :is(.steps li, .promises li) {
+    word-break: auto-phrase;
   }
 
   /* Privacy */
@@ -476,7 +479,7 @@ const moreFeatures: ReadonlyArray<{ readonly key: MoreFeature; readonly Icon: Sv
   /* Open source */
 
   .closing {
-    padding-bottom: clamp(5rem, 3rem + 5vw, 8rem);
+    padding-bottom: calc(var(--section-space) * 0.75);
     text-align: center;
   }
 
