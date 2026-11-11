@@ -2,23 +2,41 @@
 
 What changed for people using Katip, version by version. Each version's section becomes the notes of its release on GitHub. Changes go under Unreleased as they land; a release renames it to the version and its date.
 
+Each language opens with one sentence on what the version brings, then lists the changes under New, Improved and Fixed, each led by a short bold name. Versions up to 1.6.1 list the changes alone.
+
 Katip の利用者から見て変わったことを、バージョンごとに書きます。各バージョンの節が、GitHub のリリースノートになります。変更は入れたときに Unreleased に書き、リリースのときにその節をバージョン番号と日付に改めます。
+
+各言語の最初の一文でその版の要点を述べ、変更を新機能・改善・修正に分けて、それぞれ短い太字の名前から書きます。1.6.1 までの版は、変更を並べただけです。
 
 ## Unreleased
 
 ### English
 
-- While a bang is typed, Spotlight suggests the bundled bangs again, as before 1.6.1, with the commands in your list that have a keyword first. A `!` alone suggests those commands, and bangs are suggested in command mode too.
-- Typing `!` in Spotlight no longer flashes the results found for the text before it.
-- Pressing Enter in a compact Spotlight before typing anything no longer switches to a recent tab it isn't showing.
-- The speaker on a tab playing sound in the side panel mutes it when clicked, and unmutes a muted one.
+The bundled bangs are suggested again as before 1.6.1, along with a few fixes in Spotlight and the side panel.
+
+#### Improved
+
+- **Bang suggestions are back** — While you type a bang, Spotlight suggests the bundled bangs again, as before 1.6.1, with the commands in your list that have a keyword first. A `!` alone suggests those commands, and bangs are suggested in command mode too.
+- **No flash when you type `!`** — Spotlight no longer shows, for a moment, what it found for the text before the `!`.
+
+#### Fixed
+
+- **Enter in a compact Spotlight** — Pressing Enter before typing anything no longer switches to a recent tab that isn’t shown.
+- **Muting from the side panel** — Clicking the speaker on a tab playing sound mutes it, and clicking it again unmutes it.
 
 ### 日本語
 
-- bangs を打っている途中の候補に、1.6.1 より前と同じく同梱の bangs も出るように戻しました。リストのコマンドのうちキーワードのあるものが先頭に出ます。`!` だけのときはそれらのコマンドを出し、コマンドモードでも bangs の候補を出します。
-- Spotlight で `!` を打ったときに、その前の言葉で見つかった結果が一瞬映らないようにしました。
-- コンパクトの Spotlight で何も打たずに Enter を押すと、表示されていない最近のタブに切り替わってしまう問題を直しました。
-- サイドパネルで音の出ているタブのスピーカーを押すとミュートし、ミュート中のものはミュートを解除するようにしました。
+同梱の bangs を 1.6.1 より前と同じく候補に出すように戻し、Spotlight とサイドパネルのいくつかの問題を直しました。
+
+#### 改善
+
+- **bangs の候補が元どおりに** — bangs を打っている途中の候補に、1.6.1 より前と同じく同梱の bangs も出るように戻しました。リストのコマンドのうちキーワードのあるものが先頭に出ます。`!` だけのときはそれらのコマンドを出し、コマンドモードでも bangs の候補を出します。
+- **`!` を打ったときのちらつきをなくしました** — `!` の前の言葉で見つかった結果が、一瞬映ることがなくなりました。
+
+#### 修正
+
+- **コンパクトの Spotlight の Enter** — 何も打たずに Enter を押しても、表示されていない最近のタブに切り替わらなくなりました。
+- **サイドパネルからミュート** — 音の出ているタブのスピーカーを押すとミュートし、もう一度押すと解除します。
 
 ## 1.6.1 — 2026-11-10
 
