@@ -60,17 +60,20 @@ const URL_MATCH_DISCOUNT = 20
 
 // The bonuses for kind and recent use together stay below one step of match strength (20).
 // Reaching it would let when a page was opened outrank how well it matches what was typed, and
-// narrowing the search would make the results harder to predict
+// narrowing the search would make the results harder to predict. Among matches of one strength,
+// commands come first, as what was typed is more often meant to run one than to find a page; then
+// the tabs already open, and the pages that would be opened anew. The kinds are further apart than
+// the largest recency bonus, so recent use only orders candidates of the same kind
 const kindBonus: Record<CandidateKind, number> = {
-  OpenTab: 4,
-  Pin: 3,
-  Favorite: 3,
-  Space: 3,
-  Action: 2,
-  Bookmark: 1,
+  Action: 16,
+  OpenTab: 12,
+  Pin: 8,
+  Favorite: 8,
+  Space: 8,
+  Bookmark: 4,
   History: 0,
 }
-const RECENCY_BONUS_MAX = 10
+const RECENCY_BONUS_MAX = 3
 const RECENCY_HALF_LIFE_MS = 24 * 60 * 60 * 1000
 
 const recencyBonus = (lastUsedAt: Option.Option<number>, now: number): number =>

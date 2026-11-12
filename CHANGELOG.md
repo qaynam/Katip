@@ -8,6 +8,24 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 各言語の最初の一文でその版の要点を述べ、変更を新機能・改善・修正に分けて、それぞれ短い太字の名前から書きます。1.6.1 までの版は、変更を並べただけです。
 
+## Unreleased
+
+### English
+
+Spotlight puts the commands first among equally good matches.
+
+#### Improved
+
+- **Commands first** — Among results that match what you typed equally well, Spotlight lists commands first, then your open tabs, then pins, bookmarks and history. A page you visited a moment ago no longer jumps ahead of a command with the same name, though a result that matches better still comes first.
+
+### 日本語
+
+同じくらい一致する結果の中では、Spotlight がコマンドを先に出すようになりました。
+
+#### 改善
+
+- **コマンドを先頭に** — 打った言葉に同じくらい一致する結果の中では、コマンド、開いているタブ、ピン留めやブックマークと履歴の順に並べます。さっき開いた履歴が同じ名前のコマンドより先に出ることはなくなりました。よりよく一致する結果は、これまでどおり上に出ます。
+
 ## 1.7.0 — 2026-11-11
 
 ### English

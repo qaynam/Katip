@@ -231,22 +231,34 @@ describe("with an input", () => {
       expect(namesOf(entries)).toStrictEqual(["doc just now", "doc yesterday", "doc last week"])
     })
 
-    it("with the same use too, lists open tabs, then pins and Spaces, actions, bookmarks and history", () => {
+    it("lists commands, then open tabs, then pins and Spaces, bookmarks and history", () => {
       const entries = search("work", [
         candidate("work history", { kind: "History" }),
         candidate("work bookmark", { kind: "Bookmark" }),
-        candidate("work action", { kind: "Action" }),
         candidate("work pin", { kind: "Pin" }),
         candidate("work tab"),
+        candidate("work action", { kind: "Action" }),
       ])
 
       expect(namesOf(entries)).toStrictEqual([
+        "work action",
         "work tab",
         "work pin",
-        "work action",
         "work bookmark",
         "work history",
       ])
+    })
+
+    it("a page visited just now still comes after a command, and after a tab not used for days", () => {
+      const entries = search("chatgpt", [
+        candidate("ChatGPT", { kind: "History", usedMinutesAgo: 0 }),
+        candidate("ChatGPT", { usedMinutesAgo: 3 * 24 * 60 }),
+        candidate("ChatGPT", { kind: "Action" }),
+      ])
+
+      expect(
+        entries.flatMap((entry) => (entry._tag === "Candidate" ? [entry.candidate.kind] : [])),
+      ).toStrictEqual(["Action", "OpenTab", "History"])
     })
 
     it("with the same kind too, keeps the given order", () => {
@@ -264,6 +276,15 @@ describe("with an input", () => {
       ])
 
       expect(namesOf(entries)).toStrictEqual(["notebook", "my notes"])
+    })
+
+    it("a page that matches one step stronger ranks above a command", () => {
+      const entries = search("chatgpt", [
+        candidate("Ask ChatGPT", { kind: "Action" }),
+        candidate("ChatGPT", { kind: "History" }),
+      ])
+
+      expect(namesOf(entries)).toStrictEqual(["ChatGPT", "Ask ChatGPT"])
     })
   })
 
