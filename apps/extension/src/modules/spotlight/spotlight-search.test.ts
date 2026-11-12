@@ -288,6 +288,47 @@ describe("with an input", () => {
     })
   })
 
+  describe("typos", () => {
+    it("finds a title with characters swapped, missing or mistyped", () => {
+      const entries = search("chatgtp", [candidate("ChatGPT"), candidate("Calendar")])
+
+      expect(namesOf(entries)).toStrictEqual(["ChatGPT"])
+    })
+
+    it("finds a title with a mistyped word among others", () => {
+      const entries = search("githb", [candidate("Pull requests · GitHub")])
+
+      expect(namesOf(entries)).toStrictEqual(["Pull requests · GitHub"])
+    })
+
+    it("lists a match found by forgiving a typo after every match without one", () => {
+      const entries = search("notes", [
+        candidate("nodes", { kind: "Action" }),
+        candidate("footnotes", { kind: "History" }),
+      ])
+
+      expect(namesOf(entries)).toStrictEqual(["footnotes", "nodes"])
+    })
+
+    it("forgives no typo in a term of three characters or fewer", () => {
+      expect(namesOf(search("tab", [candidate("Table"), candidate("tub")]))).toStrictEqual([
+        "Table",
+      ])
+    })
+
+    it("forgives no typo in a URL", () => {
+      const entries = search("githb", [candidate("Pulls", { url: "https://github.com/pulls" })])
+
+      expect(namesOf(entries)).toStrictEqual([])
+    })
+
+    it("forgives a typo in a command's other names too", () => {
+      expect(namesOf(searchActions("copair", [action("Copy URL", ["Copiar URL"])]))).toStrictEqual([
+        "Copy URL",
+      ])
+    })
+  })
+
   describe("open-URL and web search entries", () => {
     it("ends with an entry that searches the web for the input itself", () => {
       const entries = search("  katip extension  ", [candidate("Katip extension design")])

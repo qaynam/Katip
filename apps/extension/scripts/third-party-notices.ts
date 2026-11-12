@@ -40,9 +40,12 @@ const packageInfoOf = (root: string): PackageInfo => {
   }
 }
 
-/** Data bundled into the extension that isn't an npm package, such as the list of bangs. */
+/**
+ * Data or code bundled into the extension that isn't an npm package, such as the list of bangs or
+ * code ported from another project.
+ */
 export interface DataNotice {
-  /** What the data is and where it comes from. */
+  /** What it is and where it comes from. */
   readonly name: string
   readonly licenseText: string
 }

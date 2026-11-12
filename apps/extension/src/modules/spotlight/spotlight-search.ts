@@ -6,6 +6,7 @@ import {
   searchableUrl,
   searchPhrase,
   searchTerms,
+  typoMatcherFor,
 } from "./search-text"
 import { urlFromInput } from "./url-input"
 
@@ -53,6 +54,10 @@ const strengthScore: Record<MatchStrength, number> = {
   Substring: 40,
 }
 
+// A step below a substring: a title found only by forgiving a typo matches what was typed less
+// surely than one holding it as typed
+const TYPO_MATCH_SCORE = 20
+
 // A URL match weighs the same as a title match one strength lower. Not the same weight as the
 // title: the same site's host name recurs across URLs, so that site's pages would take the top
 // whatever their titles
@@ -89,33 +94,48 @@ interface SearchableText {
   readonly url: string
 }
 
+interface SearchTerm {
+  readonly text: string
+  /** Finds the term in a title with a typo or two. None for a term too short to forgive one. */
+  readonly typoMatcher: Option.Option<(title: string) => boolean>
+}
+
+const searchTermOf = (text: string): SearchTerm => ({ text, typoMatcher: typoMatcherFor(text) })
+
 const urlMatchStrength = (url: string, term: string): Option.Option<MatchStrength> => {
   const urlTerm = searchableUrl(term)
   return url === "" || urlTerm === "" ? Option.none() : matchStrength(url, urlTerm)
 }
 
-const textScore = (text: SearchableText, term: string): Option.Option<number> =>
+// Not URLs: one host name recurs across a site's pages, and a typo forgiven in it would bring up
+// every one of them
+const typoScore = (text: SearchableText, term: SearchTerm): Option.Option<number> =>
+  Option.flatMap(term.typoMatcher, (matches) =>
+    text.titles.some(matches) ? Option.some(TYPO_MATCH_SCORE) : Option.none(),
+  )
+
+const textScore = (text: SearchableText, term: SearchTerm): Option.Option<number> =>
   pipe(
     [
       ...text.titles.map((title) =>
-        Option.map(matchStrength(title, term), (strength) => strengthScore[strength]),
+        Option.map(matchStrength(title, term.text), (strength) => strengthScore[strength]),
       ),
       Option.map(
-        urlMatchStrength(text.url, term),
+        urlMatchStrength(text.url, term.text),
         (strength) => strengthScore[strength] - URL_MATCH_DISCOUNT,
       ),
     ],
     Array.getSomes,
     Array.match({
-      onEmpty: () => Option.none(),
+      onEmpty: () => typoScore(text, term),
       onNonEmpty: (scores) => Option.some(Math.max(...scores)),
     }),
   )
 
 const matchScore = (
   candidate: SearchCandidate,
-  terms: Array.NonEmptyReadonlyArray<string>,
-  phrase: string,
+  terms: Array.NonEmptyReadonlyArray<SearchTerm>,
+  phrase: SearchTerm,
 ): Option.Option<number> => {
   const text = {
     titles: [candidate.title, ...(candidate.keywords ?? [])].map(searchableTitle),
@@ -154,11 +174,14 @@ const rankMatches = <C extends SearchCandidate>(
   terms: Array.NonEmptyReadonlyArray<string>,
   phrase: string,
   now: number,
-): ReadonlyArray<C> =>
-  pipe(
+): ReadonlyArray<C> => {
+  // Made once for the whole search: each typo matcher sets up a table over every character
+  const termsToMatch = Array.map(terms, searchTermOf)
+  const phraseToMatch: SearchTerm = { text: phrase, typoMatcher: Option.none() }
+  return pipe(
     candidates.map((candidate) =>
       Option.map(
-        matchScore(candidate, terms, phrase),
+        matchScore(candidate, termsToMatch, phraseToMatch),
         (score) =>
           [
             candidate,
@@ -170,6 +193,7 @@ const rankMatches = <C extends SearchCandidate>(
     Array.sort(byScoreDescending),
     Array.map(([candidate]) => candidate),
   )
+}
 
 const asEntries = <C>(ranked: ReadonlyArray<C>, limit: number): ReadonlyArray<SpotlightEntry<C>> =>
   ranked.slice(0, limit).map((candidate) => ({ _tag: "Candidate", candidate }))

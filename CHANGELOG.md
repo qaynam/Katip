@@ -12,19 +12,21 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 ### English
 
-Spotlight puts the commands first among equally good matches.
+Spotlight forgives typos, and puts the commands first among equally good matches.
 
 #### Improved
 
 - **Commands first** — Among results that match what you typed equally well, Spotlight lists commands first, then your open tabs, then pins, bookmarks and history. A page you visited a moment ago no longer jumps ahead of a command with the same name, though a result that matches better still comes first.
+- **Typos forgiven** — Spotlight finds what you meant through a mistyped, missing, extra or swapped character, such as `chatgtp` for ChatGPT or `githb` for GitHub. Words of four characters or more forgive more the longer they are, and such results come after those that match as typed.
 
 ### 日本語
 
-同じくらい一致する結果の中では、Spotlight がコマンドを先に出すようになりました。
+Spotlight が打ち間違いを許すようになり、同じくらい一致する結果の中ではコマンドを先に出すようになりました。
 
 #### 改善
 
 - **コマンドを先頭に** — 打った言葉に同じくらい一致する結果の中では、コマンド、開いているタブ、ピン留めやブックマークと履歴の順に並べます。さっき開いた履歴が同じ名前のコマンドより先に出ることはなくなりました。よりよく一致する結果は、これまでどおり上に出ます。
+- **打ち間違いを許す検索** — 1 文字違う、抜けている、余計にある、入れ替わっている、といった打ち間違いがあっても見つけます。たとえば `chatgtp` で ChatGPT が、`githb` で GitHub が見つかります。4 文字以上の言葉で効き、長い言葉ほど多くの間違いを許します。打ち間違いを許して見つかった結果は、打ったとおりに一致する結果のあとに並びます。
 
 ## 1.7.0 — 2026-11-11
 

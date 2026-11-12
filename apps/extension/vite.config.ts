@@ -62,6 +62,10 @@ const emitThirdPartyNotices = (): Plugin => ({
           name: "The list of bangs, from Kagi's bangs (https://github.com/kagisearch/bangs) as Helium ships them",
           licenseText: readFileSync(fromRoot("./src/modules/bangs/data/LICENSE"), "utf8"),
         },
+        {
+          name: "The approximate search, ported from node-asearch (https://github.com/shokai/node-asearch)",
+          licenseText: readFileSync(fromRoot("./src/modules/asearch/LICENSE"), "utf8"),
+        },
       ]),
     })
   },
