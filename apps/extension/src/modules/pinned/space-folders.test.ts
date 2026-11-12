@@ -10,7 +10,7 @@ import {
   type BookmarkNode,
 } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
-import { SpaceFolders } from "./space-folders"
+import { RootFolderTitle, SpaceFolders } from "./space-folders"
 
 const TestLayer = SpaceFolders.layer.pipe(Layer.provideMerge(FakeBrowser.layer))
 
@@ -81,6 +81,23 @@ describe("ensuring the Katip root folder", () => {
         assert.strictEqual(rootId, existingId)
         assert.deepStrictEqual(titlesOf(yield* childrenOf(otherBookmarksId)), ["Katip"])
       }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect(
+    "with another root title, as a development build has, leaves a Katip folder alone and makes its own",
+    () =>
+      Effect.gen(function* () {
+        const otherBookmarksId = yield* topLevelFolderId("other")
+        const releaseRootId = yield* createFolder(otherBookmarksId, "Katip")
+
+        const rootId = yield* (yield* SpaceFolders).ensureRoot
+
+        assert.notStrictEqual(rootId, releaseRootId)
+        assert.deepStrictEqual(titlesOf(yield* childrenOf(otherBookmarksId)), [
+          "Katip",
+          "Katip (dev)",
+        ])
+      }).pipe(Effect.provide(TestLayer), Effect.provideService(RootFolderTitle, "Katip (dev)")),
   )
 
   it.effect("a Katip folder on the bookmarks bar doesn't count as the root", () =>

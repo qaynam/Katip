@@ -24,7 +24,17 @@ import {
 } from "./space-folder-reconciliation"
 import { storedValue } from "./stored-value"
 
-const ROOT_FOLDER_TITLE = "Katip"
+/**
+ * The title of the bookmark folder that holds a folder for each Space, by which an installation
+ * without one saved takes it up.
+ *
+ * @remarks
+ * Another title keeps a second installation in the same profile, such as a development build, from
+ * taking up the folder of the first and rewriting its pins.
+ */
+export const RootFolderTitle = Context.Reference<string>("katip/pinned/RootFolderTitle", {
+  defaultValue: () => "Katip",
+})
 
 /** Carries the name as well as the ID, since recreating the folder needs a name. */
 export type SpaceFolderOwner = Pick<Space, "id" | "name">
@@ -48,8 +58,8 @@ export class SpaceFolders extends Context.Service<
      *
      * @remarks
      * The folder with the saved ID is used wherever it has been moved, as long as it still exists.
-     * Only when it doesn't is a folder titled "Katip" looked for directly inside Other Bookmarks;
-     * if there is none either, one is created and its ID saved.
+     * Only when it doesn't is a folder titled {@link RootFolderTitle} looked for directly inside
+     * Other Bookmarks; if there is none either, one is created and its ID saved.
      */
     readonly ensureRoot: Effect.Effect<BookmarkId, BrowserApiError>
     /**
@@ -102,6 +112,7 @@ export class SpaceFolders extends Context.Service<
     Effect.gen(function* () {
       const bookmarks = yield* Bookmarks
       const storage = yield* Storage
+      const rootFolderTitle = yield* RootFolderTitle
       const savedRootId = storedValue(storage.local, "katip/pinned/root-folder-id", BookmarkId)
       const savedSpaceFolders = storedValue(
         storage.local,
@@ -141,12 +152,12 @@ export class SpaceFolders extends Context.Service<
         const searchedFolders = otherBookmarks.length > 0 ? otherBookmarks : topLevelFolders
         const existing = Array.findFirst(
           searchedFolders.flatMap(loadedChildren),
-          (node) => isFolder(node) && node.title === ROOT_FOLDER_TITLE,
+          (node) => isFolder(node) && node.title === rootFolderTitle,
         )
         if (Option.isSome(existing)) {
           return existing.value.id
         }
-        const created = yield* bookmarks.create({ title: ROOT_FOLDER_TITLE })
+        const created = yield* bookmarks.create({ title: rootFolderTitle })
         return created.id
       })
 

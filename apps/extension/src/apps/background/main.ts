@@ -1,4 +1,5 @@
 import { Effect, Layer } from "effect"
+import { RootFolderTitle } from "#modules/pinned"
 import { captureBrowserEvents, liveBrowserLayer } from "#platform/browser"
 import { Clipboard } from "#platform/clipboard"
 import { History } from "#platform/history"
@@ -39,7 +40,10 @@ const runnable = program.pipe(Effect.scoped, Effect.provide(layer))
 
 Effect.runFork(
   import.meta.env.MODE === "development"
-    ? Effect.provideService(runnable, AcceptsExternalConnection, isLocalDevelopmentPage)
+    ? runnable.pipe(
+        Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage),
+        Effect.provideService(RootFolderTitle, "Katip (dev)"),
+      )
     : runnable,
 )
 

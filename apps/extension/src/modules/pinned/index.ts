@@ -37,5 +37,5 @@ export {
   type PinnedTree,
 } from "./pinned-node"
 export { hasNavigatedAway } from "./pinned-url"
-export { SpaceFolders, type SpaceFolderOwner } from "./space-folders"
+export { RootFolderTitle, SpaceFolders, type SpaceFolderOwner } from "./space-folders"
 export { SplitFolderStore } from "./split-folder-store"
