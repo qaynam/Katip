@@ -59,10 +59,15 @@ export const options: CatalogSection<"options"> = {
   "options.spotlight.size.footnote":
     "次に Spotlight を開いたときから変わります。コンパクトでは、打ち始めるまで検索欄だけを表示し、打つと広がります。",
   "options.spotlight.position.label": "開く位置",
-  "options.spotlight.position.instructions":
-    "ブラウザのウィンドウの上で、Spotlight を開きたい場所へドラッグします。選んでから矢印キーでも動かせます。中央と端ではぴたりと止まります。",
+  "options.spotlight.position.description":
+    "ブラウザのウィンドウの上で、Spotlight を開く場所です。",
   "options.spotlight.position.value": "横 {across}%、縦 {down}%",
+  "options.spotlight.position.set": "位置を設定…",
   "options.spotlight.position.reset": "位置を元に戻す",
+  "options.spotlight.position.dialogLabel": "Spotlight を開く位置",
+  "options.spotlight.position.hint":
+    "Spotlight をドラッグするか、矢印キーで動かします。Esc でキャンセルします。",
+  "options.spotlight.position.done": "完了",
   "options.spotlight.history.label": "閲覧履歴も検索する",
   "options.spotlight.history.footnote":
     "オンにすると、閲覧履歴を読む許可を求めます。オフにすると、その許可を外します。",

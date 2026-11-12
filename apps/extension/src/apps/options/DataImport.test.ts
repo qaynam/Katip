@@ -19,6 +19,7 @@ import { FakeHttp } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import type { ImportClientMessage } from "#protocol"
 import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
+import { CurrentWindow } from "./current-window"
 import DataImport from "./DataImport.svelte"
 import { FakeFileDownloads } from "./testing/fake-file-downloads"
 import { type ApplyAnswer, FakeImportServer } from "./testing/fake-import-server"
@@ -64,6 +65,7 @@ const renderImport = () => {
       FakeOptionalPermissions.layer,
       FakeFileDownloads.layer,
       KeyboardShortcuts.layerTest({}),
+      CurrentWindow.layerTest({ width: 1440, height: 900 }),
       FakeImportServer.layer.pipe(Layer.provide(browser)),
       Updates.layer("1.2.3").pipe(Layer.provide(Layer.mergeAll(FakeHttp.layer, browser))),
     ),

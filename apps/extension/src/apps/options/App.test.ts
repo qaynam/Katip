@@ -13,6 +13,7 @@ import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
 import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
 import App from "./App.svelte"
+import { CurrentWindow } from "./current-window"
 import { FakeFileDownloads } from "./testing/fake-file-downloads"
 import { type ApplyAnswer, FakeImportServer } from "./testing/fake-import-server"
 import { FakeOptionalPermissions } from "./testing/fake-optional-permissions"
@@ -137,6 +138,7 @@ const makeRuntime = (
       browser,
       FakeOptionalPermissions.layer,
       FakeFileDownloads.layer,
+      CurrentWindow.layerTest({ width: 1440, height: 900 }),
       keyboardShortcutsReporting(browserKeys),
       exportServerAnswering(exportAnswers).pipe(Layer.provide(browser)),
       FakeImportServer.layer.pipe(Layer.provide(browser)),
@@ -854,29 +856,110 @@ describe("Spotlight size", () => {
 })
 
 describe("Spotlight position", () => {
-  const spotlightIn = () => screen.getByRole("button", { name: /^Position: / })
+  const setPositionButton = () => screen.getByRole("button", { name: "Set Position…" })
+  const overlay = () => screen.getByRole("dialog", { name: "Spotlight Position" })
+  const spotlightIn = () => within(overlay()).getByRole("slider", { name: "Position" })
+  const where = () => spotlightIn().getAttribute("aria-valuetext")
+
+  const openOverlay = async () => {
+    setPositionButton().focus()
+    await fireEvent.click(setPositionButton())
+    return within(overlay()).findByRole("slider", { name: "Position" })
+  }
+
+  const renderSpotlightCategory = async (options: RenderOptions = {}) => {
+    const rendered = await renderLoaded(options)
+    await openCategory("Spotlight")
+    return rendered
+  }
 
   it("starts centered across and above the middle", async () => {
-    await renderLoaded()
-    await openCategory("Spotlight")
+    await renderSpotlightCategory()
 
-    expect(spotlightIn().getAttribute("aria-label")).toBe("Position: 50% across, 30% down")
+    expect(screen.getByText("50% across, 30% down")).toBeTruthy()
   })
 
-  it("moves with the arrow keys, saving at once", async () => {
-    const { readSaved } = await renderLoaded()
-    await openCategory("Spotlight")
+  it("opens an overlay with Spotlight where it was saved, ready for the arrow keys", async () => {
+    await renderSpotlightCategory({ saved: { spotlightPosition: { x: 0.2, y: 0.7 } } })
 
-    await fireEvent.keyDown(spotlightIn(), { key: "ArrowLeft", shiftKey: true })
+    const spotlight = await openOverlay()
 
+    expect(where()).toBe("20% across, 70% down")
+    expect(document.activeElement).toBe(spotlight)
+  })
+
+  it("moves with the arrow keys in the overlay, further with Shift, and saves once done", async () => {
+    const { readSaved } = await renderSpotlightCategory()
+    const spotlight = await openOverlay()
+
+    await fireEvent.keyDown(spotlight, { key: "ArrowLeft", shiftKey: true })
+    await fireEvent.keyDown(spotlight, { key: "ArrowDown" })
+    expect(where()).toBe("40% across, 32% down")
+    expect(screen.getByText("50% across, 30% down")).toBeTruthy()
+
+    await fireEvent.click(within(overlay()).getByRole("button", { name: "Done" }))
+
+    expect(screen.queryByRole("dialog")).toBeNull()
     await waitFor(async () => {
-      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.4, y: 0.3 })
+      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.4, y: 0.32 })
     })
   })
 
-  it("goes back to where it opens by default", async () => {
-    const { readSaved } = await renderLoaded({ saved: { spotlightPosition: { x: 0, y: 1 } } })
-    await openCategory("Spotlight")
+  it("saves with Return as with Done", async () => {
+    const { readSaved } = await renderSpotlightCategory()
+    const spotlight = await openOverlay()
+
+    await fireEvent.keyDown(spotlight, { key: "ArrowRight", shiftKey: true })
+    await fireEvent.keyDown(spotlight, { key: "Enter" })
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    await waitFor(async () => {
+      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.6, y: 0.3 })
+    })
+  })
+
+  it("leaves the saved position as it was when Escape closes the overlay", async () => {
+    await renderSpotlightCategory()
+    const spotlight = await openOverlay()
+
+    await fireEvent.keyDown(spotlight, { key: "ArrowRight", shiftKey: true })
+    await fireEvent.keyDown(spotlight, { key: "Escape" })
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.getByText("50% across, 30% down")).toBeTruthy()
+    expect(document.activeElement).toBe(setPositionButton())
+  })
+
+  it("leaves the saved position as it was when the overlay is canceled", async () => {
+    await renderSpotlightCategory()
+    const spotlight = await openOverlay()
+
+    await fireEvent.keyDown(spotlight, { key: "ArrowUp", shiftKey: true })
+    await fireEvent.click(within(overlay()).getByRole("button", { name: "Cancel" }))
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.getByText("50% across, 30% down")).toBeTruthy()
+  })
+
+  it("goes back in the overlay to where it opens by default", async () => {
+    const { readSaved } = await renderSpotlightCategory({
+      saved: { spotlightPosition: { x: 0, y: 1 } },
+    })
+    await openOverlay()
+
+    await fireEvent.click(within(overlay()).getByRole("button", { name: "Reset Position" }))
+    expect(where()).toBe("50% across, 30% down")
+    await fireEvent.click(within(overlay()).getByRole("button", { name: "Done" }))
+
+    await waitFor(async () => {
+      expect((await readSaved()).spotlightPosition).toStrictEqual({ x: 0.5, y: 0.3 })
+    })
+  })
+
+  it("goes back to where it opens by default without opening the overlay", async () => {
+    const { readSaved } = await renderSpotlightCategory({
+      saved: { spotlightPosition: { x: 0, y: 1 } },
+    })
 
     await fireEvent.click(screen.getByRole("button", { name: "Reset Position" }))
 

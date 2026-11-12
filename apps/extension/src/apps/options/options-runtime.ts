@@ -6,6 +6,7 @@ import { Updates } from "#modules/updates"
 import { Ports, Storage, Tabs } from "#platform/browser"
 import { Http } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { CurrentWindow } from "./current-window"
 import { FileDownloads } from "./file-downloads"
 import { OptionalPermissions } from "./optional-permissions"
 
@@ -18,7 +19,8 @@ export type OptionsRuntime = ManagedRuntime.ManagedRuntime<
   | OptionalPermissions
   | FileDownloads
   | KeyboardShortcuts
-  | Updates,
+  | Updates
+  | CurrentWindow,
   never
 >
 
@@ -37,5 +39,6 @@ export const makeOptionsRuntime = (installedVersion: string): OptionsRuntime =>
       OptionalPermissions.layer,
       FileDownloads.layer,
       KeyboardShortcuts.layer,
+      CurrentWindow.layer,
     ),
   )

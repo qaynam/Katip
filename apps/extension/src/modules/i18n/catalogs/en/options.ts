@@ -59,10 +59,14 @@ export const options = {
   "options.spotlight.size.footnote":
     "Takes effect the next time Spotlight opens. Compact shows the search field alone until you type, then opens out.",
   "options.spotlight.position.label": "Position",
-  "options.spotlight.position.instructions":
-    "Drag Spotlight to where it should open over the browser window, or select it and use the arrow keys. It comes to rest at the center and the edges.",
+  "options.spotlight.position.description": "Where Spotlight opens over the browser window.",
   "options.spotlight.position.value": "{across}% across, {down}% down",
+  "options.spotlight.position.set": "Set Position…",
   "options.spotlight.position.reset": "Reset Position",
+  "options.spotlight.position.dialogLabel": "Spotlight Position",
+  "options.spotlight.position.hint":
+    "Drag Spotlight or move it with the arrow keys. Press Esc to cancel.",
+  "options.spotlight.position.done": "Done",
   "options.spotlight.history.label": "Search browsing history too",
   "options.spotlight.history.footnote":
     "Turning this on asks for permission to read your browsing history. Turning it off removes the permission.",

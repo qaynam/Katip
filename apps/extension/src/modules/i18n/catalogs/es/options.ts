@@ -63,10 +63,15 @@ export const options: CatalogSection<"options"> = {
   "options.spotlight.size.footnote":
     "Se aplica la próxima vez que se abra Spotlight. En compacto, solo se ve el campo de búsqueda hasta que escribes, y luego se amplía.",
   "options.spotlight.position.label": "Posición",
-  "options.spotlight.position.instructions":
-    "Arrastra Spotlight a donde quieras que se abra sobre la ventana del navegador, o selecciónalo y usa las flechas. Se detiene en el centro y en los bordes.",
+  "options.spotlight.position.description":
+    "Dónde se abre Spotlight sobre la ventana del navegador.",
   "options.spotlight.position.value": "{across} % en horizontal, {down} % en vertical",
+  "options.spotlight.position.set": "Ajustar posición…",
   "options.spotlight.position.reset": "Restablecer posición",
+  "options.spotlight.position.dialogLabel": "Posición de Spotlight",
+  "options.spotlight.position.hint":
+    "Arrastra Spotlight o muévelo con las flechas. Pulsa Esc para cancelar.",
+  "options.spotlight.position.done": "Listo",
   "options.spotlight.history.label": "Buscar también en el historial",
   "options.spotlight.history.footnote":
     "Al activarlo, se solicita permiso para leer el historial de navegación. Al desactivarlo, se retira ese permiso.",

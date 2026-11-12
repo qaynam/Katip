@@ -12,20 +12,22 @@ Katip の利用者から見て変わったことを、バージョンごとに�
 
 ### English
 
-Spotlight forgives typos, and puts the commands first among equally good matches.
+Spotlight forgives typos and puts the commands first among equally good matches, and where it opens is set over the whole page.
 
 #### Improved
 
 - **Commands first** — Among results that match what you typed equally well, Spotlight lists commands first, then your open tabs, then pins, bookmarks and history. A page you visited a moment ago no longer jumps ahead of a command with the same name, though a result that matches better still comes first.
+- **Setting where Spotlight opens** — “Set Position…” in the settings dims the whole page and draws a grid over it. Drag Spotlight there, or move it with the arrow keys: near the centre, the grid lines, the edges and where it opens by default, it comes to rest and the line it rests on lights up. Done or Enter saves it, and Esc leaves it as it was.
 - **Typos forgiven** — Spotlight finds what you meant through a mistyped, missing, extra or swapped character, such as `chatgtp` for ChatGPT or `githb` for GitHub. Words of four characters or more forgive more the longer they are, and such results come after those that match as typed.
 
 ### 日本語
 
-Spotlight が打ち間違いを許すようになり、同じくらい一致する結果の中ではコマンドを先に出すようになりました。
+Spotlight が打ち間違いを許し、同じくらい一致する結果の中ではコマンドを先に出すようになりました。開く位置は、ページ全体を使って決められます。
 
 #### 改善
 
 - **コマンドを先頭に** — 打った言葉に同じくらい一致する結果の中では、コマンド、開いているタブ、ピン留めやブックマークと履歴の順に並べます。さっき開いた履歴が同じ名前のコマンドより先に出ることはなくなりました。よりよく一致する結果は、これまでどおり上に出ます。
+- **Spotlight を開く位置の設定** — 設定の「位置を設定…」を押すと、ページ全体が暗くなってグリッドが出ます。そこで Spotlight をドラッグするか矢印キーで動かします。中央・グリッド線・端・最初の位置の近くではぴたりと止まり、止まった線が光ります。「完了」か Enter で保存し、Esc で元に戻します。
 - **打ち間違いを許す検索** — 1 文字違う、抜けている、余計にある、入れ替わっている、といった打ち間違いがあっても見つけます。たとえば `chatgtp` で ChatGPT が、`githb` で GitHub が見つかります。4 文字以上の言葉で効き、長い言葉ほど多くの間違いを許します。打ち間違いを許して見つかった結果は、打ったとおりに一致する結果のあとに並びます。
 
 ## 1.7.0 — 2026-11-11
