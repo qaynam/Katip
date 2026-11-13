@@ -2,11 +2,11 @@
 
 What changed for people using Katip, version by version. Each version's section becomes the notes of its release on GitHub. Changes go under Unreleased as they land; a release renames it to the version and its date.
 
-Each language opens with one sentence on what the version brings, then lists the changes under New, Improved and Fixed, each led by a short bold name. Versions up to 1.6.1 list the changes alone.
+Each language opens with one sentence on what the version brings, then lists the changes under New, Improved and Fixed, each led by a short bold name.
 
 Katip のアップデート内容をバージョンごとにまとめています。各バージョンの内容は、そのまま GitHub のリリースノートとして公開されます。開発中の変更は Unreleased に記載し、リリース時にバージョン番号と日付を確定します。
 
-各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します（1.6.1 以前のバージョンは変更点のみを列挙しています）。
+各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
 ## 1.8.0 — 2026-11-12
 
@@ -74,140 +74,236 @@ Spotlight から直接新しいタブと並べて画面を分割できるよう�
 
 ### English
 
-- Choosing a bang in Spotlight, with Enter or Tab, or typing one in full followed by a space, such as `!yt `, puts Spotlight in that site: its name shows before the search field, as command mode's does, and what you type searches the site. Backspace in the empty field or Escape leaves it. With nothing to fill in, Tab leaves the search field as it is instead of moving away from it.
-- While a bang is typed, Spotlight suggests only the commands in your list. The bundled bangs still search when typed in full, such as `!w`.
+Site search modes for bangs in Spotlight, and focused command suggestions.
+
+#### Improved
+
+- **Site search from bangs** — Choosing a bang in Spotlight, with Enter or Tab, or typing one in full followed by a space, such as `!yt `, puts Spotlight in that site: its name shows before the search field, as command mode's does, and what you type searches the site. Backspace in the empty field or Escape leaves it. With nothing to fill in, Tab leaves the search field as it is instead of moving away from it.
+- **Focused bang suggestions** — While a bang is typed, Spotlight suggests only the commands in your list. The bundled bangs still search when typed in full, such as `!w`.
 
 ### 日本語
 
-- Spotlight で bangs を Enter や Tab で選択するか、`!yt ` のように最後まで入力してスペースを押すと、そのサイト専用の検索モードに入るようになりました。コマンドモードと同様に検索欄の左にサイト名が表示され、入力したキーワードでそのサイト内を直接検索できます。空の入力欄で Backspace または Esc を押すと通常の検索に戻ります。また、補完候補がないときに Tab を押しても検索欄からフォーカスが外れなくなりました。
-- bangs の入力中の候補には、登録済みコマンドのみを表示するようにしました（標準搭載の bangs も、`!w` のように最後まで入力すればそのまま検索できます）。
+Spotlight で bangs によるサイト専用検索モードに対応し、bang 入力時の候補表示を整理しました。
+
+#### 改善
+
+- **bangs からのサイト専用検索** — Spotlight で bangs を Enter や Tab で選択するか、`!yt ` のように最後まで入力してスペースを押すと、そのサイト専用の検索モードに入るようになりました。コマンドモードと同様に検索欄の左にサイト名が表示され、入力したキーワードでそのサイト内を直接検索できます。空の入力欄で Backspace または Esc を押すと通常の検索に戻ります。また、補完候補がないときに Tab を押しても検索欄からフォーカスが外れなくなりました。
+- **bangs 候補の絞り込み** — bangs の入力中の候補には、登録済みコマンドのみを表示するようにしました（標準搭載の bangs も、`!w` のように最後まで入力すればそのまま検索できます）。
 
 ## 1.6.0 — 2026-11-10
 
 ### English
 
-- When GitHub is limiting requests from your network, checking for updates in the settings says so and when to try again, instead of saying GitHub couldn’t be reached.
-- Spotlight fills its window, without a margin and frame of its own inside it.
-- Spotlight comes in three sizes, picked in the settings from a picture of each: Compact shows the search field alone until you type, Normal is as before, and Large is wider.
-- Where Spotlight opens can be chosen in the settings, by dragging it over a picture of the browser window. It comes to rest at the center and the edges.
-- The Space menu button and the button that clears temporary tabs are always shown, not only when the pointer is over the side panel.
-- Closing a Favorite soon after the browser restarts no longer sends a tab opened later with the same page to the wrong Space.
-- A welcome tour opens when Katip is installed. It shows where Katip lives, checks that Chrome gave Katip the keyboard shortcuts it suggests and helps fix any that went to another extension, then shows Favorites, themes, live folders, bangs and importing from Arc, each with an animated picture. A Space's color can be tried out, live folders added and Spotlight's commands changed right in the tour. It appears in the browser's language, light or dark as the browser is. The steps after setting up can be skipped, and the tour can be taken again from the settings.
+A welcome tour on install, three sizes and position settings for Spotlight, and UI refinements throughout.
+
+#### New
+
+- **Welcome tour** — A welcome tour opens when Katip is installed. It shows where Katip lives, checks that Chrome gave Katip the keyboard shortcuts it suggests and helps fix any that went to another extension, then shows Favorites, themes, live folders, bangs and importing from Arc, each with an animated picture. A Space's color can be tried out, live folders added and Spotlight's commands changed right in the tour. It appears in the browser's language, light or dark as the browser is. The steps after setting up can be skipped, and the tour can be taken again from the settings.
+- **Three Spotlight sizes** — Spotlight comes in three sizes, picked in the settings from a picture of each: Compact shows the search field alone until you type, Normal is as before, and Large is wider.
+- **Spotlight position** — Where Spotlight opens can be chosen in the settings, by dragging it over a picture of the browser window. It comes to rest at the center and the edges.
+
+#### Improved
+
+- **Frameless Spotlight** — Spotlight fills its window, without a margin and frame of its own inside it.
+- **Always visible Space buttons** — The Space menu button and the button that clears temporary tabs are always shown, not only when the pointer is over the side panel.
+- **Rate limit notice** — When GitHub is limiting requests from your network, checking for updates in the settings says so and when to try again, instead of saying GitHub couldn’t be reached.
+
+#### Fixed
+
+- **Favorites Space routing** — Closing a Favorite soon after the browser restarts no longer sends a tab opened later with the same page to the wrong Space.
 
 ### 日本語
 
-- GitHub の API レート制限がかかっている場合、設定画面のアップデート確認で「GitHub に接続できませんでした」と表示する代わりに、制限中である旨と再試行できる目安時間を表示するようにしました。
-- Spotlight のウィンドウ内の余白と枠線をなくし、ウィンドウいっぱいに表示されるようにしました。
-- Spotlight のサイズを 3 種類（コンパクト・標準・大きめ）から選べるようにしました。設定画面でプレビューを見ながら選択できます。コンパクトは文字を入力するまで検索バーのみを表示し、大きめは横幅が広くなります。
-- Spotlight を開く位置を設定画面で調整できるようになりました。ブラウザウィンドウのプレビュー上で Spotlight をドラッグして配置でき、中央や端にピタッと吸着します。
-- Space メニューボタンと一時タブを閉じるボタンを、サイドパネルにカーソルを合わせていないときでも常に表示するようにしました。
-- ブラウザの再起動直後に Favorites（お気に入り）のタブを閉じた際、後から同じページを開いたタブが意図しない別の Space に割り振られてしまう不具合を修正しました。
-- Katip のインストール時に「ようこそツアー」を表示するようにしました。Katip の使い方を案内し、推奨ショートカットが正しく割り当てられているか確認して他の拡張機能との競合解消をサポートします。さらに Favorites、テーマ、ライブフォルダ、bangs、Arc からのデータ移行などをアニメーションを交えて紹介します。ツアー内では Space のテーマ色を試したり、ライブフォルダの追加や Spotlight コマンドのカスタマイズも行えます。ツアーはブラウザの言語およびライト／ダーク設定に合わせて表示され、初期設定以降のステップはスキップ可能です（設定画面からいつでも再確認できます）。
+インストール時の「ようこそツアー」の導入、Spotlight の 3 サイズ展開と表示位置の設定など、操作性を全般的に向上させました。
+
+#### 新機能
+
+- **ようこそツアー** — Katip のインストール時に「ようこそツアー」を表示するようにしました。Katip の使い方を案内し、推奨ショートカットが正しく割り当てられているか確認して他の拡張機能との競合解消をサポートします。さらに Favorites、テーマ、ライブフォルダ、bangs、Arc からのデータ移行などをアニメーションを交えて紹介します。ツアー内では Space のテーマ色を試したり、ライブフォルダの追加や Spotlight コマンドのカスタマイズも行えます。ツアーはブラウザの言語およびライト／ダーク設定に合わせて表示され、初期設定以降のステップはスキップ可能です（設定画面からいつでも再確認できます）。
+- **Spotlight のサイズ選択** — Spotlight のサイズを 3 種類（コンパクト・標準・大きめ）から選べるようにしました。設定画面でプレビューを見ながら選択できます。コンパクトは文字を入力するまで検索バーのみを表示し、大きめは横幅が広くなります。
+- **Spotlight の表示位置設定** — Spotlight を開く位置を設定画面で調整できるようになりました。ブラウザウィンドウのプレビュー上で Spotlight をドラッグして配置でき、中央や端にピタッと吸着します。
+
+#### 改善
+
+- **Spotlight のフレームレス表示** — Spotlight のウィンドウ内の余白と枠線をなくし、ウィンドウいっぱいに表示されるようにしました。
+- **常時表示のボタン** — Space メニューボタンと一時タブを閉じるボタンを、サイドパネルにカーソルを合わせていないときでも常に表示するようにしました。
+- **レート制限時のメッセージ改善** — GitHub の API レート制限がかかっている場合、設定画面のアップデート確認で「GitHub に接続できませんでした」と表示する代わりに、制限中である旨と再試行できる目安時間を表示するようにしました。
+
+#### 修正
+
+- **Favorites の Space 振り分け修正** — ブラウザの再起動直後に Favorites（お気に入り）のタブを閉じた際、後から同じページを開いたタブが意図しない別の Space に割り振られてしまう不具合を修正しました。
 
 ## 1.5.0 — 2026-11-10
 
 ### English
 
-- Spotlight's commands have icons.
-- Spotlight has commands for creating things on popular sites, such as a new Google Doc, Linear issue or GitHub repository. You can remove them, and add your own in the settings: a command opens a page, or searches a site for what you type after its keyword.
-- Bangs: type `!` and a site's shortcut in Spotlight, as in `!gh katip`, to search that site directly. Typing `!g` suggests the bangs it can become. The bangs are Kagi's, as Helium ships them, and can be turned off in the settings.
-- When adding a command in the settings, you can pick a site from the list of bangs to fill in its search.
+Direct site searches with bangs, quick-create commands, and command icons in Spotlight.
+
+#### New
+
+- **Bangs** — Type `!` and a site's shortcut in Spotlight, as in `!gh katip`, to search that site directly. Typing `!g` suggests the bangs it can become. The bangs are Kagi's, as Helium ships them, and can be turned off in the settings.
+- **Quick-create commands** — Spotlight has commands for creating things on popular sites, such as a new Google Doc, Linear issue or GitHub repository. You can remove them, and add your own in the settings: a command opens a page, or searches a site for what you type after its keyword.
+- **Adding commands from bangs** — When adding a command in the settings, you can pick a site from the list of bangs to fill in its search.
+
+#### Improved
+
+- **Command icons** — Spotlight's commands have icons.
 
 ### 日本語
 
-- Spotlight の各コマンドにアイコンを表示するようにしました。
-- よく使う外部サービス（Google ドキュメントの新規作成、Linear の Issue 作成、GitHub リポジトリの新規作成など）のアクションコマンドを Spotlight に追加しました。これらは不要なら削除でき、設定画面から独自のコマンドを追加することも可能です（指定のページを開くか、キーワードに続く文字列でサイト内検索を行えます）。
-- bangs 検索に対応しました。Spotlight で `!gh katip` のように `!` とサイトのショートカットを入力することで、そのサイトを直接検索できます。`!g` など途中まで入力すると候補が表示されます。bangs のリストには Helium 同梱の Kagi のデータを使用しており、設定画面で無効化することも可能です。
-- 設定画面でコマンドを追加する際、bangs の一覧から対象サイトを選んで検索 URL を自動入力できるようにしました。
+Spotlight に bangs 検索やよく使うサービスへのクイック作成コマンド、コマンドアイコンを追加しました。
+
+#### 新機能
+
+- **bangs 検索** — Spotlight で `!gh katip` のように `!` とサイトのショートカットを入力することで、そのサイトを直接検索できます。`!g` など途中まで入力すると候補が表示されます。bangs のリストには Helium 同梱の Kagi のデータを使用しており、設定画面で無効化することも可能です。
+- **クイック作成コマンド** — よく使う外部サービス（Google ドキュメントの新規作成、Linear の Issue 作成、GitHub リポジトリの新規作成など）のアクションコマンドを Spotlight に追加しました。これらは不要なら削除でき、設定画面から独自のコマンドを追加することも可能です（指定のページを開くか、キーワードに続く文字列でサイト内検索を行えます）。
+- **bangs からのコマンド追加** — 設定画面でコマンドを追加する際、bangs の一覧から対象サイトを選んで検索 URL を自動入力できるようにしました。
+
+#### 改善
+
+- **コマンドアイコン** — Spotlight の各コマンドにアイコンを表示するようにしました。
 
 ## 1.4.0 — 2026-11-06
 
 ### English
 
-- The theme picker works like Arc's: colors are most vivid at the center of the color field and pale toward white at its edges, and the most vivid colors paint the side panel far more richly than before. Saved themes keep their colors, but their dots move to match, and vivid themes are painted deeper.
-- Spaces moved over from Arc come in closer to how Arc paints them at low intensity.
+An Arc-like theme picker with deeper, more vivid colors, and refined theme import.
+
+#### Improved
+
+- **Vivid theme picker** — The theme picker works like Arc's: colors are most vivid at the center of the color field and pale toward white at its edges, and the most vivid colors paint the side panel far more richly than before. Saved themes keep their colors, but their dots move to match, and vivid themes are painted deeper.
+- **Arc Space colors** — Spaces moved over from Arc come in closer to how Arc paints them at low intensity.
 
 ### 日本語
 
-- テーマのカラーピッカーの操作感を Arc に近づけました。カラーフィールドの中央ほど鮮やかで、外側に向かうほど白に近い淡い色合いになり、最も鮮やかな色を選んだ際はサイドパネルにより深みのある発色で反映されます。保存済みのテーマカラーはそのまま保持されますが、ピッカー上のピンの位置は新しい色空間に合わせて更新され、鮮やかなテーマはより深みのある色合いで表示されます。
-- Arc からインポートした Space のカラー強度が低い場合でも、Arc 本来の表示により近い見た目で再現されるように改善しました。
+テーマのカラーピッカーを Arc スタイルに刷新し、より鮮やかで深みのある色合いに対応しました。
+
+#### 改善
+
+- **より鮮やかなカラーピッカー** — テーマのカラーピッカーの操作感を Arc に近づけました。カラーフィールドの中央ほど鮮やかで、外側に向かうほど白に近い淡い色合いになり、最も鮮やかな色を選んだ際はサイドパネルにより深みのある発色で反映されます。保存済みのテーマカラーはそのまま保持されますが、ピッカー上のピンの位置は新しい色空間に合わせて更新され、鮮やかなテーマはより深みのある色合いで表示されます。
+- **Arc テーマの再現性向上** — Arc からインポートした Space のカラー強度が低い場合でも、Arc 本来の表示により近い見た目で再現されるように改善しました。
 
 ## 1.3.0 — 2026-11-06
 
 ### English
 
-- The side panel opens where its list was last scrolled, in each window and Space. Switching back to a Space returns to its place too.
-- A tab you click is highlighted at once, without waiting for the browser to switch to it.
-- Folders open and close as soon as you click them, their contents sliding down and back up while the folder icon opens and closes with them.
-- Theme colors can be dragged out to the edges and corners of the color field, where the most vivid colors are.
-- Pressing the middle of the grain dial switches between six textures: grain, speckle, film, lines, linen and paper.
-- When a newer version of Katip is out, a card at the bottom of the side panel tells you, the first time the side panel opens after the browser starts. You can turn this off in the settings.
-- The settings show when your version was released, and can check for updates when you ask.
+Instant interactions, scroll position memory, update notifications, and richer theme textures.
+
+#### New
+
+- **Update notifications** — When a newer version of Katip is out, a card at the bottom of the side panel tells you, the first time the side panel opens after the browser starts. You can turn this off in the settings.
+- **Release dates and update check** — The settings show when your version was released, and can check for updates when you ask.
+- **Six theme textures** — Pressing the middle of the grain dial switches between six textures: grain, speckle, film, lines, linen and paper.
+
+#### Improved
+
+- **Scroll position memory** — The side panel opens where its list was last scrolled, in each window and Space. Switching back to a Space returns to its place too.
+- **Instant tab highlight** — A tab you click is highlighted at once, without waiting for the browser to switch to it.
+- **Animated folders** — Folders open and close as soon as you click them, their contents sliding down and back up while the folder icon opens and closes with them.
+- **Expanded color field** — Theme colors can be dragged out to the edges and corners of the color field, where the most vivid colors are.
 
 ### 日本語
 
-- サイドパネルを開いた際、ウィンドウや Space ごとに前回スクロールしていた位置を記憶して復元するようになりました。別の Space から戻った際も同様に元の位置に戻ります。
-- タブをクリックした際、ブラウザ側のタブ切り替えを待たずに即座にハイライトされるようにし、体感速度を向上させました。
-- フォルダをクリックすると即座に開閉し、中身がスムーズにスライド展開すると同時にフォルダアイコンのアニメーションも連動するようにしました。
-- テーマのカラーピッカーで、最も鮮やかな色域があるカラーフィールドの端や四隅までピンを動かせるようになりました。
-- グレイン（質感）ダイヤルの中央をクリックすることで、6 種類のテクスチャ（グレイン・斑点・フィルム・斜線・リネン・紙）を切り替えられるようにしました。
-- 新しいバージョンがリリースされている場合、ブラウザ起動後に初めてサイドパネルを開いたタイミングで、下部に通知カードを表示するようになりました（設定画面でオフにできます）。
-- 設定画面に使用中のバージョンのリリース日を表示し、手動でアップデートの確認ができるようにしました。
+操作レスポンスの高速化、スクロール位置の記憶、アップデート通知、6 種類のテクスチャ切り替えを追加しました。
+
+#### 新機能
+
+- **アップデート通知** — 新しいバージョンがリリースされている場合、ブラウザ起動後に初めてサイドパネルを開いたタイミングで、下部に通知カードを表示するようになりました（設定画面でオフにできます）。
+- **リリース日表示と手動確認** — 設定画面に使用中のバージョンのリリース日を表示し、手動でアップデートの確認ができるようにしました。
+- **6 種類のテクスチャ** — グレイン（質感）ダイヤルの中央をクリックすることで、6 種類のテクスチャ（グレイン・斑点・フィルム・斜線・リネン・紙）を切り替えられるようにしました。
+
+#### 改善
+
+- **スクロール位置の記憶** — サイドパネルを開いた際、ウィンドウや Space ごとに前回スクロールしていた位置を記憶して復元するようになりました。別の Space から戻った際も同様に元の位置に戻ります。
+- **タブの即座ハイライト** — タブをクリックした際、ブラウザ側のタブ切り替えを待たずに即座にハイライトされるようにし、体感速度を向上させました。
+- **フォルダ開閉のアニメーション** — フォルダをクリックすると即座に開閉し、中身がスムーズにスライド展開すると同時にフォルダアイコンのアニメーションも連動するようにしました。
+- **カラーフィールドの端まで選択可能に** — テーマのカラーピッカーで、最も鮮やかな色域があるカラーフィールドの端や四隅までピンを動かせるようになりました。
 
 ## 1.2.0 — 2026-11-05
 
 ### English
 
-- Favorites stay when their tab is closed. A closed one shows as a dimmed tile that reopens on click, and Spotlight finds it too.
-- Katip keeps its data when an update is unzipped into a different folder from the previous version. Updating from 1.1.0 still starts afresh once.
-- Each release zip comes with a build provenance attestation, so you can check with `gh attestation verify` that it was built from this repository.
+Closed favorites stay as quick-launch tiles, seamless data retention across update folders, and build provenance attestations.
+
+#### New
+
+- **Build provenance attestations** — Each release zip comes with a build provenance attestation, so you can check with `gh attestation verify` that it was built from this repository.
+
+#### Improved
+
+- **Persistent Favorites tiles** — Favorites stay when their tab is closed. A closed one shows as a dimmed tile that reopens on click, and Spotlight finds it too.
+- **Folder-independent data retention** — Katip keeps its data when an update is unzipped into a different folder from the previous version. Updating from 1.1.0 still starts afresh once.
 
 ### 日本語
 
-- タブを閉じても Favorites（お気に入り）に残るようになりました。閉じているタブは薄いタイル状で表示され、クリックするとすぐに再表示できます。Spotlight からの検索にもヒットします。
-- アップデート時に zip を以前と異なるフォルダに解凍した場合でも、Katip のデータを引き継げるようになりました（※1.1.0 からのアップデート時のみ、初回に一度データのリセットが発生します）。
-- リリースの zip ファイルにビルド証明（build provenance attestation）を添付しました。`gh attestation verify` コマンドを使って、このリポジトリの公式ワークフローからビルドされたものであることを検証できます。
+Favorites（お気に入り）の保持機能、別フォルダ解凍時のデータ引き継ぎ、ビルド証明（attestation）に対応しました。
+
+#### 新機能
+
+- **ビルド証明の添付** — リリースの zip ファイルにビルド証明（build provenance attestation）を添付しました。`gh attestation verify` コマンドを使って、このリポジトリの公式ワークフローからビルドされたものであることを検証できます。
+
+#### 改善
+
+- **Favorites の保持と再表示** — タブを閉じても Favorites（お気に入り）に残るようになりました。閉じているタブは薄いタイル状で表示され、クリックするとすぐに再表示できます。Spotlight からの検索にもヒットします。
+- **別フォルダへの更新時のデータ引き継ぎ** — アップデート時に zip を以前と異なるフォルダに解凍した場合でも、Katip のデータを引き継げるようになりました（※1.1.0 からのアップデート時のみ、初回に一度データのリセットが発生します）。
 
 ## 1.1.0 — 2026-11-04
 
 ### English
 
-- A theme's colors move together as one harmony: dragging the primary color turns the others with it, and dragging another color sets how far they spread. The presets include grays.
-- Light themes are painted lighter, keeping each hue's own lightness, so creams and yellows no longer look grey.
-- The grain dial shows the grain at its strength, and the intensity wave grows from a flat line.
-- Letting a tab go on the left or right of the page splits it with the tab shown there.
+Harmonious multi-color theme customization, lighter themes, and drag-to-split tabs.
+
+#### New
+
+- **Drag to split tabs** — Letting a tab go on the left or right of the page splits it with the tab shown there.
+
+#### Improved
+
+- **Harmonious color palettes** — A theme's colors move together as one harmony: dragging the primary color turns the others with it, and dragging another color sets how far they spread. The presets include grays.
+- **Clearer light themes** — Light themes are painted lighter, keeping each hue's own lightness, so creams and yellows no longer look grey.
+- **Theme control animations** — The grain dial shows the grain at its strength, and the intensity wave grows from a flat line.
 
 ### 日本語
 
-- テーマの複数の色が調和を保ちながら連動するようになりました。主色（プライマリカラー）を動かすと他の色もバランスを保って回転し、他の色を動かすと配色の広がり具合を調整できます。また、プリセットにグレー系を追加しました。
-- ライトテーマの明度を向上させ、各色相本来の明るさを保つようにしました。クリーム色やイエローがくすんだグレーに見えてしまうことがなくなります。
-- グレインダイヤルの表示を強度に合わせて変化させ、色の強弱を表すウェーブがフラットな状態から滑らかに展開するようにしました。
-- タブを画面の左端または右端にドラッグ＆ドロップすることで、その位置にあるタブと画面を 2 分割表示できるようになりました。
+テーマ配色の連動調整、ライトテーマの視認性向上、ドラッグ＆ドロップによる画面分割に対応しました。
+
+#### 新機能
+
+- **画面端へのドラッグで分割表示** — タブを画面の左端または右端にドラッグ＆ドロップすることで、その位置にあるタブと画面を 2 分割表示できるようになりました。
+
+#### 改善
+
+- **調和するテーマ配色** — テーマの複数の色が調和を保ちながら連動するようになりました。主色（プライマリカラー）を動かすと他の色もバランスを保って回転し、他の色を動かすと配色の広がり具合を調整できます。また、プリセットにグレー系を追加しました。
+- **ライトテーマの明度改善** — ライトテーマの明度を向上させ、各色相本来の明るさを保つようにしました。クリーム色やイエローがくすんだグレーに見えてしまうことがなくなります。
+- **テーマコントロールの表現向上** — グレインダイヤルの表示を強度に合わせて変化させ、色の強弱を表すウェーブがフラットな状態から滑らかに展開するようにしました。
 
 ## 1.0.0 — 2026-11-03
 
 ### English
 
-The first release.
+The initial release of Katip, bringing vertical tabs, Spaces, and powerful tools to Chrome's side panel.
 
-- Spaces in the side panel, each with its own pinned tabs, folders and theme. Pins are saved as bookmarks.
-- Favorites, split views, folder icons and search within folders.
-- Live folders that show Gmail mail and GitHub pull requests and issues.
-- An archive of closed tabs, with automatic archiving of tabs left unviewed.
-- Spotlight for searching tabs, pins, history and the web.
-- Moving over from Arc, and exporting and importing Katip's data.
-- Keyboard shortcuts, including copying the current page's URL or Markdown link.
-- English, Japanese, Spanish and Simplified Chinese.
+#### New
+
+- **Spaces and vertical tabs** — Spaces in the side panel, each with its own pinned tabs, folders and theme. Pins are saved as bookmarks.
+- **Favorites and split views** — Favorites, split views, folder icons and search within folders.
+- **Live folders** — Live folders that show Gmail mail and GitHub pull requests and issues.
+- **Tab archive** — An archive of closed tabs, with automatic archiving of tabs left unviewed.
+- **Spotlight** — Spotlight for searching tabs, pins, history and the web.
+- **Arc import and data portability** — Moving over from Arc, and exporting and importing Katip's data.
+- **Keyboard shortcuts** — Keyboard shortcuts, including copying the current page's URL or Markdown link.
+- **Multilingual support** — English, Japanese, Spanish and Simplified Chinese.
 
 ### 日本語
 
-Katip の最初のリリースです。
+Katip の最初のリリースです。Chrome のサイドパネルに、縦型タブ、Space、多彩な整理ツールをお届けします。
 
-- サイドパネルで管理できる「Space」。Space ごとにピン留めタブ、フォルダ、テーマカラーを設定でき、ピン留めは Chrome ブックマークとして安全に保存されます。
-- Favorites（お気に入り）、分割ビュー、カスタムフォルダアイコン、フォルダ内検索。
-- Gmail の受信メールや GitHub の Pull Request・Issue を一覧表示できる「ライブフォルダ」。
-- 閉じたタブのアーカイブ機能と、一定時間閲覧していないタブの自動アーカイブ。
-- 開いているタブ、ピン留め、閲覧履歴、Web をまとめて素早く横断検索できる「Spotlight」。
-- Arc ブラウザからのデータ移行、および Katip データのエクスポート／インポート機能。
-- 表示中ページの URL コピーや Markdown リンクコピーを含む、充実したキーボードショートカット。
-- 英語、日本語、スペイン語、簡体字中国語に対応。
+#### 新機能
+
+- **Space と縦型タブ** — サイドパネルで管理できる「Space」。Space ごとにピン留めタブ、フォルダ、テーマカラーを設定でき、ピン留めは Chrome ブックマークとして安全に保存されます。
+- **Favorites と分割表示** — Favorites（お気に入り）、分割ビュー、カスタムフォルダアイコン、フォルダ内検索。
+- **ライブフォルダ** — Gmail の受信メールや GitHub の Pull Request・Issue を一覧表示できるライブフォルダ。
+- **タブアーカイブ** — 閉じたタブのアーカイブ機能と、一定時間閲覧していないタブの自動アーカイブ。
+- **Spotlight 検索** — 開いているタブ、ピン留め、閲覧履歴、Web をまとめて素早く横断検索できる Spotlight。
+- **Arc からのデータ移行** — Arc ブラウザからのデータ移行、および Katip データのエクスポート／インポート機能。
+- **キーボードショートカット** — 表示中ページの URL コピーや Markdown リンクコピーを含む、充実したキーボードショートカット。
+- **多言語対応** — 英語、日本語、スペイン語、簡体字中国語に対応。
