@@ -27,6 +27,13 @@ describe("releaseNotesOf", () => {
     expect(releaseNotesOf(changelog, "1.2.0")).toBe("### English\n\n- Favorites stay.")
   })
 
+  it("keeps language headings that start with ## inside the version notes", () => {
+    const multiLang = `## 1.2.0\n\n## English\n\n- English notes.\n\n## 日本語\n\n- 日本語のノート。\n\n## 1.1.0\n\n- Older.`
+    expect(releaseNotesOf(multiLang, "1.2.0")).toBe(
+      "## English\n\n- English notes.\n\n## 日本語\n\n- 日本語のノート。",
+    )
+  })
+
   it("takes the last version's notes to the end of the file", () => {
     expect(releaseNotesOf(changelog, "1.1.0")).toBe("- Splits.")
   })
