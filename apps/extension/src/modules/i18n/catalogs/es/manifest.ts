@@ -4,7 +4,7 @@ export const manifest: CatalogSection<"manifest"> = {
   "manifest.description": "Organiza tus pestañas en espacios desde el panel lateral",
   "manifest.command.openSidePanel": "Abrir el panel lateral",
   "manifest.command.openSpotlight":
-    "Abrir Spotlight para buscar pestañas, elementos fijados y espacios",
+    "Abrir la paleta de comandos para buscar pestañas, elementos fijados y espacios",
   "manifest.command.copyUrl":
     "Copiar la URL de la pestaña activa (actívalo en los ajustes de Katip)",
   "manifest.command.copyMarkdownLink":

@@ -36,7 +36,7 @@ const descriptionsTranslatedBy = (translator: Translator) => ({
   },
 })
 
-test("a fresh install gets keys for the side panel, Spotlight and both copy shortcuts", async ({
+test("a fresh install gets keys for the side panel, the Command Palette and both copy shortcuts", async ({
   background,
 }) => {
   const keys = Object.fromEntries(

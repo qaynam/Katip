@@ -281,7 +281,7 @@ describe("categories", () => {
       "General",
       "Tabs",
       "Archive",
-      "Spotlight",
+      "Command Palette",
       "Shortcuts",
       "Data",
     ])
@@ -783,7 +783,7 @@ describe("browsing history search", () => {
   const historySwitch = () => switchNamed("Search browsing history too")
   const renderSpotlight = async () => {
     const rendered = await renderLoaded()
-    await openCategory("Spotlight")
+    await openCategory("Command Palette")
     return rendered
   }
 
@@ -910,7 +910,7 @@ describe("notifications about new items in live folders", () => {
   })
 })
 
-describe("Spotlight size", () => {
+describe("Command Palette size", () => {
   const sizeNamed = (name: string) =>
     within(screen.getByRole("group", { name: "Size" })).getByRole<HTMLInputElement>("radio", {
       name,
@@ -918,7 +918,7 @@ describe("Spotlight size", () => {
 
   it("is normal until another size is picked, which is saved at once", async () => {
     const { readSaved } = await renderLoaded()
-    await openCategory("Spotlight")
+    await openCategory("Command Palette")
     expect(["Compact", "Normal", "Large"].map((name) => sizeNamed(name).checked)).toStrictEqual([
       false,
       true,
@@ -933,9 +933,9 @@ describe("Spotlight size", () => {
   })
 })
 
-describe("Spotlight position", () => {
+describe("Command Palette position", () => {
   const setPositionButton = () => screen.getByRole("button", { name: "Set Position…" })
-  const overlay = () => screen.getByRole("dialog", { name: "Spotlight Position" })
+  const overlay = () => screen.getByRole("dialog", { name: "Command Palette Position" })
   const spotlightIn = () => within(overlay()).getByRole("slider", { name: "Position" })
   const where = () => spotlightIn().getAttribute("aria-valuetext")
 
@@ -947,7 +947,7 @@ describe("Spotlight position", () => {
 
   const renderSpotlightCategory = async (options: RenderOptions = {}) => {
     const rendered = await renderLoaded(options)
-    await openCategory("Spotlight")
+    await openCategory("Command Palette")
     return rendered
   }
 
@@ -957,7 +957,7 @@ describe("Spotlight position", () => {
     expect(screen.getByText("50% across, 30% down")).toBeTruthy()
   })
 
-  it("opens an overlay with Spotlight where it was saved, ready for the arrow keys", async () => {
+  it("opens an overlay with the Command Palette where it was saved, ready for the arrow keys", async () => {
     await renderSpotlightCategory({ saved: { spotlightPosition: { x: 0.2, y: 0.7 } } })
 
     const spotlight = await openOverlay()
@@ -1050,7 +1050,7 @@ describe("Spotlight position", () => {
 describe("bangs", () => {
   it("are on until turned off, which is saved", async () => {
     const { readSaved } = await renderLoaded()
-    await openCategory("Spotlight")
+    await openCategory("Command Palette")
     expect(switchNamed("Search sites with bangs").checked).toBe(true)
 
     await fireEvent.click(switchNamed("Search sites with bangs"))
@@ -1064,7 +1064,7 @@ describe("bangs", () => {
 describe("site commands", () => {
   const renderCommands = async () => {
     const rendered = await renderLoaded()
-    await openCategory("Spotlight")
+    await openCategory("Command Palette")
     await screen.findByRole("heading", { name: "Commands" })
     return rendered
   }
@@ -1225,9 +1225,12 @@ describe("shortcuts", () => {
 
     await waitFor(() => {
       expect(
-        ["Open the side panel", "Open Spotlight", "Copy URL", "Copy URL as a Markdown link"].map(
-          keysShownFor,
-        ),
+        [
+          "Open the side panel",
+          "Open the Command Palette",
+          "Copy URL",
+          "Copy URL as a Markdown link",
+        ].map(keysShownFor),
       ).toStrictEqual(["⌃⌘S", "⌥T", "⇧⌘C", "⌃⇧⌘C"])
     })
   })
@@ -1248,7 +1251,7 @@ describe("shortcuts", () => {
     await renderShortcuts({ assignedKeys: { "open-spotlight": "Alt+T" } })
 
     await waitFor(() => {
-      expect(keysShownFor("Open Spotlight")).toBe("Alt+T")
+      expect(keysShownFor("Open the Command Palette")).toBe("Alt+T")
     })
   })
 
@@ -1269,7 +1272,7 @@ describe("shortcuts", () => {
   it("when the browser can't report the keys, doesn't claim any command has no key", async () => {
     await renderShortcuts({ assignedKeys: "Unavailable" })
 
-    expect(keysShownFor("Open Spotlight")).toBe("")
+    expect(keysShownFor("Open the Command Palette")).toBe("")
     expect(screen.queryByText("Not set")).toBeNull()
   })
 

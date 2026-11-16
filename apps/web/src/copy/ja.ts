@@ -5,7 +5,7 @@ export const ja: Copy = {
   meta: {
     title: "Katip – Chrome のサイドパネルで使う縦型タブと Space",
     description:
-      "Katip は、Chrome のサイドパネルをタブを整理するサイドバーに変える拡張機能です。Space、ピン留め、フォルダ、分割ビュー、Spotlight 検索に対応。無料のオープンソースで、データはブラウザの外に出ません。",
+      "Katip は、Chrome のサイドパネルをタブを整理するサイドバーに変える拡張機能です。Space、ピン留め、フォルダ、分割ビュー、コマンドパレットに対応。無料のオープンソースで、データはブラウザの外に出ません。",
     imageAlt:
       "Katip: タブを Space ごとに整理。サイドパネルに「仕事」Space のピン留めタブとフォルダが並んでいます。",
   },
@@ -20,7 +20,7 @@ export const ja: Copy = {
   },
   hero: {
     title: "Chrome のサイドパネルに、縦型タブと Space を",
-    lead: "プロジェクトごとに Space を分け、よく開くページはピン留めし、Spotlight でなんでも探せます。",
+    lead: "プロジェクトごとに Space を分け、よく開くページはピン留めし、コマンドパレットでなんでも探せます。",
     note: "無料・オープンソース · Chrome 120 以降",
     screenshotAlt:
       "ドキュメントの横のサイドパネルに表示した Katip。「仕事」Space に、Favorites の列、ピン留めタブと分割ビューのピンが入った「プロダクト」フォルダ、ほかのフォルダ、その下に開いているタブが並んでいます。",
@@ -46,11 +46,11 @@ export const ja: Copy = {
     ],
   },
   spotlight: {
-    eyebrow: "Spotlight",
+    eyebrow: "コマンドパレット",
     title: "なんでも検索、すぐに実行",
     lead: "タブ・ピン留め・Space の検索も、コマンドの実行も、キーボードだけで。",
     screenshotAlt:
-      "ブラウザのウィンドウの上に開いた Spotlight。「コピー」と入力すると、タイトルが一致するタブ、「URL をコピー」「URL を Markdown のリンクとしてコピー」のコマンド、ウェブ検索が並びます。",
+      "ブラウザのウィンドウの上に開いたコマンドパレット。「コピー」と入力すると、タイトルが一致するタブ、「URL をコピー」「URL を Markdown のリンクとしてコピー」のコマンド、ウェブ検索が並びます。",
     details: [
       {
         title: "ひとつの検索窓で",
@@ -65,9 +65,9 @@ export const ja: Copy = {
   bangs: {
     eyebrow: "bangs",
     title: "どのサイトも、bangs で検索",
-    lead: "Spotlight で ! に続けてサイトの短縮名を打つと、そのサイトをすぐに検索できます。",
+    lead: "コマンドパレットで ! に続けてサイトの短縮名を打つと、そのサイトをすぐに検索できます。",
     screenshotAlt:
-      "「!」だけを入力した Spotlight。サイト内検索が 5 つ、短縮名とともに並んでいます: Tracker（!tr）、Docs（!docs）、Recipes（!food）、Maps（!maps）、News（!news）。",
+      "「!」だけを入力したコマンドパレット。サイト内検索が 5 つ、短縮名とともに並んでいます: Tracker（!tr）、Docs（!docs）、Recipes（!food）、Maps（!maps）、News（!news）。",
     details: [
       {
         title: "数千のサイトに対応",
@@ -116,7 +116,7 @@ export const ja: Copy = {
       },
       {
         title: "ライト、ダーク、自動",
-        text: "Space ごとにシステムに合わせられ、Spotlight もそれに従います。",
+        text: "Space ごとにシステムに合わせられ、コマンドパレットもそれに従います。",
       },
     ],
   },
@@ -135,7 +135,7 @@ export const ja: Copy = {
       },
       shortcuts: {
         title: "キーボードショートカット",
-        text: "Spotlight を開くのも、ピン留めやリンクのコピーも、キーでできます。",
+        text: "コマンドパレットを開くのも、ピン留めやリンクのコピーも、キーでできます。",
       },
       languages: {
         title: "4 つの言語",

@@ -164,7 +164,7 @@ const en: LocaleSamples = {
       subtitle: "Pin the tabs you keep, file them in folders, and switch Spaces with a click.",
     },
     spotlight: {
-      eyebrow: "Spotlight",
+      eyebrow: "Command Palette",
       title: "Find anything. Run any command.",
       subtitle: "Search your tabs, pins and Spaces, or run a command, right from the keyboard.",
     },
@@ -186,7 +186,8 @@ const en: LocaleSamples = {
     bangs: {
       eyebrow: "Bangs",
       title: "Search any site with a bang",
-      subtitle: "Type ! and a site’s shortcut in Spotlight to search that site straight away.",
+      subtitle:
+        "Type ! and a site’s shortcut in the Command Palette to search that site straight away.",
     },
   },
   spaceNames: { work: "Work", personal: "Personal", reading: "Reading", studio: "Studio" },
@@ -328,7 +329,7 @@ const ja: LocaleSamples = {
       subtitle: "よく使うタブはピン留めしてフォルダに。Space はワンクリックで切り替え。",
     },
     spotlight: {
-      eyebrow: "Spotlight",
+      eyebrow: "コマンドパレット",
       title: "なんでも検索、すぐに実行",
       subtitle: "タブ・ピン留め・Space の検索も、コマンドの実行も、キーボードだけで。",
     },
@@ -351,7 +352,7 @@ const ja: LocaleSamples = {
     bangs: {
       eyebrow: "bangs",
       title: "どのサイトも、bangs で検索",
-      subtitle: "Spotlight で ! に続けてサイトの短縮名を打てば、そのサイトをすぐに検索。",
+      subtitle: "コマンドパレットで ! に続けてサイトの短縮名を打てば、そのサイトをすぐに検索。",
     },
   },
   spaceNames: { work: "仕事", personal: "プライベート", reading: "読書", studio: "制作" },

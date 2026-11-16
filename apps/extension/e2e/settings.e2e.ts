@@ -5,7 +5,7 @@ import { isSplitViewAvailable } from "./sidebar-actions"
 /** The label the Shortcuts category shows for each command the manifest declares. */
 const COMMAND_LABELS: Readonly<Record<string, string>> = {
   _execute_action: "Open the side panel",
-  "open-spotlight": "Open Spotlight",
+  "open-spotlight": "Open the Command Palette",
   "next-tab-in-space": "Next tab in the Space",
   "previous-tab-in-space": "Previous tab in the Space",
   "quick-pin-toggle": "Pin or unpin the tab",
@@ -29,7 +29,7 @@ const keysShownFor = (settings: Page, command: string) =>
     .filter({ hasText: new RegExp(`^${command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) })
     .locator("xpath=following-sibling::dd[1]")
 
-test.fixme("switching the language to Japanese shows the sidebar and Spotlight in Japanese", () => {})
+test.fixme("switching the language to Japanese shows the sidebar and the Command Palette in Japanese", () => {})
 test.fixme("the automatic language follows the browser's language", () => {})
 test.fixme("with new tabs at the top turned off, temporary tabs list oldest first", () => {})
 test.fixme("showing all open tabs in collapsed folders lists every open tab below a collapsed folder", () => {})
@@ -104,7 +104,7 @@ test("turning on a copy shortcut keeps it on across reloads, without access to a
   ).toBe(false)
 })
 
-test.fixme("enabling history search asks for the history permission and, once granted, shows history in Spotlight", () => {})
+test.fixme("enabling history search asks for the history permission and, once granted, shows history in the Command Palette", () => {})
 
 test("the settings page shows the extension version", async ({ context, background }) => {
   const version = await background.evaluate(() => chrome.runtime.getManifest().version)

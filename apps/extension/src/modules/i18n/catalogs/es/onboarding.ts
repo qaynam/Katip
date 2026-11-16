@@ -9,7 +9,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.welcome.title": "Te damos la bienvenida a Katip",
   "onboarding.welcome.lead":
-    "Espacios, pestañas fijadas y Spotlight, en el panel lateral de Chrome. Configurarlo lleva un minuto.",
+    "Espacios, pestañas fijadas y la paleta de comandos, en el panel lateral de Chrome. Configurarlo lleva un minuto.",
   "onboarding.welcome.start": "Empezar",
 
   "onboarding.sidePanel.title": "Katip vive en el panel lateral",
@@ -54,7 +54,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.bangs.title": "Busca en cualquier sitio con un bang",
   "onboarding.bangs.body":
-    "En Spotlight, escribe ! y el atajo de un sitio, como !gh katip para GitHub o !w para Wikipedia. Abajo están los comandos que trae Katip: puedes cambiarlos y añadir los tuyos.",
+    "En la paleta de comandos, escribe ! y el atajo de un sitio, como !gh katip para GitHub o !w para Wikipedia. Abajo están los comandos que trae Katip: puedes cambiarlos y añadir los tuyos.",
 
   "onboarding.done.title": "Todo listo",
   "onboarding.done.body": "Puedes volver a ver este recorrido desde la configuración de Katip.",

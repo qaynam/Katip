@@ -202,7 +202,7 @@ const importSamples = async (session: Session, workDir: string) => {
 // Through the settings, as people add them: the export file carries no commands
 const addBangCommands = async (session: Session) => {
   const settings = await openKatipPage(session, "options/index.html")
-  await settings.getByRole("tab", { name: "Spotlight" }).click()
+  await settings.getByRole("tab", { name: "Command Palette" }).click()
   for (const command of BANG_COMMANDS) {
     const name = SITES[command.host]?.name ?? command.host
     await settings.getByRole("button", { name: "Add Command" }).click()

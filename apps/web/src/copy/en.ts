@@ -5,7 +5,7 @@ export const en: Copy = {
   meta: {
     title: "Katip – Vertical tabs and Spaces in Chrome’s side panel",
     description:
-      "Katip turns Chrome’s side panel into a sidebar for your tabs, with Spaces, pinned tabs, folders, split view and a Spotlight search. Free, open source, and nothing leaves your browser.",
+      "Katip turns Chrome’s side panel into a sidebar for your tabs, with Spaces, pinned tabs, folders, split view and a Command Palette. Free, open source, and nothing leaves your browser.",
     imageAlt:
       "Katip: your tabs, organized into Spaces. The side panel shows a Work Space with pinned tabs in folders.",
   },
@@ -20,7 +20,7 @@ export const en: Copy = {
   },
   hero: {
     title: "Vertical tabs and Spaces, in Chrome’s side panel",
-    lead: "Give each project its own Space, pin the pages you come back to, and find anything with Spotlight.",
+    lead: "Give each project its own Space, pin the pages you come back to, and find anything with the Command Palette.",
     note: "Free and open source · Chrome 120 or later",
     screenshotAlt:
       "Katip in the side panel next to a document. The Work Space shows a row of Favorites, a Product folder holding pinned tabs and a pinned split view, more folders, and the open tabs below them.",
@@ -46,11 +46,11 @@ export const en: Copy = {
     ],
   },
   spotlight: {
-    eyebrow: "Spotlight",
+    eyebrow: "Command Palette",
     title: "Find anything. Run any command.",
     lead: "Search your tabs, pins and Spaces, or run a command, right from the keyboard.",
     screenshotAlt:
-      "Spotlight open over the browser window with “copy” typed. The results are the commands Copy URL and Copy URL as Markdown Link, an open tab whose title matches, and a web search.",
+      "The Command Palette open over the browser window with “copy” typed. The results are the commands Copy URL and Copy URL as Markdown Link, an open tab whose title matches, and a web search.",
     details: [
       {
         title: "One box for everything",
@@ -65,9 +65,9 @@ export const en: Copy = {
   bangs: {
     eyebrow: "Bangs",
     title: "Search any site with a bang",
-    lead: "Type ! and a site’s shortcut in Spotlight to search that site straight away.",
+    lead: "Type ! and a site’s shortcut in the Command Palette to search that site straight away.",
     screenshotAlt:
-      "Spotlight open with only “!” typed. It lists five site searches with their shortcuts: Tracker (!tr), Docs (!docs), Recipes (!food), Maps (!maps) and News (!news).",
+      "The Command Palette open with only “!” typed. It lists five site searches with their shortcuts: Tracker (!tr), Docs (!docs), Recipes (!food), Maps (!maps) and News (!news).",
     details: [
       {
         title: "Thousands built in",
@@ -116,7 +116,7 @@ export const en: Copy = {
       },
       {
         title: "Light, dark or auto",
-        text: "Each Space can follow your system, and Spotlight follows along.",
+        text: "Each Space can follow your system, and the Command Palette follows along.",
       },
     ],
   },
@@ -135,7 +135,7 @@ export const en: Copy = {
       },
       shortcuts: {
         title: "Keyboard shortcuts",
-        text: "Open Spotlight, pin a tab or copy a link from the keyboard.",
+        text: "Open the Command Palette, pin a tab or copy a link from the keyboard.",
       },
       languages: {
         title: "Four languages",

@@ -61,22 +61,22 @@ export const options: CatalogSection<"options"> = {
   "options.autoArchive.footnote":
     "Las pestañas temporales que no hayas visto durante este tiempo se cierran y se guardan en el archivo, desde donde puedes volver a abrirlas. Las pestañas fijadas, los Favoritos, las pestañas que reproducen audio y la pestaña que estás viendo nunca se cierran.",
 
-  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.heading": "Paleta de comandos",
   "options.spotlight.size.label": "Tamaño",
   "options.spotlight.size.Compact": "Compacto",
   "options.spotlight.size.Normal": "Normal",
   "options.spotlight.size.Large": "Grande",
   "options.spotlight.size.footnote":
-    "Se aplica la próxima vez que se abra Spotlight. En compacto, solo se ve el campo de búsqueda hasta que escribes, y luego se amplía.",
+    "Se aplica la próxima vez que se abra la paleta de comandos. En compacto, solo se ve el campo de búsqueda hasta que escribes, y luego se amplía.",
   "options.spotlight.position.label": "Posición",
   "options.spotlight.position.description":
-    "Dónde se abre Spotlight sobre la ventana del navegador.",
+    "Dónde se abre la paleta de comandos sobre la ventana del navegador.",
   "options.spotlight.position.value": "{across} % en horizontal, {down} % en vertical",
   "options.spotlight.position.set": "Ajustar posición…",
   "options.spotlight.position.reset": "Restablecer posición",
-  "options.spotlight.position.dialogLabel": "Posición de Spotlight",
+  "options.spotlight.position.dialogLabel": "Posición de la paleta de comandos",
   "options.spotlight.position.hint":
-    "Arrastra Spotlight o muévelo con las flechas. Pulsa Esc para cancelar.",
+    "Arrastra la paleta de comandos o muévela con las flechas. Pulsa Esc para cancelar.",
   "options.spotlight.position.done": "Listo",
   "options.spotlight.history.label": "Buscar también en el historial",
   "options.spotlight.history.footnote":
@@ -85,10 +85,10 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "Buscar en sitios con bangs",
   "options.spotlight.bangs.footnote":
-    "Escribe ! y el atajo de un sitio en Spotlight para buscar en ese sitio, como !gh katip para GitHub o !w para Wikipedia. Los atajos son los bangs de Kagi, tal como los incluye Helium. Los comandos de abajo con palabra clave se sugieren primero.",
+    "Escribe ! y el atajo de un sitio en la paleta de comandos para buscar en ese sitio, como !gh katip para GitHub o !w para Wikipedia. Los atajos son los bangs de Kagi, tal como los incluye Helium. Los comandos de abajo con palabra clave se sugieren primero.",
   "options.commands.heading": "Comandos",
   "options.commands.footnote":
-    "Estos comandos aparecen entre los comandos de Spotlight. Dale a uno una palabra clave para usarlo escribiendo ! y la palabra clave. Pon %s en su URL para buscar lo que escribas después de la palabra clave.",
+    "Estos comandos aparecen en la paleta de comandos. Dale a uno una palabra clave para usarlo escribiendo ! y la palabra clave. Pon %s en su URL para buscar lo que escribas después de la palabra clave.",
   "options.commands.add": "Añadir comando",
   "options.commands.restoreDefaults": "Restaurar comandos predeterminados",
   "options.commands.edit": "Editar",
@@ -130,7 +130,7 @@ export const options: CatalogSection<"options"> = {
   "options.shortcuts.copy.footnote":
     "Un atajo de copia no hace nada mientras está desactivado. Para usar su tecla en otra cosa, quítala en la página de combinaciones de teclas de Chrome.",
   "options.commands.openSidePanel": "Abrir el panel lateral",
-  "options.commands.openSpotlight": "Abrir Spotlight",
+  "options.commands.openSpotlight": "Abrir la paleta de comandos",
   "options.commands.nextTabInSpace": "Siguiente pestaña del espacio",
   "options.commands.previousTabInSpace": "Pestaña anterior del espacio",
   "options.commands.togglePin": "Fijar o dejar de fijar la pestaña",

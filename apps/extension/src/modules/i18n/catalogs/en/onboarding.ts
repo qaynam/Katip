@@ -9,7 +9,7 @@ export const onboarding = {
 
   "onboarding.welcome.title": "Welcome to Katip",
   "onboarding.welcome.lead":
-    "Spaces, pinned tabs and Spotlight, right in Chrome’s side panel. Setting it up takes a minute.",
+    "Spaces, pinned tabs and the Command Palette, right in Chrome’s side panel. Setting it up takes a minute.",
   "onboarding.welcome.start": "Get Started",
 
   "onboarding.sidePanel.title": "Katip lives in the side panel",
@@ -53,7 +53,7 @@ export const onboarding = {
 
   "onboarding.bangs.title": "Search any site with a bang",
   "onboarding.bangs.body":
-    "In Spotlight, type ! and a site’s shortcut, as in !gh katip for GitHub or !w for Wikipedia. Below are the commands Katip comes with, which you can change, and you can add your own.",
+    "In the Command Palette, type ! and a site’s shortcut, as in !gh katip for GitHub or !w for Wikipedia. Below are the commands Katip comes with, which you can change, and you can add your own.",
 
   "onboarding.done.title": "You’re all set",
   "onboarding.done.body": "You can take this tour again from Katip’s settings.",

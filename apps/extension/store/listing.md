@@ -25,7 +25,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 
 **Summary** (132 characters at most)
 
-> Vertical tabs in the side panel. Organize tabs into Spaces with pinned tabs, folders, split view and a Spotlight search.
+> Vertical tabs in the side panel. Organize tabs into Spaces with pinned tabs, folders, split view and a Command Palette.
 
 **Description**
 
@@ -40,7 +40,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > SPLIT VIEW
 > Drop one tab onto another to view them side by side, and pin the pair to open it again later (Chrome 155 or later).
 >
-> SPOTLIGHT
+> COMMAND PALETTE
 > One search box for open tabs, pins, Spaces, history and the web, forgiving typos. It also runs commands: copy the URL, copy a Markdown link, pin a tab, move it to another Space and more. Press Tab on an empty box to search commands only, or choose Search History to search your browsing history alone.
 >
 > LIVE FOLDERS
@@ -49,7 +49,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > AND MORE
 > • Favorites: the pages you keep at hand as a row of icons, kept even when their tabs are closed
 > • Archive: tabs you haven't used for a while are closed and kept, ready to bring back
-> • Keyboard shortcuts for the side panel, Spotlight and copying links
+> • Keyboard shortcuts for the side panel, the Command Palette and copying links
 > • Export your data to a file and import it again
 > • English, Japanese, Simplified Chinese and Spanish
 >
@@ -65,7 +65,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 
 **Summary**
 
-> サイドパネルに縦にタブを並べ、Space ごとに整理します。ピン留め、フォルダ、分割ビュー、Spotlight 検索に対応。
+> サイドパネルに縦にタブを並べ、Space ごとに整理します。ピン留め、フォルダ、分割ビュー、コマンドパレットに対応。
 
 **Description**
 
@@ -80,7 +80,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > 分割ビュー
 > タブを別のタブに重ねると、2 つのページを並べて表示できます。その組み合わせをピン留めして、あとで開き直せます（Chrome 155 以降）。
 >
-> SPOTLIGHT
+> コマンドパレット
 > 開いているタブ、ピン、Space、履歴、Web をひとつの検索窓で探せます。多少の打ち間違いがあっても見つかります。URL のコピー、Markdown のリンクとしてコピー、ピン留め、別の Space への移動などのコマンドも実行できます。空欄で Tab を押すとコマンドだけを、「履歴を検索」を選ぶと閲覧履歴だけを探せます。
 >
 > ライブフォルダ
@@ -89,7 +89,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > そのほか
 > • Favorites: よく使うページをアイコンで並べて表示。タブを閉じても残ります
 > • アーカイブ: しばらく使っていないタブを閉じて保存し、いつでも戻せます
-> • サイドパネル、Spotlight、リンクのコピーのキーボードショートカット
+> • サイドパネル、コマンドパレット、リンクのコピーのキーボードショートカット
 > • データをファイルに書き出し、読み込み直せます
 > • 英語、日本語、簡体字中国語、スペイン語に対応
 >
@@ -105,7 +105,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 
 **Single purpose**
 
-> Katip organizes the user's browser tabs in the side panel: it groups tabs into Spaces and keeps pinned tabs, folders and split views for each Space, with a search box (Spotlight) to find and act on tabs.
+> Katip organizes the user's browser tabs in the side panel: it groups tabs into Spaces and keeps pinned tabs, folders and split views for each Space, with a search box (the Command Palette) to find and act on tabs.
 
 **Permission justifications**
 
@@ -120,10 +120,10 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 | `favicon`                                                                      | Shows each tab's and pin's site icon from the browser's favicon cache.                                                                                                                  |
 | `offscreen`                                                                    | A service worker can't write to the clipboard, so copying a URL from a keyboard shortcut uses an offscreen document with the CLIPBOARD reason.                                          |
 | `clipboardWrite`                                                               | Copies the current tab's URL or a Markdown link when the user runs that command.                                                                                                        |
-| `search`                                                                       | Spotlight's "search the web" hands the query to the browser's default search engine.                                                                                                    |
+| `search`                                                                       | The Command Palette's "search the web" hands the query to the browser's default search engine.                                                                                          |
 | `scripting`                                                                    | Shows a brief "Copied" notice at the top right of the page the user copied from with a keyboard shortcut.                                                                               |
 | `activeTab`                                                                    | Limits that notice to the tab the user's keyboard shortcut ran on, without asking for access to every site.                                                                             |
-| `history` (optional)                                                           | Searches the browsing history locally in Spotlight, only after the user turns on history search in the settings. History never leaves the device.                                       |
+| `history` (optional)                                                           | Searches the browsing history locally in the Command Palette, only after the user turns on history search in the settings. History never leaves the device.                             |
 | `notifications` (optional)                                                     | Shows a system notification when important mail arrives in a Gmail live folder or a new item in a GitHub live folder, only after the user turns on these notifications in the settings. |
 | Host permission `https://mail.google.com/*` (optional)                         | Reads the Gmail feed of unread mail (the inbox, a label, or the mail Gmail marks important) for a Gmail live folder the user creates, with the signed-in session.                       |
 | Host permissions `https://github.com/*`, `https://api.github.com/*` (optional) | Reads GitHub search results and notifications from github.com with the signed-in session, or search results from api.github.com with a token the user enters, for a GitHub live folder. |
@@ -148,7 +148,7 @@ Katip does not collect or transmit any user data. Leave every data type unchecke
 
 ## Notes for reviewers
 
-> Click the toolbar icon (or press ⌃⌘S on macOS, Alt+S elsewhere) to open Katip in the side panel. Open a few tabs and they appear under the current Space; drag a tab into the pinned area to pin it, or onto another tab to open a split view (Chrome 155+). Press Alt+T for Spotlight. Live folders need an account signed in to Gmail or GitHub and are optional. Settings → Data has export and import; a sample Arc file for testing import is at https://github.com/qaynam/Katip/blob/main/apps/extension/src/modules/arc-import/fixtures/arc-sidebar.json
+> Click the toolbar icon (or press ⌃⌘S on macOS, Alt+S elsewhere) to open Katip in the side panel. Open a few tabs and they appear under the current Space; drag a tab into the pinned area to pin it, or onto another tab to open a split view (Chrome 155+). Press Alt+T for the Command Palette. Live folders need an account signed in to Gmail or GitHub and are optional. Settings → Data has export and import; a sample Arc file for testing import is at https://github.com/qaynam/Katip/blob/main/apps/extension/src/modules/arc-import/fixtures/arc-sidebar.json
 
 ## Publishing
 

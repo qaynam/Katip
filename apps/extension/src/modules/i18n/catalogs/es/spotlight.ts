@@ -1,6 +1,7 @@
 import type { CatalogSection } from "../../catalog"
 
 export const spotlight: CatalogSection<"spotlight"> = {
+  "spotlight.documentTitle": "Paleta de comandos",
   "spotlight.search.label":
     "Buscar pestañas, pestañas fijadas, espacios, marcadores, historial y comandos",
   "spotlight.search.placeholder": "Busca o escribe una URL",
@@ -14,7 +15,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.history.placeholder": "Buscar en el historial",
   "spotlight.historyOff.title": "Activar la búsqueda en el historial en los ajustes",
   "spotlight.historyOff.detail":
-    "Spotlight necesita tu permiso para leer el historial de navegación",
+    "La paleta de comandos necesita tu permiso para leer el historial de navegación",
   "spotlight.results.label": "Sugerencias",
   "spotlight.loading": "Cargando…",
   "spotlight.empty.noRecentTabs": "No hay pestañas recientes",

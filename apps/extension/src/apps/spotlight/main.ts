@@ -46,6 +46,7 @@ const { locale, spotlightSize } = await settings
 const spotlightWindow = await chrome.windows.getCurrent()
 const translator = makeTranslator(resolveLocale(locale, navigator.languages))
 document.documentElement.lang = translator.languageTag
+document.title = translator.t("spotlight.documentTitle")
 
 if (callerWindowId === null) {
   window.close()

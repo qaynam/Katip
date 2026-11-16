@@ -57,21 +57,22 @@ export const options = {
   "options.autoArchive.footnote":
     "Temporary tabs you haven’t viewed for this long are closed and saved to the archive, where you can reopen them later. Pinned tabs, Favorites, tabs playing audio, and the tab you’re viewing are never closed.",
 
-  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.heading": "Command Palette",
   "options.spotlight.size.label": "Size",
   "options.spotlight.size.Compact": "Compact",
   "options.spotlight.size.Normal": "Normal",
   "options.spotlight.size.Large": "Large",
   "options.spotlight.size.footnote":
-    "Takes effect the next time Spotlight opens. Compact shows the search field alone until you type, then opens out.",
+    "Takes effect the next time the Command Palette opens. Compact shows the search field alone until you type, then opens out.",
   "options.spotlight.position.label": "Position",
-  "options.spotlight.position.description": "Where Spotlight opens over the browser window.",
+  "options.spotlight.position.description":
+    "Where the Command Palette opens over the browser window.",
   "options.spotlight.position.value": "{across}% across, {down}% down",
   "options.spotlight.position.set": "Set Position…",
   "options.spotlight.position.reset": "Reset Position",
-  "options.spotlight.position.dialogLabel": "Spotlight Position",
+  "options.spotlight.position.dialogLabel": "Command Palette Position",
   "options.spotlight.position.hint":
-    "Drag Spotlight or move it with the arrow keys. Press Esc to cancel.",
+    "Drag the Command Palette or move it with the arrow keys. Press Esc to cancel.",
   "options.spotlight.position.done": "Done",
   "options.spotlight.history.label": "Search browsing history too",
   "options.spotlight.history.footnote":
@@ -80,10 +81,10 @@ export const options = {
 
   "options.spotlight.bangs.label": "Search sites with bangs",
   "options.spotlight.bangs.footnote":
-    "Type ! and a site’s shortcut in Spotlight to search that site, such as !gh katip for GitHub or !w for Wikipedia. The shortcuts are Kagi’s bangs, as Helium ships them. Commands below with a keyword are suggested first.",
+    "Type ! and a site’s shortcut in the Command Palette to search that site, such as !gh katip for GitHub or !w for Wikipedia. The shortcuts are Kagi’s bangs, as Helium ships them. Commands below with a keyword are suggested first.",
   "options.commands.heading": "Commands",
   "options.commands.footnote":
-    "These commands are listed among Spotlight’s commands. Give one a keyword to run it by typing ! and the keyword. Put %s in its URL to search for what you type after the keyword.",
+    "These commands are listed among the commands in the Command Palette. Give one a keyword to run it by typing ! and the keyword. Put %s in its URL to search for what you type after the keyword.",
   "options.commands.add": "Add Command",
   "options.commands.restoreDefaults": "Restore Default Commands",
   "options.commands.edit": "Edit",
@@ -121,7 +122,7 @@ export const options = {
   "options.shortcuts.copy.footnote":
     "A copy shortcut does nothing while it’s off. To use its key for something else, remove the key on Chrome’s shortcuts page.",
   "options.commands.openSidePanel": "Open the side panel",
-  "options.commands.openSpotlight": "Open Spotlight",
+  "options.commands.openSpotlight": "Open the Command Palette",
   "options.commands.nextTabInSpace": "Next tab in the Space",
   "options.commands.previousTabInSpace": "Previous tab in the Space",
   "options.commands.togglePin": "Pin or unpin the tab",

@@ -147,7 +147,7 @@ test("previous-tab-in-space activates the previous tab in display order", async 
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a", "/b active"])
 })
 
-test("open-spotlight opens Spotlight in a separate popup window", async ({
+test("open-spotlight opens the Command Palette in a separate popup window", async ({
   site,
   context,
   background,

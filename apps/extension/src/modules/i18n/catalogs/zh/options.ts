@@ -54,20 +54,20 @@ export const options: CatalogSection<"options"> = {
   "options.autoArchive.footnote":
     "超过这段时间未查看的临时标签页会被关闭并保存到归档中，之后可以从归档重新打开。已固定的标签页、收藏的标签页、正在播放音频的标签页以及当前查看的标签页不会被关闭。",
 
-  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.heading": "命令面板",
   "options.spotlight.size.label": "大小",
   "options.spotlight.size.Compact": "紧凑",
   "options.spotlight.size.Normal": "标准",
   "options.spotlight.size.Large": "大",
   "options.spotlight.size.footnote":
-    "下次打开 Spotlight 时生效。紧凑模式下，输入之前只显示搜索框，输入后再展开。",
+    "下次打开命令面板时生效。紧凑模式下，输入之前只显示搜索框，输入后再展开。",
   "options.spotlight.position.label": "位置",
-  "options.spotlight.position.description": "Spotlight 在浏览器窗口上打开的位置。",
+  "options.spotlight.position.description": "命令面板在浏览器窗口上打开的位置。",
   "options.spotlight.position.value": "水平 {across}%，垂直 {down}%",
   "options.spotlight.position.set": "设置位置…",
   "options.spotlight.position.reset": "恢复默认位置",
-  "options.spotlight.position.dialogLabel": "Spotlight 的位置",
-  "options.spotlight.position.hint": "拖动 Spotlight，或用方向键移动。按 Esc 取消。",
+  "options.spotlight.position.dialogLabel": "命令面板的位置",
+  "options.spotlight.position.hint": "拖动命令面板，或用方向键移动。按 Esc 取消。",
   "options.spotlight.position.done": "完成",
   "options.spotlight.history.label": "同时搜索浏览历史记录",
   "options.spotlight.history.footnote": "开启时会请求读取浏览历史记录的权限。关闭时会移除该权限。",
@@ -75,10 +75,10 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "使用 bangs 搜索网站",
   "options.spotlight.bangs.footnote":
-    "在 Spotlight 中输入 ! 和网站的简称即可搜索该网站，例如用 !gh katip 搜索 GitHub，用 !w 搜索维基百科。这些简称来自 Helium 内置的 Kagi bangs。下面带关键词的命令会优先建议。",
+    "在命令面板中输入 ! 和网站的简称即可搜索该网站，例如用 !gh katip 搜索 GitHub，用 !w 搜索维基百科。这些简称来自 Helium 内置的 Kagi bangs。下面带关键词的命令会优先建议。",
   "options.commands.heading": "命令",
   "options.commands.footnote":
-    "这些命令会列在 Spotlight 的命令中。为命令设置关键词后，输入 ! 和关键词即可使用。在网址中加入 %s，即可搜索你在关键词后输入的内容。",
+    "这些命令会列在命令面板中。为命令设置关键词后，输入 ! 和关键词即可使用。在网址中加入 %s，即可搜索你在关键词后输入的内容。",
   "options.commands.add": "添加命令",
   "options.commands.restoreDefaults": "恢复默认命令",
   "options.commands.edit": "编辑",
@@ -114,7 +114,7 @@ export const options: CatalogSection<"options"> = {
   "options.shortcuts.copy.footnote":
     "复制快捷键关闭时，按下按键不会有任何反应。若要将该按键用于其他用途，请在 Chrome 的快捷键页面中移除它。",
   "options.commands.openSidePanel": "打开侧边栏",
-  "options.commands.openSpotlight": "打开 Spotlight",
+  "options.commands.openSpotlight": "打开命令面板",
   "options.commands.nextTabInSpace": "切换到空间中的下一个标签页",
   "options.commands.previousTabInSpace": "切换到空间中的上一个标签页",
   "options.commands.togglePin": "固定或取消固定标签页",

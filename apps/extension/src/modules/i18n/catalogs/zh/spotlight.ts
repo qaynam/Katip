@@ -1,6 +1,7 @@
 import type { CatalogSection } from "../../catalog"
 
 export const spotlight: CatalogSection<"spotlight"> = {
+  "spotlight.documentTitle": "命令面板",
   "spotlight.search.label": "搜索标签页、已固定的标签页、空间、书签、历史记录和命令",
   "spotlight.search.placeholder": "搜索或输入网址",
   "spotlight.bang.placeholder": "要搜索的内容",
@@ -12,7 +13,7 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.history.label": "搜索浏览历史记录",
   "spotlight.history.placeholder": "搜索历史记录",
   "spotlight.historyOff.title": "在设置中开启历史记录搜索",
-  "spotlight.historyOff.detail": "Spotlight 需要你的许可才能读取浏览历史记录",
+  "spotlight.historyOff.detail": "命令面板需要你的许可才能读取浏览历史记录",
   "spotlight.results.label": "建议",
   "spotlight.loading": "正在加载…",
   "spotlight.empty.noRecentTabs": "没有最近使用的标签页",

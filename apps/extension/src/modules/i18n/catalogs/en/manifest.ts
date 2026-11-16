@@ -4,7 +4,7 @@ import type { Message } from "../../message"
 export const manifest = {
   "manifest.description": "Organize your tabs into Spaces in the side panel",
   "manifest.command.openSidePanel": "Open the side panel",
-  "manifest.command.openSpotlight": "Open Spotlight to search tabs, pins, and Spaces",
+  "manifest.command.openSpotlight": "Open the Command Palette to search tabs, pins, and Spaces",
   "manifest.command.copyUrl": "Copy the active tab’s URL (turn on in Katip’s settings)",
   "manifest.command.copyMarkdownLink":
     "Copy the active tab’s URL as a Markdown link (turn on in Katip’s settings)",

@@ -12,7 +12,7 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ## English
 
-Gmail live folders and GitHub notifications show only what’s still unread, and GitHub notifications no longer need a token.
+Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, and Spotlight is now called the Command Palette.
 
 ### ✨ Improved
 
@@ -20,10 +20,11 @@ Gmail live folders and GitHub notifications show only what’s still unread, and
 - **Only unread in Gmail and GitHub notifications** — A Gmail live folder, or a GitHub folder of notifications, lists only what you haven’t read: an item you open, or mark read with Mark All as Read, leaves the list once its tab is closed. Gmail itself still counts a mail marked read only in Katip as unread. Folders of GitHub searches keep their read items, as review requests and pull requests stay to be done.
 - **A live mark that isn't a badge** — A live folder’s icon carries a small feed mark instead of the red dot, which looked like unread mail even when nothing was unread. How many items are unread still shows on the right of the folder.
 - **Folder icons that stand out** — A folder with an icon shows the icon itself, full size and in the text color, in place of the folder with a small icon inside. It tips forward a little while the folder is open.
+- **Command Palette** — Spotlight is now called the Command Palette, in the settings, on Chrome’s shortcuts page and everywhere else Katip names it. It works as before, and its size, position and other settings stay as you set them.
 
 ## 日本語
 
-Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになりました。
+Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、Spotlight はコマンドパレットという名前になりました。
 
 ### ✨ 改善
 
@@ -31,6 +32,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **未読だけを表示** — Gmail のライブフォルダと GitHub の通知のフォルダには、まだ読んでいないものだけが並びます。開いた項目や「すべて既読にする」で既読にした項目は、タブを閉じると一覧から消えます（※Katip で既読にしただけのメールは、Gmail 上では未読のままです）。GitHub の検索のフォルダでは、レビュー依頼やプルリクエストは対応が済むまで残るため、既読のものも引き続き表示します。
 - **未読バッジに見えないライブの印** — ライブフォルダのアイコンの赤い点を、小さなフィードの印に変えました。赤い点は、未読がなくても未読があるように見えていました。未読の件数は、これまでどおりフォルダの右側に表示します。
 - **目立つフォルダのアイコン** — アイコンを設定したフォルダは、フォルダの中に小さくアイコンを描く代わりに、アイコンそのものを文字と同じ色で大きく表示します。フォルダを開いているあいだは、少し傾きます。
+- **コマンドパレット** — Spotlight の名前をコマンドパレットに変えました。設定や Chrome のショートカット設定など、Katip がこの機能の名前を出すところはすべてこの名前になります。使い方は変わらず、サイズや開く位置などの設定もそのまま引き継ぎます。
 
 ## 1.9.0 — 2026-11-16
 

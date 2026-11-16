@@ -46,7 +46,7 @@ const choose = async (spotlight: Page, query: string, option: string | RegExp) =
 const addSearchCommand = async (context: BrowserContext, background: Worker, site: string) => {
   const settings = await context.newPage()
   await settings.goto(new URL("options/index.html", background.url()).href)
-  await settings.getByRole("tab", { name: "Spotlight" }).click()
+  await settings.getByRole("tab", { name: "Command Palette" }).click()
   await settings.getByRole("button", { name: "Add Command" }).click()
   const form = settings.getByRole("form", { name: "New Command" })
   await form.getByLabel("Name").fill("Search the test site")
@@ -112,7 +112,7 @@ test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
 })
 
-test("choosing an open tab by name activates it and closes Spotlight", async ({
+test("choosing an open tab by name activates it and closes the Command Palette", async ({
   site,
   context,
   sidebar,
@@ -302,7 +302,7 @@ test("Search History without the history permission offers to turn it on, openin
   await spotlight.keyboard.press("Enter")
 
   const settings = await opened
-  await expect(settings.getByRole("tab", { name: "Spotlight" })).toHaveAttribute(
+  await expect(settings.getByRole("tab", { name: "Command Palette" })).toHaveAttribute(
     "aria-selected",
     "true",
   )

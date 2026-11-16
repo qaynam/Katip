@@ -374,7 +374,7 @@ describe("history mode", () => {
 
     expect([shown.title, shown.detail, shown.icon]).toStrictEqual([
       "Turn On History Search in Settings",
-      "Spotlight needs your permission to read your browsing history",
+      "The Command Palette needs your permission to read your browsing history",
       { _tag: "Glyph", glyph: "settings" },
     ])
   })

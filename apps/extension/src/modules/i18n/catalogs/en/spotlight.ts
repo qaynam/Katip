@@ -1,6 +1,7 @@
 import type { Message } from "../../message"
 
 export const spotlight = {
+  "spotlight.documentTitle": "Command Palette",
   "spotlight.search.label": "Search tabs, pinned tabs, Spaces, bookmarks, history, and commands",
   "spotlight.search.placeholder": "Search or enter a URL",
   "spotlight.bang.placeholder": "What to search for",
@@ -12,7 +13,8 @@ export const spotlight = {
   "spotlight.history.label": "Search browsing history",
   "spotlight.history.placeholder": "Search history",
   "spotlight.historyOff.title": "Turn On History Search in Settings",
-  "spotlight.historyOff.detail": "Spotlight needs your permission to read your browsing history",
+  "spotlight.historyOff.detail":
+    "The Command Palette needs your permission to read your browsing history",
   "spotlight.results.label": "Suggestions",
   "spotlight.loading": "Loading…",
   "spotlight.empty.noRecentTabs": "No recent tabs",

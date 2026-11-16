@@ -57,22 +57,22 @@ export const options: CatalogSection<"options"> = {
   "options.autoArchive.footnote":
     "最後に表示してからこの時間が過ぎた一時タブを閉じて、アーカイブに記録します。アーカイブからはあとで開き直せます。ピン留め・Favorites・音声を再生中・表示中のタブは閉じません。",
 
-  "options.spotlight.heading": "Spotlight",
+  "options.spotlight.heading": "コマンドパレット",
   "options.spotlight.size.label": "サイズ",
   "options.spotlight.size.Compact": "コンパクト",
   "options.spotlight.size.Normal": "標準",
   "options.spotlight.size.Large": "大きめ",
   "options.spotlight.size.footnote":
-    "次に Spotlight を開いたときから変わります。コンパクトでは、打ち始めるまで検索欄だけを表示し、打つと広がります。",
+    "次にコマンドパレットを開いたときから変わります。コンパクトでは、打ち始めるまで検索欄だけを表示し、打つと広がります。",
   "options.spotlight.position.label": "開く位置",
   "options.spotlight.position.description":
-    "ブラウザのウィンドウの上で、Spotlight を開く場所です。",
+    "ブラウザのウィンドウの上で、コマンドパレットを開く場所です。",
   "options.spotlight.position.value": "横 {across}%、縦 {down}%",
   "options.spotlight.position.set": "位置を設定…",
   "options.spotlight.position.reset": "位置を元に戻す",
-  "options.spotlight.position.dialogLabel": "Spotlight を開く位置",
+  "options.spotlight.position.dialogLabel": "コマンドパレットを開く位置",
   "options.spotlight.position.hint":
-    "Spotlight をドラッグするか、矢印キーで動かします。Esc でキャンセルします。",
+    "コマンドパレットをドラッグするか、矢印キーで動かします。Esc でキャンセルします。",
   "options.spotlight.position.done": "完了",
   "options.spotlight.history.label": "閲覧履歴も検索する",
   "options.spotlight.history.footnote":
@@ -81,10 +81,10 @@ export const options: CatalogSection<"options"> = {
 
   "options.spotlight.bangs.label": "bangs でサイトを検索する",
   "options.spotlight.bangs.footnote":
-    "Spotlight で ! に続けてサイトの短縮名を打つと、そのサイトを検索できます。たとえば !gh katip で GitHub を、!w で Wikipedia を検索します。短縮名の一覧は、Helium が同梱している Kagi の bangs です。下のコマンドのうちキーワードのあるものが、候補の先頭に出ます。",
+    "コマンドパレットで ! に続けてサイトの短縮名を打つと、そのサイトを検索できます。たとえば !gh katip で GitHub を、!w で Wikipedia を検索します。短縮名の一覧は、Helium が同梱している Kagi の bangs です。下のコマンドのうちキーワードのあるものが、候補の先頭に出ます。",
   "options.commands.heading": "コマンド",
   "options.commands.footnote":
-    "これらのコマンドは Spotlight のコマンドの一覧に出ます。キーワードを付けると、! に続けてキーワードを打って実行できます。URL に %s を入れると、キーワードのあとに打った言葉で検索します。",
+    "これらのコマンドは、コマンドパレットの一覧に出ます。キーワードを付けると、! に続けてキーワードを打って実行できます。URL に %s を入れると、キーワードのあとに打った言葉で検索します。",
   "options.commands.add": "コマンドを追加",
   "options.commands.restoreDefaults": "既定のコマンドを戻す",
   "options.commands.edit": "編集",
@@ -123,7 +123,7 @@ export const options: CatalogSection<"options"> = {
   "options.shortcuts.copy.footnote":
     "コピーのショートカットは、オフの間はキーを押しても何もしません。そのキーをほかの用途に使うときは、Chrome のショートカット設定でキーを外してください。",
   "options.commands.openSidePanel": "サイドパネルを開く",
-  "options.commands.openSpotlight": "Spotlight を開く",
+  "options.commands.openSpotlight": "コマンドパレットを開く",
   "options.commands.nextTabInSpace": "Space の次のタブへ移る",
   "options.commands.previousTabInSpace": "Space の前のタブへ移る",
   "options.commands.togglePin": "タブをピン留め／ピン留めを外す",

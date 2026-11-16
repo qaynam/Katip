@@ -9,7 +9,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.welcome.title": "Katip へようこそ",
   "onboarding.welcome.lead":
-    "Space、ピン留めしたタブ、Spotlight を、Chrome のサイドパネルで。設定は 1 分で終わります。",
+    "Space、ピン留めしたタブ、コマンドパレットを、Chrome のサイドパネルで。設定は 1 分で終わります。",
   "onboarding.welcome.start": "はじめる",
 
   "onboarding.sidePanel.title": "Katip はサイドパネルにあります",
@@ -53,7 +53,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.bangs.title": "bangs でどのサイトも検索",
   "onboarding.bangs.body":
-    "Spotlight で ! に続けてサイトの短縮名を打ちます。GitHub なら !gh katip、Wikipedia なら !w です。下に Katip に入っているコマンドが並んでいて、変えたり、自分のものを足したりできます。",
+    "コマンドパレットで ! に続けてサイトの短縮名を打ちます。GitHub なら !gh katip、Wikipedia なら !w です。下に Katip に入っているコマンドが並んでいて、変えたり、自分のものを足したりできます。",
 
   "onboarding.done.title": "準備ができました",
   "onboarding.done.body": "このツアーは、Katip の設定からもう一度見られます。",

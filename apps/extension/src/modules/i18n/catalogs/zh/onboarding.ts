@@ -9,7 +9,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.welcome.title": "欢迎使用 Katip",
   "onboarding.welcome.lead":
-    "空间、固定的标签页和 Spotlight，都在 Chrome 的侧边栏里。设置只需一分钟。",
+    "空间、固定的标签页和命令面板，都在 Chrome 的侧边栏里。设置只需一分钟。",
   "onboarding.welcome.start": "开始",
 
   "onboarding.sidePanel.title": "Katip 在侧边栏中",
@@ -52,7 +52,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
 
   "onboarding.bangs.title": "用 bang 搜索任何网站",
   "onboarding.bangs.body":
-    "在 Spotlight 中输入 ! 和网站的简称，例如 GitHub 用 !gh katip，维基百科用 !w。下面是 Katip 自带的命令，你可以修改它们，也可以添加自己的。",
+    "在命令面板中输入 ! 和网站的简称，例如 GitHub 用 !gh katip，维基百科用 !w。下面是 Katip 自带的命令，你可以修改它们，也可以添加自己的。",
 
   "onboarding.done.title": "一切就绪",
   "onboarding.done.body": "你可以在 Katip 的设置中再次查看这个导览。",
