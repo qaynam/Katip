@@ -8,7 +8,7 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
-## Unreleased
+## 1.9.0 — 2026-11-16
 
 ## English
 
@@ -24,7 +24,7 @@ Gmail live folders follow the mail Gmail marks important, and every live item sh
 
 - **Important mail in Gmail live folders** — A new Gmail live folder lists the unread mail Gmail marks important. You can choose the Primary tab instead, which leaves out what Gmail sorts into Promotions, Social and Updates, or the whole inbox, or a label by its name. A folder made before keeps what it lists; make a new one to change it.
 - **Important mail marked** — In any Gmail live folder, mail Gmail marks important carries a yellow marker, as in Gmail.
-- **Read mail leaves sooner** — Live folders refresh every two minutes instead of five, and a Gmail live folder refreshes again soon after you open a mail from it, so the mail you’ve read leaves it.
+- **Read mail leaves sooner** — Live folders refresh every two minutes instead of five, and a Gmail live folder refreshes again soon after you open a mail from it, so a mail you’ve read leaves as soon as you close its tab.
 - **Who each item is from** — A live folder shows the icon of Gmail or GitHub with a red dot for live. Its items show the icon of the sender’s site, or the sender’s initial for an address at a free mail service or a site not visited yet, and GitHub items show the avatar of the repository’s owner, in place of the same Gmail or GitHub icon on every row.
 - **Live items open in place** — Opening a mail or a GitHub item from a live folder turns its row into the tab, as opening a pin does, instead of adding it to the temporary tabs. The row lights up while its tab is shown and has a close button, and clicking it again goes back to the tab. A mail Gmail has since counted read stays until you close its tab, and leaves the folder then. A collapsed live folder keeps the shown tab’s item in view under it, as a folder does with its pins.
 
@@ -48,7 +48,7 @@ Gmail のライブフォルダで「重要」メールを追えるようにな�
 
 - **Gmail ライブフォルダの表示対象** — 新しく作成する Gmail ライブフォルダは、デフォルトで未読の「重要」メールを並べるようになりました。メインタブ（プロモーションやソーシャル等を除く）、受信トレイ全体、任意のラベル指定も選べます（※既存のフォルダの設定は維持されるため、変更したい場合は新しくフォルダを作成してください）。
 - **重要なメールに印** — Gmail のライブフォルダでも、Gmail が重要マークを付けたメールには Gmail と同じ黄色の印が付きます。
-- **読んだメールがすぐ消える** — ライブフォルダの更新間隔を 5 分から 2 分に短縮しました。Gmail のライブフォルダからメールを開いた少しあとにも更新が走るため、読んだメールがすぐに消えます。
+- **読んだメールがすぐ消える** — ライブフォルダの更新間隔を 5 分から 2 分に短縮しました。Gmail のライブフォルダからメールを開いた少しあとにも更新が走るため、読んだメールはタブを閉じるとすぐに消えます。
 - **差出人がわかるアイコン** — フォルダには Gmail や GitHub のアイコンと、ライブ中を示す赤い点が付きます。フォルダ内の項目には、一律のアイコンではなく差出人サイトのアイコンを表示します（フリーメールのアドレスや未訪問サイトは差出人の頭文字、GitHub の項目にはリポジトリ所有者のアバターを表示します）。
 - **ライブフォルダの項目をその場で開く** — ライブフォルダのメールや GitHub の項目を開くと、ピン留めを開いたときと同じように、その行がそのままタブになります。一時的なタブには加わりません。そのタブを表示しているあいだは行が強調され、閉じるボタンが付きます。もう一度クリックすると、そのタブに戻ります。開いたあとに Gmail で既読になったメールはタブを閉じるまで残り、閉じるとフォルダから消えます。ライブフォルダを畳んでも、表示中のタブの項目はフォルダの下に残ります（フォルダのピン留めと同じです）。
 
