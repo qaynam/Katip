@@ -101,6 +101,16 @@ const workInbox = (now: number): PinnedLiveFolderView =>
       }),
       mail("m4", "October expense reports", "Accounting", now - 26 * 60 * MINUTE_MS),
     ],
+    limit: 5,
+    hiddenItems: [
+      mail("m6", "Your order has shipped", "Store", now - 30 * 60 * MINUTE_MS, { isUnseen: true }),
+      mail("m7", "Seminar on November 20", "Events", now - 2 * 24 * 60 * MINUTE_MS, {
+        isUnseen: true,
+      }),
+      mail("m8", "Monthly newsletter", "Newsletter", now - 3 * 24 * 60 * MINUTE_MS, {
+        isUnseen: true,
+      }),
+    ],
   })
 
 const reviewRequests = (now: number): PinnedLiveFolderView =>

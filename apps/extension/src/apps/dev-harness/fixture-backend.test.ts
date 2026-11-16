@@ -373,6 +373,68 @@ describe("the fixture's naive responses", () => {
     expect(updatedAts).toStrictEqual([...updatedAts].sort((a, b) => a - b))
   })
 
+  it("holds back the inbox's items past its limit of five, behind a row of more items", () => {
+    const folder = liveFolder(view, "live-inbox")
+
+    expect([folder.limit, folder.items.length, folder.hiddenItems.length]).toStrictEqual([5, 5, 3])
+  })
+
+  it("choosing All shows the items held back, and a smaller limit holds them back again", () => {
+    const all = viewAfter({
+      _tag: "SetLiveFolderLimit",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      limit: "all",
+    })
+    const again = viewAfter(
+      { _tag: "SetLiveFolderLimit", bookmarkId: BookmarkId.make("live-inbox"), limit: 5 },
+      all,
+    )
+
+    expect(
+      [all, again].map((next) => {
+        const folder = liveFolder(next, "live-inbox")
+        return [folder.limit, folder.items.length, folder.hiddenItems.length]
+      }),
+    ).toStrictEqual([
+      ["all", 8, 0],
+      [5, 5, 3],
+    ])
+  })
+
+  it("applies the limit after sorting, so the oldest come first when sorted oldest first", () => {
+    const next = viewAfter({
+      _tag: "SetLiveFolderSort",
+      bookmarkId: BookmarkId.make("live-inbox"),
+      sort: "oldest",
+    })
+
+    expect(liveFolder(next, "live-inbox").items.map((item) => item.id)).toStrictEqual([
+      "m8",
+      "m7",
+      "m6",
+      "m4",
+      "m3",
+    ])
+  })
+
+  it("keeps an item held back by the limit on a row of its own once it opens", () => {
+    const next = viewAfter({
+      _tag: "OpenLiveItem",
+      windowId: view.windowId,
+      bookmarkId: BookmarkId.make("live-inbox"),
+      itemId: "m8",
+    })
+
+    const folder = liveFolder(next, "live-inbox")
+    expect([
+      folder.items.map((item) => item.id),
+      folder.hiddenItems.map((item) => item.id),
+    ]).toStrictEqual([
+      ["m1", "m2", "m5", "m3", "m4", "m8"],
+      ["m6", "m7"],
+    ])
+  })
+
   it("sorted by repository, groups each repository's items together, newest first", () => {
     const next = viewAfter({
       _tag: "SetLiveFolderSort",

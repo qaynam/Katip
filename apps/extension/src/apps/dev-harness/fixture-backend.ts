@@ -1,6 +1,11 @@
 import { Array, Match, Option, Order } from "effect"
 import { makeTranslator } from "#modules/i18n"
-import { defaultLiveFolderTitle, type LiveSort, type LiveSource } from "#modules/live-folders"
+import {
+  defaultLiveFolderTitle,
+  type LiveLimit,
+  type LiveSort,
+  type LiveSource,
+} from "#modules/live-folders"
 import { SpaceId, SpaceName } from "#modules/space"
 import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
@@ -650,39 +655,63 @@ const liveItemOrder = (sort: LiveSort): Order.Order<LiveItemView> =>
     Match.exhaustive,
   )
 
-const sortLiveFolder = (folder: PinnedLiveFolderView, sort: LiveSort): PinnedLiveFolderView => ({
-  ...folder,
-  sort,
-  items: Array.sort(folder.items, liveItemOrder(sort)),
-})
+const allItemsOf = (folder: PinnedLiveFolderView): ReadonlyArray<LiveItemView> => [
+  ...folder.items,
+  ...folder.hiddenItems,
+]
 
-const refreshLiveFolder = (folder: PinnedLiveFolderView, now: number): PinnedLiveFolderView =>
-  sortLiveFolder(
-    {
-      ...folder,
-      status: { _tag: "Ready", refreshedAt: now },
-      items: folder.items.length === 0 ? sampleLiveItems(folder.source, now) : folder.items,
-    },
-    folder.sort,
+const arrangeLiveFolder = (
+  folder: PinnedLiveFolderView,
+  items: ReadonlyArray<LiveItemView>,
+  { sort, limit }: { readonly sort: LiveSort; readonly limit: LiveLimit },
+): PinnedLiveFolderView => {
+  const isShown = (item: LiveItemView, index: number) =>
+    limit === "all" || index < limit || item.openTab !== null
+  const sorted = Array.sort(items, liveItemOrder(sort))
+  return {
+    ...folder,
+    sort,
+    limit,
+    items: sorted.filter(isShown),
+    hiddenItems: sorted.filter((item, index) => !isShown(item, index)),
+  }
+}
+
+const sortLiveFolder = (folder: PinnedLiveFolderView, sort: LiveSort): PinnedLiveFolderView =>
+  arrangeLiveFolder(folder, allItemsOf(folder), { sort, limit: folder.limit })
+
+const limitLiveFolder = (folder: PinnedLiveFolderView, limit: LiveLimit): PinnedLiveFolderView =>
+  arrangeLiveFolder(folder, allItemsOf(folder), { sort: folder.sort, limit })
+
+const refreshLiveFolder = (folder: PinnedLiveFolderView, now: number): PinnedLiveFolderView => {
+  const items = allItemsOf(folder)
+  return arrangeLiveFolder(
+    { ...folder, status: { _tag: "Ready", refreshedAt: now } },
+    items.length === 0 ? sampleLiveItems(folder.source, now) : items,
+    folder,
   )
+}
 
 const openLiveItem = (view: SidebarView, bookmarkId: BookmarkId, itemId: string): SidebarView => {
   const item = findNode(view, bookmarkId).pipe(
     Option.flatMap((node) =>
       node._tag === "PinnedLiveFolder"
-        ? Array.findFirst(node.items, (candidate) => candidate.id === itemId)
+        ? Array.findFirst(allItemsOf(node), (candidate) => candidate.id === itemId)
         : Option.none(),
     ),
   )
   if (Option.isNone(item)) return view
   const tab =
     item.value.openTab ?? tabView(nextTabId(view), { title: item.value.title, url: item.value.url })
-  const opened = mapLiveFolder(view, bookmarkId, (folder) => ({
-    ...folder,
-    items: folder.items.map((candidate) =>
-      candidate.id === itemId ? { ...candidate, isUnseen: false, openTab: tab } : candidate,
+  const opened = mapLiveFolder(view, bookmarkId, (folder) =>
+    arrangeLiveFolder(
+      folder,
+      allItemsOf(folder).map((candidate) =>
+        candidate.id === itemId ? { ...candidate, isUnseen: false, openTab: tab } : candidate,
+      ),
+      folder,
     ),
-  }))
+  )
   return activateTab(opened, tab.tabId)
 }
 
@@ -894,6 +923,7 @@ const respondWithoutPeeks = (
           mapLiveFolder(view, bookmarkId, (folder) => ({
             ...folder,
             items: folder.items.map((item) => ({ ...item, isUnseen: false })),
+            hiddenItems: folder.hiddenItems.map((item) => ({ ...item, isUnseen: false })),
           })),
         ),
       ),
@@ -902,6 +932,9 @@ const respondWithoutPeeks = (
       ),
       Match.tag("SetLiveFolderSort", ({ bookmarkId, sort }) =>
         succeeded(mapLiveFolder(view, bookmarkId, (folder) => sortLiveFolder(folder, sort))),
+      ),
+      Match.tag("SetLiveFolderLimit", ({ bookmarkId, limit }) =>
+        succeeded(mapLiveFolder(view, bookmarkId, (folder) => limitLiveFolder(folder, limit))),
       ),
       Match.tag("OpenUrl", ({ url }) =>
         succeeded(
