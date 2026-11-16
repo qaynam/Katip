@@ -51,6 +51,7 @@ import { Permissions } from "#platform/permissions"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
 import { KatipState } from "./katip-state"
 import { KeyboardCommand } from "./keyboard-commands"
+import { SidebarHub } from "./sidebar-hub"
 import { urlOf } from "./tab-admission"
 import { currentTranslator } from "./translation"
 
@@ -338,7 +339,9 @@ const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | 
     ToggleMute: () => null,
     MoveTabToSpace: () => null,
     CloseTemporaryTabs: () => null,
+    ToggleSidebar: () => assigned(KeyboardCommand.toggleSidePanel),
     OpenArchive: () => null,
+    OpenDownloads: () => null,
     SearchHistory: () => null,
     OpenSettings: () => null,
   })
@@ -379,6 +382,7 @@ const actionContextOf = Effect.fnUntraced(function* (callerWindowId: WindowId) {
     })),
     activeSpaceId: activeSpaceOf(workspace, callerWindowId),
     spaces: yield* state.spaces.get,
+    isSidebarOpen: yield* (yield* SidebarHub).isSidePanelOpenIn(callerWindowId),
   } satisfies ActionContext
 })
 

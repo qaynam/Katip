@@ -288,7 +288,9 @@ export const program = Effect.gen(function* () {
 })
 
 /** The services {@link program} uses, apart from the Chrome APIs. */
-export const applicationLayer = Layer.mergeAll(SidebarHub.layer, SpotlightHub.layer).pipe(
+// Spotlight's search asks the side panel hub whether a side panel is open, so it shares that hub
+export const applicationLayer = SpotlightHub.layer.pipe(
+  Layer.provideMerge(SidebarHub.layer),
   Layer.provideMerge(
     Layer.mergeAll(
       KatipState.layer,

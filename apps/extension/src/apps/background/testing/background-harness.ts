@@ -99,7 +99,8 @@ export const openSidebar = (windowId: WindowId) =>
             )
           case "Notice":
             return Ref.update(notices, (all) => [...all, message.message])
-          case "ShowArchive":
+          case "ShowPanel":
+          case "CloseSidePanel":
             return Effect.void
         }
       }),

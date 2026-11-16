@@ -15,7 +15,7 @@ import {
 } from "#modules/site-commands"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
-import { BookmarkId, type PortSender, Tabs, type WindowId, Windows } from "#platform/browser"
+import { BookmarkId, type PortSender, TabId, Tabs, type WindowId, Windows } from "#platform/browser"
 import { fakeSearchUrl, FakeBrowser, makePortPair } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHistory } from "#platform/history"
@@ -140,15 +140,20 @@ const actionsOfKind = (kind: Action["_tag"]) => (results: ReadonlyArray<Spotligh
 const encodeSidebarMessage = Schema.encodeEffect(ClientMessage)
 const decodeSidebarMessage = Schema.decodeUnknownEffect(ServerMessage)
 
+/** A page in a tab that follows a window as a side panel does, as the welcome tour does. */
+const tabPageSender: PortSender = { ...spotlightPageSender, tabId: Option.some(TabId.make(900)) }
+
 /**
- * Subscribes as a side panel, and returns an Effect that waits for the next message `pick` keeps.
+ * Subscribes as a side panel, or as `sender` says, and returns an Effect that waits for the next
+ * message `pick` keeps.
  */
 const watchSidebar = Effect.fnUntraced(function* <A>(
   windowId: WindowId,
   pick: (message: ServerMessage) => Option.Option<A>,
+  sender: PortSender = spotlightPageSender,
 ) {
   const hub = yield* SidebarHub
-  const { client, server } = makePortPair(SIDEBAR_PORT_NAME, spotlightPageSender)
+  const { client, server } = makePortPair(SIDEBAR_PORT_NAME, sender)
   yield* Effect.forkScoped(
     hub.serve(server, () => Effect.succeed({ _tag: "Succeeded", createdBookmarkId: null })),
   )
@@ -172,9 +177,17 @@ const watchSidebarNotices = (windowId: WindowId) =>
     message._tag === "Notice" ? Option.some(message.message) : Option.none(),
   )
 
-const watchSidebarArchiveRequests = (windowId: WindowId) =>
-  watchSidebar(windowId, (message) =>
-    message._tag === "ShowArchive" ? Option.some(message._tag) : Option.none(),
+/** Subscribes as a side panel, and returns an Effect that waits for what it is asked to do next. */
+const watchSidebarRequests = (windowId: WindowId, sender?: PortSender) =>
+  watchSidebar(
+    windowId,
+    (message): Option.Option<string> =>
+      message._tag === "ShowPanel"
+        ? Option.some(`Show ${message.panel}`)
+        : message._tag === "CloseSidePanel"
+          ? Option.some("Close")
+          : Option.none(),
+    sender,
   )
 
 const firstSpaceId = KatipState.use((state) =>
@@ -644,7 +657,9 @@ describe("Spotlight commands", () => {
             "Close Tab",
             "Mute Tab",
             "Close All Temporary Tabs",
+            "Toggle Sidebar",
             "Open Archive",
+            "Open Downloads",
             "Search History",
             "Open Settings",
             ...DEFAULT_SITE_COMMANDS.map((command) => english.t(command.title)),
@@ -753,6 +768,24 @@ describe("Spotlight commands", () => {
       KeyboardShortcuts.layerTest({
         assigned: { "copy-current-url": "⌃⇧C", "quick-pin-toggle": "⌥D" },
       }),
+    ),
+  )
+
+  it.effect("shows the key that opens and closes the side panel next to Toggle Sidebar", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "Actions")
+
+        expect(
+          actionsOfKind("ToggleSidebar")(results).map(({ shortcut }) => shortcut),
+        ).toStrictEqual(["⌘⌃S"])
+      }),
+      KeyboardShortcuts.layerTest({ assigned: { _execute_action: "⌘⌃S" } }),
     ),
   )
 
@@ -944,7 +977,7 @@ describe("choosing a Spotlight command", () => {
     inBackground(
       Effect.gen(function* () {
         const { windowId } = yield* seedPage
-        const nextArchiveRequest = yield* watchSidebarArchiveRequests(windowId)
+        const nextRequest = yield* watchSidebarRequests(windowId)
         const spotlight = yield* connectSpotlight(windowId)
         const openArchive = yield* firstOf(
           actionsOfKind("OpenArchive")((yield* spotlight.search("", "Actions")).results),
@@ -952,10 +985,7 @@ describe("choosing a Spotlight command", () => {
 
         const outcome = yield* spotlight.choose(openArchive)
 
-        expect([outcome, yield* nextArchiveRequest]).toStrictEqual([
-          { _tag: "Succeeded" },
-          "ShowArchive",
-        ])
+        expect([outcome, yield* nextRequest]).toStrictEqual([{ _tag: "Succeeded" }, "Show Archive"])
       }),
     ),
   )
@@ -972,9 +1002,129 @@ describe("choosing a Spotlight command", () => {
           )
           yield* spotlight.choose(openArchive)
 
-          const nextArchiveRequest = yield* watchSidebarArchiveRequests(windowId)
+          const nextRequest = yield* watchSidebarRequests(windowId)
 
-          expect(yield* nextArchiveRequest).toBe("ShowArchive")
+          expect(yield* nextRequest).toBe("Show Archive")
+        }),
+      ),
+  )
+
+  it.effect("choosing Open Downloads has the side panel of that window show the downloads", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const nextRequest = yield* watchSidebarRequests(windowId)
+        const spotlight = yield* connectSpotlight(windowId)
+        const openDownloads = yield* firstOf(
+          actionsOfKind("OpenDownloads")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        const outcome = yield* spotlight.choose(openDownloads)
+
+        expect([outcome, yield* nextRequest]).toStrictEqual([
+          { _tag: "Succeeded" },
+          "Show Downloads",
+        ])
+      }),
+    ),
+  )
+
+  it.effect(
+    "choosing Open Downloads with no side panel open in that window has the one opened next there show them",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId } = yield* seedPage
+          const spotlight = yield* connectSpotlight(windowId)
+          const openDownloads = yield* firstOf(
+            actionsOfKind("OpenDownloads")((yield* spotlight.search("", "Actions")).results),
+          )
+          yield* spotlight.choose(openDownloads)
+
+          const nextRequest = yield* watchSidebarRequests(windowId)
+
+          expect(yield* nextRequest).toBe("Show Downloads")
+        }),
+      ),
+  )
+
+  it.effect("offers Toggle Sidebar as open when a side panel is open in the window", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        yield* watchSidebarRequests(windowId)
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const toggles = actionsOfKind("ToggleSidebar")(
+          (yield* spotlight.search("", "Actions")).results,
+        )
+
+        expect(toggles.map(({ action }) => action)).toStrictEqual([
+          { _tag: "ToggleSidebar", isOpen: true },
+        ])
+      }),
+    ),
+  )
+
+  it.effect(
+    "offers Toggle Sidebar as closed when no side panel is open, not taking a page in a tab for one",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId } = yield* seedPage
+          yield* watchSidebarRequests(windowId, tabPageSender)
+          const spotlight = yield* connectSpotlight(windowId)
+
+          const toggles = actionsOfKind("ToggleSidebar")(
+            (yield* spotlight.search("", "Actions")).results,
+          )
+
+          expect(toggles.map(({ action }) => action)).toStrictEqual([
+            { _tag: "ToggleSidebar", isOpen: false },
+          ])
+        }),
+      ),
+  )
+
+  it.effect("choosing Toggle Sidebar while the side panel is open asks it to close", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const nextRequest = yield* watchSidebarRequests(windowId)
+        const spotlight = yield* connectSpotlight(windowId)
+        const toggle = yield* firstOf(
+          actionsOfKind("ToggleSidebar")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        const outcome = yield* spotlight.choose(toggle)
+
+        expect([outcome, yield* nextRequest]).toStrictEqual([{ _tag: "Succeeded" }, "Close"])
+      }),
+    ),
+  )
+
+  it.effect(
+    "choosing Toggle Sidebar while it was closed leaves the opening to Spotlight, asking the side panel nothing",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId } = yield* seedPage
+          const spotlight = yield* connectSpotlight(windowId)
+          const toggle = yield* firstOf(
+            actionsOfKind("ToggleSidebar")((yield* spotlight.search("", "Actions")).results),
+          )
+
+          const outcome = yield* spotlight.choose(toggle)
+          const nextRequest = yield* watchSidebarRequests(windowId)
+          const openArchive = yield* firstOf(
+            actionsOfKind("OpenArchive")((yield* spotlight.search("", "Actions")).results),
+          )
+          yield* spotlight.choose(openArchive)
+
+          expect([outcome, yield* nextRequest]).toStrictEqual([
+            { _tag: "Succeeded" },
+            "Show Archive",
+          ])
         }),
       ),
   )

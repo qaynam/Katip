@@ -102,14 +102,18 @@ describe("When connected", () => {
     expect(events).toStrictEqual([{ _tag: "ViewUpdated", view }])
   })
 
-  it("passes a request to show the Archive to listeners", () => {
+  it("passes requests to show a panel or to close to listeners", () => {
     connect()
     const events: Array<SidebarEvent> = []
     connection.listen((event) => events.push(event))
 
-    latestPort().deliver({ _tag: "ShowArchive" })
+    latestPort().deliver({ _tag: "ShowPanel", panel: "Downloads" })
+    latestPort().deliver({ _tag: "CloseSidePanel" })
 
-    expect(events).toStrictEqual([{ _tag: "ShowArchive" }])
+    expect(events).toStrictEqual([
+      { _tag: "ShowPanel", panel: "Downloads" },
+      { _tag: "CloseSidePanel" },
+    ])
   })
 
   it("gives a late listener the last received view", () => {

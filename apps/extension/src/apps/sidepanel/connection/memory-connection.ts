@@ -1,4 +1,4 @@
-import type { CommandOutcome, SidebarCommand, SidebarView } from "#protocol"
+import type { CommandOutcome, SidebarCommand, SidebarPanel, SidebarView } from "#protocol"
 import type { SidebarConnection, SidebarEvent } from "./sidebar-connection"
 
 export interface CommandResponse {
@@ -18,8 +18,10 @@ export interface MemoryConnection extends SidebarConnection {
   readonly sentCommands: ReadonlyArray<SidebarCommand>
   readonly pushView: (view: SidebarView) => void
   readonly pushNotice: (message: string) => void
-  /** Simulates the Command Palette asking for the Archive. */
-  readonly pushShowArchive: () => void
+  /** Simulates the Command Palette asking for a panel. */
+  readonly pushShowPanel: (panel: SidebarPanel) => void
+  /** Simulates the Command Palette asking the side panel to close. */
+  readonly pushCloseSidePanel: () => void
 }
 
 const succeedWithoutChange = (): CommandResponse => ({
@@ -45,7 +47,8 @@ export const createMemoryConnection = (options: MemoryConnectionOptions = {}): M
     sentCommands,
     pushView,
     pushNotice,
-    pushShowArchive: () => emit({ _tag: "ShowArchive" }),
+    pushShowPanel: (panel) => emit({ _tag: "ShowPanel", panel }),
+    pushCloseSidePanel: () => emit({ _tag: "CloseSidePanel" }),
     listen: (listener) => {
       listeners.add(listener)
       if (latestView !== null) listener({ _tag: "ViewUpdated", view: latestView })

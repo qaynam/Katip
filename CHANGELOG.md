@@ -18,6 +18,8 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 
 - **A button that closes the sidebar** — The sidebar button to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
 - **Downloads in the sidebar** — The button at the bottom left of the sidebar shows your downloads in place of the Space, newest first, each with its file’s icon, the site it came from and how far it got. Search Downloads finds one by its name or site among your last 200, forgiving a typo, and the chips above the list narrow it to images, videos, audio, documents, archives or other files. Click a finished file to open it, show it in Finder or in its folder, pause, resume or cancel one still downloading, or choose Show All Downloads for Chrome’s downloads page. Esc clears the search, then takes you back to your tabs, as the back button at the top or at the bottom left, where the Downloads button was, does. The first click asks to read your downloads; if you don’t allow it, the button opens Chrome’s downloads page instead, and right-clicking it asks again.
+- **Toggle Sidebar in the Command Palette** — The Toggle Sidebar command closes the side panel when it’s open in the window and opens it when it isn’t, with the key Chrome gives the side panel shown beside it if one is set.
+- **Open Downloads in the Command Palette** — The Open Downloads command opens the side panel if it’s closed and shows your downloads there. If Katip can’t read your downloads yet, the view offers to allow it.
 
 ### ✨ Improved
 
@@ -42,6 +44,8 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 
 - **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にあるサイドバーのボタンで、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
 - **サイドバーにダウンロード** — サイドバー左下のボタンで、Space の代わりにダウンロードを新しい順に表示できるようになりました。ファイルのアイコン、ダウンロード元のサイト、どこまで進んだかも表示します。「ダウンロードを検索」では直近 200 件からファイル名やサイトで探せて（※多少の入力ミスがあっても見つかります）、一覧の上のボタンで画像・動画・音声・書類・圧縮ファイル・その他に絞り込めます。ダウンロードし終えたファイルはクリックで開くほか、Finder やフォルダで表示でき、ダウンロード中のものは一時停止・再開・キャンセルできます。「すべてのダウンロードを表示」で Chrome のダウンロードのページを開きます。Esc で検索を消し、もう一度押すとタブの一覧に戻ります。上部の戻るボタンや、ダウンロードのボタンがあった左下の戻るボタンでも戻れます。最初のクリックでダウンロードを読む許可を求めます（※許可しなかった場合、ボタンは代わりに Chrome のダウンロードのページを開きます。右クリックからあらためて許可できます）。
+- **コマンドパレットでサイドバーを切り替え** — 「サイドバーを切り替え」で、そのウィンドウのサイドパネルが開いていれば閉じ、閉じていれば開きます。Chrome でサイドパネルを開くキーを設定していれば、そのキーも横に表示します。
+- **コマンドパレットからダウンロード** — 「ダウンロードを開く」で、閉じていればサイドパネルを開いて、ダウンロードを表示します（※ダウンロードを読む許可がまだない場合は、表示した画面から許可できます）。
 
 ### ✨ 改善
 

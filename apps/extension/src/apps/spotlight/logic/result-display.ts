@@ -245,9 +245,16 @@ export const bangModeOnChoosing = (result: SpotlightResult): BangMode | null =>
 export const entersHistoryMode = (result: SpotlightResult): boolean =>
   result._tag === "Action" && result.action._tag === "SearchHistory"
 
-/** Whether choosing the result shows something in the side panel, which may not be open yet. */
-export const showsInSidePanel = (result: SpotlightResult): boolean =>
-  result._tag === "Action" && result.action._tag === "OpenArchive"
+/** Whether choosing the result needs the side panel open, which it may not be yet. */
+export const opensSidePanel = (result: SpotlightResult): boolean => {
+  if (result._tag !== "Action") return false
+  const { action } = result
+  return (
+    action._tag === "OpenArchive" ||
+    action._tag === "OpenDownloads" ||
+    (action._tag === "ToggleSidebar" && !action.isOpen)
+  )
+}
 
 /** What Spotlight searches for: in a site's mode, its bang followed by what is typed. */
 export const searchTextIn = (mode: BangMode | null, typed: string): string =>

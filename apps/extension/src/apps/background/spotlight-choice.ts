@@ -12,6 +12,7 @@ import {
 import {
   historySearchSettingsUrl,
   type SidebarCommand,
+  type SidebarPanel,
   type SpotlightOutcome,
   type SpotlightResult,
 } from "#protocol"
@@ -95,6 +96,12 @@ const openHistorySearchSettings = Effect.fnUntraced(function* (callerWindowId: W
 
 const finishInCaller = (callerWindowId: WindowId) =>
   Effect.as(focusWindow(callerWindowId), succeeded)
+
+const showPanelIn = (callerWindowId: WindowId, panel: SidebarPanel) =>
+  Effect.andThen(
+    SidebarHub.use((hub) => hub.showPanel(callerWindowId, panel)),
+    finishInCaller(callerWindowId),
+  )
 
 const onActiveTab = Effect.fnUntraced(function* <E, R>(
   callerWindowId: WindowId,
@@ -187,11 +194,16 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
         runAsSidebarCommand(callerWindowId, { _tag: "MoveTabToSpace", tabId: tab.id, spaceId }),
       ),
     CloseTemporaryTabs: () => closeTemporaryTabs(callerWindowId),
-    OpenArchive: () =>
-      Effect.andThen(
-        SidebarHub.use((hub) => hub.showArchive(callerWindowId)),
-        finishInCaller(callerWindowId),
-      ),
+    // Spotlight opens a closed side panel itself, being the only one able to
+    ToggleSidebar: ({ isOpen }) =>
+      isOpen
+        ? Effect.andThen(
+            SidebarHub.use((hub) => hub.closeSidePanel(callerWindowId)),
+            finishInCaller(callerWindowId),
+          )
+        : finishInCaller(callerWindowId),
+    OpenArchive: () => showPanelIn(callerWindowId, "Archive"),
+    OpenDownloads: () => showPanelIn(callerWindowId, "Downloads"),
     // Spotlight puts itself in history mode instead of sending it: one sent anyway has nothing to
     // open
     SearchHistory: () => Effect.map(translate("background.spotlight.cannotOpen"), failed),

@@ -20,8 +20,8 @@
     bangModeOnChoosing,
     entersHistoryMode,
     isMatchedCandidate,
+    opensSidePanel,
     searchTextIn,
-    showsInSidePanel,
   } from "./logic/result-display"
   import { selectionStepOf, stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
@@ -198,7 +198,7 @@
       enterBangMode(site)
       return
     }
-    if (showsInSidePanel(result)) openSidePanel()
+    if (opensSidePanel(result)) openSidePanel()
     isChoosing = true
     const outcome = await connection.choose(result)
     isChoosing = false

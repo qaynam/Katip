@@ -441,6 +441,30 @@ describe("a command row", () => {
     expect([openSidePanel.mock.calls.length, connection.chosen]).toStrictEqual([1, [openArchive]])
   })
 
+  it.each([
+    ["opens the side panel for Open Downloads", "Open Downloads", { _tag: "OpenDownloads" }, 1],
+    [
+      "opens the side panel for Toggle Sidebar while it is closed",
+      "Toggle Sidebar",
+      { _tag: "ToggleSidebar", isOpen: false },
+      1,
+    ],
+    [
+      "leaves an open side panel for the background to close on Toggle Sidebar",
+      "Toggle Sidebar",
+      { _tag: "ToggleSidebar", isOpen: true },
+      0,
+    ],
+  ] as const)("%s", async (_, title, action, opened) => {
+    const command: SpotlightResult = { _tag: "Action", action, title, shortcut: null }
+    const { openSidePanel, input } = renderSpotlight({ respond: () => [command] })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(openSidePanel.mock.calls.length).toBe(opened)
+  })
+
   it("leaves the side panel as it is for a command that shows nothing there", async () => {
     const { openSidePanel, input } = renderSpotlight({ respond: () => commands })
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))

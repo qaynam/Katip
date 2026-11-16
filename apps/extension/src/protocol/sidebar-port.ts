@@ -25,10 +25,15 @@ export const CommandOutcome = Schema.Union([
 ])
 export type CommandOutcome = typeof CommandOutcome.Type
 
+/** A view the side panel shows in place of the Space's pins and tabs. */
+export const SidebarPanel = Schema.Literals(["Archive", "Downloads"])
+export type SidebarPanel = typeof SidebarPanel.Type
+
 export const ServerMessage = Schema.Union([
   Schema.TaggedStruct("ViewUpdated", { view: SidebarView }),
   Schema.TaggedStruct("CommandSettled", { requestId: RequestId, outcome: CommandOutcome }),
   Schema.TaggedStruct("Notice", { message: Schema.String }),
-  Schema.TaggedStruct("ShowArchive", {}),
+  Schema.TaggedStruct("ShowPanel", { panel: SidebarPanel }),
+  Schema.TaggedStruct("CloseSidePanel", {}),
 ])
 export type ServerMessage = typeof ServerMessage.Type

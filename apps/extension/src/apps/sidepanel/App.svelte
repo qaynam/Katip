@@ -89,7 +89,8 @@
         receivedView = event.view
         pendingActivation.settleWith(event.view)
       } else if (event._tag === "Notice") toasts.show(event.message)
-      else bodyPanel.show("Archive")
+      else if (event._tag === "ShowPanel") bodyPanel.show(event.panel)
+      else if (receivedView !== null) sidePanel.close(receivedView.windowId)
     }),
   )
 

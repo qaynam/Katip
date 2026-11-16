@@ -37,6 +37,7 @@ const context = (overrides: Partial<ActionContext> = {}): ActionContext => ({
   activeTab: Option.some(tabIn(home)),
   activeSpaceId: Option.some(home),
   spaces,
+  isSidebarOpen: true,
   ...overrides,
 })
 
@@ -58,7 +59,9 @@ describe("available actions", () => {
       "Move Tab to Work",
       "Move Tab to Hobbies",
       "Close All Temporary Tabs",
+      "Toggle Sidebar",
       "Open Archive",
+      "Open Downloads",
       "Search History",
       "Open Settings",
     ])
@@ -76,7 +79,9 @@ describe("available actions", () => {
   it("without an active tab, leaves out the actions on a tab", () => {
     expect(titlesIn(context({ activeTab: Option.none() }))).toStrictEqual([
       "Close All Temporary Tabs",
+      "Toggle Sidebar",
       "Open Archive",
+      "Open Downloads",
       "Search History",
       "Open Settings",
     ])
@@ -98,7 +103,9 @@ describe("available actions", () => {
       "CloseTab",
       "ToggleMute",
       "CloseTemporaryTabs",
+      "ToggleSidebar",
       "OpenArchive",
+      "OpenDownloads",
       "SearchHistory",
       "OpenSettings",
     ])
@@ -123,12 +130,30 @@ describe("available actions", () => {
     expect(tags.filter((tag) => tag === "Unsplit" || tag === "SplitWithNewTab")).toStrictEqual([])
   })
 
-  it("whatever the window and tab, offers opening the archive, searching the history and the settings", () => {
+  it("whatever the window and tab, offers the sidebar, the archive, downloads, history and settings", () => {
     const tags = availableActions(
       context({ activeTab: Option.none(), activeSpaceId: Option.none() }),
     ).map(({ _tag }) => _tag)
 
-    expect(tags).toStrictEqual(["OpenArchive", "SearchHistory", "OpenSettings"])
+    expect(tags).toStrictEqual([
+      "ToggleSidebar",
+      "OpenArchive",
+      "OpenDownloads",
+      "SearchHistory",
+      "OpenSettings",
+    ])
+  })
+
+  it("offers toggling the sidebar marked with whether it is open now", () => {
+    const toggles = (isSidebarOpen: boolean) =>
+      availableActions(context({ isSidebarOpen })).filter(
+        (action) => action._tag === "ToggleSidebar",
+      )
+
+    expect([toggles(true), toggles(false)]).toStrictEqual([
+      [{ _tag: "ToggleSidebar", isOpen: true }],
+      [{ _tag: "ToggleSidebar", isOpen: false }],
+    ])
   })
 
   it("without a shown Space, leaves out closing the temporary tabs", () => {

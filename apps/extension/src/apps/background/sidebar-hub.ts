@@ -1,6 +1,12 @@
 import { Context, Effect, Layer, Match, Option, Ref, Schema, Stream } from "effect"
 import { Windows, type BrowserPort, type WindowId } from "#platform/browser"
-import { ClientMessage, ServerMessage, type CommandOutcome, type SidebarCommand } from "#protocol"
+import {
+  ClientMessage,
+  ServerMessage,
+  type CommandOutcome,
+  type SidebarCommand,
+  type SidebarPanel,
+} from "#protocol"
 import { buildSidebarView } from "./sidebar-view-source"
 
 interface Subscriber {
@@ -8,7 +14,13 @@ interface Subscriber {
   readonly port: BrowserPort
   /** None follows whichever window was focused last, as the development page does. */
   readonly windowId: Option.Option<WindowId>
+  /** False for a page that follows a window from a tab of its own, as the welcome tour does. */
+  readonly isSidePanel: boolean
 }
+
+// The side panel's page is the one connecting from inside the extension without a tab
+const isSidePanelPort = (port: BrowserPort) =>
+  Option.exists(port.sender, (sender) => !sender.external && Option.isNone(sender.tabId))
 
 const decodeClientMessage = Schema.decodeUnknownEffect(ClientMessage)
 const encodeServerMessage = Schema.encodeEffect(ServerMessage)
@@ -39,10 +51,13 @@ export class SidebarHub extends Context.Service<
     readonly publish: Effect.Effect<void>
     notify(message: string): Effect.Effect<void>
     /**
-     * Has the side panels of `windowId` show the Archive. When none is open there, the next one to
+     * Has the side panel of `windowId` show `panel`. When none is open there, the next one to
      * subscribe to that window shows it.
      */
-    showArchive(windowId: WindowId): Effect.Effect<void>
+    showPanel(windowId: WindowId, panel: SidebarPanel): Effect.Effect<void>
+    /** Has the side panel of `windowId` close itself. Does nothing when none is open there. */
+    closeSidePanel(windowId: WindowId): Effect.Effect<void>
+    isSidePanelOpenIn(windowId: WindowId): Effect.Effect<boolean>
   }
 >()("katip/background/SidebarHub") {
   static readonly layer = Layer.effect(
@@ -57,7 +72,7 @@ export class SidebarHub extends Context.Service<
       // Sending the whole view every time would keep side panels redrawing nonstop while tabs load
       const lastSent = yield* Ref.make<ReadonlyMap<number, string>>(new Map())
       const nextId = yield* Ref.make(0)
-      const archiveAwaitedIn = yield* Ref.make<ReadonlySet<WindowId>>(new Set())
+      const panelsAwaited = yield* Ref.make<ReadonlyMap<WindowId, SidebarPanel>>(new Map())
 
       const resolveWindow = (subscriber: Subscriber) =>
         Option.match(subscriber.windowId, {
@@ -96,11 +111,22 @@ export class SidebarHub extends Context.Service<
           }),
         )
 
-      const takeAwaitedArchive = (windowId: WindowId) =>
-        Ref.modify(archiveAwaitedIn, (awaited) => [
-          awaited.has(windowId),
-          new Set([...awaited].filter((awaitedId) => awaitedId !== windowId)),
-        ])
+      const takeAwaitedPanel = (windowId: WindowId) =>
+        Ref.modify(panelsAwaited, (awaited) => {
+          const rest = new Map(awaited)
+          rest.delete(windowId)
+          return [Option.fromNullishOr(awaited.get(windowId)), rest]
+        })
+
+      // Not the side panels that follow the last focused window: that is the development page,
+      // which the Command Palette isn't opened over
+      const sidePanelsOf = (windowId: WindowId) =>
+        Effect.map(Ref.get(subscribers), (all) =>
+          all.filter(
+            (subscriber) =>
+              subscriber.isSidePanel && Option.contains(subscriber.windowId, windowId),
+          ),
+        )
 
       const serve = <R>(
         port: BrowserPort,
@@ -113,12 +139,19 @@ export class SidebarHub extends Context.Service<
               Match.tagsExhaustive({
                 Subscribe: ({ windowId }) =>
                   Effect.gen(function* () {
-                    const subscriber = { id, port, windowId: Option.fromNullishOr(windowId) }
+                    const subscriber = {
+                      id,
+                      port,
+                      windowId: Option.fromNullishOr(windowId),
+                      isSidePanel: isSidePanelPort(port),
+                    }
                     yield* unsubscribe(id)
                     yield* Ref.update(subscribers, (all) => [...all, subscriber])
                     yield* publishTo(subscriber)
-                    if (windowId !== null && (yield* takeAwaitedArchive(windowId))) {
-                      yield* post(port, { _tag: "ShowArchive" })
+                    if (windowId === null || !subscriber.isSidePanel) return
+                    const awaited = yield* takeAwaitedPanel(windowId)
+                    if (Option.isSome(awaited)) {
+                      yield* post(port, { _tag: "ShowPanel", panel: awaited.value })
                     }
                   }),
                 Run: ({ requestId, command }) =>
@@ -138,20 +171,28 @@ export class SidebarHub extends Context.Service<
           )
         })
 
-      // Not the side panels that follow the last focused window: that is the development page,
-      // which the Command Palette isn't opened over
-      const showArchive = (windowId: WindowId) =>
+      const showPanel = (windowId: WindowId, panel: SidebarPanel) =>
         Effect.gen(function* () {
-          const shownIn = (yield* Ref.get(subscribers)).filter((subscriber) =>
-            Option.contains(subscriber.windowId, windowId),
-          )
-          const delivered = yield* Effect.forEach(shownIn, (subscriber) =>
-            post(subscriber.port, { _tag: "ShowArchive" }),
+          const delivered = yield* Effect.forEach(yield* sidePanelsOf(windowId), (subscriber) =>
+            post(subscriber.port, { _tag: "ShowPanel", panel }),
           )
           if (!delivered.includes(true)) {
-            yield* Ref.update(archiveAwaitedIn, (awaited) => new Set([...awaited, windowId]))
+            yield* Ref.update(panelsAwaited, (awaited) => new Map(awaited).set(windowId, panel))
           }
         })
+
+      const closeSidePanel = (windowId: WindowId) =>
+        Effect.gen(function* () {
+          yield* takeAwaitedPanel(windowId)
+          yield* Effect.forEach(
+            yield* sidePanelsOf(windowId),
+            (subscriber) => post(subscriber.port, { _tag: "CloseSidePanel" }),
+            { discard: true },
+          )
+        })
+
+      const isSidePanelOpenIn = (windowId: WindowId) =>
+        Effect.map(sidePanelsOf(windowId), (open) => open.length > 0)
 
       const notify = (message: string) =>
         Effect.flatMap(Ref.get(subscribers), (all) =>
@@ -160,7 +201,14 @@ export class SidebarHub extends Context.Service<
           }),
         )
 
-      return SidebarHub.of({ serve, publish, notify, showArchive })
+      return SidebarHub.of({
+        serve,
+        publish,
+        notify,
+        showPanel,
+        closeSidePanel,
+        isSidePanelOpenIn,
+      })
     }),
   )
 }

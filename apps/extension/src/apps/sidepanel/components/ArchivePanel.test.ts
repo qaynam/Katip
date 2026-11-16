@@ -67,7 +67,7 @@ describe("Opening the archive", () => {
   it("shows it when the Command Palette asks for it", async () => {
     const { connection } = await renderSidebar(sidebarView({ spaces: [work], archive: archived }))
 
-    connection.pushShowArchive()
+    connection.pushShowPanel("Archive")
     await tick()
 
     expect(archiveRegion()).toBeTruthy()

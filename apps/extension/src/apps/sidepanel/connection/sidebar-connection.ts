@@ -2,7 +2,7 @@ import type { CommandOutcome, ServerMessage, SidebarCommand } from "#protocol"
 
 export type SidebarEvent = Extract<
   ServerMessage,
-  { readonly _tag: "ViewUpdated" | "Notice" | "ShowArchive" }
+  { readonly _tag: "ViewUpdated" | "Notice" | "ShowPanel" | "CloseSidePanel" }
 >
 
 /**

@@ -12,4 +12,6 @@ export const KeyboardCommand = {
   copyCurrentUrl: "copy-current-url",
   copyCurrentUrlAsMarkdown: "copy-current-url-as-markdown",
   openSpotlight: "open-spotlight",
+  // Chrome's own command for the toolbar button, which opens and closes the side panel
+  toggleSidePanel: "_execute_action",
 } as const

@@ -15,7 +15,12 @@ export const Action = Schema.TaggedUnion({
   ToggleMute: {},
   MoveTabToSpace: { spaceId: SpaceId },
   CloseTemporaryTabs: {},
+  // isOpen tells whether the side panel was open in the window when the action was offered. Only a
+  // key press in Spotlight can open it, so Spotlight opens it itself and the background only ever
+  // closes it
+  ToggleSidebar: { isOpen: Schema.Boolean },
   OpenArchive: {},
+  OpenDownloads: {},
   // Not run by the background: Spotlight turns into a search of the browsing history alone
   SearchHistory: {},
   OpenSettings: {},

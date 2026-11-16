@@ -24,6 +24,8 @@ export interface ActionContext {
   readonly activeSpaceId: Option.Option<SpaceId>
   /** The Spaces, in the order their actions are listed. */
   readonly spaces: ReadonlyArray<{ readonly id: SpaceId; readonly name: string }>
+  /** Whether the side panel is open in the window the action runs in. */
+  readonly isSidebarOpen: boolean
 }
 
 const splitActions: Readonly<Record<ActionTarget["split"], ReadonlyArray<Action>>> = {
@@ -62,7 +64,9 @@ export const availableActions = (context: ActionContext): ReadonlyArray<Action> 
     onSome: (target) => tabActions(target, context),
   }),
   ...(Option.isSome(context.activeSpaceId) ? [{ _tag: "CloseTemporaryTabs" } as const] : []),
+  { _tag: "ToggleSidebar", isOpen: context.isSidebarOpen },
   { _tag: "OpenArchive" },
+  { _tag: "OpenDownloads" },
   { _tag: "SearchHistory" },
   { _tag: "OpenSettings" },
 ]
@@ -104,7 +108,9 @@ export const actionTitle = (
         ),
       }),
     CloseTemporaryTabs: () => translator.t("actions.closeTemporaryTabs"),
+    ToggleSidebar: () => translator.t("actions.toggleSidebar"),
     OpenArchive: () => translator.t("actions.openArchive"),
+    OpenDownloads: () => translator.t("actions.openDownloads"),
     SearchHistory: () => translator.t("actions.searchHistory"),
     OpenSettings: () => translator.t("actions.openSettings"),
   })

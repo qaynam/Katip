@@ -9,6 +9,7 @@ export {
   RequestId,
   ServerMessage,
   SIDEBAR_PORT_NAME,
+  SidebarPanel,
 } from "./sidebar-port"
 export {
   callerWindowOfSpotlight,
