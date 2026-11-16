@@ -2,7 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import { Effect, Fiber, Layer } from "effect"
 import { TestClock } from "effect/testing"
 import { FakeBrowser } from "#platform/browser-testing"
-import { FakeHttp, httpResponse, unreachable } from "#platform/http"
+import { FakeHttp, httpResponse, redirectResponse, unreachable } from "#platform/http"
 import { FakePermissions } from "#platform/permissions"
 import { GitHubTokenStore } from "./github-token-store"
 import { LiveFetcher } from "./live-fetcher"
@@ -44,16 +44,11 @@ const webResult = (number: number, created: string) => ({
 const webPage = (results: ReadonlyArray<unknown>, loggedIn = true) =>
   JSON.stringify({ payload: { blackbirdSearchRoute: { results, logged_in: loggedIn } } })
 
-const notificationThread = (id: string, updatedAt: string) => ({
-  id,
-  updated_at: updatedAt,
-  subject: {
-    title: `#${id}`,
-    url: `https://api.github.com/repos/katip-dev/katip/issues/${id}`,
-    type: "Issue",
-  },
-  repository: { full_name: "katip-dev/katip", owner: { login: "katip-dev" } },
-})
+const notification = (id: string, updatedAt: string) =>
+  `<li class="notifications-list-item js-notifications-list-item notification-unread" data-notification-id="${id}"><a class="js-navigation-open notification-list-item-link" href="/katip-dev/katip/issues/${id}?notification_referrer_id=${id}"><p class="m-0 f6 flex-auto">katip-dev/katip <span class="text-normal color-fg-muted">#${id}</span></p><p class="m-0 text-normal markdown-title">#${id}</p></a><relative-time class="no-wrap" datetime="${updatedAt}"></relative-time></li>`
+
+const notificationsPage = (...notifications: ReadonlyArray<string>) =>
+  `<!DOCTYPE html><html lang="en"><body class="logged-in"><ul class="js-notifications-list">${notifications.join("")}</ul></body></html>`
 
 const fetchFailure = (source: LiveSource) =>
   Effect.map(
@@ -294,58 +289,59 @@ describe("GitHub with a token", () => {
 })
 
 describe("GitHub notifications", () => {
-  it.effect("with a token set, reads the unread notifications from the official API with it", () =>
-    Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
-      yield* (yield* GitHubTokenStore).save("ghp_secret")
-      yield* (yield* FakeHttp).route("https://api.github.com/notifications", () =>
-        Effect.succeed(
-          httpResponse(
-            200,
-            JSON.stringify([
-              notificationThread("2", "2026-11-16T08:00:00Z"),
-              notificationThread("1", "2026-11-15T08:00:00Z"),
-            ]),
+  it.effect(
+    "reads the unread notifications from github.com's notifications page with the signed-in cookies",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+        yield* (yield* FakeHttp).route("https://github.com/notifications", () =>
+          Effect.succeed(
+            httpResponse(
+              200,
+              notificationsPage(
+                notification("2", "2026-11-16T08:00:00Z"),
+                notification("1", "2026-11-15T08:00:00Z"),
+              ),
+            ),
           ),
+        )
+
+        const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(notifications))
+
+        const requests = yield* (yield* FakeHttp).requests
+        assert.deepStrictEqual(
+          [items.map((item) => item.title), requests.map((request) => request.credentials)],
+          [["#2", "#1"], ["include"]],
+        )
+      }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("reads them with the signed-in session even with a token set, sending it nowhere", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN, GITHUB_API_ORIGIN])
+      yield* (yield* GitHubTokenStore).save("ghp_secret")
+      yield* (yield* FakeHttp).route("https://github.com/notifications", () =>
+        Effect.succeed(
+          httpResponse(200, notificationsPage(notification("1", "2026-11-16T08:00:00Z"))),
         ),
       )
 
-      const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(notifications))
+      yield* LiveFetcher.use((fetcher) => fetcher.fetch(notifications))
 
       const requests = yield* (yield* FakeHttp).requests
       assert.deepStrictEqual(
-        [
-          items.map((item) => item.url),
-          requests.map((request) => [request.headers?.["Authorization"], request.credentials]),
-        ],
-        [
-          [
-            "https://github.com/katip-dev/katip/issues/2",
-            "https://github.com/katip-dev/katip/issues/1",
-          ],
-          [["Bearer ghp_secret", "omit"]],
-        ],
+        requests.map((request) => [
+          new URL(request.url).origin,
+          request.headers?.["Authorization"],
+        ]),
+        [["https://github.com", undefined]],
       )
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("without a token, fails as needing one without sending a request", () =>
+  it.effect("without access to github.com, fails without sending a request", () =>
     Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN, GITHUB_API_ORIGIN])
-
-      const failure = yield* fetchFailure(notifications)
-
-      assert.deepStrictEqual(
-        [failure, yield* (yield* FakeHttp).requests],
-        [{ _tag: "TokenMissing" }, []],
-      )
-    }).pipe(Effect.provide(TestLayer)),
-  )
-
-  it.effect("without access to the official API, fails without sending a request", () =>
-    Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
-      yield* (yield* GitHubTokenStore).save("ghp_secret")
+      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
 
       const failure = yield* fetchFailure(notifications)
 
@@ -356,19 +352,14 @@ describe("GitHub notifications", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
-  it.effect("fails as unable to read notifications when GitHub refuses the token for them", () =>
+  it.effect("fails as not signed in when sent to the sign-in page", () =>
     Effect.gen(function* () {
-      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
-      yield* (yield* GitHubTokenStore).save("github_pat_fine_grained")
-      yield* (yield* FakeHttp).route("https://api.github.com/", () =>
-        Effect.succeed(
-          httpResponse(403, '{"message":"Resource not accessible by personal access token"}'),
-        ),
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* FakeHttp).route("https://github.com/notifications", () =>
+        Effect.succeed(redirectResponse),
       )
 
-      assert.deepStrictEqual(yield* fetchFailure(notifications), {
-        _tag: "TokenCannotReadNotifications",
-      })
+      assert.deepStrictEqual(yield* fetchFailure(notifications), { _tag: "NotSignedIn" })
     }).pipe(Effect.provide(TestLayer)),
   )
 })

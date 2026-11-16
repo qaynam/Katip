@@ -31,9 +31,6 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.notSignedInGmail": "このアカウントで Gmail にログインしていません",
   "background.liveFolder.notSignedInGitHub": "GitHub にログインしていません",
   "background.liveFolder.tokenRejected": "GitHub のアクセストークンが無効です",
-  "background.liveFolder.tokenMissing": "GitHub の通知は、アクセストークンがないと読めません",
-  "background.liveFolder.tokenCannotReadNotifications":
-    "このトークンでは通知を読めません。notifications か repo のスコープを付けた Personal access token (classic) を設定してください",
   "background.liveFolder.accessDenied": "取得元へのアクセスが拒否されました",
   "background.liveFolder.rateLimited":
     "{site} の利用上限に達しました。しばらくしてから取得し直します",

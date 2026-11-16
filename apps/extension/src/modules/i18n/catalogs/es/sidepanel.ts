@@ -166,12 +166,10 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.gitHubDescription":
     "Funciona si has iniciado sesión en GitHub en este navegador.",
   "sidepanel.liveFolderDialog.queryLegend": "Mostrar",
-  "sidepanel.liveFolderDialog.notificationsHint":
-    "Las notificaciones se leen con un token de acceso personal en lugar de tu sesión. La carpeta te lo pedirá una vez creada.",
   "sidepanel.liveFolderDialog.tokenTitle": "Configurar el token de GitHub",
   "sidepanel.liveFolderDialog.token": "Token de acceso",
   "sidepanel.liveFolderDialog.tokenHowTo":
-    "Crea un token de acceso personal (classic) en github.com y pégalo aquí. Para incluir repositorios privados, selecciona el permiso repo; las notificaciones necesitan ese permiso o el de notifications. El token solo se usa para las solicitudes a GitHub.",
+    "Crea un token de acceso personal (classic) en github.com y pégalo aquí. Para incluir repositorios privados, selecciona el permiso repo. El token solo se usa para las solicitudes a GitHub.",
   "sidepanel.liveFolderDialog.tokenLink": "Crear un token en github.com",
   "sidepanel.liveFolderDialog.create": "Crear",
   "sidepanel.liveFolderDialog.save": "Guardar",

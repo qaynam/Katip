@@ -183,7 +183,7 @@ describe("Creating a GitHub live folder", () => {
     )
   })
 
-  it("offers the notifications inbox, asking for access to the official API that lists it, then creates the folder", async () => {
+  it("offers the notifications inbox, asking for access to github.com as the searches do, then creates the folder", async () => {
     const { connection, originAccess } = await renderSidebar(viewWithPins(), {
       respond: createdLiveFolder,
     })
@@ -192,7 +192,7 @@ describe("Creating a GitHub live folder", () => {
     await fireEvent.click(screen.getByRole("radio", { name: "Notifications" }))
     await fireEvent.click(screen.getByRole("button", { name: "Create" }))
 
-    expect(originAccess.requestedOrigins).toStrictEqual([["https://api.github.com/*"]])
+    expect(originAccess.requestedOrigins).toStrictEqual([["https://github.com/*"]])
     await vi.waitFor(() =>
       expect(connection.sentCommands).toStrictEqual([
         {
@@ -202,21 +202,6 @@ describe("Creating a GitHub live folder", () => {
           source: { _tag: "GitHub", query: "notifications" },
         },
       ]),
-    )
-  })
-
-  it("explains that notifications are read with a token, once they're chosen", async () => {
-    const hint =
-      "Notifications are read with a personal access token instead of your sign-in. The folder asks for one once it’s created."
-    await renderSidebar(viewWithPins())
-
-    await chooseFromSpaceMenu("GitHub")
-    const hintBefore = screen.queryByText(hint)
-    await fireEvent.click(screen.getByRole("radio", { name: "Notifications" }))
-
-    expect(hintBefore).toBeNull()
-    expect(screen.getByText(hint).id).toBe(
-      screen.getByRole("group", { name: "Show" }).getAttribute("aria-describedby"),
     )
   })
 

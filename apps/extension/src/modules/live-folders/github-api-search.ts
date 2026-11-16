@@ -25,30 +25,22 @@ export const githubApiSearchesFor = (
   query: GitHubSearchQuery,
 ): Array.NonEmptyReadonlyArray<string> => searchesByQuery[query]
 
-/** A request to the official API, authenticated by the token alone. */
-export const githubApiRequest = (url: string, token: string): HttpRequest => ({
-  url,
+export const githubApiSearchRequest = (search: string, token: string): HttpRequest => ({
+  url: `https://api.github.com/search/issues?${new URLSearchParams({
+    q: search,
+    sort: "updated",
+    order: "desc",
+    per_page: "50",
+  })}`,
   headers: {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
     "X-GitHub-Api-Version": "2022-11-28",
   },
   credentials: "omit",
-  // Not the browser's cache: a copy kept there would go on listing what has since been closed or
-  // read
+  // Not the browser's cache: a copy kept there would go on listing what has since been closed
   cache: "no-store",
 })
-
-export const githubApiSearchRequest = (search: string, token: string): HttpRequest =>
-  githubApiRequest(
-    `https://api.github.com/search/issues?${new URLSearchParams({
-      q: search,
-      sort: "updated",
-      order: "desc",
-      per_page: "50",
-    })}`,
-    token,
-  )
 
 const SearchResponse = Schema.fromJsonString(Schema.Struct({ items: Schema.Array(Schema.Unknown) }))
 

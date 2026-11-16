@@ -5,7 +5,6 @@ import type { LiveSource } from "./live-source"
 
 const gmail: LiveSource = { _tag: "Gmail", accountIndex: 2, label: null }
 const github: LiveSource = { _tag: "GitHub", query: "review-requested" }
-const notifications: LiveSource = { _tag: "GitHub", query: "notifications" }
 const en = makeTranslator("en")
 const ja = makeTranslator("ja")
 
@@ -25,27 +24,6 @@ describe("explaining a failure", () => {
 
   it("with an invalid token, says entering the token again fixes it", () => {
     expect(fixesOf({ _tag: "TokenRejected" })).toStrictEqual({
-      needsPermission: false,
-      needsToken: true,
-      signInUrl: null,
-    })
-  })
-
-  it("without a token for GitHub's notifications, says setting one fixes it", () => {
-    expect(explainFailure({ _tag: "TokenMissing" }, notifications, en)).toStrictEqual({
-      reason: "GitHub notifications can only be read with an access token",
-      needsPermission: false,
-      needsToken: true,
-      signInUrl: null,
-    })
-  })
-
-  it("with a token that can't read notifications, says which token can and that setting it fixes it", () => {
-    expect(
-      explainFailure({ _tag: "TokenCannotReadNotifications" }, notifications, en),
-    ).toStrictEqual({
-      reason:
-        "This token can't read notifications. Use a personal access token (classic) with the notifications or repo scope",
       needsPermission: false,
       needsToken: true,
       signInUrl: null,

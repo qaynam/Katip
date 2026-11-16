@@ -154,12 +154,10 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub 实时文件夹",
   "sidepanel.liveFolderDialog.gitHubDescription": "只要在此浏览器中登录了 GitHub 即可使用。",
   "sidepanel.liveFolderDialog.queryLegend": "显示内容",
-  "sidepanel.liveFolderDialog.notificationsHint":
-    "通知通过个人访问令牌读取，而不是登录会话。创建文件夹后会要求设置令牌。",
   "sidepanel.liveFolderDialog.tokenTitle": "设置 GitHub 令牌",
   "sidepanel.liveFolderDialog.token": "访问令牌",
   "sidepanel.liveFolderDialog.tokenHowTo":
-    "在 github.com 上生成个人访问令牌（classic）并粘贴到这里。如需包含私有仓库，请勾选 repo 权限；读取通知需要 repo 或 notifications 权限。令牌仅用于向 GitHub 发出的请求。",
+    "在 github.com 上生成个人访问令牌（classic）并粘贴到这里。如需包含私有仓库，请勾选 repo 权限。令牌仅用于向 GitHub 发出的请求。",
   "sidepanel.liveFolderDialog.tokenLink": "在 github.com 上生成令牌",
   "sidepanel.liveFolderDialog.create": "创建",
   "sidepanel.liveFolderDialog.save": "保存",

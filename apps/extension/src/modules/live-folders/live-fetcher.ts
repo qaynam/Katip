@@ -6,7 +6,7 @@ import {
   githubApiSearchesFor,
   githubApiSearchRequest,
 } from "./github-api-search"
-import { githubNotificationItemsFrom, githubNotificationsRequest } from "./github-notifications"
+import { GITHUB_NOTIFICATIONS_REQUEST, githubNotificationItemsFrom } from "./github-notifications"
 import { GitHubTokenStore } from "./github-token-store"
 import {
   githubWebItemsFrom,
@@ -41,8 +41,8 @@ export class LiveFetcher extends Context.Service<
      * Takes in items from the source, in the source's newest-first order.
      *
      * GitHub's searches are read through the official API when a token is set, and otherwise with
-     * the browser's signed-in session. GitHub's notifications are read only through the official
-     * API: without a token, fetching them fails without sending a request.
+     * the browser's signed-in session. GitHub's notifications are always read with the signed-in
+     * session.
      *
      * Fails without sending a request when access to the source isn't granted. Never asks for the
      * permission (the dialog asking for it can only come from a page the user is acting on).
@@ -107,25 +107,23 @@ export class LiveFetcher extends Context.Service<
         return mergeNewestFirst(results)
       })
 
-      const fetchGitHubNotifications = Effect.fnUntraced(function* (token: string) {
-        yield* requirePermission(GITHUB_API_ORIGIN)
-        const response = yield* send(githubNotificationsRequest(token))
+      const fetchGitHubNotifications = Effect.fnUntraced(function* () {
+        yield* requirePermission(GITHUB_WEB_ORIGIN)
+        const response = yield* send(GITHUB_NOTIFICATIONS_REQUEST)
         const now = yield* Clock.currentTimeMillis
         return yield* fromInterpretation(githubNotificationItemsFrom(response, now))
       })
 
       const fetchGitHub = ({ query }: Extract<LiveSource, { _tag: "GitHub" }>) =>
-        Effect.flatMap(loadToken, (token) =>
-          query === "notifications"
-            ? Option.match(token, {
-                onNone: () => failWith({ _tag: "TokenMissing" }),
-                onSome: fetchGitHubNotifications,
-              })
-            : Option.match(token, {
+        query === "notifications"
+          ? fetchGitHubNotifications()
+          : Effect.flatMap(
+              loadToken,
+              Option.match({
                 onNone: () => searchGitHubWithSession(query),
                 onSome: (token) => searchGitHubWithToken(query, token),
               }),
-        )
+            )
 
       const fetchGmailFeed = (source: Extract<LiveSource, { _tag: "Gmail" }>) =>
         Effect.flatMap(send(gmailFeedRequest(source)), (response) =>

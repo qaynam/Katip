@@ -38,15 +38,10 @@ describe("sourceOrigins", () => {
     ])
   })
 
-  it("asks for access to github.com for a GitHub search, which uses the browser's sign-in", () => {
-    expect(sourceOrigins({ _tag: "GitHub", query: "mentioned" })).toStrictEqual([
-      "https://github.com/*",
-    ])
-  })
-
-  it("asks for access to the official API for GitHub's notifications, which only it lists", () => {
-    expect(sourceOrigins({ _tag: "GitHub", query: "notifications" })).toStrictEqual([
-      "https://api.github.com/*",
-    ])
+  it("asks for access to github.com for GitHub's searches and notifications, which use the browser's sign-in", () => {
+    expect([
+      sourceOrigins({ _tag: "GitHub", query: "mentioned" }),
+      sourceOrigins({ _tag: "GitHub", query: "notifications" }),
+    ]).toStrictEqual([["https://github.com/*"], ["https://github.com/*"]])
   })
 })

@@ -374,7 +374,7 @@ describe("A live folder that failed to refresh", () => {
     )
   })
 
-  it("asks for access to GitHub's official API for a notifications folder, the only way to read them", async () => {
+  it("asks for access to github.com for a notifications folder, which is read with the signed-in session", async () => {
     const { originAccess } = await renderSidebar(
       viewWithPins(
         inbox({
@@ -386,7 +386,7 @@ describe("A live folder that failed to refresh", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "Allow Access" }))
 
-    expect(originAccess.requestedOrigins).toStrictEqual([["https://api.github.com/*"]])
+    expect(originAccess.requestedOrigins).toStrictEqual([["https://github.com/*"]])
   })
 
   it("doesn't refresh when access is denied and reports the missing permission", async () => {

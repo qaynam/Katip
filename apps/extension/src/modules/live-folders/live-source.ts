@@ -99,14 +99,13 @@ export const GITHUB_API_ORIGIN = "https://api.github.com/*"
  * The host permission needed to access a source, written as in the manifest's
  * optional_host_permissions.
  *
- * For GitHub's notifications it's the official API, the only way to read them. For GitHub's
- * searches it's github.com, read with the signed-in session; it doesn't cover the official API
- * used for them when a token is set.
+ * For GitHub it's github.com, read with the signed-in session; it doesn't cover the official API
+ * used for searches when a token is set.
  */
 export const originPatternOf = (source: LiveSource): string =>
   Match.valueTags(source, {
     Gmail: () => "https://mail.google.com/*",
-    GitHub: ({ query }) => (query === "notifications" ? GITHUB_API_ORIGIN : GITHUB_WEB_ORIGIN),
+    GitHub: () => GITHUB_WEB_ORIGIN,
   })
 
 /** The avatar of a GitHub user or organization, such as a repository's owner. */

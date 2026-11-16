@@ -31,10 +31,6 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.notSignedInGmail": "No has iniciado sesión en Gmail con esta cuenta",
   "background.liveFolder.notSignedInGitHub": "No has iniciado sesión en GitHub",
   "background.liveFolder.tokenRejected": "El token de acceso de GitHub no es válido",
-  "background.liveFolder.tokenMissing":
-    "Las notificaciones de GitHub solo se pueden leer con un token de acceso",
-  "background.liveFolder.tokenCannotReadNotifications":
-    "Este token no puede leer las notificaciones. Usa un token de acceso personal (classic) con el permiso notifications o repo",
   "background.liveFolder.accessDenied": "Se denegó el acceso a la fuente",
   "background.liveFolder.rateLimited":
     "Se alcanzó el límite de uso de {site}. Katip lo volverá a intentar más tarde",

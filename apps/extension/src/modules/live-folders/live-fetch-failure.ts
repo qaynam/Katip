@@ -11,13 +11,6 @@ export const LiveFetchFailure = Schema.TaggedUnion({
   NotSignedIn: {},
   /** GitHub didn't accept the configured token (expired, revoked or wrong). */
   TokenRejected: {},
-  /** No GitHub token is set, and GitHub's notifications can only be read with one. */
-  TokenMissing: {},
-  /**
-   * The token can't read GitHub's notifications: it's fine-grained, which never can, or a classic
-   * token with neither the notifications nor the repo scope.
-   */
-  TokenCannotReadNotifications: {},
   AccessDenied: { status: Schema.Int },
   /** No automatic refetch until `retryAt` (epoch milliseconds). */
   RateLimited: { retryAt: Schema.Number },
@@ -74,12 +67,6 @@ export const explainFailure = (
       ),
     TokenRejected: () =>
       explanation(translator.t("background.liveFolder.tokenRejected"), { needsToken: true }),
-    TokenMissing: () =>
-      explanation(translator.t("background.liveFolder.tokenMissing"), { needsToken: true }),
-    TokenCannotReadNotifications: () =>
-      explanation(translator.t("background.liveFolder.tokenCannotReadNotifications"), {
-        needsToken: true,
-      }),
     AccessDenied: () => explanation(translator.t("background.liveFolder.accessDenied")),
     RateLimited: () =>
       explanation(translator.t("background.liveFolder.rateLimited", { site: siteNameOf(source) })),

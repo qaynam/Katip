@@ -31,9 +31,6 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.notSignedInGmail": "未使用此账号登录 Gmail",
   "background.liveFolder.notSignedInGitHub": "未登录 GitHub",
   "background.liveFolder.tokenRejected": "GitHub 访问令牌无效",
-  "background.liveFolder.tokenMissing": "GitHub 通知只能通过访问令牌读取",
-  "background.liveFolder.tokenCannotReadNotifications":
-    "此令牌无法读取通知。请使用带有 notifications 或 repo 权限的个人访问令牌（classic）",
   "background.liveFolder.accessDenied": "访问来源被拒绝",
   "background.liveFolder.rateLimited": "已达到 {site} 的使用上限，稍后将重新获取",
   "background.liveFolder.unreachable": "无法连接到来源",

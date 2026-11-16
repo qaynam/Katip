@@ -19,17 +19,12 @@ const gmail = (accountIndex: number, label: string | null): LiveSource => ({
 })
 
 describe("host permission a source needs", () => {
-  it("Gmail needs mail.google.com, and GitHub needs github.com, read with the signed-in session", () => {
+  it("Gmail needs mail.google.com, and GitHub needs github.com for searches and notifications alike, read with the signed-in session", () => {
     expect([
       originPatternOf(gmail(1, "Work")),
       originPatternOf({ _tag: "GitHub", query: "mentioned" }),
-    ]).toStrictEqual(["https://mail.google.com/*", "https://github.com/*"])
-  })
-
-  it("GitHub's notifications need the official API, the only way to read them", () => {
-    expect(originPatternOf({ _tag: "GitHub", query: "notifications" })).toBe(
-      "https://api.github.com/*",
-    )
+      originPatternOf({ _tag: "GitHub", query: "notifications" }),
+    ]).toStrictEqual(["https://mail.google.com/*", "https://github.com/*", "https://github.com/*"])
   })
 })
 

@@ -213,10 +213,7 @@
         {/if}
       {:else if initial._tag === "Create"}
         <p class="description">{t("sidepanel.liveFolderDialog.gitHubDescription")}</p>
-        <fieldset
-          class="choices"
-          aria-describedby={query === "notifications" ? `${ids}-query-hint` : undefined}
-        >
+        <fieldset class="choices">
           <legend class="label">{t("sidepanel.liveFolderDialog.queryLegend")}</legend>
           {#each GitHubQuery.literals as option (option)}
             <label class="choice">
@@ -224,11 +221,6 @@
               <span>{t(gitHubQueryMessages[option])}</span>
             </label>
           {/each}
-          {#if query === "notifications"}
-            <p id="{ids}-query-hint" class="hint">
-              {t("sidepanel.liveFolderDialog.notificationsHint")}
-            </p>
-          {/if}
         </fieldset>
       {/if}
 

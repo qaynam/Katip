@@ -1,119 +1,179 @@
-import { Array, DateTime, Option, pipe, Record, Result, Schema } from "effect"
+import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
-import { githubApiRequest } from "./github-api-search"
 import { rateLimitRetryAt } from "./github-rate-limit"
+import { contentOf, hasClass, plainTextOf, startTagsOf, type StartTag } from "./html-scan"
 import type { LiveFetchFailure } from "./live-fetch-failure"
 import { githubAvatarIcon, type LiveItem } from "./live-source"
 
-/** The notifications inbox on github.com, opened for a thread whose own page can't be told. */
-export const GITHUB_NOTIFICATIONS_PAGE_URL = "https://github.com/notifications"
+const GITHUB_WEB = "https://github.com"
 
-/** Asks the official API for the unread threads of the notifications inbox. */
-export const githubNotificationsRequest = (token: string): HttpRequest =>
-  githubApiRequest(
-    `https://api.github.com/notifications?${new URLSearchParams({ all: "false", per_page: "50" })}`,
-    token,
-  )
-
-const NotificationsResponse = Schema.fromJsonString(Schema.Array(Schema.Unknown))
-
-const Thread = Schema.Struct({
-  id: Schema.String,
-  updated_at: Schema.DateTimeUtcFromString,
-  subject: Schema.Struct({ title: Schema.String, url: Schema.NullOr(Schema.String) }),
-  repository: Schema.Struct({
-    full_name: Schema.String,
-    owner: Schema.Struct({ login: Schema.String }),
-  }),
-})
-type Thread = typeof Thread.Type
-
-const decodeResponse = Schema.decodeUnknownOption(NotificationsResponse)
-const decodeThread = Schema.decodeUnknownOption(Thread)
-
-interface SubjectPage {
-  readonly url: string
-  /** The issue or pull request number. */
-  readonly number: Option.Option<string>
+/**
+ * Reads the unread notifications from github.com's notifications page, with the signed-in
+ * session's cookies.
+ *
+ * Reads the page rather than the official API so that it works without a token. The page's markup
+ * isn't published and can change without notice, so a page that can't be read fails as unreadable,
+ * making the breakage visible.
+ */
+export const GITHUB_NOTIFICATIONS_REQUEST: HttpRequest = {
+  url: `${GITHUB_WEB}/notifications?${new URLSearchParams({ query: "is:unread" })}`,
+  // Not JSON, as asked of the search page: the notifications page answers that with 406
+  headers: { Accept: "text/html" },
+  credentials: "include",
+  // Not followed: signed out, the page redirects to the sign-in page, and the redirect tells that
+  // without reading the sign-in page's markup
+  redirect: "manual",
+  // Not the browser's cache: a copy kept there would go on listing what has since been read
+  cache: "no-store",
 }
 
-type SubjectPageOf = (repositoryPage: string, id: string) => SubjectPage
-
-const subjectPages: Record.ReadonlyRecord<string, SubjectPageOf> = {
-  issues: (repositoryPage, id) => ({
-    url: `${repositoryPage}/issues/${id}`,
-    number: Option.some(id),
-  }),
-  pulls: (repositoryPage, id) => ({ url: `${repositoryPage}/pull/${id}`, number: Option.some(id) }),
-  commits: (repositoryPage, id) => ({
-    url: `${repositoryPage}/commit/${id}`,
-    number: Option.none(),
-  }),
-  // Not the release's own page: the API names a release by its id, and its page by its tag
-  releases: (repositoryPage) => ({ url: `${repositoryPage}/releases`, number: Option.none() }),
+interface NotificationMarkup {
+  readonly tag: StartTag
+  readonly content: string
 }
 
-const subjectUrlPattern =
-  /^https:\/\/api\.github\.com\/repos\/([\w.-]+\/[\w.-]+)\/(issues|pulls|commits|releases)\/(\w+)$/
+const notificationMarkupsOf = (html: string): ReadonlyArray<NotificationMarkup> => {
+  const tags = startTagsOf(html, "li").filter((tag) => hasClass(tag, "notifications-list-item"))
+  return tags.map((tag, index) => ({
+    tag,
+    // Not up to the end of the page when an item's end tag is missing: it would take what it lacks
+    // from the items after it
+    content: contentOf(html.slice(0, tags[index + 1]?.start ?? html.length), tag, "li"),
+  }))
+}
 
-const subjectPageOf = (subjectUrl: string | null): SubjectPage =>
+const firstWithClass = (html: string, name: string, className: string) =>
+  Array.findFirst(startTagsOf(html, name), (tag) => hasClass(tag, className))
+
+const nonBlank = (text: string | undefined): Option.Option<string> =>
+  Option.liftPredicate(text?.trim() ?? "", (trimmed) => trimmed !== "")
+
+const parseUrl = Option.liftThrowable((href: string) => new URL(href, GITHUB_WEB))
+
+const linkOf = (content: string): Option.Option<URL> =>
   pipe(
-    Option.fromNullishOr(subjectUrl?.match(subjectUrlPattern)),
-    Option.flatMap(([, repository = "", kind = "", id = ""]) =>
-      Option.map(Record.get(subjectPages, kind), (pageOf) =>
-        pageOf(`https://github.com/${repository}`, id),
-      ),
-    ),
-    Option.getOrElse((): SubjectPage => ({
-      url: GITHUB_NOTIFICATIONS_PAGE_URL,
-      number: Option.none(),
-    })),
+    firstWithClass(content, "a", "notification-list-item-link"),
+    Option.flatMap((link) => nonBlank(link.attributes.get("href"))),
+    Option.flatMap(parseUrl),
+    Option.filter((url) => url.origin === GITHUB_WEB),
   )
 
-const itemFrom = (thread: Thread): LiveItem => {
-  const page = subjectPageOf(thread.subject.url)
-  const repository = thread.repository.full_name
-  return {
-    id: thread.id,
-    title: thread.subject.title,
-    subtitle: Option.match(page.number, {
-      onNone: () => repository,
-      onSome: (number) => `${repository}#${number}`,
+const titleOf = (content: string): Option.Option<string> =>
+  pipe(
+    firstWithClass(content, "p", "markdown-title"),
+    Option.map((title) => plainTextOf(contentOf(content, title, "p")).replace(/\s+/g, " ")),
+    Option.flatMap(nonBlank),
+  )
+
+const decodeTime = Schema.decodeUnknownOption(Schema.DateTimeUtcFromString)
+
+const updatedAtOf = (content: string): Option.Option<number> =>
+  pipe(
+    Array.head(startTagsOf(content, "relative-time")),
+    Option.flatMap((time) => decodeTime(time.attributes.get("datetime"))),
+    Option.map(DateTime.toEpochMillis),
+  )
+
+interface Repository {
+  readonly owner: string
+  /** `<owner>/<repo>`, followed by `#<number>` for an issue, a pull request or a discussion. */
+  readonly subtitle: string
+}
+
+const repositoryPathPattern = /^\/([^/]+)\/([^/]+)(?:\/(?:issues|pull|discussions)\/(\d+))?/
+
+const repositoryOf = (link: URL): Option.Option<Repository> =>
+  Option.map(
+    Option.fromNullishOr(link.pathname.match(repositoryPathPattern)),
+    ([, owner = "", name = "", number]) => ({
+      owner,
+      subtitle: number === undefined ? `${owner}/${name}` : `${owner}/${name}#${number}`,
     }),
-    url: page.url,
-    updatedAt: DateTime.toEpochMillis(thread.updated_at),
-    icon: githubAvatarIcon(thread.repository.owner.login),
+  )
+
+const itemFrom = ({ tag, content }: NotificationMarkup, now: number): Option.Option<LiveItem> =>
+  Option.map(
+    Option.all({
+      id: nonBlank(tag.attributes.get("data-notification-id")),
+      link: linkOf(content),
+      title: titleOf(content),
+    }),
+    ({ id, link, title }) => {
+      const repository = repositoryOf(link)
+      return {
+        id,
+        title,
+        subtitle: Option.match(repository, {
+          onNone: () => "",
+          onSome: ({ subtitle }) => subtitle,
+        }),
+        // Not the plain page of the issue or pull request: GitHub's own link carries the
+        // notification, so that opening it marks the notification read, as the inbox does
+        url: link.href,
+        updatedAt: Option.getOrElse(updatedAtOf(content), () => now),
+        ...Option.match(repository, {
+          onNone: () => ({}),
+          onSome: ({ owner }) => ({ icon: githubAvatarIcon(owner) }),
+        }),
+      }
+    },
+  )
+
+const isSignInPage = (html: string): boolean =>
+  startTagsOf(html, "input").some(
+    (input) => input.attributes.get("type")?.toLowerCase() === "password",
+  )
+
+// Not any page without notifications: one whose markup has changed would pass for an empty inbox,
+// hiding the breakage
+const isEmptyInbox = (html: string): boolean =>
+  startTagsOf(html, "div").some((div) => hasClass(div, "blankslate"))
+
+/**
+ * Reads the unread notifications from the notifications page, in the page's order (most recently
+ * updated first).
+ *
+ * Leaves out the notifications already read, and those without an id, a link on github.com or a
+ * title. A notification without a time counts as updated at `now`.
+ *
+ * Fails as not signed in for the sign-in page. Fails as unreadable for a page that is neither, or
+ * that lists notifications none of which can be read.
+ */
+export const parseGitHubNotificationsPage = (
+  html: string,
+  now: number,
+): Result.Result<ReadonlyArray<LiveItem>, LiveFetchFailure> => {
+  const markups = notificationMarkupsOf(html)
+  if (markups.length === 0) {
+    if (isSignInPage(html)) return Result.fail({ _tag: "NotSignedIn" })
+    return isEmptyInbox(html) ? Result.succeed([]) : Result.fail({ _tag: "UnreadableResponse" })
   }
+  const notifications = markups.map((markup) => ({
+    isUnread: hasClass(markup.tag, "notification-unread"),
+    item: itemFrom(markup, now),
+  }))
+  if (notifications.every(({ item }) => Option.isNone(item))) {
+    return Result.fail({ _tag: "UnreadableResponse" })
+  }
+  return Result.succeed(
+    Array.getSomes(notifications.filter(({ isUnread }) => isUnread).map(({ item }) => item)),
+  )
 }
 
 /**
- * Reads the threads, in the API's order (most recently updated first), from a notifications
- * response body. Each opens the page of its issue, pull request, commit or release, and any other
- * kind opens the notifications inbox. Leaves out threads of the wrong shape. None if the response
- * is unreadable.
+ * @param now - What the retry time counts from when the rate limit gives it as a wait, and the time
+ *   of a notification the page gives none for.
  */
-export const parseGitHubNotifications = (body: string): Option.Option<ReadonlyArray<LiveItem>> =>
-  Option.map(decodeResponse(body), (threads) =>
-    Array.getSomes(threads.map((raw) => Option.map(decodeThread(raw), itemFrom))),
-  )
-
-/** @param now - What the retry time counts from when the rate limit gives it as a wait. */
 export const githubNotificationItemsFrom = (
   response: HttpResponse,
   now: number,
 ): Result.Result<ReadonlyArray<LiveItem>, LiveFetchFailure> => {
-  if (response.status === 200) {
-    return Result.fromOption(parseGitHubNotifications(response.body), () => ({
-      _tag: "UnreadableResponse" as const,
-    }))
-  }
-  if (response.status === 401) return Result.fail({ _tag: "TokenRejected" })
+  if (response.isRedirect || response.status === 401) return Result.fail({ _tag: "NotSignedIn" })
   const retryAt = rateLimitRetryAt(response, now)
   if (Option.isSome(retryAt)) return Result.fail({ _tag: "RateLimited", retryAt: retryAt.value })
-  // Not taken as a missing page: the inbox always exists, and GitHub answers 404 rather than 403
-  // for what a token isn't allowed to see
-  if (response.status === 403 || response.status === 404) {
-    return Result.fail({ _tag: "TokenCannotReadNotifications" })
+  if (response.status === 403) return Result.fail({ _tag: "AccessDenied", status: 403 })
+  if (response.status !== 200) {
+    return Result.fail({ _tag: "UnexpectedStatus", status: response.status })
   }
-  return Result.fail({ _tag: "UnexpectedStatus", status: response.status })
+  return parseGitHubNotificationsPage(response.body, now)
 }
