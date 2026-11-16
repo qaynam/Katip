@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Option } from "effect"
+  import { Match, Option } from "effect"
   import type { MessageKey } from "#modules/i18n"
   import {
     DOWNLOAD_KINDS,
@@ -62,6 +62,40 @@
     ),
   )
 
+  interface RowAction {
+    readonly label: string
+    readonly icon: IconName
+    readonly run: () => void
+  }
+
+  const actionsOf = (download: Download): ReadonlyArray<RowAction> => {
+    const { id } = download
+    const show: RowAction = { label: showLabel, icon: "folder", run: () => ctx.downloads.show(id) }
+    const pause: RowAction = {
+      label: t("sidepanel.downloads.pause"),
+      icon: "pause",
+      run: () => ctx.downloads.pause(id),
+    }
+    const resume: RowAction = {
+      label: t("sidepanel.downloads.resume"),
+      icon: "play",
+      run: () => ctx.downloads.resume(id),
+    }
+    const cancel: RowAction = {
+      label: t("sidepanel.downloads.cancel"),
+      icon: "close",
+      run: () => ctx.downloads.cancel(id),
+    }
+    return Match.valueTags(download.progress, {
+      Complete: () => [show],
+      InProgress: () => [pause, cancel],
+      Paused: ({ canResume }) => (canResume ? [resume, cancel] : [cancel]),
+      Failed: ({ canResume }) => (canResume ? [resume] : []),
+      Deleted: () => [],
+      Canceled: () => [],
+    })
+  }
+
   const detailsOf = (download: Download): ReadonlyArray<DownloadDetail> => [
     ...Option.toArray(sourceHostOf(download.url)).map((host): DownloadDetail => ({
       text: host,
@@ -122,7 +156,11 @@
 {#snippet summary(download: Download)}
   <DownloadFileIcon {download} />
   <span class="text">
-    <span class="name">{download.fileName}</span>
+    {#if download.progress._tag === "Canceled"}
+      <s class="name">{download.fileName}</s>
+    {:else}
+      <span class="name">{download.fileName}</span>
+    {/if}
     {#if download.progress._tag === "InProgress" || download.progress._tag === "Paused"}
       {@const { receivedBytes, totalBytes } = download.progress}
       {#if totalBytes === null}
@@ -145,9 +183,15 @@
   </span>
 {/snippet}
 
-{#snippet actionButton(label: string, icon: IconName, run: () => void)}
-  <button class="action" type="button" aria-label={label} title={label} onclick={run}>
-    <Icon name={icon} size={14} />
+{#snippet backButton()}
+  <button
+    class="back"
+    type="button"
+    aria-label={t("sidepanel.downloads.close")}
+    title={t("sidepanel.downloads.close")}
+    onclick={() => ctx.bodyPanel.close()}
+  >
+    <Icon name="chevronLeft" />
   </button>
 {/snippet}
 
@@ -155,15 +199,7 @@
 
 <section bind:this={view} class="downloads" aria-labelledby="{ids}-heading">
   <header class="header">
-    <button
-      class="back"
-      type="button"
-      aria-label={t("sidepanel.downloads.close")}
-      title={t("sidepanel.downloads.close")}
-      onclick={() => ctx.bodyPanel.close()}
-    >
-      <Icon name="chevronLeft" />
-    </button>
+    {@render backButton()}
     <h2 id="{ids}-heading" class="heading">{t("sidepanel.downloads.title")}</h2>
   </header>
 
@@ -201,14 +237,16 @@
     {:else}
       <ul class="entries">
         {#each matches as download, index (download.id)}
-          {@const { progress } = download}
+          {@const actions = actionsOf(download)}
           <li
             id={rowId(index)}
             class="entry"
+            class:canceled={download.progress._tag === "Canceled"}
             data-highlighted={index === highlighted}
+            style:--action-count={actions.length}
             onpointermove={() => (highlighted = index)}
           >
-            {#if progress._tag === "Complete"}
+            {#if download.progress._tag === "Complete"}
               <button
                 class="main"
                 type="button"
@@ -220,38 +258,37 @@
             {:else}
               <div class="main" title={download.fileName}>{@render summary(download)}</div>
             {/if}
-            <div class="actions">
-              {#if progress._tag === "Complete"}
-                {@render actionButton(showLabel, "folder", () => ctx.downloads.show(download.id))}
-              {:else if progress._tag === "InProgress"}
-                {@render actionButton(t("sidepanel.downloads.pause"), "pause", () =>
-                  ctx.downloads.pause(download.id),
-                )}
-              {/if}
-              {#if (progress._tag === "Paused" || progress._tag === "Failed") && progress.canResume}
-                {@render actionButton(t("sidepanel.downloads.resume"), "play", () =>
-                  ctx.downloads.resume(download.id),
-                )}
-              {/if}
-              {#if progress._tag === "InProgress" || progress._tag === "Paused"}
-                {@render actionButton(t("sidepanel.downloads.cancel"), "close", () =>
-                  ctx.downloads.cancel(download.id),
-                )}
-              {/if}
-            </div>
+            {#if actions.length > 0}
+              <div class="actions">
+                {#each actions as action (action.label)}
+                  <button
+                    class="action"
+                    type="button"
+                    aria-label={action.label}
+                    title={action.label}
+                    onclick={action.run}
+                  >
+                    <Icon name={action.icon} size={14} />
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </li>
         {/each}
       </ul>
     {/if}
   </div>
 
-  <button
-    class="show-all"
-    type="button"
-    onclick={() => void ctx.run({ _tag: "OpenDownloadsPage", windowId: ctx.view.windowId })}
-  >
-    {t("sidepanel.downloads.showAll")}
-  </button>
+  <footer class="footer">
+    {@render backButton()}
+    <button
+      class="show-all"
+      type="button"
+      onclick={() => void ctx.run({ _tag: "OpenDownloadsPage", windowId: ctx.view.windowId })}
+    >
+      {t("sidepanel.downloads.showAll")}
+    </button>
+  </footer>
 </section>
 
 <style>
@@ -261,7 +298,7 @@
     flex-direction: column;
     gap: 10px;
     min-height: 0;
-    padding: 8px 0 10px;
+    padding-top: 8px;
     animation: downloads-in 160ms ease-out;
   }
 
@@ -397,6 +434,7 @@
   }
 
   .entry {
+    position: relative;
     display: flex;
     align-items: center;
     border-radius: var(--radius-row);
@@ -414,12 +452,24 @@
     align-items: center;
     gap: 10px;
     min-width: 0;
-    padding: 6px 4px 6px 10px;
+    padding: 6px 8px 6px 10px;
+    overflow: hidden;
     border: none;
     background: none;
     color: inherit;
     font: inherit;
     text-align: start;
+  }
+
+  /* The text gives way to the actions laid over the row's right edge, so however long the name,
+     they show in full */
+  .entry:hover .main,
+  .entry:focus-within .main {
+    padding-inline-end: calc(var(--action-count) * 26px + 8px);
+  }
+
+  .entry.canceled .main {
+    opacity: 0.55;
   }
 
   .text {
@@ -487,10 +537,12 @@
   }
 
   .actions {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 6px;
     display: flex;
-    flex: none;
+    align-items: center;
     gap: 2px;
-    margin-right: 6px;
   }
 
   .action {
@@ -516,9 +568,19 @@
     color: var(--text);
   }
 
-  .show-all {
+  /* Laid out as the bottom bar the view takes the place of, so its back button sits where the
+     Downloads button was */
+  .footer {
+    display: grid;
     flex: none;
-    align-self: center;
+    grid-template-columns: 30px 1fr 30px;
+    align-items: center;
+    height: 44px;
+    padding-bottom: 4px;
+  }
+
+  .show-all {
+    justify-self: center;
     padding: 4px 10px;
     border: none;
     border-radius: 6px;

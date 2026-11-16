@@ -7,6 +7,8 @@
     download: Download
   }
 
+  const ICON_SIZE = 20
+
   const { download }: Props = $props()
   const ctx = getSidebarContext()
 
@@ -29,9 +31,9 @@
 </script>
 
 {#if icon === null}
-  <span class="generic"><Icon name="file" /></span>
+  <span class="generic"><Icon name="file" size={ICON_SIZE} /></span>
 {:else}
-  <img class="image" src={icon} alt="" width="16" height="16" draggable="false" />
+  <img class="image" src={icon} alt="" width={ICON_SIZE} height={ICON_SIZE} draggable="false" />
 {/if}
 
 <style>
@@ -39,8 +41,8 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     color: var(--text);
   }
 

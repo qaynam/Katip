@@ -17,7 +17,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 ### 🚀 New
 
 - **A button that closes the sidebar** — The sidebar button to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
-- **Downloads in the sidebar** — The button at the bottom left of the sidebar shows your downloads in place of the Space, newest first, each with its file’s icon, the site it came from and how far it got. Search Downloads finds one by its name or site among your last 200, forgiving a typo, and the chips above the list narrow it to images, videos, audio, documents, archives or other files. Click a finished file to open it, show it in Finder or in its folder, pause, resume or cancel one still downloading, or choose Show All Downloads for Chrome’s downloads page. Esc clears the search, then takes you back to your tabs. The first click asks to read your downloads; if you don’t allow it, the button opens Chrome’s downloads page instead, and right-clicking it asks again.
+- **Downloads in the sidebar** — The button at the bottom left of the sidebar shows your downloads in place of the Space, newest first, each with its file’s icon, the site it came from and how far it got. Search Downloads finds one by its name or site among your last 200, forgiving a typo, and the chips above the list narrow it to images, videos, audio, documents, archives or other files. Click a finished file to open it, show it in Finder or in its folder, pause, resume or cancel one still downloading, or choose Show All Downloads for Chrome’s downloads page. Esc clears the search, then takes you back to your tabs, as the back button at the top or at the bottom left, where the Downloads button was, does. The first click asks to read your downloads; if you don’t allow it, the button opens Chrome’s downloads page instead, and right-clicking it asks again.
 
 ### ✨ Improved
 
@@ -41,7 +41,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 ### 🚀 新機能
 
 - **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にあるサイドバーのボタンで、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
-- **サイドバーにダウンロード** — サイドバー左下のボタンで、Space の代わりにダウンロードを新しい順に表示できるようになりました。ファイルのアイコン、ダウンロード元のサイト、どこまで進んだかも表示します。「ダウンロードを検索」では直近 200 件からファイル名やサイトで探せて（※多少の入力ミスがあっても見つかります）、一覧の上のボタンで画像・動画・音声・書類・圧縮ファイル・その他に絞り込めます。ダウンロードし終えたファイルはクリックで開くほか、Finder やフォルダで表示でき、ダウンロード中のものは一時停止・再開・キャンセルできます。「すべてのダウンロードを表示」で Chrome のダウンロードのページを開きます。Esc で検索を消し、もう一度押すとタブの一覧に戻ります。最初のクリックでダウンロードを読む許可を求めます（※許可しなかった場合、ボタンは代わりに Chrome のダウンロードのページを開きます。右クリックからあらためて許可できます）。
+- **サイドバーにダウンロード** — サイドバー左下のボタンで、Space の代わりにダウンロードを新しい順に表示できるようになりました。ファイルのアイコン、ダウンロード元のサイト、どこまで進んだかも表示します。「ダウンロードを検索」では直近 200 件からファイル名やサイトで探せて（※多少の入力ミスがあっても見つかります）、一覧の上のボタンで画像・動画・音声・書類・圧縮ファイル・その他に絞り込めます。ダウンロードし終えたファイルはクリックで開くほか、Finder やフォルダで表示でき、ダウンロード中のものは一時停止・再開・キャンセルできます。「すべてのダウンロードを表示」で Chrome のダウンロードのページを開きます。Esc で検索を消し、もう一度押すとタブの一覧に戻ります。上部の戻るボタンや、ダウンロードのボタンがあった左下の戻るボタンでも戻れます。最初のクリックでダウンロードを読む許可を求めます（※許可しなかった場合、ボタンは代わりに Chrome のダウンロードのページを開きます。右クリックからあらためて許可できます）。
 
 ### ✨ 改善
 

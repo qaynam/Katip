@@ -116,16 +116,30 @@ describe("The Downloads view", () => {
     expect(document.activeElement).toBe(searchField())
   })
 
-  it("gives the Space back with Close Downloads", async () => {
+  it("gives the Space back with Close Downloads at the top", async () => {
     await showDownloads()
+    const [atTop] = screen.getAllByRole("button", { name: "Close Downloads" })
 
-    await fireEvent.click(screen.getByRole("button", { name: "Close Downloads" }))
+    await fireEvent.click(atTop as HTMLElement)
 
     expect([
       screen.queryByRole("region", { name: "Downloads" }),
       screen.queryByRole("navigation", { name: "Switch Space" }) !== null,
       screen.queryByRole("region", { name: "Temporary tabs" }) !== null,
     ]).toStrictEqual([null, true, true])
+  })
+
+  it("gives the Space back with Close Downloads at the bottom left, too, where the Downloads button was", async () => {
+    await showDownloads()
+    const closeButtons = screen.getAllByRole("button", { name: "Close Downloads" })
+
+    await fireEvent.click(closeButtons.at(-1) as HTMLElement)
+
+    expect([
+      closeButtons.length,
+      screen.queryByRole("region", { name: "Downloads" }),
+      screen.queryByRole("navigation", { name: "Switch Space" }) !== null,
+    ]).toStrictEqual([2, null, true])
   })
 
   it("lists the downloads started last first, each with its site and how far it got", async () => {
@@ -153,6 +167,30 @@ describe("The Downloads view", () => {
       within(rowOf("photo.heic") as HTMLElement).getByText("Deleted").dataset["tone"],
       within(rowOf("dataset.csv") as HTMLElement).getByText("Failed").dataset["tone"],
     ]).toStrictEqual([1, "State", "Alert"])
+  })
+
+  it("strikes through the name of a canceled download, and only that one", async () => {
+    const dropped = download(4, "movie.mp4", { _tag: "Canceled" })
+    await showDownloads({ downloads: [report, photo, dropped] })
+
+    expect(
+      ["movie.mp4", "photo.heic", "report.pdf"].map(
+        (fileName) => within(rowOf(fileName) as HTMLElement).getByText(fileName).tagName,
+      ),
+    ).toStrictEqual(["S", "SPAN", "SPAN"])
+  })
+
+  it("keeps a finished file's Show in Folder however long its name", async () => {
+    const longName = `${"Annual financial statements and auditor's report ".repeat(4)}(final).pdf`
+    const { downloads } = await showDownloads({
+      downloads: [download(4, longName, { _tag: "Complete", bytes: KB })],
+    })
+
+    await fireEvent.click(
+      within(rowOf(longName) as HTMLElement).getByRole("button", { name: "Show in Folder" }),
+    )
+
+    expect(downloads.shown).toStrictEqual([DownloadId.make(4)])
   })
 
   it("shows how far a running download got on a bar", async () => {

@@ -35,6 +35,15 @@ export const fixtureDownloads = (now: number): ReadonlyArray<Download> => [
     progress: { _tag: "Complete", bytes: Math.round(48 * MB) },
   },
   {
+    id: DownloadId.make(9),
+    fileName:
+      "Annual financial statements and auditor's report for the 2026 fiscal year (final, approved).pdf",
+    url: "https://investors.example.com/reports/2026/annual-report-final.pdf",
+    mime: "application/pdf",
+    startedAt: now - 2 * MINUTE,
+    progress: { _tag: "Complete", bytes: Math.round(14.2 * MB) },
+  },
+  {
     id: DownloadId.make(5),
     fileName: "Quarterly report.pdf",
     url: "https://docs.example.com/files/quarterly-report.pdf",
@@ -44,7 +53,7 @@ export const fixtureDownloads = (now: number): ReadonlyArray<Download> => [
   },
   {
     id: DownloadId.make(4),
-    fileName: "Launch screens.fig",
+    fileName: "Launch_screens_onboarding_flow_v12_with_review_comments_2026-11.fig",
     url: "blob:https://www.figma.com/2f1c6a3e-8a7b-4c2d-9e10-5b6a7c8d9e0f",
     mime: "application/octet-stream",
     startedAt: now - 25 * MINUTE,
