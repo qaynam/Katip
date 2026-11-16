@@ -20,7 +20,7 @@ interface Notification {
   readonly octicon?: string
   /** Markup, as GitHub renders the title. */
   readonly title?: string
-  /** None leaves the time out. */
+  /** Null leaves the time out. */
   readonly updatedAt?: string | null
   readonly reason?: string
 }
