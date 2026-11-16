@@ -4,6 +4,7 @@ import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHistory } from "#platform/history"
 import { FakeHttp } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { FakeNotifications } from "#platform/notifications"
 import { FakePermissions } from "#platform/permissions"
 import { FakeScripting } from "#platform/scripting"
 import type { WindowId } from "#platform/browser"
@@ -30,6 +31,7 @@ export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
     FakePermissions.layer,
     FakeHistory.layer,
     FakeScripting.layer,
+    FakeNotifications.layer,
     KeyboardShortcuts.layerTest({}),
     // Fixed, so the expected notices and names don't depend on the language of the machine
     // running the tests

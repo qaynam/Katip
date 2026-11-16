@@ -32,6 +32,7 @@ These requests go directly from your browser to Gmail or GitHub. What they retur
 
 - **History**: if you turn on history search in Spotlight, Katip asks for permission to read your browsing history and searches it locally, on your device, when you type in Spotlight.
 - **Gmail and GitHub access**: asked for only when you create a live folder for that site.
+- **Notifications**: if you turn on notifications about new items in live folders, Katip asks for permission to show notifications, and shows them through your system from what the live folders have already fetched. Showing them makes no network request.
 
 You can revoke these at any time from Katip's settings or from your browser's extension settings.
 
@@ -88,6 +89,7 @@ Katip が通信するのは、アップデートの確認とライブフォル�
 
 - **閲覧履歴**: Spotlight の履歴検索を有効にしたときにだけ許可を求め、入力した語で端末の中で検索します。
 - **Gmail と GitHub へのアクセス**: そのサイトのライブフォルダを作るときにだけ許可を求めます。
+- **通知**: ライブフォルダの新着の通知を有効にしたときにだけ許可を求め、ライブフォルダが取得済みの内容をシステムの通知で表示します。通知の表示のための通信はしません。
 
 これらの許可は、Katip の設定画面やブラウザの拡張機能の設定から、いつでも取り消せます。
 

@@ -23,6 +23,10 @@ interface EventSource<Listener> {
   addListener(listener: Listener): void
 }
 
+interface InspectableEventSource<Listener> extends EventSource<Listener> {
+  hasListener(listener: Listener): boolean
+}
+
 type EventSourcesOf<Namespace, Name extends keyof Namespace> = {
   readonly [K in Name]: EventSource<ListenerOf<Namespace[K]>>
 }
@@ -57,6 +61,11 @@ export interface BrowserEventSources {
   readonly runtime: EventSourcesOf<typeof chrome.runtime, "onInstalled" | "onStartup"> & {
     readonly onConnect: EventSource<(port: ChromePort) => void>
     readonly onConnectExternal: EventSource<(port: ChromePort) => void>
+  }
+  readonly permissions: EventSourcesOf<typeof chrome.permissions, "onAdded">
+  /** Missing while the optional `notifications` permission isn't granted. */
+  readonly notifications?: {
+    readonly onClicked: InspectableEventSource<(notificationId: string) => void>
   }
 }
 
@@ -239,6 +248,20 @@ export const captureBrowserEvents = (sources: BrowserEventSources): CapturedBrow
   sources.runtime.onConnectExternal.addListener((port) =>
     connections.push(fromChromePort(port, Option.some(fromChromeMessageSender(port.sender, true)))),
   )
+
+  const onNotificationClicked = (notificationId: string) =>
+    emit({ _tag: "NotificationClicked", notificationId })
+  // Not registered just once at startup: chrome.notifications appears only once its permission is
+  // granted, possibly long after startup, and a grant after a removal may bring a namespace without
+  // the listener
+  const listenToNotificationClicks = () => {
+    const clicked = sources.notifications?.onClicked
+    if (clicked !== undefined && !clicked.hasListener(onNotificationClicked)) {
+      clicked.addListener(onNotificationClicked)
+    }
+  }
+  listenToNotificationClicks()
+  sources.permissions.onAdded.addListener(listenToNotificationClicks)
 
   return { events: events.stream, connections: connections.stream }
 }

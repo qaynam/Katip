@@ -5,6 +5,7 @@ import {
   isUnseen,
   markAllSeen,
   markItemSeen,
+  newlyArrived,
   recordFailed,
   recordFetched,
   type LiveFolderRecord,
@@ -102,6 +103,45 @@ describe("after a failed fetch", () => {
     const next = recordFailed(Option.none(), { _tag: "PermissionMissing" }, 500)
 
     expect(next.items).toStrictEqual([])
+  })
+})
+
+describe("items arriving with a fetch", () => {
+  const ids = (items: ReadonlyArray<LiveItem>) => items.map((each) => each.id)
+  const unreachable = { _tag: "Unreachable" } as const
+
+  it("are the fetched items the previous fetch didn't have, in the fetched order", () => {
+    const previous = recordFetched(Option.none(), [item("b"), item("a")], 0)
+
+    const arrived = newlyArrived(Option.some(previous), [item("d"), item("c"), item("b")])
+
+    expect(ids(arrived)).toStrictEqual(["d", "c"])
+  })
+
+  it("are none on a folder's first fetch, so a new folder doesn't announce everything in it", () => {
+    expect(newlyArrived(Option.none(), [item("a")])).toStrictEqual([])
+  })
+
+  it("are none on the first successful fetch after only failed ones", () => {
+    const failed = recordFailed(Option.none(), unreachable, 0)
+
+    expect(newlyArrived(Option.some(failed), [item("a")])).toStrictEqual([])
+  })
+
+  it("leave out the items a failed fetch kept from the successful one before it", () => {
+    const failed = recordFailed(
+      Option.some(recordFetched(Option.none(), [item("a")], 0)),
+      unreachable,
+      10,
+    )
+
+    expect(ids(newlyArrived(Option.some(failed), [item("b"), item("a")]))).toStrictEqual(["b"])
+  })
+
+  it("are every item after a fetch that found nothing, even with a failed fetch in between", () => {
+    const failed = recordFailed(Option.some(recordFetched(Option.none(), [], 0)), unreachable, 10)
+
+    expect(ids(newlyArrived(Option.some(failed), [item("a")]))).toStrictEqual(["a"])
   })
 })
 

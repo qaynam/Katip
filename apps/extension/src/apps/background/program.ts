@@ -45,6 +45,7 @@ import {
   scheduleLiveFolderRefresh,
 } from "./live-folder-refresh"
 import { runKeyboardCommand } from "./keyboard-commands"
+import { notifyArrival, openNotifiedItem } from "./live-item-notifications"
 import { openOnboarding } from "./onboarding"
 import { runSidebarCommand } from "./sidebar-commands"
 import { SidebarHub } from "./sidebar-hub"
@@ -157,6 +158,12 @@ export const program = Effect.gen(function* () {
     Stream.runForEach(() => publishViews),
     Effect.forkScoped,
   )
+  yield* (yield* LiveFolders).arrivals.pipe(
+    Stream.runForEach((arrival) =>
+      logFailure("Couldn't notify about new live folder items")(notifyArrival(arrival)),
+    ),
+    Effect.forkScoped,
+  )
 
   const handleEvent = (event: BrowserEvent) =>
     Match.value(event).pipe(
@@ -177,6 +184,9 @@ export const program = Effect.gen(function* () {
       ),
       Match.tag("CommandTriggered", ({ command, tab }) =>
         serialize(runKeyboardCommand(command, tab)),
+      ),
+      Match.tag("NotificationClicked", ({ notificationId }) =>
+        serialize(openNotifiedItem(notificationId)),
       ),
       // Not on updates: people who already use Katip have set it up
       Match.tag("RuntimeInstalled", ({ reason }) =>

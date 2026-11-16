@@ -14,25 +14,40 @@ type ListenerIn<Source> = Source extends { addListener(listener: infer Listener)
   : never
 type ListenerArgs<Source> = Parameters<Extract<ListenerIn<Source>, (...args: never[]) => unknown>>
 
-/** Stands in for `chrome` so a test can fire Chrome events. */
-const makeFakeChromeEvents = () => {
+/**
+ * Stands in for `chrome` so a test can fire Chrome events. `chrome.notifications` is missing until
+ * `grantNotifications`, as it is until the permission is granted.
+ */
+const makeFakeChromeEvents = ({ notificationsGranted = true } = {}) => {
   const listeners = new Map<string, ReadonlyArray<(...args: ReadonlyArray<unknown>) => void>>()
+  let hasNotifications = notificationsGranted
   const source = (key: string) => ({
     addListener: (listener: (...args: ReadonlyArray<unknown>) => void) => {
       listeners.set(key, [...(listeners.get(key) ?? []), listener])
     },
+    hasListener: (listener: (...args: ReadonlyArray<unknown>) => void) =>
+      (listeners.get(key) ?? []).includes(listener),
   })
   const sources = new Proxy({} as BrowserEventSources, {
     get: (_, namespace) =>
-      new Proxy({}, { get: (_, event) => source(`${String(namespace)}.${String(event)}`) }),
+      namespace === "notifications" && !hasNotifications
+        ? undefined
+        : new Proxy({}, { get: (_, event) => source(`${String(namespace)}.${String(event)}`) }),
   })
-  const fire = <N extends keyof BrowserEventSources, E extends keyof BrowserEventSources[N]>(
+  const fire = <
+    N extends keyof BrowserEventSources,
+    E extends keyof NonNullable<BrowserEventSources[N]>,
+  >(
     namespace: N,
     event: E,
-    ...args: ListenerArgs<BrowserEventSources[N][E]>
+    ...args: ListenerArgs<NonNullable<BrowserEventSources[N]>[E]>
   ) =>
     (listeners.get(`${namespace}.${String(event)}`) ?? []).forEach((listener) => listener(...args))
-  return { sources, fire }
+  const grantNotifications = () => {
+    hasNotifications = true
+    fire("permissions", "onAdded", { permissions: ["notifications"] })
+  }
+  return { sources, fire, grantNotifications }
 }
 
 const chromeTab = (overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab => ({
@@ -217,6 +232,53 @@ describe("normalizing Chrome values", () => {
         reason: "install",
         previousVersion: Option.none(),
       })
+    }),
+  )
+})
+
+describe("clicks on notifications", () => {
+  const clicked = (notificationId: string): BrowserEvent => ({
+    _tag: "NotificationClicked",
+    notificationId,
+  })
+
+  it.effect("arrive like any other event when notifications are allowed at startup", () =>
+    Effect.gen(function* () {
+      const chrome = makeFakeChromeEvents()
+      const captured = captureBrowserEvents(chrome.sources)
+
+      chrome.fire("notifications", "onClicked", "mail-1")
+
+      assert.deepStrictEqual(yield* takeEvents(captured, 1), [clicked("mail-1")])
+    }),
+  )
+
+  it.effect("arrive too when notifications are allowed only after startup", () =>
+    Effect.gen(function* () {
+      const chrome = makeFakeChromeEvents({ notificationsGranted: false })
+      const captured = captureBrowserEvents(chrome.sources)
+
+      chrome.grantNotifications()
+      chrome.fire("notifications", "onClicked", "mail-1")
+
+      assert.deepStrictEqual(yield* takeEvents(captured, 1), [clicked("mail-1")])
+    }),
+  )
+
+  it.effect("arrive once each, however many permissions are granted after startup", () =>
+    Effect.gen(function* () {
+      const chrome = makeFakeChromeEvents()
+      const captured = captureBrowserEvents(chrome.sources)
+
+      chrome.fire("permissions", "onAdded", { permissions: ["history"] })
+      chrome.grantNotifications()
+      chrome.fire("notifications", "onClicked", "mail-1")
+      chrome.fire("runtime", "onStartup")
+
+      assert.deepStrictEqual(yield* takeEvents(captured, 2), [
+        clicked("mail-1"),
+        { _tag: "RuntimeStartup" },
+      ])
     }),
   )
 })

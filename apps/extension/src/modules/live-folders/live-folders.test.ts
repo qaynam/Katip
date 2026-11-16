@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest"
-import { Deferred, Effect, Layer, Option } from "effect"
+import { Deferred, Effect, Fiber, Layer, Option, Stream } from "effect"
 import { BookmarkId } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import { FakeHttp, httpResponse, unreachable, type HttpResponse } from "#platform/http"
@@ -100,6 +100,35 @@ describe("refreshing", () => {
         [["Invoice"], "Failed"],
       )
     }).pipe(Effect.provide(TestLayer)),
+  )
+})
+
+describe("arrivals", () => {
+  it.effect(
+    "a refresh announces only the items new since the previous one, and a folder's first announces none",
+    () =>
+      Effect.gen(function* () {
+        yield* grantGmail
+        const announced = yield* (yield* LiveFolders).arrivals.pipe(
+          Stream.take(1),
+          Stream.runCollect,
+          Effect.forkChild,
+        )
+        yield* Effect.yieldNow
+
+        yield* serveFeed(feed(entry("a", "Invoice")))
+        yield* refreshAndSettle
+        yield* serveFeed(feed(entry("b", "Meeting notes"), entry("a", "Invoice")))
+        yield* refreshAndSettle
+
+        assert.deepStrictEqual(
+          (yield* Fiber.join(announced)).map(({ folderId, items }) => [
+            folderId,
+            items.map((item) => item.title),
+          ]),
+          [[FOLDER, ["Meeting notes"]]],
+        )
+      }).pipe(Effect.provide(TestLayer)),
   )
 })
 

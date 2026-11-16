@@ -18,6 +18,7 @@ Gmail live folders follow the mail Gmail marks important, and every live item sh
 
 - **GitHub notifications in a live folder** — A GitHub live folder can list the unread notifications in your GitHub inbox. It reads them with a personal access token (classic) with the notifications or repo scope, and asks you for one once the folder is made. Exports leave such a folder out, as the export file has no place for it yet.
 - **Search History** — The Search History command in Spotlight searches your browsing history alone, forgiving typos as the rest of Spotlight does, and lists the pages you visited most recently before you type. Backspace in the empty field or Esc takes you back to the usual search. It needs history search turned on in the settings; until it is, the command offers to open the settings there.
+- **Notifications for live folders** — Turn on “Notify about new items in live folders” in the settings, under Tabs, and Katip shows a system notification when mail Gmail marks important arrives in a Gmail live folder, or a new item in a GitHub live folder. Items that arrive together share one notification, and clicking it opens the item as clicking it in the side panel does. What a folder lists when it’s made isn’t announced.
 
 #### Improved
 
@@ -40,6 +41,7 @@ Gmail のライブフォルダが Gmail の「重要」なメールを追える�
 
 - **GitHub の通知をライブフォルダに** — GitHub のライブフォルダで、GitHub の通知の受信トレイにある未読の通知を並べられるようになりました。通知は notifications か repo のスコープを付けた Personal access token (classic) で読むので、フォルダを作ったあとにトークンの設定を求めます。エクスポートのファイルにはまだ置き場所がないため、このフォルダはエクスポートに含まれません。
 - **履歴を検索** — Spotlight の「履歴を検索」コマンドで、閲覧履歴だけを検索できるようになりました。ほかの検索と同じく多少の入力ミスがあっても見つかり、何も入力していないときは最近開いたページを並べます。空欄で Backspace か Esc を押すと、通常の検索に戻ります。設定で閲覧履歴の検索をオンにしておく必要があり、オフのあいだはこのコマンドからその設定を開けます。
+- **ライブフォルダの新着通知** — 設定の「タブ」で「ライブフォルダの新着を通知する」をオンにすると、Gmail のライブフォルダに Gmail が重要マークを付けたメールが届いたときや、GitHub のライブフォルダに新しい項目が加わったときに、システムの通知で知らせます。同時に届いたものは 1 つの通知にまとめ、クリックするとサイドパネルで項目をクリックしたときと同じように開きます。フォルダを作ったときにすでにある項目は通知しません。
 
 #### 改善
 

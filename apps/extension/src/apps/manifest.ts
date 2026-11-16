@@ -149,8 +149,9 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
     // notice can show on the page without asking for access to every site
     "activeTab",
   ],
-  // For searching browsing history in Spotlight. Asked for only when turned on in the settings
-  optional_permissions: ["history"],
+  // For searching browsing history in Spotlight, and for notifying about new items in live
+  // folders. Each is asked for only when turned on in the settings
+  optional_permissions: ["history", "notifications"],
   // Live folder sources. Asked for only when a live folder needs one, so people who don't use
   // live folders are never asked
   optional_host_permissions: [

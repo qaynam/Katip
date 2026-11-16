@@ -43,6 +43,19 @@ describe("the Chrome Web Store package's manifest", () => {
   })
 })
 
+describe("the manifest's permissions", () => {
+  it("leave browsing history and notifications to be asked for when turned on in the settings", () => {
+    const { permissions = [], optional_permissions = [] } = buildManifest("production", "1.0.0")
+
+    expect({
+      optional: optional_permissions,
+      upFront: permissions.filter((permission) =>
+        ["history", "notifications"].includes(permission),
+      ),
+    }).toStrictEqual({ optional: ["history", "notifications"], upFront: [] })
+  })
+})
+
 describe("the manifest's version", () => {
   it.each(["1", "0.1.0", "1.2.3.4", "65535.65535.65535.65535"])(
     "is the given version %s as is",

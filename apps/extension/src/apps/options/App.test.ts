@@ -844,6 +844,72 @@ describe("browsing history search", () => {
   })
 })
 
+describe("notifications about new items in live folders", () => {
+  const notificationSwitch = () => switchNamed("Notify about new items in live folders")
+  const renderTabs = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("Tabs")
+    await screen.findByRole("switch", { name: "Notify about new items in live folders" })
+    return rendered
+  }
+
+  it("is off without the notifications permission", async () => {
+    await renderTabs()
+
+    expect(notificationSwitch().checked).toBe(false)
+  })
+
+  it("turning it on asks for the notifications permission, and is on once granted", async () => {
+    const { permissions } = await renderTabs()
+
+    await fireEvent.click(notificationSwitch())
+
+    await waitFor(() => {
+      expect(notificationSwitch().checked).toBe(true)
+    })
+    expect(await permissions((fake) => fake.requested)).toStrictEqual(["Notifications"])
+  })
+
+  it("when the permission is denied, turns back off and says so", async () => {
+    const { permissions } = await renderTabs()
+    await permissions((fake) => fake.answerRequestsWith("Deny"))
+
+    await fireEvent.click(notificationSwitch())
+
+    expect(await screen.findByText("Permission to show notifications wasn’t allowed.")).toBeTruthy()
+    expect(notificationSwitch().checked).toBe(false)
+  })
+
+  it("turning it off removes the notifications permission", async () => {
+    const { permissions } = await renderTabs()
+    await permissions((fake) => fake.grantElsewhere("Notifications"))
+    await waitFor(() => {
+      expect(notificationSwitch().checked).toBe(true)
+    })
+
+    await fireEvent.click(notificationSwitch())
+
+    await waitFor(async () => {
+      expect(await permissions((fake) => fake.removed)).toStrictEqual(["Notifications"])
+    })
+    expect(notificationSwitch().checked).toBe(false)
+  })
+
+  it("follows the permission when it changes on another page", async () => {
+    const { permissions } = await renderTabs()
+
+    await permissions((fake) => fake.grantElsewhere("Notifications"))
+    await waitFor(() => {
+      expect(notificationSwitch().checked).toBe(true)
+    })
+
+    await permissions((fake) => fake.revokeElsewhere("Notifications"))
+    await waitFor(() => {
+      expect(notificationSwitch().checked).toBe(false)
+    })
+  })
+})
+
 describe("Spotlight size", () => {
   const sizeNamed = (name: string) =>
     within(screen.getByRole("group", { name: "Size" })).getByRole<HTMLInputElement>("radio", {

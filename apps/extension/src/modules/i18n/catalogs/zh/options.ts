@@ -42,6 +42,11 @@ export const options: CatalogSection<"options"> = {
   "options.splitView.label": "分屏视图",
   "options.splitView.available": "可以使用",
   "options.splitView.unavailable": "此浏览器无法使用（需要 Chrome 155 或更高版本）",
+  "options.liveFolderNotifications.label": "通知实时文件夹中的新项目",
+  "options.liveFolderNotifications.description":
+    "以系统通知提示 Gmail 实时文件夹中的重要邮件和 GitHub 实时文件夹中的新项目。",
+  "options.liveFolderNotifications.footnote": "开启时会请求显示通知的权限。关闭时会移除该权限。",
+  "options.liveFolderNotifications.denied": "未获得显示通知的权限。",
 
   "options.autoArchive.heading": "归档",
   "options.autoArchive.label": "自动归档闲置的标签页",

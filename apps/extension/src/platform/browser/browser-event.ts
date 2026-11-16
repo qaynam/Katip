@@ -54,5 +54,6 @@ export const BrowserEvent = Schema.TaggedUnion({
     previousVersion: Schema.OptionFromNullOr(Schema.String),
   },
   RuntimeStartup: {},
+  NotificationClicked: { notificationId: Schema.String },
 })
 export type BrowserEvent = typeof BrowserEvent.Type

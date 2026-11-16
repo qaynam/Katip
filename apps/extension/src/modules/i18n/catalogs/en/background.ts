@@ -41,6 +41,14 @@ export const background = {
   "background.liveFolder.unexpectedStatus": "Couldn't fetch the items (HTTP {status})",
   "background.liveFolder.unreadable": "Couldn't read the response from {site}",
   "background.liveFolder.noSubject": "(no subject)",
+  "background.liveFolder.notification.importantMail": {
+    one: "{count} new important email",
+    other: "{count} new important emails",
+  },
+  "background.liveFolder.notification.newItems": {
+    one: "{count} new item",
+    other: "{count} new items",
+  },
   "background.liveFolder.title.gmailInbox": "Gmail Inbox",
   "background.liveFolder.title.gmailPrimary": "Gmail Primary",
   "background.liveFolder.title.gmailImportant": "Gmail Important",

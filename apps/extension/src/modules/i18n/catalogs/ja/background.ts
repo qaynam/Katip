@@ -41,6 +41,10 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unexpectedStatus": "取得できませんでした（HTTP {status}）",
   "background.liveFolder.unreadable": "{site} の応答を読み取れませんでした",
   "background.liveFolder.noSubject": "（件名なし）",
+  "background.liveFolder.notification.importantMail": {
+    other: "重要なメールが {count} 件届きました",
+  },
+  "background.liveFolder.notification.newItems": { other: "新しい項目が {count} 件あります" },
   "background.liveFolder.title.gmailInbox": "Gmail の受信トレイ",
   "background.liveFolder.title.gmailPrimary": "Gmail のメイン",
   "background.liveFolder.title.gmailImportant": "Gmail の重要なメール",

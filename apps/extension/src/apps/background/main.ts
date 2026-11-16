@@ -5,6 +5,7 @@ import { Clipboard } from "#platform/clipboard"
 import { History } from "#platform/history"
 import { Http } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
+import { Notifications } from "#platform/notifications"
 import { Permissions } from "#platform/permissions"
 import { Scripting } from "#platform/scripting"
 import { exposeLogsForDevelopment } from "./dev-log"
@@ -32,6 +33,7 @@ const layer = applicationLayer.pipe(
       History.layer,
       KeyboardShortcuts.layer,
       Scripting.layer,
+      Notifications.layer,
     ),
   ),
 )

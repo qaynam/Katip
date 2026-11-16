@@ -18,11 +18,20 @@ import { LiveSortStore } from "./live-sort-store"
 import {
   markAllSeen,
   markItemSeen,
+  newlyArrived,
   recordFailed,
   recordFetched,
   type LiveFolderSnapshot,
 } from "./live-folder-record"
 import type { LiveItem, LiveSort, LiveSource } from "./live-source"
+
+/** Items that turned up in a live folder since its previous fetch. */
+export interface LiveArrival {
+  readonly folderId: BookmarkId
+  readonly source: LiveSource
+  /** In the source's newest-first order. Never empty. */
+  readonly items: ReadonlyArray<LiveItem>
+}
 
 export class LiveFolders extends Context.Service<
   LiveFolders,
@@ -45,6 +54,11 @@ export class LiveFolders extends Context.Service<
     retainOnly(folderIds: ReadonlySet<BookmarkId>): Effect.Effect<void, BrowserApiError>
     /** Emits a folder's id when a fetch of it starts and when it finishes. */
     readonly refreshEvents: Stream.Stream<BookmarkId>
+    /**
+     * Emits the items a successful fetch found that the folder's previous fetch didn't have, once
+     * the outcome is saved. Emits nothing for a folder's first successful fetch.
+     */
+    readonly arrivals: Stream.Stream<LiveArrival>
   }
 >()("katip/live-folders/LiveFolders") {
   static readonly layerNoDeps = Layer.effect(
@@ -57,6 +71,7 @@ export class LiveFolders extends Context.Service<
       const refreshing = yield* Ref.make<ReadonlySet<BookmarkId>>(new Set())
       const events = yield* PubSub.unbounded<BookmarkId>()
       const announce = (folderId: BookmarkId) => Effect.asVoid(PubSub.publish(events, folderId))
+      const arrivals = yield* PubSub.unbounded<LiveArrival>()
 
       const fetchAndRecord = Effect.fnUntraced(function* (
         folderId: BookmarkId,
@@ -64,12 +79,17 @@ export class LiveFolders extends Context.Service<
       ) {
         const outcome = yield* Effect.result(fetcher.fetch(source))
         const now = yield* Clock.currentTimeMillis
-        yield* cache.save(folderId, (previous) =>
+        const previous = yield* cache.get(folderId)
+        yield* cache.save(folderId, (latest) =>
           Result.match(outcome, {
-            onSuccess: (items) => recordFetched(previous, items, now),
-            onFailure: (error) => recordFailed(previous, error.failure, now),
+            onSuccess: (items) => recordFetched(latest, items, now),
+            onFailure: (error) => recordFailed(latest, error.failure, now),
           }),
         )
+        if (Result.isFailure(outcome)) return
+        const arrived = newlyArrived(previous, outcome.success)
+        if (arrived.length > 0)
+          yield* PubSub.publish(arrivals, { folderId, source, items: arrived })
       })
 
       const finish = (folderId: BookmarkId) =>
@@ -123,6 +143,7 @@ export class LiveFolders extends Context.Service<
         retainOnly: (folderIds) =>
           Effect.andThen(cache.retainOnly(folderIds), sorts.retainOnly(folderIds)),
         refreshEvents: Stream.fromPubSub(events),
+        arrivals: Stream.fromPubSub(arrivals),
       })
     }),
   )

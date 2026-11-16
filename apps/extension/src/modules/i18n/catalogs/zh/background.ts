@@ -40,6 +40,8 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unexpectedStatus": "无法获取（HTTP {status}）",
   "background.liveFolder.unreadable": "无法读取 {site} 的响应",
   "background.liveFolder.noSubject": "（无主题）",
+  "background.liveFolder.notification.importantMail": { other: "{count} 封新的重要邮件" },
+  "background.liveFolder.notification.newItems": { other: "{count} 个新项目" },
   "background.liveFolder.title.gmailInbox": "Gmail 收件箱",
   "background.liveFolder.title.gmailPrimary": "Gmail 主要邮件",
   "background.liveFolder.title.gmailImportant": "Gmail 重要邮件",

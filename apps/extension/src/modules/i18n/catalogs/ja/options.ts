@@ -44,6 +44,12 @@ export const options: CatalogSection<"options"> = {
   "options.splitView.label": "分割ビュー",
   "options.splitView.available": "使えます",
   "options.splitView.unavailable": "このブラウザでは使えません（Chrome 155 以降が必要）",
+  "options.liveFolderNotifications.label": "ライブフォルダの新着を通知する",
+  "options.liveFolderNotifications.description":
+    "Gmail のライブフォルダに届いた重要なメールと、GitHub のライブフォルダの新しい項目を、システムの通知で知らせます。",
+  "options.liveFolderNotifications.footnote":
+    "オンにすると、通知を表示する許可を求めます。オフにすると、その許可を外します。",
+  "options.liveFolderNotifications.denied": "通知の表示が許可されませんでした",
 
   "options.autoArchive.heading": "アーカイブ",
   "options.autoArchive.label": "使っていないタブを自動でアーカイブ",

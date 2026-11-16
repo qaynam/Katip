@@ -14,6 +14,8 @@ export const LiveFolderRecord = Schema.Struct({
   /** In the source's newest-first order. A failed fetch keeps the items from the previous one. */
   items: Schema.Array(LiveItem),
   lastAttempt: LiveFolderAttempt,
+  /** When a fetch last succeeded, kept through later failures. Missing when none is on record. */
+  lastFetchedAt: Schema.optionalKey(Schema.Number),
   /** For each item id, the item's update time when it was last seen. */
   seenVersions: Schema.Record(Schema.String, Schema.Number),
 })
@@ -54,7 +56,7 @@ export const recordFetched = (
     onNone: () => ({}),
     onSome: (record) => Record.filter(record.seenVersions, (_, id) => currentIds.has(id)),
   })
-  return { items, lastAttempt: { _tag: "Fetched", at }, seenVersions }
+  return { items, lastAttempt: { _tag: "Fetched", at }, lastFetchedAt: at, seenVersions }
 }
 
 export const recordFailed = (
@@ -62,10 +64,30 @@ export const recordFailed = (
   failure: LiveFetchFailure,
   at: number,
 ): LiveFolderRecord => ({
-  items: Option.match(previous, { onNone: () => [], onSome: (record) => record.items }),
+  ...Option.getOrElse(previous, () => ({ items: [], seenVersions: {} })),
   lastAttempt: { _tag: "Failed", at, failure },
-  seenVersions: Option.match(previous, { onNone: () => ({}), onSome: (r) => r.seenVersions }),
 })
+
+const hasFetched = (record: LiveFolderRecord): boolean =>
+  record.lastAttempt._tag === "Fetched" || record.lastFetchedAt !== undefined
+
+/**
+ * The fetched items whose ids weren't among the record's items, in the fetched order.
+ *
+ * None on a folder's first successful fetch, where every item would count as new: right after the
+ * folder is created, or after only failed fetches.
+ */
+export const newlyArrived = (
+  previous: Option.Option<LiveFolderRecord>,
+  fetched: ReadonlyArray<LiveItem>,
+): ReadonlyArray<LiveItem> =>
+  Option.match(Option.filter(previous, hasFetched), {
+    onNone: () => [],
+    onSome: (record) => {
+      const knownIds = new Set(record.items.map((item) => item.id))
+      return fetched.filter((item) => !knownIds.has(item.id))
+    },
+  })
 
 /** Returns the record unchanged when it has no such item. */
 export const markItemSeen = (record: LiveFolderRecord, itemId: string): LiveFolderRecord =>

@@ -300,6 +300,7 @@ export const makeStage: Effect.Effect<Stage, never, ContractRig> = Effect.gen(fu
       CommandTriggered: () => {},
       RuntimeInstalled: () => {},
       RuntimeStartup: () => {},
+      NotificationClicked: () => {},
     })
 
   const events = Effect.map(rig.takeEvents, (taken): Observation => {

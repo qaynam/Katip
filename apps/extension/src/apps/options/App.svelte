@@ -35,7 +35,7 @@
   import DataImport from "./DataImport.svelte"
   import FrameBackdrop from "./FrameBackdrop.svelte"
   import Glyph from "./Glyph.svelte"
-  import { OptionalPermissions } from "./optional-permissions"
+  import { type OptionalAccess, OptionalPermissions } from "./optional-permissions"
   import type { OptionsRuntime } from "./options-runtime"
   import PopUpButton, { type PopUpOption } from "./PopUpButton.svelte"
   import PushButton from "./PushButton.svelte"
@@ -77,6 +77,7 @@
     | "SaveFailed"
     | "ShortcutsUnavailable"
     | "HistoryDenied"
+    | "NotificationsDenied"
     | "Exported"
     | "ExportFailed"
     | "Imported"
@@ -87,6 +88,7 @@
     SaveFailed: { message: "options.saveFailed", tone: "Alert" },
     ShortcutsUnavailable: { message: "options.shortcuts.openFailed", tone: "Alert" },
     HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
+    NotificationsDenied: { message: "options.liveFolderNotifications.denied", tone: "Info" },
     Exported: { message: "options.data.exported", tone: "Done" },
     ExportFailed: { message: "options.data.exportFailed", tone: "Alert" },
     Imported: { message: "options.data.imported", tone: "Done" },
@@ -102,7 +104,16 @@
   let settings = $state<Settings | null>(null)
   let loadFailed = $state(false)
   let supportsSplitView = $state<boolean | null>(null)
-  let searchesHistory = $state<boolean | null>(null)
+  const OPTIONAL_ACCESSES = [
+    "History",
+    "Notifications",
+  ] as const satisfies ReadonlyArray<OptionalAccess>
+  const deniedOutcomes = {
+    History: "HistoryDenied",
+    Notifications: "NotificationsDenied",
+  } as const satisfies Record<OptionalAccess, Outcome>
+  /** Each switch shows whether its permission is granted. Missing until that's known. */
+  let allowedAccess = $state<Partial<Record<OptionalAccess, boolean>>>({})
   let assignedKeys = $state<ReadonlyMap<string, string> | null>(null)
   let systemScheme = $state<ColorScheme>(currentSystemScheme())
   let outcome = $state<Outcome | null>(null)
@@ -201,13 +212,18 @@
     runtime.runCallback(
       OptionalPermissions.use((permissions) =>
         Stream.runForEach(Stream.merge(Stream.succeed(undefined), permissions.changes), () =>
-          permissions.contains("History").pipe(
-            Effect.tap((allowed) =>
-              Effect.sync(() => {
-                searchesHistory = allowed
-              }),
-            ),
-            Effect.ignore,
+          Effect.forEach(
+            OPTIONAL_ACCESSES,
+            (access) =>
+              permissions.contains(access).pipe(
+                Effect.tap((allowed) =>
+                  Effect.sync(() => {
+                    allowedAccess[access] = allowed
+                  }),
+                ),
+                Effect.ignore,
+              ),
+            { discard: true },
           ),
         ),
       ),
@@ -305,24 +321,24 @@
 
   const save = (patch: SettingsPatch) => (settings === null ? undefined : saveOver(settings, patch))
 
-  const setHistorySearch = async (enabled: boolean) => {
-    searchesHistory = enabled
+  const setAccess = async (access: OptionalAccess, enabled: boolean) => {
+    allowedAccess[access] = enabled
     const allowed = await runtime.runPromiseExit(
       OptionalPermissions.use((permissions) =>
         Effect.andThen(
-          enabled ? permissions.request("History") : permissions.remove("History"),
-          permissions.contains("History"),
+          enabled ? permissions.request(access) : permissions.remove(access),
+          permissions.contains(access),
         ),
       ),
     )
     if (Exit.isFailure(allowed)) {
-      searchesHistory = !enabled
+      allowedAccess[access] = !enabled
       announce("SaveFailed")
       return
     }
-    searchesHistory = allowed.value
+    allowedAccess[access] = allowed.value
     if (allowed.value === enabled) announce("Saved")
-    else announce(enabled ? "HistoryDenied" : "SaveFailed")
+    else announce(enabled ? deniedOutcomes[access] : "SaveFailed")
   }
 
   const openShortcutSettings = async () => {
@@ -540,6 +556,22 @@
               </SettingRow>
             {/if}
           </SettingsSection>
+          {#if allowedAccess.Notifications !== undefined}
+            <SettingsSection footnote={t("options.liveFolderNotifications.footnote")}>
+              <SettingRow
+                label={t("options.liveFolderNotifications.label")}
+                description={t("options.liveFolderNotifications.description")}
+              >
+                {#snippet children(control)}
+                  <Switch
+                    {...control}
+                    checked={allowedAccess.Notifications === true}
+                    onchange={(enabled) => setAccess("Notifications", enabled)}
+                  />
+                {/snippet}
+              </SettingRow>
+            </SettingsSection>
+          {/if}
         {:else if selected === "Archive"}
           <SettingsSection footnote={t("options.autoArchive.footnote")}>
             <SettingRow label={t("options.autoArchive.label")}>
@@ -589,14 +621,14 @@
               onchange={(spotlightPosition) => save({ spotlightPosition })}
             />
           </SettingsSection>
-          {#if searchesHistory !== null}
+          {#if allowedAccess.History !== undefined}
             <SettingsSection footnote={t("options.spotlight.history.footnote")}>
               <SettingRow label={t("options.spotlight.history.label")}>
                 {#snippet children(control)}
                   <Switch
                     {...control}
-                    checked={searchesHistory === true}
-                    onchange={setHistorySearch}
+                    checked={allowedAccess.History === true}
+                    onchange={(enabled) => setAccess("History", enabled)}
                   />
                 {/snippet}
               </SettingRow>

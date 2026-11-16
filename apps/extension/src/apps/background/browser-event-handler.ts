@@ -95,6 +95,7 @@ export const handleBrowserEvent = (event: BrowserEvent) =>
         CommandTriggered: () => Effect.void,
         RuntimeInstalled: () => Effect.void,
         RuntimeStartup: () => Effect.void,
+        NotificationClicked: () => Effect.void,
       }),
     )
   })

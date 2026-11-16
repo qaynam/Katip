@@ -48,6 +48,12 @@ export const options: CatalogSection<"options"> = {
   "options.splitView.available": "Disponible",
   "options.splitView.unavailable":
     "No disponible en este navegador (requiere Chrome 155 o posterior)",
+  "options.liveFolderNotifications.label": "Avisar de los elementos nuevos en las carpetas en vivo",
+  "options.liveFolderNotifications.description":
+    "Muestra como notificaciones del sistema el correo importante de las carpetas en vivo de Gmail y los elementos nuevos de las de GitHub.",
+  "options.liveFolderNotifications.footnote":
+    "Al activarlo, se solicita permiso para mostrar notificaciones. Al desactivarlo, se retira ese permiso.",
+  "options.liveFolderNotifications.denied": "No se permitió mostrar notificaciones.",
 
   "options.autoArchive.heading": "Archivo",
   "options.autoArchive.label": "Archivar automáticamente las pestañas inactivas",

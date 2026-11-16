@@ -42,6 +42,14 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unexpectedStatus": "No se pudieron obtener los elementos (HTTP {status})",
   "background.liveFolder.unreadable": "No se pudo leer la respuesta de {site}",
   "background.liveFolder.noSubject": "(sin asunto)",
+  "background.liveFolder.notification.importantMail": {
+    one: "{count} correo importante nuevo",
+    other: "{count} correos importantes nuevos",
+  },
+  "background.liveFolder.notification.newItems": {
+    one: "{count} elemento nuevo",
+    other: "{count} elementos nuevos",
+  },
   "background.liveFolder.title.gmailInbox": "Recibidos de Gmail",
   "background.liveFolder.title.gmailPrimary": "Principal de Gmail",
   "background.liveFolder.title.gmailImportant": "Importantes de Gmail",

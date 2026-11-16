@@ -15,7 +15,7 @@ export {
   type LiveFolderAttempt,
   type LiveFolderSnapshot,
 } from "./live-folder-record"
-export { LiveFolders } from "./live-folders"
+export { type LiveArrival, LiveFolders } from "./live-folders"
 export {
   defaultLiveFolderTitle,
   GitHubQuery,

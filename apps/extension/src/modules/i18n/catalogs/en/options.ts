@@ -44,6 +44,12 @@ export const options = {
   "options.splitView.label": "Split view",
   "options.splitView.available": "Available",
   "options.splitView.unavailable": "Not available in this browser (requires Chrome 155 or later)",
+  "options.liveFolderNotifications.label": "Notify about new items in live folders",
+  "options.liveFolderNotifications.description":
+    "Shows important mail in Gmail live folders and new items in GitHub live folders as system notifications.",
+  "options.liveFolderNotifications.footnote":
+    "Turning this on asks for permission to show notifications. Turning it off removes the permission.",
+  "options.liveFolderNotifications.denied": "Permission to show notifications wasn’t allowed.",
 
   "options.autoArchive.heading": "Archive",
   "options.autoArchive.label": "Archive inactive tabs automatically",
