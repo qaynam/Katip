@@ -1,6 +1,7 @@
 import { Array, DateTime, Option, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import { rateLimitRetryAt } from "./github-rate-limit"
+import { plainTextOf } from "./html-scan"
 import type { LiveFetchFailure } from "./live-fetch-failure"
 import { githubAvatarIcon, type GitHubSearchQuery, type LiveItem } from "./live-source"
 
@@ -78,35 +79,6 @@ const SearchPage = Schema.fromJsonString(
 
 const decodePage = Schema.decodeUnknownOption(SearchPage)
 
-const namedEntities: Readonly<Record<string, string>> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-}
-
-const MAX_CODE_POINT = 0x10ffff
-
-const decodeEntity = (reference: string, body: string): string => {
-  const lower = body.toLowerCase()
-  if (!lower.startsWith("#")) return namedEntities[lower] ?? reference
-  const codePoint = lower.startsWith("#x")
-    ? Number.parseInt(lower.slice(2), 16)
-    : Number.parseInt(lower.slice(1), 10)
-  return codePoint <= MAX_CODE_POINT ? String.fromCodePoint(codePoint) : reference
-}
-
-// Only for stripping match highlighting (such as <em>). Doesn't handle tags with > in an
-// attribute value, or comments
-const tagPattern = /<[^>]*>/g
-const referencePattern = /&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi
-
-/** Strips the highlighting tags around matches from a title, and decodes character references. */
-const plainTitleOf = (highlighted: string): string =>
-  highlighted.replace(tagPattern, "").replace(referencePattern, decodeEntity)
-
 const itemFrom =
   (type: GitHubWebSearchType) =>
   (result: SearchResult): LiveItem => {
@@ -115,7 +87,7 @@ const itemFrom =
     const kind = type === "pullrequests" ? "pull" : "issues"
     return {
       id: `${repository}#${result.number}`,
-      title: plainTitleOf(result.hl_title),
+      title: plainTextOf(result.hl_title),
       subtitle: `${repository}#${result.number}`,
       url: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/${kind}/${result.number}`,
       // The web search results have no update time. The query's update order decides the order,
