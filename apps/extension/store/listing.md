@@ -8,7 +8,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 
 **Category:** Productivity → Workflow & Planning
 
-**Homepage URL:** https://github.com/qaynam/Katip
+**Homepage URL:** https://katip.qaynam.dev/
 
 **Support URL:** https://github.com/qaynam/Katip/issues
 
@@ -41,10 +41,10 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > Drop one tab onto another to view them side by side, and pin the pair to open it again later (Chrome 155 or later).
 >
 > SPOTLIGHT
-> One search box for open tabs, pins, Spaces, history and the web. It also runs commands: copy the URL, copy a Markdown link, pin a tab, move it to another Space and more. Press Tab on an empty box to search commands only.
+> One search box for open tabs, pins, Spaces, history and the web, forgiving typos. It also runs commands: copy the URL, copy a Markdown link, pin a tab, move it to another Space and more. Press Tab on an empty box to search commands only, or choose Search History to search your browsing history alone.
 >
 > LIVE FOLDERS
-> A folder that lists your Gmail inbox or a label, or your GitHub review requests, pull requests, issues and mentions, using the accounts you're already signed in to.
+> A folder that keeps up with the mail Gmail marks important, your Primary tab, inbox or a label, or with your GitHub review requests, pull requests, issues, mentions and notifications, using the accounts you're already signed in to. Items open right in the folder, and Katip can tell you with a notification when important mail or a new GitHub item arrives.
 >
 > AND MORE
 > • Favorites: the pages you keep at hand as a row of icons, kept even when their tabs are closed
@@ -81,10 +81,10 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > タブを別のタブに重ねると、2 つのページを並べて表示できます。その組み合わせをピン留めして、あとで開き直せます（Chrome 155 以降）。
 >
 > SPOTLIGHT
-> 開いているタブ、ピン、Space、履歴、Web をひとつの検索窓で探せます。URL のコピー、Markdown のリンクとしてコピー、ピン留め、別の Space への移動などのコマンドも実行できます。空欄で Tab を押すと、コマンドだけを探せます。
+> 開いているタブ、ピン、Space、履歴、Web をひとつの検索窓で探せます。多少の打ち間違いがあっても見つかります。URL のコピー、Markdown のリンクとしてコピー、ピン留め、別の Space への移動などのコマンドも実行できます。空欄で Tab を押すとコマンドだけを、「履歴を検索」を選ぶと閲覧履歴だけを探せます。
 >
 > ライブフォルダ
-> Gmail の受信トレイやラベル、GitHub のレビュー依頼・プルリクエスト・Issue・メンションを一覧にするフォルダです。ログイン済みのアカウントをそのまま使います。
+> Gmail の重要なメール・メインタブ・受信トレイ・ラベルや、GitHub のレビュー依頼・プルリクエスト・Issue・メンション・通知を、常に最新の状態で一覧にするフォルダです。ログイン済みのアカウントをそのまま使います。項目はフォルダの中でそのまま開けて、重要なメールや GitHub の新しい項目が届いたときは通知でも知らせます。
 >
 > そのほか
 > • Favorites: よく使うページをアイコンで並べて表示。タブを閉じても残ります
