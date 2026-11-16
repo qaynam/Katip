@@ -9,6 +9,7 @@ import {
 } from "#modules/favorites"
 import type { Translator } from "#modules/i18n"
 import {
+  DEFAULT_LIVE_LIMIT,
   DEFAULT_LIVE_SORT,
   explainFailure,
   isUnseen,
@@ -18,6 +19,7 @@ import {
   type LiveFolderRecord,
   type LiveFolderSnapshot,
   type LiveItem,
+  type LiveLimit,
 } from "#modules/live-folders"
 import {
   canCreateFolderInside,
@@ -334,12 +336,26 @@ export const peekableLiveItems = (
 
 const byNewest = Order.flip(Order.mapInput(Order.Number, (item: LiveItem) => item.updatedAt))
 
+/**
+ * Splits a live folder's items, keeping their order, into those it shows and those its limit
+ * leaves out. An item whose tab is open shows wherever it falls.
+ */
+const applyLimit = (items: ReadonlyArray<LiveItemView>, limit: LiveLimit) => {
+  const isShown = (item: LiveItemView, index: number) =>
+    limit === "all" || index < limit || item.openTab !== null
+  return {
+    shown: items.filter(isShown),
+    hidden: items.filter((item, index) => !isShown(item, index)),
+  }
+}
+
 const pinnedLiveFolderView = (
   live: PinnedLiveFolder,
   projection: PinnedProjection,
 ): PinnedLiveFolderView => {
   const record = Option.fromNullishOr(projection.liveFolders.records.get(live.id))
   const sort = projection.liveFolders.sorts.get(live.id) ?? DEFAULT_LIVE_SORT
+  const limit = projection.liveFolders.limits.get(live.id) ?? DEFAULT_LIVE_LIMIT
   const openTabs = projection.liveItemTabs.filter((open) => open.binding.folderId === live.id)
   const fetched = Option.match(record, { onNone: () => [], onSome: (loaded) => loaded.items })
   const fetchedIds = new Set(fetched.map((item) => item.id))
@@ -369,9 +385,10 @@ const pinnedLiveFolderView = (
   )
   // Not kept greyed out like a search's items: the source still has a mail read only in Katip
   // unread, and would list it until it's read there too
-  const shownItems = listsUnreadOnly(live.source)
+  const listedItems = listsUnreadOnly(live.source)
     ? items.filter((item) => item.isUnseen || item.openTab !== null)
     : items
+  const { shown, hidden } = applyLimit(listedItems, limit)
   const isExpanded = isFolderExpanded(projection.folderExpansion, live.id)
   return {
     _tag: "PinnedLiveFolder",
@@ -386,10 +403,12 @@ const pinnedLiveFolderView = (
       projection.translator,
     ),
     sort,
-    items: shownItems,
+    limit,
+    items: shown,
+    hiddenItems: hidden,
     peekedItems: isExpanded
       ? []
-      : peekableLiveItems(shownItems, projection.showAllOpenTabsInCollapsedFolders),
+      : peekableLiveItems(shown, projection.showAllOpenTabsInCollapsedFolders),
   }
 }
 

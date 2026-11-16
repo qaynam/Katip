@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { ArchiveEntryId } from "#modules/archive"
 import { FavoriteId } from "#modules/favorites"
-import { LiveSort, LiveSource } from "#modules/live-folders"
+import { LiveLimit, LiveSort, LiveSource } from "#modules/live-folders"
 import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
@@ -123,6 +123,7 @@ export const SidebarCommand = Schema.Union([
   }),
   Schema.TaggedStruct("MarkLiveFolderSeen", { bookmarkId: BookmarkId }),
   Schema.TaggedStruct("SetLiveFolderSort", { bookmarkId: BookmarkId, sort: LiveSort }),
+  Schema.TaggedStruct("SetLiveFolderLimit", { bookmarkId: BookmarkId, limit: LiveLimit }),
   // Opens a page that is neither a pin nor a live item, such as a source's sign-in page, as a
   // temporary tab in the window's active Space
   Schema.TaggedStruct("OpenUrl", { windowId: WindowId, url: Schema.String }),

@@ -117,7 +117,9 @@ export const pinnedLiveFolder = (
   isExpanded: true,
   status: { _tag: "Ready", refreshedAt: 0 },
   sort: "newest",
+  limit: 10,
   items: [],
+  hiddenItems: [],
   peekedItems: [],
   ...overrides,
 })

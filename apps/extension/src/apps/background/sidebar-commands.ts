@@ -5,6 +5,7 @@ import {
   defaultLiveFolderTitle,
   GitHubTokenStore,
   LiveFolders,
+  type LiveLimit,
   type LiveSort,
   type LiveSource,
 } from "#modules/live-folders"
@@ -924,6 +925,17 @@ const liveFolderCommands = {
   }) {
     yield* liveFolderOrReject(bookmarkId)
     yield* (yield* LiveFolders).setSort(bookmarkId, sort)
+  }),
+
+  SetLiveFolderLimit: Effect.fnUntraced(function* ({
+    bookmarkId,
+    limit,
+  }: {
+    bookmarkId: BookmarkId
+    limit: LiveLimit
+  }) {
+    yield* liveFolderOrReject(bookmarkId)
+    yield* (yield* LiveFolders).setLimit(bookmarkId, limit)
   }),
 
   // The side panel may send any string, so javascript: and the extension's or browser's internal

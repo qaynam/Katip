@@ -478,6 +478,50 @@ describe("sorting", () => {
   )
 })
 
+describe("limiting how many items show", () => {
+  it.live("choosing a limit holds back the items past it, and the limit survives a refresh", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GMAIL_ORIGIN)
+        yield* serveGmail(
+          gmailFeed(...["1", "2", "3", "4", "5", "6"].map((id) => gmailEntry(id, `Email ${id}`))),
+        )
+        const { sidebar } = yield* createLiveFolder(inbox)
+        const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+
+        yield* sidebar.run({ _tag: "SetLiveFolderLimit", bookmarkId: ready.bookmarkId, limit: 5 })
+        yield* sidebar.viewWhere(hasLiveFolderWith((live) => live.limit === 5))
+        yield* sidebar.run({ _tag: "RefreshLiveFolder", bookmarkId: ready.bookmarkId })
+        const view = yield* sidebar.viewWhere(
+          hasLiveFolderWith((live) => live.limit === 5 && live.status._tag === "Ready"),
+        )
+
+        expect(
+          Option.map(liveFolderOf(view), (live) => [live.items.length, live.hiddenItems.length]),
+        ).toStrictEqual(Option.some([5, 1]))
+      }),
+    ),
+  )
+
+  it.live("a pin that isn't a live folder can't be limited", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { sidebar, spaceId } = yield* startWithSidebar
+        const folder = yield* sidebar.run({ _tag: "CreateFolder", spaceId, parentId: null })
+        const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
+
+        const outcome = yield* sidebar.run({
+          _tag: "SetLiveFolderLimit",
+          bookmarkId: folderId ?? BookmarkId.make("missing"),
+          limit: "all",
+        })
+
+        expect(outcome).toStrictEqual({ _tag: "Failed", reason: "Live folder not found" })
+      }),
+    ),
+  )
+})
+
 describe("opening items and marking them read", () => {
   it.live(
     "opening an item opens its tab on the item's row, not among the temporary tabs, and marks only it read",

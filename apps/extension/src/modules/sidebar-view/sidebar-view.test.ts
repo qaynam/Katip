@@ -788,6 +788,107 @@ describe("live folders", () => {
   })
 })
 
+describe("how many items a live folder shows", () => {
+  const reviews: LiveSource = { _tag: "GitHub", query: "review-requested" }
+  const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
+  const LIVE = bookmarkId("live")
+  /** Newest first, as the source returns them: "1" is the newest. */
+  const newestFirst = (count: number): ReadonlyArray<LiveItem> =>
+    Array.from({ length: count }, (_, index) => ({
+      id: String(index + 1),
+      title: `Item ${index + 1}`,
+      subtitle: "katip-dev/katip#1",
+      url: `https://github.com/katip-dev/katip/pull/${index + 1}`,
+      updatedAt: 1000 - index,
+    }))
+  const liveFolderWith = (options: {
+    readonly source?: LiveSource
+    readonly items: ReadonlyArray<LiveItem>
+    readonly seenVersions?: Record<string, number>
+    readonly sorts?: SidebarSources["liveFolders"]["sorts"]
+    readonly limits?: SidebarSources["liveFolders"]["limits"]
+  }) =>
+    pinnedNodesOf(
+      project({
+        pinnedTrees: homeWithPin([
+          { _tag: "PinnedLiveFolder", id: LIVE, title: "Live", source: options.source ?? reviews },
+        ]),
+        liveFolders: {
+          records: new Map([
+            [
+              LIVE,
+              {
+                items: options.items,
+                lastAttempt: { _tag: "Fetched", at: 1000 },
+                seenVersions: options.seenVersions ?? {},
+              },
+            ],
+          ]),
+          refreshing: new Set(),
+          sorts: options.sorts ?? new Map(),
+          limits: options.limits ?? new Map(),
+        },
+      }),
+    )[0] as PinnedLiveFolderView
+  const idsOf = (items: ReadonlyArray<{ readonly id: string }>) => items.map((item) => item.id)
+
+  it("without a chosen limit, shows the first ten and holds the rest back as hidden", () => {
+    const node = liveFolderWith({ items: newestFirst(12) })
+
+    expect([node.limit, idsOf(node.items), idsOf(node.hiddenItems)]).toStrictEqual([
+      10,
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      ["11", "12"],
+    ])
+  })
+
+  it("shows the first items in the chosen sort, not the first the source returned", () => {
+    const node = liveFolderWith({
+      items: newestFirst(7),
+      sorts: new Map([[LIVE, "oldest"]]),
+      limits: new Map([[LIVE, 5]]),
+    })
+
+    expect([idsOf(node.items), idsOf(node.hiddenItems)]).toStrictEqual([
+      ["7", "6", "5", "4", "3"],
+      ["2", "1"],
+    ])
+  })
+
+  it("counts toward the limit only the unread items of a folder that lists what's unread", () => {
+    const node = liveFolderWith({
+      source: inbox,
+      items: newestFirst(8),
+      seenVersions: { "1": 1000, "3": 998 },
+      limits: new Map([[LIVE, 5]]),
+    })
+
+    expect([idsOf(node.items), idsOf(node.hiddenItems)]).toStrictEqual([
+      ["2", "4", "5", "6", "7"],
+      ["8"],
+    ])
+  })
+
+  it("keeps whether each hidden item is unread", () => {
+    const node = liveFolderWith({
+      items: newestFirst(7),
+      seenVersions: { "7": 994 },
+      limits: new Map([[LIVE, 5]]),
+    })
+
+    expect(node.hiddenItems.map((item) => [item.id, item.isUnseen])).toStrictEqual([
+      ["6", true],
+      ["7", false],
+    ])
+  })
+
+  it("hides nothing when All is chosen", () => {
+    const node = liveFolderWith({ items: newestFirst(25), limits: new Map([[LIVE, "all"]]) })
+
+    expect([node.items.length, node.hiddenItems]).toStrictEqual([25, []])
+  })
+})
+
 describe("live folder items open in tabs", () => {
   const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
   const LIVE = bookmarkId("live")
@@ -942,6 +1043,42 @@ describe("live folder items open in tabs", () => {
     })
 
     expect(liveFolderIn(view).peekedItems).toStrictEqual([])
+  })
+
+  describe("past the folder's limit", () => {
+    const sixMails = ["a", "b", "c", "d", "e", "f"].map((id, index) => mail(id, 60 - index))
+    const limitedToFive = { ...fetched(sixMails), limits: new Map([[LIVE, 5 as const]]) }
+
+    it("shows an item whose tab is open where the sort puts it, as well as the first five", () => {
+      const view = viewOf({
+        workspace: openFor(shown, 1, mail("f", 55)),
+        windowTabs: [browserTab(1)],
+        liveFolders: limitedToFive,
+      })
+
+      expect([rowsOf(view), liveFolderIn(view).hiddenItems]).toStrictEqual([
+        [
+          ["a", null],
+          ["b", null],
+          ["c", null],
+          ["d", null],
+          ["e", null],
+          ["f", tabId(1)],
+        ],
+        [],
+      ])
+    })
+
+    it("peeks out an item whose tab is open under the collapsed folder", () => {
+      const view = viewOf({
+        folderExpansion: { [LIVE]: false },
+        workspace: openFor(shown, 1, mail("f", 55)),
+        windowTabs: [browserTab(1, { active: true })],
+        liveFolders: limitedToFive,
+      })
+
+      expect(liveFolderIn(view).peekedItems.map((item) => item.id)).toStrictEqual(["f"])
+    })
   })
 })
 

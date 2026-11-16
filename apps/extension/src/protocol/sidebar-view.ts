@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { ArchiveEntry } from "#modules/archive"
 import { FavoriteId } from "#modules/favorites"
-import { LiveItem, LiveSort, LiveSource } from "#modules/live-folders"
+import { LiveItem, LiveLimit, LiveSort, LiveSource } from "#modules/live-folders"
 import { FolderIcon } from "#modules/pinned"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
@@ -88,9 +88,12 @@ export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
   isExpanded: Schema.Boolean,
   status: LiveFolderStatus,
   sort: LiveSort,
-  // Already in the order of sort. An item whose tab is open stays until the tab closes, even once
-  // the source no longer returns it
+  limit: LiveLimit,
+  // Already in the order of sort, and no more than limit but for items whose tabs are open. An item
+  // whose tab is open stays until the tab closes, even once the source no longer returns it
   items: Schema.Array(LiveItemView),
+  // The items past the limit, in the order of sort. None of them has a tab open
+  hiddenItems: Schema.Array(LiveItemView),
   // Items whose tabs peek out under the collapsed folder's heading, as a folder's open pins do
   peekedItems: Schema.Array(LiveItemView),
 })
