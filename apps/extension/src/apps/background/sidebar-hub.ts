@@ -18,7 +18,8 @@ interface Subscriber {
   readonly isSidePanel: boolean
 }
 
-// The side panel's page is the one connecting from inside the extension without a tab
+// Not told by the port's name alone: the welcome tour follows a window with the same port from a
+// tab, and must not count as that window's side panel
 const isSidePanelPort = (port: BrowserPort) =>
   Option.exists(port.sender, (sender) => !sender.external && Option.isNone(sender.tabId))
 

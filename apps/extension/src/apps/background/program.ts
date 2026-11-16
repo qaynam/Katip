@@ -301,7 +301,8 @@ export const program = Effect.gen(function* () {
 })
 
 /** The services {@link program} uses, apart from the Chrome APIs. */
-// Spotlight's search asks the side panel hub whether a side panel is open, so it shares that hub
+// Not merged side by side: Spotlight's search asks the side panel hub whether a side panel is
+// open, so it is built on that hub
 export const applicationLayer = SpotlightHub.layer.pipe(
   Layer.provideMerge(SidebarHub.layer),
   Layer.provideMerge(
