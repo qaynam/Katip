@@ -126,7 +126,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 | `history` (optional)                                                           | Searches the browsing history locally in Spotlight, only after the user turns on history search in the settings. History never leaves the device.                                       |
 | `notifications` (optional)                                                     | Shows a system notification when important mail arrives in a Gmail live folder or a new item in a GitHub live folder, only after the user turns on these notifications in the settings. |
 | Host permission `https://mail.google.com/*` (optional)                         | Reads the Gmail feed of unread mail (the inbox, a label, or the mail Gmail marks important) for a Gmail live folder the user creates, with the signed-in session.                       |
-| Host permissions `https://github.com/*`, `https://api.github.com/*` (optional) | Reads GitHub search results or notifications for a GitHub live folder the user creates.                                                                                                 |
+| Host permissions `https://github.com/*`, `https://api.github.com/*` (optional) | Reads GitHub search results and notifications from github.com with the signed-in session, or search results from api.github.com with a token the user enters, for a GitHub live folder. |
 
 **Are you using remote code?** No. All code is included in the package.
 
