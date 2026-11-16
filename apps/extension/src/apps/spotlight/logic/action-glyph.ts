@@ -11,6 +11,7 @@ export type ActionGlyph =
   | "speaker"
   | "move"
   | "sweep"
+  | "clock"
   | "settings"
 
 /**
@@ -30,5 +31,6 @@ export const actionGlyphOf = (action: Action): ActionGlyph =>
     ToggleMute: () => "speaker" as const,
     MoveTabToSpace: () => "move" as const,
     CloseTemporaryTabs: () => "sweep" as const,
+    SearchHistory: () => "clock" as const,
     OpenSettings: () => "settings" as const,
   })

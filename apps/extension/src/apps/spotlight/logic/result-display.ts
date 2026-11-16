@@ -54,6 +54,7 @@ const kindLabels = {
   SiteCommand: "spotlight.kind.command",
   SiteSearch: "spotlight.kind.siteSearch",
   BangSuggestion: "spotlight.kind.siteSearch",
+  TurnOnHistorySearch: "spotlight.kind.command",
   OpenUrl: "spotlight.kind.openUrl",
   SearchWeb: "spotlight.kind.searchWeb",
 } as const satisfies Record<SpotlightResult["_tag"], MessageKey>
@@ -182,6 +183,13 @@ export const displayOf = (
         kindLabel,
         icon: favicon(suggestion.iconPageUrl, suggestion.siteName),
       }),
+    TurnOnHistorySearch: () =>
+      withoutShortcut({
+        title: t("spotlight.historyOff.title"),
+        detail: t("spotlight.historyOff.detail"),
+        kindLabel,
+        icon: { _tag: "Glyph", glyph: "settings" },
+      }),
     OpenUrl: ({ url }) =>
       withoutShortcut({
         title: url,
@@ -232,6 +240,10 @@ export const bangModeOf = (result: SpotlightResult): BangMode | null => {
  */
 export const bangModeOnChoosing = (result: SpotlightResult): BangMode | null =>
   result._tag === "SiteSearch" ? null : bangModeOf(result)
+
+/** Whether choosing the result puts Spotlight in history mode, rather than running anything. */
+export const entersHistoryMode = (result: SpotlightResult): boolean =>
+  result._tag === "Action" && result.action._tag === "SearchHistory"
 
 /** What Spotlight searches for: in a site's mode, its bang followed by what is typed. */
 export const searchTextIn = (mode: BangMode | null, typed: string): string =>

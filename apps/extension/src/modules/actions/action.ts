@@ -15,6 +15,8 @@ export const Action = Schema.TaggedUnion({
   ToggleMute: {},
   MoveTabToSpace: { spaceId: SpaceId },
   CloseTemporaryTabs: {},
+  // Puts Spotlight in a search of the browsing history alone
+  SearchHistory: {},
   OpenSettings: {},
 })
 export type Action = typeof Action.Type

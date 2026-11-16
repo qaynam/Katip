@@ -8,6 +8,7 @@ import {
   bangModeOf,
   bangModeOnChoosing,
   displayOf,
+  entersHistoryMode,
   isMatchedCandidate,
   searchTextIn,
 } from "./result-display"
@@ -185,10 +186,12 @@ describe("a command's display", () => {
     expect([
       glyphOf({ _tag: "CloseTab" }),
       glyphOf({ _tag: "ToggleMute" }),
+      glyphOf({ _tag: "SearchHistory" }),
       glyphOf({ _tag: "OpenSettings" }),
     ]).toStrictEqual([
       { _tag: "Glyph", glyph: "close" },
       { _tag: "Glyph", glyph: "speaker" },
+      { _tag: "Glyph", glyph: "clock" },
       { _tag: "Glyph", glyph: "settings" },
     ])
   })
@@ -346,6 +349,34 @@ describe("the site a result puts Spotlight in", () => {
       }),
       bangModeOf(openTab()),
     ]).toStrictEqual([null, null])
+  })
+})
+
+describe("history mode", () => {
+  it("is entered on choosing the command that searches history, and no other", () => {
+    const commandOf = (action: Extract<SpotlightResult, { _tag: "Action" }>["action"]) =>
+      ({ _tag: "Action", action, title: "", shortcut: null }) as const
+
+    expect([
+      entersHistoryMode(commandOf({ _tag: "SearchHistory" })),
+      entersHistoryMode(commandOf({ _tag: "OpenSettings" })),
+      entersHistoryMode({
+        _tag: "History",
+        title: "",
+        url: "https://a.example/",
+        lastVisitedAt: 0,
+      }),
+    ]).toStrictEqual([true, false, false])
+  })
+
+  it("without the history permission, offers to turn history search on in the settings", () => {
+    const shown = display({ _tag: "TurnOnHistorySearch" })
+
+    expect([shown.title, shown.detail, shown.icon]).toStrictEqual([
+      "Turn On History Search in Settings",
+      "Spotlight needs your permission to read your browsing history",
+      { _tag: "Glyph", glyph: "settings" },
+    ])
   })
 })
 

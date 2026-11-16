@@ -92,6 +92,9 @@ export const SpotlightResult = Schema.TaggedUnion({
   // A bang the trigger being typed after ! can become. Choosing it fills in the trigger, ready for a
   // query, rather than opening anything
   BangSuggestion: { siteName: Schema.String, trigger: Schema.String, iconPageUrl: Schema.String },
+  // Offered in history mode until the history permission is granted, which only the settings page
+  // can ask for: choosing it opens the settings there
+  TurnOnHistorySearch: {},
   OpenUrl: { url: Schema.String },
   SearchWeb: { query: Schema.String },
 })
@@ -107,8 +110,10 @@ export type SpotlightOutcome = typeof SpotlightOutcome.Type
  * `All` searches tabs, pins, history, commands and more together. `Actions` searches only
  * commands, and lists every command when the query is empty. `Site` is for a query that starts
  * with a bang, typed in the site the bang put Spotlight in: it finds the site's search alone.
+ * `History` searches only the browsing history, and lists the pages visited most recently when the
+ * query is empty.
  */
-export const SpotlightMode = Schema.Literals(["All", "Actions", "Site"])
+export const SpotlightMode = Schema.Literals(["All", "Actions", "Site", "History"])
 export type SpotlightMode = typeof SpotlightMode.Type
 
 // windowId is the window that opened Spotlight, not Spotlight's own window

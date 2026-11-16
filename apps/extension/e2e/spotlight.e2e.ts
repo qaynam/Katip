@@ -1,4 +1,9 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { launchWithExtension } from "./browser-launch"
+import { EXTENSION_DIR } from "./extension-dir"
 import { expect, test } from "./fixtures"
 import {
   isSplitViewAvailable,
@@ -58,6 +63,48 @@ const searchedOnSite = (background: Worker, site: string) =>
       (await chrome.tabs.query({}))
         .map((tab) => tab.pendingUrl ?? tab.url ?? "")
         .filter((url) => url.startsWith(`${site}/search`)),
+    site,
+  )
+
+// Not by turning history search on in the settings: Chrome grants an optional permission only
+// through its prompt, which a test can't answer
+/** A copy of the extension that holds the history permission from the moment it's installed. */
+const extensionWithHistoryAccess = async () => {
+  const dir = await mkdtemp(join(tmpdir(), "katip-e2e-history-"))
+  await cp(EXTENSION_DIR, dir, { recursive: true })
+  const manifestPath = join(dir, "manifest.json")
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as chrome.runtime.ManifestV3
+  await writeFile(
+    manifestPath,
+    JSON.stringify({
+      ...manifest,
+      permissions: [...(manifest.permissions ?? []), "history"],
+      optional_permissions: (manifest.optional_permissions ?? []).filter(
+        (permission) => permission !== "history",
+      ),
+    }),
+  )
+  return dir
+}
+
+const testWithHistoryAccess = test.extend({
+  // eslint-disable-next-line no-empty-pattern -- Playwright reads dependencies from the destructured argument
+  context: async ({}, use) => {
+    const dir = await extensionWithHistoryAccess()
+    const { context, close } = await launchWithExtension(dir)
+    await use(context)
+    await close()
+    await rm(dir, { recursive: true, force: true })
+  },
+})
+
+/** The paths of the local site's pages in the browsing history, most recently visited first. */
+const pathsInHistory = (background: Worker, site: string) =>
+  background.evaluate(
+    async (site) =>
+      (await chrome.history.search({ text: "", startTime: 0 }))
+        .filter((page) => page.url?.startsWith(site) === true && page.title !== "")
+        .map((page) => new URL(page.url ?? "").pathname),
     site,
   )
 
@@ -213,6 +260,55 @@ test("Split with New Tab splits the active tab with a new tab on its right, show
       }, site),
     )
     .toStrictEqual(["/a", "new tab active"])
+})
+
+testWithHistoryAccess(
+  "Search History finds a closed page in the history through a typo in its title, and opens it",
+  async ({ site, context, sidebar, background }) => {
+    await openPages(background, [`${site}/documentation`, `${site}/a`])
+    await expect(temporaryTitles(sidebar)).toHaveText(["Page /a", "Page /documentation"])
+    await background.evaluate(async (url) => {
+      const [tab] = await chrome.tabs.query({ url })
+      if (tab?.id !== undefined) await chrome.tabs.remove(tab.id)
+    }, `${site}/documentation`)
+    await expect.poll(() => pathsInHistory(background, site)).toContain("/documentation")
+    const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
+
+    await choose(spotlight, "search history", /^Search History/)
+    await expect(spotlight.getByRole("combobox")).toHaveAccessibleName("Search browsing history")
+    await spotlight.getByRole("combobox").fill("documantation")
+    await expect(spotlight.getByRole("option")).toHaveText([/^.?Page \/documentation/])
+    await spotlight.keyboard.press("Enter")
+
+    await expect
+      .poll(() => pagesInBrowser(background, site))
+      .toStrictEqual(["/a", "/documentation active"])
+  },
+)
+
+test("Search History without the history permission offers to turn it on, opening the settings there", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
+  const spotlight = await openSpotlightOver(context, sidebar, background, `${site}/a`)
+
+  await choose(spotlight, "search history", /^Search History/)
+  await expect(spotlight.getByRole("option")).toHaveText([/Turn On History Search in Settings/])
+  const opened = context.waitForEvent("page", (page) => page.url().includes("/options/"))
+  await spotlight.keyboard.press("Enter")
+
+  const settings = await opened
+  await expect(settings.getByRole("tab", { name: "Spotlight" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await expect(
+    settings.getByRole("switch", { name: "Search browsing history too" }),
+  ).not.toBeChecked()
 })
 
 test.fixme("choosing a closed pin by name opens it as that pin's tab", () => {})

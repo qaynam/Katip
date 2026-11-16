@@ -9,8 +9,14 @@ import {
   type WindowId,
   Windows,
 } from "#platform/browser"
-import type { SidebarCommand, SpotlightOutcome, SpotlightResult } from "#protocol"
+import {
+  historySearchSettingsUrl,
+  type SidebarCommand,
+  type SpotlightOutcome,
+  type SpotlightResult,
+} from "#protocol"
 import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
+import { ExtensionInfo } from "./extension-info"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
 import { currentTranslator, translate } from "./translation"
@@ -74,6 +80,17 @@ const searchWeb = Effect.fnUntraced(function* (callerWindowId: WindowId, query: 
 })
 
 const failed = (reason: string): SpotlightOutcome => ({ _tag: "Failed", reason })
+
+const openHistorySearchSettings = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+  const { origin } = yield* ExtensionInfo
+  yield* (yield* Tabs).create({
+    windowId: callerWindowId,
+    active: true,
+    url: historySearchSettingsUrl(origin),
+  })
+  yield* focusWindow(callerWindowId)
+  return succeeded
+})
 
 const finishInCaller = (callerWindowId: WindowId) =>
   Effect.as(focusWindow(callerWindowId), succeeded)
@@ -169,6 +186,9 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
         runAsSidebarCommand(callerWindowId, { _tag: "MoveTabToSpace", tabId: tab.id, spaceId }),
       ),
     CloseTemporaryTabs: () => closeTemporaryTabs(callerWindowId),
+    // Spotlight puts itself in history mode instead of sending it: one sent anyway has nothing to
+    // open
+    SearchHistory: () => Effect.map(translate("background.spotlight.cannotOpen"), failed),
     OpenSettings: () => runAsSidebarCommand(callerWindowId, { _tag: "OpenSettings" }),
   })
 
@@ -210,6 +230,7 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
       openUrl(callerWindowId, searches ? iconPageUrl : url),
     SiteSearch: ({ url }) => openUrl(callerWindowId, url),
     BangSuggestion: ({ iconPageUrl }) => openUrl(callerWindowId, iconPageUrl),
+    TurnOnHistorySearch: () => openHistorySearchSettings(callerWindowId),
     OpenUrl: ({ url }) => openUrl(callerWindowId, url),
     SearchWeb: ({ query }) => searchWeb(callerWindowId, query),
   }).pipe(

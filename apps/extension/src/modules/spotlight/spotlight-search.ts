@@ -1,4 +1,4 @@
-import { Array, Number, Option, Order, pipe } from "effect"
+import { Array, Iterable, Number, Option, Order, pipe } from "effect"
 import {
   type MatchStrength,
   matchStrength,
@@ -15,9 +15,9 @@ export type CandidateKind =
 
 /**
  * `All` searches candidates of every kind. `Actions` searches only the action (`Action`)
- * candidates.
+ * candidates, and `History` only the browsing history (`History`) candidates.
  */
-export type SpotlightSearchMode = "All" | "Actions"
+export type SpotlightSearchMode = "All" | "Actions" | "History"
 
 export interface SearchCandidate {
   readonly kind: CandidateKind
@@ -141,9 +141,15 @@ const matchScore = (
     titles: [candidate.title, ...(candidate.keywords ?? [])].map(searchableTitle),
     url: searchableUrl(candidate.url),
   }
-  const termScores = Option.all(terms.map((term) => textScore(text, term)))
-  const phraseBonus = terms.length > 1 ? Option.getOrElse(textScore(text, phrase), () => 0) : 0
-  return Option.map(termScores, (scores) => Number.sumAll(scores) + phraseBonus)
+  // Not terms.map: past a term the candidate lacks, the rest would be matched for nothing, typos
+  // and all, and most candidates lack one
+  const termScores = Option.all(Iterable.map(terms, (term) => textScore(text, term)))
+  return Option.map(
+    termScores,
+    (scores) =>
+      Number.sumAll(scores) +
+      (terms.length > 1 ? Option.getOrElse(textScore(text, phrase), () => 0) : 0),
+  )
 }
 
 const byRecentUse = Order.flip(
@@ -198,17 +204,30 @@ const rankMatches = <C extends SearchCandidate>(
 const asEntries = <C>(ranked: ReadonlyArray<C>, limit: number): ReadonlyArray<SpotlightEntry<C>> =>
   ranked.slice(0, limit).map((candidate) => ({ _tag: "Candidate", candidate }))
 
-const searchActions = <C extends SearchCandidate>(
+type SingleKindMode = Exclude<SpotlightSearchMode, "All">
+
+const kindSearchedIn: Record<SingleKindMode, CandidateKind> = {
+  Actions: "Action",
+  History: "History",
+}
+
+const listedWithoutQuery = <C extends SearchCandidate>(
+  mode: SingleKindMode,
+  candidates: ReadonlyArray<C>,
+): ReadonlyArray<C> => (mode === "History" ? Array.sort(candidates, byRecentUse) : candidates)
+
+const searchSingleKind = <C extends SearchCandidate>(
+  mode: SingleKindMode,
   input: string,
   candidates: ReadonlyArray<C>,
   options: SpotlightSearchOptions,
 ): ReadonlyArray<SpotlightEntry<C>> => {
-  const actions = candidates.filter((candidate) => candidate.kind === "Action")
+  const ofKind = candidates.filter((candidate) => candidate.kind === kindSearchedIn[mode])
   const terms = searchTerms(input)
   return asEntries(
     Array.isReadonlyArrayNonEmpty(terms)
-      ? rankMatches(actions, terms, searchPhrase(input), options.now)
-      : actions,
+      ? rankMatches(ofKind, terms, searchPhrase(input), options.now)
+      : listedWithoutQuery(mode, ofKind),
     options.limit,
   )
 }
@@ -226,15 +245,16 @@ const searchActions = <C extends SearchCandidate>(
  * right after the candidates.
  *
  * In `Actions`, returns only the action candidates: all of them in the given order for an empty
- * input, otherwise the matching ones, strongest match first. No open-URL or web search entry is
- * added.
+ * input, otherwise the matching ones, strongest match first. `History` does the same with the
+ * history candidates, listing them by most recent use for an empty input. Neither adds an open-URL
+ * or web search entry.
  */
 export const searchSpotlight = <C extends SearchCandidate>(
   input: string,
   candidates: ReadonlyArray<C>,
   options: SpotlightSearchOptions,
 ): ReadonlyArray<SpotlightEntry<C>> => {
-  if (options.mode === "Actions") return searchActions(input, candidates, options)
+  if (options.mode !== "All") return searchSingleKind(options.mode, input, candidates, options)
   const terms = searchTerms(input)
   if (!Array.isReadonlyArrayNonEmpty(terms)) {
     return asEntries(suggestionsWithoutQuery(candidates, options.limit), options.limit)

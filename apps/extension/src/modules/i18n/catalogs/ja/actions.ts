@@ -13,6 +13,7 @@ export const actions: CatalogSection<"actions"> = {
   "actions.unmuteTab": "タブのミュートを解除",
   "actions.moveTabToSpace": "タブを「{space}」へ移動",
   "actions.closeTemporaryTabs": "一時タブをすべて閉じる",
+  "actions.searchHistory": "履歴を検索",
   "actions.openSettings": "設定を開く",
   "actions.site.googleDoc": "新しい Google ドキュメント",
   "actions.site.googleSheet": "新しい Google スプレッドシート",

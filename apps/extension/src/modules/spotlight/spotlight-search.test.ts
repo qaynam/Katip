@@ -34,8 +34,14 @@ const search = (input: string, candidates: ReadonlyArray<TestCandidate>, limit =
 const searchActions = (input: string, candidates: ReadonlyArray<TestCandidate>) =>
   searchSpotlight(input, candidates, { mode: "Actions", now: NOW, limit: 50 })
 
+const searchHistory = (input: string, candidates: ReadonlyArray<TestCandidate>, limit = 50) =>
+  searchSpotlight(input, candidates, { mode: "History", now: NOW, limit })
+
 const action = (name: string, keywords: ReadonlyArray<string> = []) =>
   candidate(name, { kind: "Action", keywords })
+
+const page = (name: string, visitedMinutesAgo: number, url = "") =>
+  candidate(name, { kind: "History", url, usedMinutesAgo: visitedMinutesAgo })
 
 const namesOf = (entries: ReadonlyArray<SpotlightEntry<TestCandidate>>) =>
   entries.flatMap((entry) => (entry._tag === "Candidate" ? [entry.candidate.name] : []))
@@ -421,5 +427,80 @@ describe("action candidates", () => {
 
   it("finds an action by its name in a language other than the one shown", () => {
     expect(namesOf(searchActions("copiar", actions))).toStrictEqual(["Copy URL"])
+  })
+})
+
+describe("history candidates, when searching only history", () => {
+  it("with an empty input, lists every page by most recent visit", () => {
+    const entries = searchHistory("", [
+      page("visited yesterday", 24 * 60),
+      page("visited just now", 1),
+      page("visited an hour ago", 60),
+    ])
+
+    expect(namesOf(entries)).toStrictEqual([
+      "visited just now",
+      "visited an hour ago",
+      "visited yesterday",
+    ])
+  })
+
+  it("leaves out candidates that aren't history, even when they match", () => {
+    const entries = searchHistory("docs", [
+      candidate("Docs tab", { usedMinutesAgo: 1 }),
+      action("Open docs"),
+      page("Docs page", 10),
+    ])
+
+    expect(namesOf(entries)).toStrictEqual(["Docs page"])
+  })
+
+  it("with an input, lists only the matching pages, strongest match first", () => {
+    const entries = searchHistory("katip", [
+      page("About katip", 1),
+      page("Calendar", 1),
+      page("Katip", 600),
+    ])
+
+    expect(namesOf(entries)).toStrictEqual(["Katip", "About katip"])
+  })
+
+  it("finds a page by its URL", () => {
+    const entries = searchHistory("example.com/guide", [
+      page("Guide", 5, "https://www.example.com/guide"),
+    ])
+
+    expect(namesOf(entries)).toStrictEqual(["Guide"])
+  })
+
+  it("finds a page whose title was typed with a typo, after those matching as typed", () => {
+    const entries = searchHistory("githb", [
+      page("Pull requests · GitHub", 1),
+      page("githbuddy notes", 600),
+    ])
+
+    expect(namesOf(entries)).toStrictEqual(["githbuddy notes", "Pull requests · GitHub"])
+  })
+
+  it("among equally strong matches, lists the most recently visited first", () => {
+    const entries = searchHistory("notes", [page("Notes", 24 * 60), page("Notes", 1)])
+
+    expect(
+      entries.map((entry) => entry._tag === "Candidate" && entry.candidate.lastUsedAt),
+    ).toStrictEqual([Option.some(NOW - MINUTE), Option.some(NOW - 24 * 60 * MINUTE)])
+  })
+
+  it("adds neither an open-URL entry nor a web search entry", () => {
+    expect(actionsOf(searchHistory("https://example.com/", []))).toStrictEqual([])
+  })
+
+  it("lists no more pages than the limit", () => {
+    const entries = searchHistory(
+      "",
+      [1, 2, 3].map((n) => page(`page ${n}`, n)),
+      2,
+    )
+
+    expect(namesOf(entries)).toStrictEqual(["page 1", "page 2"])
   })
 })

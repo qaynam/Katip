@@ -9,11 +9,18 @@ export const spotlight: CatalogSection<"spotlight"> = {
   "spotlight.commands.badge": "Comandos",
   "spotlight.commands.label": "Buscar comandos",
   "spotlight.commands.placeholder": "Buscar comandos",
+  "spotlight.history.badge": "Historial",
+  "spotlight.history.label": "Buscar en el historial de navegación",
+  "spotlight.history.placeholder": "Buscar en el historial",
+  "spotlight.historyOff.title": "Activar la búsqueda en el historial en los ajustes",
+  "spotlight.historyOff.detail":
+    "Spotlight necesita tu permiso para leer el historial de navegación",
   "spotlight.results.label": "Sugerencias",
   "spotlight.loading": "Cargando…",
   "spotlight.empty.noRecentTabs": "No hay pestañas recientes",
   "spotlight.empty.noMatches": "No hay coincidencias",
   "spotlight.empty.noMatchingCommands": "No hay comandos que coincidan",
+  "spotlight.empty.noMatchingHistory": "No hay coincidencias en el historial",
   "spotlight.unreachable": "No se pudo conectar con Katip. Vuelve a intentarlo.",
 
   "spotlight.kind.tab": "Pestaña",

@@ -8,6 +8,7 @@
   } from "#modules/spotlight"
   import type { ColorScheme, SpaceTheme } from "#modules/theme"
   import type { SpotlightMode, SpotlightResult } from "#protocol"
+  import CommandGlyph from "./components/CommandGlyph.svelte"
   import ResultRow from "./components/ResultRow.svelte"
   import SearchGlyph from "./components/SearchGlyph.svelte"
   import type { SearchResponse, SpotlightConnection } from "./connection/spotlight-connection"
@@ -17,6 +18,7 @@
     type BangMode,
     bangModeOf,
     bangModeOnChoosing,
+    entersHistoryMode,
     isMatchedCandidate,
     searchTextIn,
   } from "./logic/result-display"
@@ -73,6 +75,32 @@
     if (collapses) setCollapsed(isCollapsed)
   })
   const hasMatches = $derived(results.some(isMatchedCandidate))
+  const fieldText = $derived.by(() => {
+    if (mode === "Actions") {
+      return {
+        label: t("spotlight.commands.label"),
+        placeholder: t("spotlight.commands.placeholder"),
+      }
+    }
+    if (mode === "History") {
+      return {
+        label: t("spotlight.history.label"),
+        placeholder: t("spotlight.history.placeholder"),
+      }
+    }
+    if (bangMode !== null) {
+      return {
+        label: t("spotlight.bang.label", { site: bangMode.siteName }),
+        placeholder: t("spotlight.bang.placeholder"),
+      }
+    }
+    return { label: t("spotlight.search.label"), placeholder: t("spotlight.search.placeholder") }
+  })
+  const emptyMessage = $derived.by(() => {
+    if (mode === "Actions") return t("spotlight.empty.noMatchingCommands")
+    if (mode === "History") return t("spotlight.empty.noMatchingHistory")
+    return query.trim() === "" ? t("spotlight.empty.noRecentTabs") : t("spotlight.empty.noMatches")
+  })
   const selectedBangMode = $derived.by(() => {
     const selected = results[selectedIndex]
     return selected === undefined || bangMode !== null ? null : bangModeOf(selected)
@@ -153,6 +181,10 @@
   let isChoosing = false
   const choose = async (result: SpotlightResult | undefined) => {
     if (result === undefined || isChoosing) return
+    if (entersHistoryMode(result)) {
+      enterHistoryMode()
+      return
+    }
     const site = bangModeOnChoosing(result)
     if (site !== null) {
       enterBangMode(site)
@@ -176,6 +208,13 @@
   const switchMode = (next: ListMode) => {
     mode = next
     void search(query, next)
+  }
+
+  // What was typed found the command, and is no search of the history
+  const enterHistoryMode = () => {
+    query = ""
+    input?.focus()
+    switchMode("History")
   }
 
   const hasModifier = (event: KeyboardEvent) =>
@@ -210,7 +249,7 @@
           leaveBangMode(bangMode)
           return
         }
-        if (mode !== "Actions" || query !== "") return
+        if (mode === "All" || query !== "") return
         event.preventDefault()
         switchMode("All")
         return
@@ -221,7 +260,7 @@
       case "Escape":
         event.preventDefault()
         if (bangMode !== null) leaveBangMode(bangMode)
-        else if (mode === "Actions") switchMode("All")
+        else if (mode !== "All") switchMode("All")
         else close()
         return
     }
@@ -255,9 +294,14 @@
       <span class="search-glyph"><SearchGlyph size={20} /></span>
       {#if mode === "Actions"}
         <span class="mode-chip">{t("spotlight.commands.badge")}</span>
+      {:else if mode === "History"}
+        <span class="mode-chip icon-chip">
+          <CommandGlyph glyph="clock" size={14} />
+          {t("spotlight.history.badge")}
+        </span>
       {:else if bangMode !== null}
         {@const icon = faviconUrl(bangMode.iconPageUrl)}
-        <span class="mode-chip site-chip">
+        <span class="mode-chip icon-chip">
           {#if icon !== null}<img src={icon} alt="" width="14" height="14" />{/if}
           {bangMode.siteName}
         </span>
@@ -267,28 +311,21 @@
         class="query"
         type="text"
         role="combobox"
-        aria-label={mode === "Actions"
-          ? t("spotlight.commands.label")
-          : bangMode !== null
-            ? t("spotlight.bang.label", { site: bangMode.siteName })
-            : t("spotlight.search.label")}
+        aria-label={fieldText.label}
         aria-expanded={!isCollapsed}
         aria-controls={RESULTS_ID}
         aria-autocomplete="list"
         aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
-        placeholder={mode === "Actions"
-          ? t("spotlight.commands.placeholder")
-          : bangMode !== null
-            ? t("spotlight.bang.placeholder")
-            : t("spotlight.search.placeholder")}
+        placeholder={fieldText.placeholder}
         autocomplete="off"
         spellcheck="false"
         value={query}
         oninput={(event) => {
           query = event.currentTarget.value
-          // A ! starts a bang: what was found for the text before it would flash by until the
-          // answer comes, so only what bangs found stays up meanwhile
-          if (bangMode === null && query.trimStart().startsWith("!")) {
+          // A ! starts a bang, though not in history mode, which searches no site: what was found
+          // for the text before it would flash by until the answer comes, so only what bangs found
+          // stays up meanwhile
+          if (bangMode === null && mode !== "History" && query.trimStart().startsWith("!")) {
             results = results.filter(
               (result) => result._tag === "SiteSearch" || result._tag === "BangSuggestion",
             )
@@ -309,13 +346,7 @@
         {#if !hasLoaded}
           <p class="message" role="status">{t("spotlight.loading")}</p>
         {:else if !hasMatches}
-          <p class="message" role="status">
-            {mode === "Actions"
-              ? t("spotlight.empty.noMatchingCommands")
-              : query.trim() === ""
-                ? t("spotlight.empty.noRecentTabs")
-                : t("spotlight.empty.noMatches")}
-          </p>
+          <p class="message" role="status">{emptyMessage}</p>
         {/if}
         {#if results.length > 0}
           <div
@@ -355,7 +386,7 @@
         <span><kbd>↑</kbd><kbd>↓</kbd>{t("spotlight.hint.select")}</span>
         <span><kbd>↵</kbd>{t("spotlight.hint.open")}</span>
         <span
-          ><kbd>esc</kbd>{mode === "Actions" || bangMode !== null
+          ><kbd>esc</kbd>{mode !== "All" || bangMode !== null
             ? t("spotlight.hint.back")
             : t("common.close")}</span
         >
@@ -417,13 +448,13 @@
     color: var(--text-muted);
   }
 
-  .site-chip {
+  .icon-chip {
     display: inline-flex;
     align-items: center;
     gap: 5px;
   }
 
-  .site-chip img {
+  .icon-chip img {
     border-radius: 3px;
   }
 

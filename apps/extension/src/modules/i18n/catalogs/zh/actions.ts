@@ -13,6 +13,7 @@ export const actions: CatalogSection<"actions"> = {
   "actions.unmuteTab": "取消标签页静音",
   "actions.moveTabToSpace": "将标签页移到“{space}”",
   "actions.closeTemporaryTabs": "关闭所有临时标签页",
+  "actions.searchHistory": "搜索历史记录",
   "actions.openSettings": "打开设置",
   "actions.site.googleDoc": "新建 Google 文档",
   "actions.site.googleSheet": "新建 Google 表格",

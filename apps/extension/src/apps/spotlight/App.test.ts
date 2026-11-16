@@ -627,6 +627,162 @@ describe("bangs", () => {
   })
 })
 
+describe("history mode", () => {
+  const searchHistoryCommand: SpotlightResult = {
+    _tag: "Action",
+    action: { _tag: "SearchHistory" },
+    title: "Search History",
+    shortcut: null,
+  }
+  const respondWithHistory = (query: string, mode: SpotlightMode) =>
+    mode !== "History"
+      ? [searchHistoryCommand]
+      : query === "zzz"
+        ? []
+        : [historyPage("Blog post", 3)]
+
+  const field = () => screen.getByRole("combobox") as HTMLInputElement
+
+  const enterHistoryMode = async (input: HTMLElement) => {
+    await type(input, "history")
+    await settle()
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await settle()
+  }
+
+  it("is entered by choosing the Search History command, before an empty field, running nothing", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithHistory })
+
+    await enterHistoryMode(input)
+
+    expect([
+      field().value,
+      field().getAttribute("placeholder"),
+      screen.getByText("History", { selector: ".mode-chip" }) !== null,
+      connection.searches.at(-1),
+      connection.chosen,
+    ]).toStrictEqual(["", "Search history", true, { query: "", mode: "History" }, []])
+  })
+
+  it("is entered by clicking the command too", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithHistory })
+    await type(input, "history")
+    await settle()
+
+    await fireEvent.click(screen.getByRole("option"))
+
+    expect(connection.searches.at(-1)).toStrictEqual({ query: "", mode: "History" })
+  })
+
+  it("searches the history alone for what is typed, showing the pages without their kind", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+
+    await type(input, "blog")
+    await settle()
+
+    const [row] = screen.getAllByRole("option")
+    expect([
+      connection.searches.at(-1),
+      row?.textContent?.includes("Blog post"),
+      row?.querySelector(".kind"),
+    ]).toStrictEqual([{ query: "blog", mode: "History" }, true, null])
+  })
+
+  it("keeps the pages found up while a ! is typed, as it searches no site", async () => {
+    const { connection, input } = renderSpotlight()
+    await connection.answer("", [])
+    await type(input, "history")
+    await connection.answer("history", [searchHistoryCommand])
+    await settle()
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await connection.answer("", [historyPage("Blog post", 3)])
+    await settle()
+
+    await type(input, "!")
+    await settle()
+
+    expect([connection.searches.at(-1), optionNames().length]).toStrictEqual([
+      { query: "!", mode: "History" },
+      1,
+    ])
+  })
+
+  it("says no history matched when none does", async () => {
+    const { input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+
+    await type(input, "zzz")
+
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain("No matching history"),
+    )
+  })
+
+  it("goes back to the usual search with Backspace on an empty field", async () => {
+    const { connection, input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+
+    await fireEvent.keyDown(input, { key: "Backspace" })
+
+    expect([
+      connection.searches.at(-1),
+      field().getAttribute("placeholder"),
+      screen.queryByText("History", { selector: ".mode-chip" }),
+    ]).toStrictEqual([{ query: "", mode: "All" }, "Search or enter a URL", null])
+  })
+
+  it("keeps history mode on Backspace while there is something to delete", async () => {
+    const { input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+    await type(input, "blog")
+
+    const notCancelled = await fireEvent.keyDown(input, { key: "Backspace" })
+
+    expect([notCancelled, field().getAttribute("placeholder")]).toStrictEqual([
+      true,
+      "Search history",
+    ])
+  })
+
+  it("goes back to the usual search with Escape, instead of closing", async () => {
+    const { close, connection, input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+
+    await fireEvent.keyDown(input, { key: "Escape" })
+
+    expect([close.mock.calls.length, connection.searches.at(-1)]).toStrictEqual([
+      0,
+      { query: "", mode: "All" },
+    ])
+  })
+
+  it("opens the chosen page through the background", async () => {
+    const { connection, close, input } = renderSpotlight({ respond: respondWithHistory })
+    await enterHistoryMode(input)
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(connection.chosen.map(({ _tag }) => _tag)).toStrictEqual(["History"])
+    await waitFor(() => expect(close).toHaveBeenCalled())
+  })
+
+  it("without the history permission, offers to turn it on in the settings, which Enter opens", async () => {
+    const { connection, input } = renderSpotlight({
+      respond: (_, mode) =>
+        mode === "History" ? [{ _tag: "TurnOnHistorySearch" }] : [searchHistoryCommand],
+    })
+    await enterHistoryMode(input)
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect([
+      screen.getByRole("option").textContent?.includes("Turn On History Search in Settings"),
+      connection.chosen,
+    ]).toStrictEqual([true, [{ _tag: "TurnOnHistorySearch" }]])
+  })
+})
+
 describe("a history row", () => {
   it("shows when the page was last visited", async () => {
     renderSpotlight({ respond: () => [historyPage("Blog post", 3)] })
@@ -657,6 +813,35 @@ describe("the display language", () => {
 
     expect(input.getAttribute("placeholder")).toBe("コマンドを検索")
     expect(screen.getByText("コマンド", { selector: ".mode-chip" })).toBeTruthy()
+  })
+
+  it("translates history mode's badge and placeholder too", async () => {
+    const { input } = renderSpotlight(
+      {
+        respond: (_, mode) =>
+          mode === "History"
+            ? []
+            : [
+                {
+                  _tag: "Action",
+                  action: { _tag: "SearchHistory" },
+                  title: "履歴を検索",
+                  shortcut: null,
+                },
+              ],
+      },
+      "ja",
+    )
+    await type(input, "rireki")
+    await settle()
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+    await settle()
+
+    expect([
+      input.getAttribute("placeholder"),
+      screen.getByText("履歴", { selector: ".mode-chip" }) !== null,
+    ]).toStrictEqual(["履歴を検索", true])
   })
 
   it("writes when a page was last visited in that language's wording", async () => {

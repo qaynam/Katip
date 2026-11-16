@@ -39,12 +39,13 @@ import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
 import {
   type BookmarkId,
   Bookmarks,
+  type BrowserApiError,
   type BrowserTab,
   Tabs,
   type WindowId,
   Windows,
 } from "#platform/browser"
-import { History } from "#platform/history"
+import { History, type HistoryPage } from "#platform/history"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { Permissions } from "#platform/permissions"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
@@ -55,6 +56,8 @@ import { currentTranslator } from "./translation"
 
 const RESULT_LIMIT = 40
 const HISTORY_LIMIT = 50
+const HISTORY_MODE_LIMIT = 50
+const RECENT_HISTORY_SIZE = 3000
 const BANG_SUGGESTION_LIMIT = 5
 
 interface ResultCandidate extends SearchCandidate {
@@ -209,32 +212,35 @@ const bookmarkCandidates = Effect.fnUntraced(function* (
   )
 })
 
+const historyCandidate = (page: HistoryPage): ResultCandidate => {
+  const title = page.title.trim() === "" ? page.url : page.title
+  return {
+    kind: "History",
+    title,
+    url: page.url,
+    lastUsedAt: Option.some(page.lastVisitedAt),
+    isCurrent: false,
+    result: { _tag: "History", title, url: page.url, lastVisitedAt: page.lastVisitedAt },
+  }
+}
+
+// An optional permission: until it's granted, chrome.history doesn't exist at all
+const searchesHistory = Permissions.use((permissions) => permissions.containsPermission("history"))
+
 const historyCandidates = Effect.fnUntraced(function* (
   query: string,
   shownUrls: ReadonlySet<string>,
 ) {
   if (query.trim() === "") return []
-  // An optional permission: until it's granted, chrome.history doesn't exist at all
-  if (!(yield* (yield* Permissions).containsPermission("history"))) return []
+  if (!(yield* searchesHistory)) return []
   const pages = yield* (yield* History).search({
     text: query.trim(),
     maxResults: HISTORY_LIMIT,
     startTime: 0,
   })
-  return pages.flatMap((page): ReadonlyArray<ResultCandidate> => {
-    if (shownUrls.has(page.url) || !isOpenableUrl(page.url)) return []
-    const title = page.title.trim() === "" ? page.url : page.title
-    return [
-      {
-        kind: "History",
-        title,
-        url: page.url,
-        lastUsedAt: Option.some(page.lastVisitedAt),
-        isCurrent: false,
-        result: { _tag: "History", title, url: page.url, lastVisitedAt: page.lastVisitedAt },
-      },
-    ]
-  })
+  return pages
+    .filter((page) => !shownUrls.has(page.url) && isOpenableUrl(page.url))
+    .map(historyCandidate)
 })
 
 const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, query: string) {
@@ -331,6 +337,7 @@ const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | 
     ToggleMute: () => null,
     MoveTabToSpace: () => null,
     CloseTemporaryTabs: () => null,
+    SearchHistory: () => null,
     OpenSettings: () => null,
   })
 }
@@ -497,6 +504,48 @@ const toResult = (entry: SpotlightEntry<ResultCandidate>): SpotlightResult =>
     SearchWeb: ({ query }): SpotlightResult => ({ _tag: "SearchWeb", query }),
   })
 
+/** The pages history mode ranks what is typed against, most recently visited first. */
+export type RecentHistory = Effect.Effect<ReadonlyArray<HistoryPage>, BrowserApiError, History>
+
+/**
+ * Reads the {@link RecentHistory}: the pages visited most recently, as many as ranking them all
+ * stays quick for while typing. Needs the `history` permission.
+ */
+export const readRecentHistory: RecentHistory = History.use((history) =>
+  history.search({ text: "", maxResults: RECENT_HISTORY_SIZE, startTime: 0 }),
+)
+
+// Not Chrome's text search alone: it finds only pages holding the words as typed, so a typo would
+// find nothing. The recent pages are ranked here instead, and the text search adds the older pages
+// beyond them that hold the words as typed
+const historyModePages = Effect.fnUntraced(function* (query: string, recent: RecentHistory) {
+  const recentPages = yield* recent
+  if (query.trim() === "") return recentPages
+  const recentUrls = new Set(recentPages.map((page) => page.url))
+  const older = yield* (yield* History).search({
+    text: query.trim(),
+    maxResults: HISTORY_MODE_LIMIT,
+    startTime: 0,
+  })
+  return [...recentPages, ...older.filter((page) => !recentUrls.has(page.url))]
+})
+
+const historyModeResults = Effect.fnUntraced(function* (query: string, recent: RecentHistory) {
+  if (!(yield* searchesHistory)) {
+    return [{ _tag: "TurnOnHistorySearch" }] satisfies ReadonlyArray<SpotlightResult>
+  }
+  const pages = yield* historyModePages(query, recent)
+  return searchSpotlight(
+    query,
+    pages.filter((page) => isOpenableUrl(page.url)).map(historyCandidate),
+    {
+      mode: "History",
+      now: yield* Clock.currentTimeMillis,
+      limit: HISTORY_MODE_LIMIT,
+    },
+  ).map(toResult)
+})
+
 const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const state = yield* KatipState
   const spaces = yield* state.spaces.get
@@ -511,12 +560,17 @@ const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) 
 /**
  * Finds the results to list for `query` in Spotlight opened over the `callerWindowId` window.
  *
+ * @param recentHistory - The pages `History` ranks; reused across the searches of one Spotlight,
+ *   it can be read once for all of them.
+ *
  * @remarks
  * `Actions` returns commands only. `All` adds commands and browsing history (the latter only with
  * the `history` permission) only when something has been typed. In `All`, a bang typed with `!`
  * (one of a command's keywords, or one of the bundled list while bangs are on) puts its site search
  * first, and a trigger being typed is followed by the bangs it can become. `Site` returns the site
- * search of the query's bang alone, or nothing when no bang in it is known.
+ * search of the query's bang alone, or nothing when no bang in it is known. `History` returns
+ * browsing history alone, the pages of open tabs included, forgiving typos as `All` does; without
+ * the `history` permission, it returns {@link SpotlightResult} `TurnOnHistorySearch` alone.
  *
  * Never fails. When tabs or bookmarks can't be read, they're treated as having no results, and
  * only the items for opening the URL and searching the web are returned.
@@ -525,7 +579,18 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   query: string,
   mode: SpotlightMode,
+  recentHistory: RecentHistory,
 ) {
+  if (mode === "History") {
+    return {
+      results: yield* historyModeResults(query, recentHistory).pipe(
+        Effect.catch((error) =>
+          Effect.as(Effect.logWarning("Spotlight couldn't search history", error), []),
+        ),
+      ),
+      spaceTheme: yield* activeSpaceTheme(callerWindowId),
+    }
+  }
   if (mode === "Site") {
     const bangs = yield* bangResultsOrEmpty(query)
     return {

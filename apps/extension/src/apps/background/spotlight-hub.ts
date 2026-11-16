@@ -6,7 +6,7 @@ import {
   type SpotlightResult,
   SpotlightServerMessage,
 } from "#protocol"
-import { findSpotlightResults } from "./spotlight-results"
+import { findSpotlightResults, readRecentHistory } from "./spotlight-results"
 
 const decodeClientMessage = Schema.decodeUnknownEffect(SpotlightClientMessage)
 const encodeServerMessage = Schema.encodeEffect(SpotlightServerMessage)
@@ -51,29 +51,32 @@ export class SpotlightHub extends Context.Service<
           windowId: WindowId,
           result: SpotlightResult,
         ) => Effect.Effect<SpotlightOutcome, never, R>,
-      ) => {
-        const handle = (message: SpotlightClientMessage) =>
-          Match.valueTags(message, {
-            Search: ({ requestId, windowId, query, mode }) =>
-              findSpotlightResults(windowId, query, mode).pipe(
-                Effect.provideContext(searchContext),
-                Effect.flatMap(({ results, spaceTheme }) =>
-                  reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),
+      ) =>
+        // Read for each Spotlight opened rather than kept between them, which would leave out the
+        // pages visited since
+        Effect.flatMap(Effect.cached(readRecentHistory), (recentHistory) => {
+          const handle = (message: SpotlightClientMessage) =>
+            Match.valueTags(message, {
+              Search: ({ requestId, windowId, query, mode }) =>
+                findSpotlightResults(windowId, query, mode, recentHistory).pipe(
+                  Effect.provideContext(searchContext),
+                  Effect.flatMap(({ results, spaceTheme }) =>
+                    reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),
+                  ),
                 ),
+              Choose: ({ requestId, windowId, result }) =>
+                Effect.flatMap(choose(windowId, result), (outcome) =>
+                  reply(port, { _tag: "ChoiceSettled", requestId, outcome }),
+                ),
+            })
+          return port.messages.pipe(
+            Stream.runForEach((raw) =>
+              Effect.flatMap(Effect.option(decodeClientMessage(raw)), (message) =>
+                Option.match(message, { onNone: () => Effect.void, onSome: handle }),
               ),
-            Choose: ({ requestId, windowId, result }) =>
-              Effect.flatMap(choose(windowId, result), (outcome) =>
-                reply(port, { _tag: "ChoiceSettled", requestId, outcome }),
-              ),
-          })
-        return port.messages.pipe(
-          Stream.runForEach((raw) =>
-            Effect.flatMap(Effect.option(decodeClientMessage(raw)), (message) =>
-              Option.match(message, { onNone: () => Effect.void, onSome: handle }),
             ),
-          ),
-        )
-      }
+          )
+        })
 
       return SpotlightHub.of({ serve })
     }),

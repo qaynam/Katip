@@ -626,6 +626,7 @@ describe("Spotlight commands", () => {
             "Close Tab",
             "Mute Tab",
             "Close All Temporary Tabs",
+            "Search History",
             "Open Settings",
             ...DEFAULT_SITE_COMMANDS.map((command) => english.t(command.title)),
           ])
@@ -1031,6 +1032,169 @@ describe("Spotlight history results", () => {
         ])
       }),
     ),
+  )
+})
+
+describe("Spotlight history mode", () => {
+  const seedHistory = Effect.gen(function* () {
+    const fake = yield* FakeBrowser
+    const { windowId } = yield* fake.seedWindow({
+      tabs: [{ url: "https://katip.example/open", title: "Katip open page" }],
+    })
+    yield* (yield* FakeHistory).seed([
+      { url: "https://katip.example/open", title: "Katip open page", lastVisitedAt: 300 },
+      { url: "https://katip.example/docs", title: "Katip documentation", lastVisitedAt: 200 },
+      { url: "https://news.example/", title: "Morning news", lastVisitedAt: 100 },
+    ])
+    yield* initialize
+    yield* (yield* FakePermissions).grantPermissions(["history"])
+    return windowId
+  })
+
+  const urlsOf = (results: ReadonlyArray<SpotlightResult>) =>
+    results.map((result) => ("url" in result ? `${result._tag} ${result.url}` : result._tag))
+
+  it.effect(
+    "searching the history lists browsing history alone, the pages of open tabs included",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const windowId = yield* seedHistory
+          const spotlight = yield* connectSpotlight(windowId)
+
+          const { results } = yield* spotlight.search("katip", "History")
+
+          expect(urlsOf(results)).toStrictEqual([
+            "History https://katip.example/open",
+            "History https://katip.example/docs",
+          ])
+        }),
+      ),
+  )
+
+  it.effect("finds a page by a word of its title typed with a typo", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("documantation", "History")
+
+        expect(urlsOf(results)).toStrictEqual(["History https://katip.example/docs"])
+      }),
+    ),
+  )
+
+  it.effect("with no input, lists the pages visited most recently first", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("", "History")
+
+        expect(urlsOf(results)).toStrictEqual([
+          "History https://katip.example/open",
+          "History https://katip.example/docs",
+          "History https://news.example/",
+        ])
+      }),
+    ),
+  )
+
+  it.effect("finds a page visited before the thousands visited since, when typed as it is", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* FakeHistory).seed(
+          Array.makeBy(5000, (n) => ({
+            url: `https://recent.example/${n}`,
+            title: `Recent page ${n}`,
+            lastVisitedAt: 1000 + n,
+          })),
+        )
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("morning news", "History")
+
+        expect(urlsOf(results)).toStrictEqual(["History https://news.example/"])
+      }),
+    ),
+  )
+
+  it.effect("reads the recently visited pages once for all that is typed in one Spotlight", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        const spotlight = yield* connectSpotlight(windowId)
+
+        yield* spotlight.search("", "History")
+        yield* spotlight.search("k", "History")
+        yield* spotlight.search("ka", "History")
+
+        const searches = yield* (yield* FakeHistory).searches
+        expect(searches.filter(({ text }) => text === "").length).toBe(1)
+      }),
+    ),
+  )
+
+  it.effect("a Spotlight opened later finds the pages visited since the last one", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const windowId = yield* seedHistory
+        yield* (yield* connectSpotlight(windowId)).search("", "History")
+        yield* (yield* FakeHistory).seed([
+          { url: "https://later.example/", title: "Visited later", lastVisitedAt: 400 },
+        ])
+
+        const { results } = yield* (yield* connectSpotlight(windowId)).search("", "History")
+
+        expect(urlsOf(results)[0]).toBe("History https://later.example/")
+      }),
+    ),
+  )
+
+  it.effect(
+    "without the history permission, offers turning history search on instead, reading no history",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* initialize
+          const spotlight = yield* connectSpotlight(windowId)
+
+          const { results } = yield* spotlight.search("katip", "History")
+
+          expect([results, yield* (yield* FakeHistory).searches]).toStrictEqual([
+            [{ _tag: "TurnOnHistorySearch" }],
+            [],
+          ])
+        }),
+      ),
+  )
+
+  it.effect(
+    "choosing to turn history search on opens the settings where it's turned on, in the calling window",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+          yield* initialize
+          const spotlight = yield* connectSpotlight(windowId)
+
+          const outcome = yield* spotlight.choose({ _tag: "TurnOnHistorySearch" })
+
+          const opened = (yield* (yield* Tabs).query({ windowId, active: true })).map((tab) =>
+            Option.getOrNull(tab.url),
+          )
+          expect([outcome, opened]).toStrictEqual([
+            { _tag: "Succeeded" },
+            ["chrome-extension://katip-test/options/index.html#spotlight"],
+          ])
+        }),
+      ),
   )
 })
 
