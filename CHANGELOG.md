@@ -21,6 +21,7 @@ Gmail live folders can list just the Primary tab, so newsletters no longer crowd
 #### Fixed
 
 - **Deleting a live folder** — Delete Live Folder in a live folder’s menu removes it. Before, it did nothing.
+- **Site icons on any theme** — A site icon drawn in one color for the system’s dark or light mode, such as GitHub’s or ChatGPT’s, no longer fades into a Space theme of the same lightness: it turns dark on a light theme and light on a dark one.
 
 ### 日本語
 
@@ -33,6 +34,7 @@ Gmail のライブフォルダで「メイン」タブだけを並べられる�
 #### 修正
 
 - **ライブフォルダの削除** — ライブフォルダのメニューの「ライブフォルダを削除」で、削除されるようになりました。これまでは何も起きませんでした。
+- **どのテーマでも見えるサイトのアイコン** — GitHub や ChatGPT のように、システムのダークモードやライトモードに合わせて一色で描かれたアイコンが、同じ明るさの Space のテーマに溶けて見えなくなることがなくなりました。明るいテーマでは暗く、暗いテーマでは明るく表示します。
 
 ## 1.8.0 — 2026-11-12
 

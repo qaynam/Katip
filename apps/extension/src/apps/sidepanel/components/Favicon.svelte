@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { faviconCandidates, faviconLetter } from "../logic/favicon"
+  import {
+    faviconCandidates,
+    faviconLetter,
+    toneSampleUrl,
+    type FaviconTone,
+  } from "../logic/favicon"
+  import { faviconToneAt } from "../state/favicon-tones"
   import { getSidebarContext } from "../state/sidebar-context"
 
   interface Props {
@@ -19,6 +25,23 @@
   const skip = (candidate: string) => {
     failed = new Set([...failed, candidate])
   }
+
+  let tone = $state<FaviconTone>("Mixed")
+  const sampleUrl = $derived(
+    source === undefined ? null : toneSampleUrl(source, pageUrl, ctx.faviconUrl),
+  )
+  $effect(() => {
+    const url = sampleUrl
+    tone = "Mixed"
+    if (url === null) return
+    let isCurrent = true
+    void faviconToneAt(url).then((found) => {
+      if (isCurrent) tone = found
+    })
+    return () => {
+      isCurrent = false
+    }
+  })
 </script>
 
 {#if source === undefined}
@@ -32,6 +55,7 @@
     alt=""
     width={size}
     height={size}
+    data-tone={tone}
     draggable="false"
     onerror={() => skip(source)}
   />
@@ -42,6 +66,13 @@
     display: block;
     flex: none;
     border-radius: 3px;
+  }
+
+  /* Sites that switch their icon with the system's scheme draw it in one color for that scheme,
+     which vanishes into a Space theme of the same lightness */
+  :global(.katip-root[data-scheme="light"]) .image[data-tone="Light"],
+  :global(.katip-root[data-scheme="dark"]) .image[data-tone="Dark"] {
+    filter: invert(1);
   }
 
   .letter {
