@@ -2,6 +2,7 @@ import { mount } from "svelte"
 import { WindowId } from "#platform/browser"
 import { SIDEBAR_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
+import { makeChromeDownloads } from "./connection/downloads"
 import { makeStoredLocalePreferences } from "./connection/locale-preferences"
 import { chromeOriginAccess } from "./connection/origin-access"
 import { createPortConnection, type SidebarPort } from "./connection/port-connection"
@@ -34,6 +35,9 @@ mount(App, {
       windowId: currentWindow.id === undefined ? null : WindowId.make(currentWindow.id),
     }),
     originAccess: chromeOriginAccess,
+    downloads: makeChromeDownloads({
+      fileManager: navigator.platform.startsWith("Mac") ? "Finder" : "Folder",
+    }),
     localePreferences: makeStoredLocalePreferences(),
     browserLanguages: navigator.languages,
     faviconUrl,

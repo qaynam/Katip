@@ -831,6 +831,8 @@ const parseUrl = Option.liftThrowable((url: string) => new URL(url))
 const isWebUrl = (url: string): boolean =>
   Option.exists(parseUrl(url), ({ protocol }) => protocol === "http:" || protocol === "https:")
 
+const DOWNLOADS_PAGE_URL = "chrome://downloads/"
+
 /** Opens the URL as a temporary tab of the Space shown in the window. */
 const openInActiveSpace = Effect.fnUntraced(function* (windowId: WindowId, url: string) {
   const state = yield* KatipState
@@ -974,6 +976,9 @@ const archiveCommands = {
   OpenSettings: () => ExtensionInfo.use((info) => info.openOptionsPage),
 
   OpenSpotlight: ({ windowId }: { windowId: WindowId }) => openSpotlight(windowId),
+
+  OpenDownloadsPage: ({ windowId }: { windowId: WindowId }) =>
+    openInActiveSpace(windowId, DOWNLOADS_PAGE_URL),
 }
 
 const executeCommand = (command: SidebarCommand) =>

@@ -48,11 +48,25 @@ describe("the manifest's permissions", () => {
     const { permissions = [], optional_permissions = [] } = buildManifest("production", "1.0.0")
 
     expect({
-      optional: optional_permissions,
+      optional: optional_permissions.filter((permission) =>
+        ["history", "notifications"].includes(permission),
+      ),
       upFront: permissions.filter((permission) =>
         ["history", "notifications"].includes(permission),
       ),
     }).toStrictEqual({ optional: ["history", "notifications"], upFront: [] })
+  })
+
+  it("leave reading and opening downloads to be asked for from the sidebar's Downloads button", () => {
+    const { permissions = [], optional_permissions = [] } = buildManifest("production", "1.0.0")
+    const downloadPermissions = ["downloads", "downloads.open"]
+
+    expect({
+      optional: optional_permissions.filter((permission) =>
+        downloadPermissions.includes(permission),
+      ),
+      upFront: permissions.filter((permission) => downloadPermissions.includes(permission)),
+    }).toStrictEqual({ optional: ["downloads", "downloads.open"], upFront: [] })
   })
 })
 

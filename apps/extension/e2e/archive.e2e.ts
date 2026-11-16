@@ -1,5 +1,14 @@
+import type { Page } from "@playwright/test"
 import { expect, test } from "./fixtures"
 import { chooseFromMenu, openPages, pagesInBrowser, temporaryTitles } from "./sidebar-actions"
+
+const openArchive = async (sidebar: Page) => {
+  await sidebar.getByRole("button", { name: "Space menu" }).click()
+  await sidebar
+    .getByRole("menu")
+    .getByRole("menuitem", { name: "Open Archive", exact: true })
+    .click()
+}
 
 test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
@@ -14,7 +23,7 @@ test("Archive in the tab menu closes the tab and lists it in the archive", async
   const temporary = sidebar.getByRole("region", { name: "Temporary tabs" })
 
   await chooseFromMenu(sidebar, temporary.getByRole("button", { name: "Page /a" }), "Archive")
-  await sidebar.getByRole("button", { name: "Archive", exact: true }).click()
+  await openArchive(sidebar)
 
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/b"])
   await expect(
@@ -35,14 +44,14 @@ test("clicking an archive entry reopens it as a temporary tab of its Space and r
       .getByRole("button", { name: "Page /a" }),
     "Archive",
   )
-  await sidebar.getByRole("button", { name: "Archive", exact: true }).click()
+  await openArchive(sidebar)
   const archive = sidebar.getByRole("region", { name: "Archive" })
 
   await archive.getByRole("button", { name: /Page \/a/ }).click()
 
   await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a active"])
   await expect(archive.getByText("No archived tabs")).toBeVisible()
-  await sidebar.getByRole("button", { name: "Archive", exact: true }).click()
+  await sidebar.getByRole("button", { name: "Close Archive" }).click()
   await expect(temporaryTitles(sidebar)).toHaveText(["Page /a"])
 })
 
@@ -59,7 +68,7 @@ test("removing an archive entry deletes it from the list without reopening it", 
       .getByRole("button", { name: "Page /a" }),
     "Archive",
   )
-  await sidebar.getByRole("button", { name: "Archive", exact: true }).click()
+  await openArchive(sidebar)
   const archive = sidebar.getByRole("region", { name: "Archive" })
 
   await archive.getByRole("button", { name: "Remove from Archive" }).click()

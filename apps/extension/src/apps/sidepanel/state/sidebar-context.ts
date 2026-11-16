@@ -1,6 +1,7 @@
 import { createContext } from "svelte"
 import type { Translator } from "#modules/i18n"
 import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
+import type { Downloads } from "../connection/downloads"
 import type { OriginAccess } from "../connection/origin-access"
 import type { SidePanel } from "../connection/side-panel"
 import type { FaviconResolver } from "../logic/favicon"
@@ -40,6 +41,7 @@ export interface SidebarContext {
    */
   readonly translator: Translator
   readonly originAccess: OriginAccess
+  readonly downloads: Downloads
   readonly sidePanel: SidePanel
   readonly liveFolderDialog: LiveFolderDialogController
   readonly folderSearch: FolderSearchController

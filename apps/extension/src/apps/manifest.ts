@@ -150,8 +150,10 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
     "activeTab",
   ],
   // Not required: each is asked for only when its setting is turned on, history search in Spotlight
-  // and notifications about live folders
-  optional_permissions: ["history", "notifications"],
+  // and notifications about live folders, or the downloads when the sidebar's Downloads button is
+  // first clicked. Chrome warns about reading downloads, so requiring it would disable installed
+  // copies on update until the warning is accepted
+  optional_permissions: ["history", "notifications", "downloads", "downloads.open"],
   // Live folder sources. Asked for only when a live folder needs one, so people who don't use
   // live folders are never asked
   optional_host_permissions: [

@@ -913,6 +913,15 @@ const respondWithoutPeeks = (
         ),
       ),
       Match.tag("SetGitHubToken", () => succeeded(view)),
+      Match.tag("OpenDownloadsPage", () =>
+        succeeded(
+          openTemporaryTab(
+            view,
+            view.activeSpaceId,
+            tabView(nextTabId(view), { title: "Downloads", url: "chrome://downloads/" }),
+          ),
+        ),
+      ),
       Match.orElse(() => notReproduced(view, command)),
     )
 

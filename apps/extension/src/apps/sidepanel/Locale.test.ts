@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import type { SidebarCommand } from "#protocol"
 import App from "./App.svelte"
 import { createMemoryLocalePreferences } from "./connection/locale-preferences"
+import { createMemoryDownloads } from "./connection/memory-downloads"
 import { createMemoryOriginAccess } from "./connection/memory-origin-access"
 import { createMemoryScrollPositions } from "./connection/memory-scroll-positions"
 import { createMemorySidePanel } from "./connection/memory-side-panel"
@@ -105,6 +106,7 @@ describe("Commands that never reach the background", () => {
       props: {
         connection,
         originAccess: createMemoryOriginAccess(),
+        downloads: createMemoryDownloads(),
         localePreferences: createMemoryLocalePreferences("en"),
         browserLanguages: [],
         scrollPositions: createMemoryScrollPositions(),

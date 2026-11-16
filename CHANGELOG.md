@@ -12,11 +12,12 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ## English
 
-Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, and Spotlight is now called the Command Palette.
+Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, your downloads show in the sidebar, and Spotlight is now called the Command Palette.
 
 ### 🚀 New
 
 - **A button that closes the sidebar** — The × to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
+- **Downloads in the sidebar** — The button at the bottom left of the sidebar lists your recent downloads, newest first, each with its file’s icon, the site it came from and how far it got. Click a finished file to open it, show it in Finder or in its folder, pause, resume or cancel one still downloading, or choose Show All Downloads for Chrome’s downloads page. The first click asks to read your downloads; if you don’t allow it, the button opens Chrome’s downloads page instead, and right-clicking it asks again.
 
 ### ✨ Improved
 
@@ -26,7 +27,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **Folder icons that stand out** — A folder with an icon shows the icon itself, full size and in the text color, in place of the folder with a small icon inside. It tips forward a little while the folder is open.
 - **Command Palette** — Spotlight is now called the Command Palette, in the settings, on Chrome’s shortcuts page and everywhere else Katip names it. It works as before, and its size, position and other settings stay as you set them.
 - **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
-- **The Archive from the Space menu and the Command Palette** — Open Archive in a Space’s … menu, or the Open Archive command in the Command Palette, shows the tabs Katip archived, with the × at its top right to go back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
+- **The Archive from the Space menu and the Command Palette** — The Archive moves from the button at the bottom left, which now shows your downloads, to Open Archive in a Space’s … menu and the Open Archive command in the Command Palette. The × at its top right takes you back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
 
 ### 🐛 Fixed
 
@@ -34,11 +35,12 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 
 ## 日本語
 
-Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、Spotlight はコマンドパレットという名前になりました。
+Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、サイドバーでダウンロードを見られるようになって、Spotlight はコマンドパレットという名前になりました。
 
 ### 🚀 新機能
 
 - **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にある × で、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
+- **サイドバーにダウンロード** — サイドバー左下のボタンで、最近のダウンロードを新しい順に表示できるようになりました。ファイルのアイコン、ダウンロード元のサイト、どこまで進んだかも表示します。ダウンロードし終えたファイルはクリックで開くほか、Finder やフォルダで表示でき、ダウンロード中のものは一時停止・再開・キャンセルできます。「すべてのダウンロードを表示」で Chrome のダウンロードのページを開きます。最初のクリックでダウンロードを読む許可を求めます（※許可しなかった場合、ボタンは代わりに Chrome のダウンロードのページを開きます。右クリックからあらためて許可できます）。
 
 ### ✨ 改善
 
@@ -48,7 +50,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **目立つフォルダのアイコン** — アイコンを設定したフォルダは、フォルダの中に小さくアイコンを描く代わりに、アイコンそのものを文字と同じ色で大きく表示します。フォルダを開いているあいだは、少し傾きます。
 - **コマンドパレット** — Spotlight の名前をコマンドパレットに変えました。設定や Chrome のショートカット設定など、Katip がこの機能の名前を出すところはすべてこの名前になります。使い方は変わらず、サイズや開く位置などの設定もそのまま引き継ぎます。
 - **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
-- **Space のメニューとコマンドパレットからアーカイブ** — Space の「…」メニューの「アーカイブを開く」や、コマンドパレットの「アーカイブを開く」で、Katip がアーカイブしたタブを表示できるようになりました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
+- **Space のメニューとコマンドパレットからアーカイブ** — アーカイブは、ダウンロードを表示するようになった左下のボタンから、Space の「…」メニューとコマンドパレットの「アーカイブを開く」に移りました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
 
 ### 🐛 修正
 

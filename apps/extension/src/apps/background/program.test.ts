@@ -1522,6 +1522,36 @@ describe("Spotlight", () => {
   )
 })
 
+describe("the downloads page", () => {
+  it.live("opens as a temporary tab of the Space shown in the window", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const homeTemporaryUrls = (v: SidebarView) =>
+          Option.match(spaceNamed(v, "Home"), {
+            onNone: (): ReadonlyArray<string> => [],
+            onSome: (space) => temporaryTabsIn(space).map((tab) => tab.url),
+          })
+
+        const outcome = yield* sidebar.run({ _tag: "OpenDownloadsPage", windowId })
+        const view = yield* sidebar.viewWhere((v) =>
+          homeTemporaryUrls(v).includes("chrome://downloads/"),
+        )
+
+        expect([
+          outcome._tag,
+          homeTemporaryUrls(view).includes("chrome://downloads/"),
+        ]).toStrictEqual(["Succeeded", true])
+      }),
+    ),
+  )
+})
+
 describe("onboarding", () => {
   const onboardingTabs = Tabs.use((tabs) =>
     Effect.map(tabs.query({}), (all) =>

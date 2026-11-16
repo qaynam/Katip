@@ -5,6 +5,7 @@
   import { pointRect } from "../logic/menu-position"
   import { suggestedTheme } from "../logic/space-themes"
   import { getSidebarContext } from "../state/sidebar-context"
+  import DownloadsButton from "./DownloadsButton.svelte"
   import Icon from "./Icon.svelte"
   import { spaceMenuEntries } from "./menus"
 
@@ -91,17 +92,7 @@
 </script>
 
 <footer class="bottom-bar">
-  <button
-    class="icon-button"
-    class:pressed={ctx.bodyPanel.current === "Archive"}
-    type="button"
-    aria-label={t("sidepanel.archive.title")}
-    aria-pressed={ctx.bodyPanel.current === "Archive"}
-    onclick={() =>
-      ctx.bodyPanel.current === "Archive" ? ctx.bodyPanel.close() : ctx.bodyPanel.show("Archive")}
-  >
-    <Icon name="archive" />
-  </button>
+  <DownloadsButton />
 
   <nav class="marks" aria-label={t("sidepanel.space.switcher")}>
     <ul bind:this={markList} ondragover={onListDragOver} {@attach scrollHorizontally}>
@@ -177,12 +168,6 @@
 
   .icon-button:hover {
     background: var(--surface-hover);
-    color: var(--text);
-  }
-
-  .icon-button.pressed {
-    background: var(--surface-active);
-    box-shadow: var(--shadow-active);
     color: var(--text);
   }
 

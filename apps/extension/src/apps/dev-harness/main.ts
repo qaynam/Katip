@@ -4,8 +4,10 @@ import { LocalePreference } from "#modules/i18n"
 import { REPOSITORY_URL, type Release } from "#modules/updates"
 import { SIDEBAR_PORT_NAME, type SidebarCommand } from "#protocol"
 import App from "../sidepanel/App.svelte"
+import type { Downloads } from "../sidepanel/connection/downloads"
 import { createMemoryLocalePreferences } from "../sidepanel/connection/locale-preferences"
 import { createMemoryConnection } from "../sidepanel/connection/memory-connection"
+import { createMemoryDownloads } from "../sidepanel/connection/memory-downloads"
 import { createMemoryOriginAccess } from "../sidepanel/connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../sidepanel/connection/memory-scroll-positions"
 import { createMemoryUpdateNotices } from "../sidepanel/connection/memory-update-notices"
@@ -13,6 +15,7 @@ import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
 import type { SidePanel } from "../sidepanel/connection/side-panel"
 import { respondInFixture } from "./fixture-backend"
+import { fixtureDownloads } from "./fixture-downloads"
 import { fixtureView } from "./fixture-view"
 
 const DEFAULT_EXTENSION_ID = "hggfdjnidgfpigakapgkgolnjemijaed"
@@ -38,6 +41,7 @@ const element = <E extends HTMLElement>(selector: string): E => {
 
 const commandLog = element<HTMLOListElement>("#command-log")
 const denyAccess = element<HTMLInputElement>("#deny-access")
+const denyDownloads = element<HTMLInputElement>("#deny-downloads")
 const localeSelect = element<HTMLSelectElement>("#locale")
 
 // Not the extension's setting, which this page can't read: the language is chosen in the toolbar
@@ -80,6 +84,44 @@ const originAccess = createMemoryOriginAccess({
 // Not chrome.sidePanel, which this page isn't shown in: closing is only logged
 const sidePanel: SidePanel = {
   close: (windowId) => log(`sidePanel.close ${JSON.stringify({ windowId })}`),
+}
+
+// Not chrome.downloads, which this page can't use: sample downloads stand in, the one running
+// moves on every second, and ?downloads starts with access already granted
+const fakeDownloads = createMemoryDownloads({
+  downloads: fixtureDownloads(Date.now()),
+  access: params.has("downloads") ? "Granted" : "NotAsked",
+  decide: () => {
+    const isGranted = !denyDownloads.checked
+    log(`permissions.request downloads → ${isGranted ? "granted" : "denied"}`)
+    return isGranted
+  },
+  fileManager: navigator.platform.startsWith("Mac") ? "Finder" : "Folder",
+})
+setInterval(() => {
+  for (const download of fakeDownloads.downloads) {
+    const { progress } = download
+    if (progress._tag !== "InProgress" || progress.totalBytes === null) continue
+    const receivedBytes = Math.min(progress.receivedBytes + 400_000, progress.totalBytes)
+    fakeDownloads.put({
+      ...download,
+      progress:
+        receivedBytes === progress.totalBytes
+          ? { _tag: "Complete", bytes: receivedBytes }
+          : { ...progress, receivedBytes },
+    })
+  }
+}, 1_000)
+const downloads: Downloads = {
+  ...fakeDownloads,
+  open: (id) => {
+    log(`downloads.open ${id}`)
+    fakeDownloads.open(id)
+  },
+  show: (id) => {
+    log(`downloads.show ${id}`)
+    fakeDownloads.show(id)
+  },
 }
 
 const withCommandLog = (connection: SidebarConnection): SidebarConnection => ({
@@ -139,6 +181,7 @@ if (connection === null) {
     props: {
       connection: withCommandLog(connection),
       originAccess,
+      downloads,
       localePreferences,
       browserLanguages: navigator.languages,
       scrollPositions: createMemoryScrollPositions(),

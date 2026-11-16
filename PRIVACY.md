@@ -33,6 +33,7 @@ These requests go directly from your browser to Gmail or GitHub. What they retur
 - **History**: if you turn on history search in the Command Palette, Katip asks for permission to read your browsing history and searches it locally, on your device, when you type in the Command Palette.
 - **Gmail and GitHub access**: asked for only when you create a live folder for that site.
 - **Notifications**: if you turn on notifications about new items in live folders, Katip asks for permission to show notifications, and shows them through your system from what the live folders have already fetched. Showing them makes no network request.
+- **Downloads**: the first time you click the Downloads button at the bottom of the sidebar, Katip asks for permission to read and open your downloads. It lists the recent ones in the sidebar and opens a file or shows it in its folder only when you click it. Your downloads are read and shown only on your device; this makes no network request.
 
 You can revoke these at any time from Katip's settings or from your browser's extension settings.
 
@@ -90,6 +91,7 @@ Katip が通信するのは、アップデートの確認とライブフォル�
 - **閲覧履歴**: コマンドパレットの履歴検索を有効にしたときにだけ許可を求め、入力した語で端末の中で検索します。
 - **Gmail と GitHub へのアクセス**: そのサイトのライブフォルダを作るときにだけ許可を求めます。
 - **通知**: ライブフォルダの新着の通知を有効にしたときにだけ許可を求め、ライブフォルダが取得済みの内容をシステムの通知で表示します。通知の表示のための通信はしません。
+- **ダウンロード**: サイドバー下部のダウンロードのボタンを初めて押したときに、ダウンロードを読み取って開く許可を求めます。最近のダウンロードをサイドバーに一覧し、ファイルを開いたりフォルダで表示したりするのはクリックしたときだけです。ダウンロードの情報は端末の中で読んで表示するだけで、そのための通信はしません。
 
 これらの許可は、Katip の設定画面やブラウザの拡張機能の設定から、いつでも取り消せます。
 

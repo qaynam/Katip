@@ -19,6 +19,12 @@
     search: "M7.1 2.75a4.35 4.35 0 1 1 0 8.7 4.35 4.35 0 0 1 0-8.7zM10.25 10.25l3 3",
     alert: "M8 2.75l5.75 10H2.25zM8 6.75v2.75M8 11.25h.01",
     check: "M3.5 8.25l3 3 6-6.5",
+    download: "M8 2.75v7.5M4.75 7.25L8 10.5l3.25-3.25M3.25 13.25h9.5",
+    file: "M4.25 2.75h4.5l3 3v7.5h-7.5zM8.75 2.75v3h3",
+    folder:
+      "M2.75 4.25a1 1 0 0 1 1-1h2.5l1.5 1.5h4.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1z",
+    pause: "M6 4.25v7.5M10 4.25v7.5",
+    play: "M5.5 4l6 4-6 4z",
   } as const
 
   export type IconName = keyof typeof paths

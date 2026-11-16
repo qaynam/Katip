@@ -13,6 +13,7 @@
   import Sidebar from "./components/Sidebar.svelte"
   import ThemedSurface from "./components/ThemedSurface.svelte"
   import Toasts from "./components/Toasts.svelte"
+  import type { Downloads } from "./connection/downloads"
   import type { LocalePreferences } from "./connection/locale-preferences"
   import type { OriginAccess } from "./connection/origin-access"
   import type { ScrollPositions } from "./connection/scroll-positions"
@@ -28,6 +29,7 @@
   interface Props {
     connection: SidebarConnection
     originAccess: OriginAccess
+    downloads: Downloads
     localePreferences: LocalePreferences
     /**
      * Language tags in order of preference, like `navigator.languages`. Used when the language
@@ -44,6 +46,7 @@
   const {
     connection,
     originAccess,
+    downloads,
     localePreferences,
     browserLanguages,
     faviconUrl = noFaviconResolver,
@@ -119,6 +122,7 @@
     {bodyPanel}
     {translator}
     {originAccess}
+    {downloads}
     {faviconUrl}
     {scrollPositions}
     {sidePanel}

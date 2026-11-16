@@ -11,6 +11,7 @@ import {
   type MemoryConnectionOptions,
 } from "../connection/memory-connection"
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
+import { createMemoryDownloads, type MemoryDownloadsOptions } from "../connection/memory-downloads"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../connection/memory-scroll-positions"
 import { createMemorySidePanel } from "../connection/memory-side-panel"
@@ -47,6 +48,8 @@ export const renderSidebar = async (
     readonly scrollPositions?: ScrollPositions
     /** The newer release the side panel is told about. None by default. */
     readonly updateNotice?: Release | null
+    /** The browser's downloads, and how asking to read them goes. Granted when asked by default. */
+    readonly downloads?: MemoryDownloadsOptions
   } = {},
 ) => {
   const {
@@ -55,6 +58,7 @@ export const renderSidebar = async (
     browserLanguages = [],
     scrollPositions = createMemoryScrollPositions(),
     updateNotice = null,
+    downloads: downloadsOptions = {},
     ...connectionOptions
   } = options
   const connection = createMemoryConnection({
@@ -62,6 +66,7 @@ export const renderSidebar = async (
     ...connectionOptions,
   })
   const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
+  const downloads = createMemoryDownloads(downloadsOptions)
   const localePreferences = createMemoryLocalePreferences(locale)
   const updateNotices = createMemoryUpdateNotices(updateNotice)
   const sidePanel = createMemorySidePanel()
@@ -70,6 +75,7 @@ export const renderSidebar = async (
     props: {
       connection,
       originAccess,
+      downloads,
       localePreferences,
       browserLanguages,
       scrollPositions,
@@ -83,6 +89,7 @@ export const renderSidebar = async (
     ...result,
     connection,
     originAccess,
+    downloads,
     updateNotices,
     sidePanel,
     onReload,

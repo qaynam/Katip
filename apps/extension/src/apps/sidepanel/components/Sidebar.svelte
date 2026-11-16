@@ -4,6 +4,7 @@
   import type { Translator } from "#modules/i18n"
   import type { Release } from "#modules/updates"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
+  import type { Downloads } from "../connection/downloads"
   import type { OriginAccess } from "../connection/origin-access"
   import type { ScrollPositions } from "../connection/scroll-positions"
   import type { SidePanel } from "../connection/side-panel"
@@ -29,6 +30,7 @@
   import ClosePanelButton from "./ClosePanelButton.svelte"
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
+  import DownloadsPanel from "./DownloadsPanel.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
   import FolderIconPicker from "./FolderIconPicker.svelte"
   import FolderSearch from "./FolderSearch.svelte"
@@ -51,6 +53,7 @@
     bodyPanel: BodyPanelController
     translator: Translator
     originAccess: OriginAccess
+    downloads: Downloads
     faviconUrl: FaviconResolver
     scrollPositions: ScrollPositions
     sidePanel: SidePanel
@@ -68,6 +71,7 @@
     bodyPanel,
     translator,
     originAccess,
+    downloads,
     faviconUrl,
     scrollPositions,
     sidePanel,
@@ -120,6 +124,9 @@
     },
     get originAccess() {
       return originAccess
+    },
+    get downloads() {
+      return downloads
     },
     get sidePanel() {
       return sidePanel
@@ -217,6 +224,8 @@
         <div class="space-body" data-space-body {@attach keepScrollPosition}>
           {#if bodyPanel.current === "Archive"}
             <ArchivePanel spaceId={activeSpace.id} />
+          {:else if bodyPanel.current === "Downloads"}
+            <DownloadsPanel />
           {:else}
             <PinnedSection pinned={activeSpace.pinned} {onReload} />
             <TemporarySection space={activeSpace} />

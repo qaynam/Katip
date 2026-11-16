@@ -130,5 +130,7 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("SetGitHubToken", { token: Schema.String }),
 
   Schema.TaggedStruct("OpenSpotlight", { windowId: WindowId }),
+  // Opens the browser's own list of every download as a temporary tab in the window's active Space
+  Schema.TaggedStruct("OpenDownloadsPage", { windowId: WindowId }),
 ])
 export type SidebarCommand = typeof SidebarCommand.Type
