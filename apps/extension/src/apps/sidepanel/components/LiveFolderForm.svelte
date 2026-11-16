@@ -60,7 +60,7 @@
         : "sidepanel.liveFolderDialog.gitHubTitle"
 
   let accountIndex = $state("0")
-  // The whole inbox would fill the folder with newsletters, which Gmail doesn't mark important
+  // Not the whole inbox: newsletters would fill the folder, and Gmail doesn't mark them important
   let mailbox = $state<GmailMailbox>("Important")
   let label = $state("")
   let query = $state<GitHubQuery>("review-requested")

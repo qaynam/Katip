@@ -860,7 +860,8 @@ const respondWithoutPeeks = (
           ),
         ),
       ),
-      // As in the background, which removes a live folder only as a pinned item
+      // Not succeeding like the other naive responses: the background refuses this for a live
+      // folder, and a side panel sending it would look as if it worked here
       Match.tag("DeleteFolder", ({ bookmarkId }) =>
         isLiveFolder(view, bookmarkId)
           ? failed(view, "Not a folder")

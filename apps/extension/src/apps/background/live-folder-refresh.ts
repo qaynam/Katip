@@ -6,8 +6,8 @@ import { KatipState } from "./katip-state"
 
 export const LIVE_FOLDER_REFRESH_ALARM = "katip/live-folders/refresh"
 
-// Short enough that new mail shows up within a couple of minutes. Each refresh is a request or two
-// per folder, small next to what an open Gmail tab sends
+// Not longer: new mail would wait that long to show up. Not much shorter either: every live folder
+// sends a request or two on each run
 const REFRESH_PERIOD_MINUTES = 2
 
 /**

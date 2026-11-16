@@ -68,8 +68,8 @@
     border-radius: 3px;
   }
 
-  /* Sites that switch their icon with the system's scheme draw it in one color for that scheme,
-     which vanishes into a Space theme of the same lightness */
+  /* Not left as the site drew it: a site switching its icon with the system's scheme draws it in
+     one color, which vanishes into a Space theme of the same lightness */
   :global(.katip-root[data-scheme="light"]) .image[data-tone="Light"],
   :global(.katip-root[data-scheme="dark"]) .image[data-tone="Dark"] {
     filter: invert(1);

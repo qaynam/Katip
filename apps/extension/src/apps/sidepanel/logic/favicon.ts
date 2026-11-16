@@ -30,14 +30,13 @@ export const faviconLetter = (pageUrl: string, title: string): string => {
 export type FaviconTone = "Light" | "Dark" | "Mixed"
 
 const OPAQUE_ALPHA = 128
-// A pixel whose channels spread this far apart is colored, not a shade of gray
-const GRAY_CHROMA_MAX = 48
+const MAX_CHANNEL_SPREAD_OF_GRAY = 48
 const LIGHT_MIN = 0.7
 const DARK_MAX = 0.3
-// Edges smoothed against the background are neither light nor dark, so not every pixel need be
+// Not every pixel: edges smoothed against the background are neither light nor dark
 const SHARE_OF_ONE_TONE = 0.9
 const SHARE_OF_COLORED_MAX = 0.1
-// An icon showing almost nothing has no tone worth correcting
+// Not judged below this: an icon showing almost nothing has no tone worth correcting
 const SHARE_OF_OPAQUE_MIN = 0.05
 
 /** The tone of an icon from its pixels, as RGBA bytes in rows. */
@@ -54,7 +53,9 @@ export const faviconToneOf = (rgba: ArrayLike<number>): FaviconTone => {
     const alpha = rgba[offset + 3] ?? 0
     if (alpha < OPAQUE_ALPHA) continue
     opaque += 1
-    if (Math.max(red, green, blue) - Math.min(red, green, blue) > GRAY_CHROMA_MAX) colored += 1
+    if (Math.max(red, green, blue) - Math.min(red, green, blue) > MAX_CHANNEL_SPREAD_OF_GRAY) {
+      colored += 1
+    }
     const lightness = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
     if (lightness >= LIGHT_MIN) light += 1
     else if (lightness <= DARK_MAX) dark += 1

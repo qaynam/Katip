@@ -1,4 +1,4 @@
-// A page that can't have a favicon, for the default image the browser answers in place of one
+// Not a real site's page: .invalid never resolves, so no icon can have been saved for it
 const PAGE_WITHOUT_FAVICON = "https://katip.invalid/"
 
 const checks = new Map<string, Promise<boolean>>()

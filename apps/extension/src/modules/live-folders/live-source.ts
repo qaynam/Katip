@@ -66,7 +66,7 @@ export type GmailSource = Extract<LiveSource, { readonly _tag: "Gmail" }>
 export const GMAIL_PRIMARY_LABEL = "^sq_ig_i_personal"
 
 /** The label of the mail Gmail marks important, by hand or by its own guess. */
-// Gmail's own name for the label, which Google doesn't document either
+// Not a documented name: Gmail's own, like the Primary tab's, so Gmail may change it unannounced
 export const GMAIL_IMPORTANT_LABEL = "^io_im"
 
 /**

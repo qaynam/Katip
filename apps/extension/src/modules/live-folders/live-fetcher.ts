@@ -126,7 +126,7 @@ export class LiveFetcher extends Context.Service<
         const [items, important] = yield* Effect.all(
           [
             fetchGmailFeed(source),
-            // Without it the folder still lists its mail, only without the marks
+            // Not failing the folder with it: without it the folder still lists its mail, unmarked
             fetchGmailFeed({ ...source, label: GMAIL_IMPORTANT_LABEL }).pipe(
               Effect.catch(() => Effect.succeed<ReadonlyArray<LiveItem>>([])),
             ),

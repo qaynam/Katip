@@ -50,7 +50,7 @@ export const githubWebSearchRequest = (search: GitHubWebSearch): HttpRequest => 
   headers: { Accept: "application/json" },
   credentials: "include",
   redirect: "manual",
-  // A copy the browser kept would go on listing what has since been closed or reviewed
+  // Not the browser's cache: a copy kept there would go on listing what has since been closed
   cache: "no-store",
 })
 

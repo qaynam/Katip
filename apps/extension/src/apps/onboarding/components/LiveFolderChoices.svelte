@@ -39,8 +39,8 @@
     readonly source: LiveSource
   }
 
-  // The important mail of the first account signed in, which is what most people mean to follow.
-  // Not the whole inbox: newsletters would take most of the folder
+  // Not the whole inbox: newsletters would take most of the folder. Not another account either: the
+  // first one signed in is the one most people mean
   const CHOICES: ReadonlyArray<Choice> = [
     {
       key: "gmail",

@@ -5,10 +5,6 @@ const SAMPLE_SIZE = 24
 const tones = new Map<string, Promise<FaviconTone>>()
 
 const readTone = async (url: string): Promise<FaviconTone> => {
-  // Neither exists in jsdom, where the side panel's tests run
-  if (typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") {
-    return "Mixed"
-  }
   const blob = await (await fetch(url)).blob()
   const bitmap = await createImageBitmap(blob, {
     resizeWidth: SAMPLE_SIZE,

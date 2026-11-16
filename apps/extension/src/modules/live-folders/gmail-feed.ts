@@ -23,7 +23,7 @@ export const gmailFeedRequest = ({ accountIndex, label }: GmailSource): HttpRequ
   // accounts.google.com, which has no permission, and become indistinguishable from a connection
   // error, so the redirect is judged without following it
   redirect: "manual",
-  // A copy the browser kept would go on listing mail already read
+  // Not the browser's cache: a copy kept there would go on listing mail already read
   cache: "no-store",
 })
 
@@ -72,7 +72,7 @@ const senderOf = (entry: AtomEntry): string =>
     Option.getOrElse(() => ""),
   )
 
-// Anyone can sign up at these, so their icon says nothing of who sent the mail
+// Not their icon: anyone can sign up at these, so it says nothing of who sent the mail
 const FREE_MAIL_DOMAINS = new Set([
   "gmail.com",
   "googlemail.com",
@@ -108,9 +108,9 @@ const FREE_MAIL_DOMAINS = new Set([
   "i.softbank.jp",
 ])
 
-// Mail often comes from a host kept for sending, such as mail. or news., while the browser saved
-// the icon of the site people visit. Not a full public suffix list: a two-letter country code under
-// a short second level, as in co.jp, keeps three labels
+// Not the sender's own host: mail often comes from one kept for sending, such as mail. or news.,
+// while the browser saved the icon of the site people visit. Not a full public suffix list either:
+// a two-letter country code under a short second level, as in co.jp, keeps three labels
 const siteDomainOf = (domain: string): string => {
   const labels = domain.split(".")
   const [secondLevel, topLevel] = labels.slice(-2)

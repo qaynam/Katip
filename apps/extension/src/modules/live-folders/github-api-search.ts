@@ -35,7 +35,7 @@ export const githubApiSearchRequest = (search: string, token: string): HttpReque
     "X-GitHub-Api-Version": "2022-11-28",
   },
   credentials: "omit",
-  // A copy the browser kept would go on listing what has since been closed or reviewed
+  // Not the browser's cache: a copy kept there would go on listing what has since been closed
   cache: "no-store",
 })
 
