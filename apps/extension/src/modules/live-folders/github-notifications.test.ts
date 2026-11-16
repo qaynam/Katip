@@ -129,7 +129,7 @@ const appShellPage = `<!DOCTYPE html>
   </body>
 </html>`
 
-const itemsOf = (html: string) => parseGitHubNotificationsPage(html, NOW)
+const itemsOf = (html: string) => parseGitHubNotificationsPage(html)
 
 const fieldOf = <K extends keyof LiveItem>(html: string, key: K) =>
   Result.map(itemsOf(html), (items) => items.map((item) => item[key]))
@@ -231,15 +231,16 @@ describe("reading the notifications page", () => {
     )
   })
 
-  it("takes the time a notification was last updated from the page, and counts one without a time as updated now", () => {
+  it("takes the time a notification was last updated from the page, and leaves out one without a time", () => {
     const page = notificationsPage(
       notification({ id: "timed", updatedAt: "2026-11-15T23:05:00Z" }),
       notification({ id: "untimed", updatedAt: null }),
     )
 
-    expect(fieldOf(page, "updatedAt")).toStrictEqual(
-      Result.succeed([Date.UTC(2026, 10, 15, 23, 5, 0), NOW]),
-    )
+    expect([fieldOf(page, "id"), fieldOf(page, "updatedAt")]).toStrictEqual([
+      Result.succeed(["timed"]),
+      Result.succeed([Date.UTC(2026, 10, 15, 23, 5, 0)]),
+    ])
   })
 
   it("keeps the page's order, most recently updated first", () => {

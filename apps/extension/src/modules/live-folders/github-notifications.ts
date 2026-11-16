@@ -91,14 +91,17 @@ const repositoryOf = (link: URL): Option.Option<Repository> =>
     }),
   )
 
-const itemFrom = ({ tag, content }: NotificationMarkup, now: number): Option.Option<LiveItem> =>
+const itemFrom = ({ tag, content }: NotificationMarkup): Option.Option<LiveItem> =>
   Option.map(
     Option.all({
       id: nonBlank(tag.attributes.get("data-notification-id")),
       link: linkOf(content),
       title: titleOf(content),
+      // Not the time of the refresh in place of a missing one: the notification would count as
+      // updated at every refresh, and come back unread after being read
+      updatedAt: updatedAtOf(content),
     }),
-    ({ id, link, title }) => {
+    ({ id, link, title, updatedAt }) => {
       const repository = repositoryOf(link)
       return {
         id,
@@ -110,7 +113,7 @@ const itemFrom = ({ tag, content }: NotificationMarkup, now: number): Option.Opt
         // Not the plain page of the issue or pull request: GitHub's own link carries the
         // notification, so that opening it marks the notification read, as the inbox does
         url: link.href,
-        updatedAt: Option.getOrElse(updatedAtOf(content), () => now),
+        updatedAt,
         ...Option.match(repository, {
           onNone: () => ({}),
           onSome: ({ owner }) => ({ icon: githubAvatarIcon(owner) }),
@@ -134,14 +137,13 @@ const isEmptyInbox = (html: string): boolean =>
  * updated first).
  *
  * Leaves out the notifications already read, and those without an id, a link on github.com or a
- * title. A notification without a time counts as updated at `now`.
+ * title or a time.
  *
  * Fails as not signed in for the sign-in page. Fails as unreadable for a page that is neither, or
  * that lists notifications none of which can be read.
  */
 export const parseGitHubNotificationsPage = (
   html: string,
-  now: number,
 ): Result.Result<ReadonlyArray<LiveItem>, LiveFetchFailure> => {
   const markups = notificationMarkupsOf(html)
   if (markups.length === 0) {
@@ -150,7 +152,7 @@ export const parseGitHubNotificationsPage = (
   }
   const notifications = markups.map((markup) => ({
     isUnread: hasClass(markup.tag, "notification-unread"),
-    item: itemFrom(markup, now),
+    item: itemFrom(markup),
   }))
   if (notifications.every(({ item }) => Option.isNone(item))) {
     return Result.fail({ _tag: "UnreadableResponse" })
@@ -160,10 +162,7 @@ export const parseGitHubNotificationsPage = (
   )
 }
 
-/**
- * @param now - What the retry time counts from when the rate limit gives it as a wait, and the time
- *   of a notification the page gives none for.
- */
+/** @param now - What the retry time counts from when the rate limit gives it as a wait. */
 export const githubNotificationItemsFrom = (
   response: HttpResponse,
   now: number,
@@ -175,5 +174,5 @@ export const githubNotificationItemsFrom = (
   if (response.status !== 200) {
     return Result.fail({ _tag: "UnexpectedStatus", status: response.status })
   }
-  return parseGitHubNotificationsPage(response.body, now)
+  return parseGitHubNotificationsPage(response.body)
 }
