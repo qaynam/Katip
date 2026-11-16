@@ -31,6 +31,9 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
 - **The Archive from the Space menu and the Command Palette** — The Archive moves from the button at the bottom left, which now shows your downloads, to Open Archive in a Space’s … menu and the Open Archive command in the Command Palette. The × at its top right takes you back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
 - **How many items a live folder shows** — A live folder shows its first 10 items, in the order you sorted it, and ends with a row such as “3 more” that opens the rest on Gmail or GitHub. Right-click the folder and choose 5, 10, 20 or All under Items to Show, below Sort By. An item open in a tab stays on its row wherever it falls, and the count on the right of the folder still counts every unread item.
+- **Sliding between Spaces** — Switching Spaces slides the Space’s name, pins and tabs in from the side its dot sits on in the bottom bar, pushing the Space you leave out the other side, while the background changes color along with them. Downloads slide in from the left as a whole, pushing the Space aside, and the Archive slides in from the left under the Space’s name; both slide back when closed. If your system is set to reduce motion, they change at once.
+- **Swiping stops at the ends** — Swiping sideways no longer goes around from the last Space to the first. Past the first Space, it shows your downloads; if Katip can’t read them yet, Allow Access to Downloads in the view asks for it. Past the last Space, it shows a new Space to name. Swiping further than either nudges the sidebar instead of going on.
+- **Name a new Space before it’s created** — The + at the bottom right, like swiping past the last Space, shows a new Space with a name ready to edit, and creates it only when you press Enter or Create; the theme picker then opens as before. Esc, Cancel, swiping back or clicking elsewhere gives it up, and neither the Space nor its bookmark folder is created.
 
 ### 🐛 Fixed
 
@@ -57,6 +60,9 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
 - **Space のメニューとコマンドパレットからアーカイブ** — アーカイブは、ダウンロードを表示するようになった左下のボタンから、Space の「…」メニューとコマンドパレットの「アーカイブを開く」に移りました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
 - **ライブフォルダに表示する件数** — ライブフォルダには、並べ替えた順に先頭の 10 件を表示し、最後に「ほか 3 件」のような行を置きます。この行をクリックすると、残りを Gmail や GitHub で開きます。件数は、フォルダの右クリックメニューで「並べ替え」の下にある「表示する件数」から、5 件・10 件・20 件・すべてのいずれかを選べます。タブで開いている項目は、何件目であっても自分の行に表示し、フォルダの右側の未読の件数は、表示していないものも含めてすべて数えます。
+- **Space の切り替えをスライドで** — Space を切り替えると、Space の名前・ピン・タブが、下部のバーでその Space の点がある側からスライドして入り、それまでの Space を反対側へ押し出します。背景の色も一緒に変わります。ダウンロードは画面全体が左から入って Space を横へ押しのけ、アーカイブは Space の名前の下に左から入ります。どちらも閉じると元の向きに戻ります（※システムで視差効果を減らす設定にしている場合は、動かさずに切り替えます）。
+- **スワイプは端で止まるように** — 横へのスワイプで、最後の Space から最初の Space へ回り込まなくなりました。最初の Space からさらに戻るとダウンロードを表示します（※ダウンロードを読む許可がまだない場合は、表示した画面の「ダウンロードへのアクセスを許可」から許可できます）。最後の Space からさらに進むと、名前を付ける新しい Space を表示します。その先へスワイプしても、サイドバーが少し揺れるだけで止まります。
+- **新しい Space は名前を決めてから作成** — 右下の ＋ や最後の Space からのスワイプで、名前を編集できる状態の新しい Space を表示し、Enter か「作成」を押したときにはじめて作成します。作成後は、これまでどおりテーマの選択が開きます。Esc、「キャンセル」、スワイプで戻る、ほかの場所をクリックのいずれかで取りやめ、Space もそのブックマークフォルダも作られません。
 
 ### 🐛 修正
 
