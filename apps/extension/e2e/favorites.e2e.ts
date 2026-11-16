@@ -75,5 +75,4 @@ test("closing a Favorite's tab keeps the Favorite, and clicking it opens the pag
 })
 
 test.fixme("reordering Favorites tiles reorders Chrome's pinned tabs", () => {})
-test.fixme("Favorites stay visible whichever Space is shown", () => {})
 test.fixme("moving a Favorite to another window makes it a temporary tab of the Space shown there", () => {})

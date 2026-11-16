@@ -21,7 +21,7 @@ const previewArcFile = async (context: BrowserContext, background: Worker) => {
   }
 }
 
-test("importing Arc's sidebar file from the settings page adds its Spaces, pins and Favorites after a preview", async ({
+test("importing Arc's sidebar file from the settings page adds its Spaces, pins and each Space's Favorites after a preview", async ({
   context,
   sidebar,
   background,
@@ -30,7 +30,7 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
   const { options, preview } = await previewArcFile(context, background)
 
   await expect(preview.getByRole("list", { name: "To be added" }).getByRole("listitem")).toHaveText(
-    ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "3 Favorites"],
+    ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "8 Favorites"],
   )
   expect(await pinnedBookmarks(background, "Work")).toBeNull()
 
@@ -56,28 +56,30 @@ test("importing Arc's sidebar file from the settings page adds its Spaces, pins 
     untitled: ["Weather"],
     personal: ["Recipes", "Trips[Packing List]"],
   })
+  const switcher = sidebar.getByRole("navigation", { name: "Switch Space" })
+  for (const name of ["Home", "Work", "Reading", "Space 4", "Personal"]) {
+    await expect(switcher.getByRole("button", { name, exact: true })).toBeVisible()
+  }
+  const favorites = sidebar.getByRole("region", { name: "Favorites" })
+  await expect(favorites.getByText("Drag tabs here to add them to Favorites")).toBeVisible()
+  await switcher.getByRole("button", { name: "Personal", exact: true }).click()
+  await expect(sidebar.getByRole("heading", { name: "Personal" })).toBeVisible()
   // Added closed, so no tab opens for them
-  const favorites = sidebar.getByRole("region", { name: "Favorites" }).getByRole("button")
-  await expect(favorites).toHaveCount(3)
+  await expect(favorites.getByRole("button")).toHaveCount(2)
   expect(
     await Promise.all(
-      (await favorites.all()).map(async (tile) => [
+      (await favorites.getByRole("button").all()).map(async (tile) => [
         await tile.getAttribute("aria-label"),
         await tile.getAttribute("data-favorite-state"),
       ]),
     ),
   ).toStrictEqual([
-    ["Calendar", "closed"],
-    ["Music", "closed"],
     ["Photos", "closed"],
+    ["Calendar", "closed"],
   ])
   expect(await background.evaluate(async () => chrome.tabs.query({ pinned: true }))).toStrictEqual(
     [],
   )
-  const switcher = sidebar.getByRole("navigation", { name: "Switch Space" })
-  for (const name of ["Home", "Work", "Reading", "Space 4", "Personal"]) {
-    await expect(switcher.getByRole("button", { name, exact: true })).toBeVisible()
-  }
 })
 
 test("combining the chosen Arc Spaces adds one Space named Arc with a folder for each, and leaves the existing Space as it was", async ({

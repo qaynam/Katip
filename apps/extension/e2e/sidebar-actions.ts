@@ -1,4 +1,4 @@
-import type { Locator, Page, Worker } from "@playwright/test"
+import { expect, type Locator, type Page, type Worker } from "@playwright/test"
 
 /** Creates bookmarks in order in the folder of the first Space, "Home". Entries without `url` become folders. */
 export const seedPins = (
@@ -96,4 +96,13 @@ export const chooseFromMenu = async (
   for (const item of path) {
     await sidebar.getByRole("menu").getByRole("menuitem", { name: item, exact: true }).click()
   }
+}
+
+/** Creates a Space from the bottom bar, enters `name` in the name editor that opens, and closes the theme picker. */
+export const createSpace = async (sidebar: Page, name: string) => {
+  await sidebar.getByRole("button", { name: "Create Space" }).click()
+  await sidebar.getByRole("textbox", { name: "Space name" }).fill(name)
+  await sidebar.keyboard.press("Enter")
+  await sidebar.keyboard.press("Escape")
+  await expect(sidebar.getByRole("heading", { name })).toBeVisible()
 }

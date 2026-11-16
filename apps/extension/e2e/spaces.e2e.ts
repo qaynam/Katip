@@ -1,6 +1,12 @@
-import type { Page, Worker } from "@playwright/test"
+import type { Worker } from "@playwright/test"
 import { expect, test } from "./fixtures"
-import { chooseFromMenu, openPages, pagesInBrowser, temporaryTitles } from "./sidebar-actions"
+import {
+  chooseFromMenu,
+  createSpace,
+  openPages,
+  pagesInBrowser,
+  temporaryTitles,
+} from "./sidebar-actions"
 
 const spaceFolderTitles = (background: Worker) =>
   background.evaluate(async () => {
@@ -9,15 +15,6 @@ const spaceFolderTitles = (background: Worker) =>
       ? []
       : (await chrome.bookmarks.getChildren(root.id)).map((node) => node.title)
   })
-
-/** Creates a Space from the bottom bar, enters `name` in the name editor that opens, and closes the theme picker. */
-const createSpace = async (sidebar: Page, name: string) => {
-  await sidebar.getByRole("button", { name: "Create Space" }).click()
-  await sidebar.getByRole("textbox", { name: "Space name" }).fill(name)
-  await sidebar.keyboard.press("Enter")
-  await sidebar.keyboard.press("Escape")
-  await expect(sidebar.getByRole("heading", { name })).toBeVisible()
-}
 
 test.beforeEach(async ({ sidebar }) => {
   await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
