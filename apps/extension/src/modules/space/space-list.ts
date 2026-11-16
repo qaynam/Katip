@@ -16,9 +16,11 @@ export class LastSpaceRemoval extends Schema.TaggedError<LastSpaceRemoval>()("La
 /** Names a Space created without a name after a number. Numbers start at 1. */
 export type NumberedSpaceName = (number: number) => string
 
+type NamedSpaces = ReadonlyArray<{ readonly name: string }>
+
 // Given more candidates than there are Spaces, one is always free and the fallback is never reached
 const firstFreeName = (
-  spaces: SpaceList,
+  spaces: NamedSpaces,
   candidates: Array.NonEmptyReadonlyArray<SpaceName>,
 ): SpaceName => {
   const taken = new Set<string>(spaces.map((space) => space.name))
@@ -31,7 +33,7 @@ const firstFreeName = (
 /**
  * A numbered name no existing Space has. The search starts at the number after the count of Spaces.
  */
-export const nextSpaceName = (spaces: SpaceList, numbered: NumberedSpaceName): SpaceName =>
+export const nextSpaceName = (spaces: NamedSpaces, numbered: NumberedSpaceName): SpaceName =>
   firstFreeName(
     spaces,
     Array.makeBy(spaces.length + 1, (offset) =>

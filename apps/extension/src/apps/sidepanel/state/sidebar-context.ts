@@ -13,6 +13,7 @@ import type { FolderSearchController } from "./folder-search.svelte"
 import type { LiveFolderDialogController } from "./live-folder-dialog.svelte"
 import type { MenuController } from "./menu-controller.svelte"
 import type { PendingRename } from "./pending-rename.svelte"
+import type { SpaceDraftController } from "./space-draft.svelte"
 import type { PendingSpaceSetup } from "./space-setup.svelte"
 import type { ThemeDraft } from "./theme-draft.svelte"
 import type { ThemePickerController } from "./theme-picker.svelte"
@@ -29,6 +30,7 @@ export interface SidebarContext {
   readonly drag: DragSession
   readonly pendingRename: PendingRename
   readonly spaceSetup: PendingSpaceSetup
+  readonly spaceDraft: SpaceDraftController
   readonly themePicker: ThemePickerController
   readonly themeDraft: ThemeDraft
   readonly tooltip: TooltipController

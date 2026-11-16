@@ -13,6 +13,7 @@
     type Download,
     type DownloadDetail,
   } from "../logic/downloads"
+  import type { DownloadsAccess } from "../connection/downloads"
   import { getSidebarContext } from "../state/sidebar-context"
   import DownloadFileIcon from "./DownloadFileIcon.svelte"
   import Icon, { type IconName } from "./Icon.svelte"
@@ -36,10 +37,23 @@
   const t = $derived(ctx.translator.t)
   const ids = $props.id()
 
+  // Read before access is known as well: without it, nothing is delivered
+  let access = $state<DownloadsAccess | null>(null)
+  $effect(() => {
+    void ctx.downloads.access().then((found) => (access = found))
+  })
+  const isAccessMissing = $derived(access === "NotAsked" || access === "Declined")
+
   let downloads = $state.raw<ReadonlyArray<Download> | null>(null)
-  $effect(() =>
-    ctx.downloads.watchRecent(SEARCHED_COUNT, (recent) => (downloads = newestFirst(recent))),
-  )
+  $effect(() => {
+    if (isAccessMissing) return
+    return ctx.downloads.watchRecent(SEARCHED_COUNT, (recent) => (downloads = newestFirst(recent)))
+  })
+
+  // A swipe opens the view without a click, and Chrome only asks for permission during one
+  const allowAccess = async () => {
+    access = (await ctx.downloads.request()) ? "Granted" : "Declined"
+  }
 
   let query = $state("")
   let kind = $state<DownloadKindFilter>("All")
@@ -230,7 +244,14 @@
   </div>
 
   <div id="{ids}-results" class="results">
-    {#if downloads !== null && downloads.length === 0}
+    {#if isAccessMissing}
+      <div class="access">
+        <p class="empty">{t("sidepanel.downloads.accessNeeded")}</p>
+        <button class="allow" type="button" onclick={allowAccess}>
+          {t("sidepanel.downloads.allowAccess")}
+        </button>
+      </div>
+    {:else if downloads !== null && downloads.length === 0}
       <p class="empty">{t("sidepanel.downloads.empty")}</p>
     {:else if downloads !== null && matches.length === 0}
       <p class="empty">{t("sidepanel.downloads.noMatch")}</p>
@@ -416,6 +437,28 @@
     color: var(--text-muted);
     font-size: 12px;
     text-align: center;
+  }
+
+  .access {
+    display: grid;
+    justify-items: center;
+    padding: 0 12px;
+  }
+
+  .access .empty {
+    margin-bottom: 10px;
+  }
+
+  .allow {
+    height: 28px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--surface-active);
+    box-shadow: var(--shadow-active);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .entries {

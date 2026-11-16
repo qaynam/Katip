@@ -10,7 +10,6 @@ import { sidebarView, spaceView } from "../testing/view-builders"
 
 const work = spaceView("work", { name: SpaceName.make("Work") })
 const hobby = spaceView("hobby", { name: SpaceName.make("Hobby") })
-const reading = spaceView("reading", { name: SpaceName.make("Reading") })
 
 const spaceBar = () => screen.getByRole("navigation", { name: "Switch Space" })
 
@@ -82,9 +81,25 @@ describe("Space marks", () => {
 })
 
 describe("Creating a Space", () => {
-  const create = () => fireEvent.click(screen.getByRole("button", { name: "Create Space" }))
+  const nameField = () => screen.queryByRole<HTMLInputElement>("textbox", { name: "Space name" })
+  const create = async () => {
+    await fireEvent.click(screen.getByRole("button", { name: "Create Space" }))
+    await fireEvent.submit(nameField() as HTMLElement)
+    await tick()
+  }
 
-  it("creates a Space in this window with a theme in a color not used yet", async () => {
+  it("shows a new Space to name, named like the next numbered Space, without creating it", async () => {
+    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby] }))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Create Space" }))
+
+    expect([nameField()?.value, commandsOf(connection.sentCommands, "CreateSpace")]).toStrictEqual([
+      "Space 3",
+      [],
+    ])
+  })
+
+  it("creates the confirmed Space in this window with a theme in a color not used yet", async () => {
     const used = themeOf([{ hue: 350, chroma: 0.55 }])
     const { connection } = await renderSidebar(
       sidebarView({ spaces: [{ ...work, theme: used }, hobby] }),
@@ -93,12 +108,12 @@ describe("Creating a Space", () => {
     await create()
 
     const [command] = commandsOf(connection.sentCommands, "CreateSpace")
-    expect(command).toMatchObject({ _tag: "CreateSpace", windowId: 1 })
+    expect(command).toMatchObject({ _tag: "CreateSpace", windowId: 1, name: "Space 3" })
     expect(command?._tag === "CreateSpace" && command.theme?.colors).not.toStrictEqual(used.colors)
     expect(command?._tag === "CreateSpace" && command.theme?.colors.length).toBe(1)
   })
 
-  it("starts renaming and opens the theme picker once the created Space is shown", async () => {
+  it("opens the theme picker once the created Space is shown", async () => {
     await renderSidebar(sidebarView({ spaces: [work, hobby] }), {
       respond: respondLikeBackground,
     })
@@ -106,10 +121,20 @@ describe("Creating a Space", () => {
     await create()
     await tick()
 
-    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Space name" }).value).toBe(
-      "Space 3",
-    )
+    expect(screen.getByRole("heading", { name: "Space 3" })).toBeTruthy()
     expect(screen.getByRole("dialog", { name: "Theme" })).toBeTruthy()
+  })
+
+  it("creates nothing when the new Space is cancelled", async () => {
+    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby] }))
+    await fireEvent.click(screen.getByRole("button", { name: "Create Space" }))
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect([commandsOf(connection.sentCommands, "CreateSpace"), nameField()]).toStrictEqual([
+      [],
+      null,
+    ])
   })
 
   it("doesn't start editing on a later switch to another Space when creation failed", async () => {
@@ -128,47 +153,5 @@ describe("Creating a Space", () => {
 
     expect(screen.queryByRole("textbox", { name: "Space name" })).toBeNull()
     expect(screen.queryByRole("dialog", { name: "Theme" })).toBeNull()
-  })
-})
-
-describe("Horizontal swipe", () => {
-  const swipe = (deltaX: number) => fireEvent.wheel(screen.getByRole("main"), { deltaX, deltaY: 0 })
-
-  it("switches to the next Space on a swipe to the right", async () => {
-    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby, reading] }))
-
-    await swipe(40)
-
-    expect(connection.sentCommands).toStrictEqual([
-      { _tag: "SwitchSpace", windowId: 1, spaceId: "hobby" },
-    ])
-  })
-
-  it("wraps around to the last Space on a swipe to the left from the first", async () => {
-    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby, reading] }))
-
-    await swipe(-40)
-
-    expect(connection.sentCommands).toStrictEqual([
-      { _tag: "SwitchSpace", windowId: 1, spaceId: "reading" },
-    ])
-  })
-
-  it("doesn't switch on horizontal scrolling over the Space marks", async () => {
-    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby] }))
-
-    await fireEvent.wheel(within(spaceBar()).getByRole("list"), { deltaX: 40, deltaY: 0 })
-
-    expect(connection.sentCommands).toStrictEqual([])
-  })
-
-  it("doesn't switch while the theme picker is open", async () => {
-    const { connection } = await renderSidebar(sidebarView({ spaces: [work, hobby] }))
-    await fireEvent.click(screen.getByRole("button", { name: "Space menu" }))
-    await fireEvent.click(screen.getByRole("menuitem", { name: "Edit Theme" }))
-
-    await swipe(40)
-
-    expect(commandsOf(connection.sentCommands, "SwitchSpace")).toStrictEqual([])
   })
 })

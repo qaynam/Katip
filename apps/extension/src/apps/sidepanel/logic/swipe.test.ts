@@ -1,7 +1,15 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId } from "#modules/space"
-import { detectSwipe, neighborSpaceId } from "./swipe"
+import {
+  detectSwipe,
+  downloadsPage,
+  newSpacePage,
+  spacePage,
+  swipeDestination,
+  type SidebarPage,
+  type SwipeDirection,
+} from "./swipe"
 
 const longAgo = Number.POSITIVE_INFINITY
 
@@ -28,28 +36,41 @@ describe("detectSwipe", () => {
   })
 })
 
-describe("neighborSpaceId", () => {
+describe("swipeDestination", () => {
   const spaces = ["a", "b", "c"].map((id) => ({ id: SpaceId.make(id) }))
-  const neighbor = (activeId: string, direction: "previous" | "next") =>
-    Option.getOrNull(neighborSpaceId(spaces, SpaceId.make(activeId), direction))
+  const destination = (current: SidebarPage, direction: SwipeDirection) =>
+    Option.getOrNull(swipeDestination(spaces, current, direction))
 
-  it("returns the neighboring Space", () => {
-    expect(neighbor("b", "next")).toBe("c")
-    expect(neighbor("b", "previous")).toBe("a")
+  it("goes to the neighboring Space", () => {
+    expect([
+      destination(spacePage(SpaceId.make("b")), "next"),
+      destination(spacePage(SpaceId.make("b")), "previous"),
+    ]).toStrictEqual([spacePage(SpaceId.make("c")), spacePage(SpaceId.make("a"))])
   })
 
-  it("wraps around to the other end at either end", () => {
-    expect(neighbor("c", "next")).toBe("a")
-    expect(neighbor("a", "previous")).toBe("c")
+  it("goes to a new Space past the last Space rather than around to the first", () => {
+    expect(destination(spacePage(SpaceId.make("c")), "next")).toStrictEqual(newSpacePage)
   })
 
-  it("has nowhere to switch to with only one Space", () => {
-    const only = [{ id: SpaceId.make("a") }]
-
-    expect(Option.isNone(neighborSpaceId(only, SpaceId.make("a"), "next"))).toBe(true)
+  it("goes to Downloads past the first Space rather than around to the last", () => {
+    expect(destination(spacePage(SpaceId.make("a")), "previous")).toStrictEqual(downloadsPage)
   })
 
-  it("has nowhere to switch to when the active Space isn't in the list", () => {
-    expect(neighbor("missing", "next")).toBeNull()
+  it("comes back to the last Space from a new Space and to the first from Downloads", () => {
+    expect([
+      destination(newSpacePage, "previous"),
+      destination(downloadsPage, "next"),
+    ]).toStrictEqual([spacePage(SpaceId.make("c")), spacePage(SpaceId.make("a"))])
+  })
+
+  it("has nowhere to go past Downloads or a new Space", () => {
+    expect([
+      destination(downloadsPage, "previous"),
+      destination(newSpacePage, "next"),
+    ]).toStrictEqual([null, null])
+  })
+
+  it("has nowhere to go from a Space that isn't in the list", () => {
+    expect(destination(spacePage(SpaceId.make("missing")), "next")).toBeNull()
   })
 })

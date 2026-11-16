@@ -37,6 +37,20 @@ test("creating a Space adds a bookmark folder with the entered name and opens a 
   await expect.poll(() => spaceFolderTitles(background)).toStrictEqual(["Home", "Work"])
 })
 
+test("swiping past the last Space shows a new Space to name, and giving it up adds no bookmark folder", async ({
+  sidebar,
+  background,
+}) => {
+  await sidebar.getByRole("main").hover()
+  await sidebar.mouse.wheel(60, 0)
+  await expect(sidebar.getByRole("textbox", { name: "Space name" })).toBeFocused()
+
+  await sidebar.keyboard.press("Escape")
+
+  await expect(sidebar.getByRole("heading", { name: "Home" })).toBeVisible()
+  await expect.poll(() => spaceFolderTitles(background)).toStrictEqual(["Home"])
+})
+
 test("switching Spaces in the bottom bar brings that Space's last viewed tab to the front", async ({
   site,
   sidebar,

@@ -3,7 +3,7 @@
   import type { SpaceView } from "#protocol"
   import { edgeAt, slotAt } from "../logic/drag-drop"
   import { pointRect } from "../logic/menu-position"
-  import { suggestedTheme } from "../logic/space-themes"
+  import { newSpaceDraft } from "../logic/space-draft"
   import { getSidebarContext } from "../state/sidebar-context"
   import DownloadsButton from "./DownloadsButton.svelte"
   import Icon from "./Icon.svelte"
@@ -18,21 +18,15 @@
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
 
-  const switchTo = (spaceId: SpaceId) =>
-    void ctx.run({ _tag: "SwitchSpace", windowId: ctx.view.windowId, spaceId })
+  const isDraftShown = $derived(ctx.spaceDraft.isShownWith(activeSpaceId))
 
-  const createSpace = async () => {
-    ctx.spaceSetup.requestForNextCreated(new Set(spaces.map((space) => space.id)), {
-      rename: true,
-      editTheme: true,
-    })
-    const outcome = await ctx.run({
-      _tag: "CreateSpace",
-      windowId: ctx.view.windowId,
-      theme: suggestedTheme(spaces),
-    })
-    if (outcome._tag === "Failed") ctx.spaceSetup.cancel()
+  const switchTo = (spaceId: SpaceId) => {
+    ctx.spaceDraft.discard()
+    void ctx.run({ _tag: "SwitchSpace", windowId: ctx.view.windowId, spaceId })
   }
+
+  const openNewSpace = () =>
+    ctx.spaceDraft.open(newSpaceDraft(spaces, ctx.translator), activeSpaceId)
 
   const openSpaceMenu = (event: MouseEvent, space: SpaceView) => {
     event.preventDefault()
@@ -112,10 +106,10 @@
         >
           <button
             class="mark"
-            class:active={space.id === activeSpaceId}
+            class:active={space.id === activeSpaceId && !isDraftShown}
             type="button"
             aria-label={space.name}
-            aria-current={space.id === activeSpaceId ? "true" : undefined}
+            aria-current={space.id === activeSpaceId && !isDraftShown ? "true" : undefined}
             data-space-id={space.id}
             onclick={() => switchTo(space.id)}
             oncontextmenu={(event) => openSpaceMenu(event, space)}
@@ -128,6 +122,18 @@
           </button>
         </li>
       {/each}
+      {#if isDraftShown}
+        <li class="mark-cell">
+          <span
+            class="mark active"
+            role="img"
+            aria-label={t("sidepanel.space.draft")}
+            aria-current="true"
+          >
+            <Icon name="plus" size={10} />
+          </span>
+        </li>
+      {/if}
     </ul>
   </nav>
 
@@ -135,7 +141,7 @@
     class="icon-button"
     type="button"
     aria-label={t("sidepanel.space.create")}
-    onclick={createSpace}
+    onclick={openNewSpace}
   >
     <Icon name="plus" />
   </button>

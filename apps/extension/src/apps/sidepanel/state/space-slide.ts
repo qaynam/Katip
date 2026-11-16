@@ -1,4 +1,4 @@
-import type { SpaceId } from "#modules/space"
+import { Option } from "effect"
 import {
   enteringSide,
   oppositeSide,
@@ -6,48 +6,31 @@ import {
   type Side,
   type SpaceOrder,
 } from "../logic/space-slide"
-import type { SwipeDirection } from "../logic/swipe"
+import { isSamePage, type SidebarPage } from "../logic/swipe"
 
-interface ExpectedSwipe {
-  readonly destination: SpaceId
-  readonly direction: SwipeDirection
-}
-
-/** Which way the Space contents slide each time the shown Space changes. */
+/** Which way the page showing a Space, or the new Space being named, slides each time it changes. */
 export class SpaceSlide {
-  /** Where the Space switched to last came in from. */
-  entersFrom: Side = "right"
-  #shownId: SpaceId
+  /** Where the page switched to last came in from, or null when it took the place without moving. */
+  entersFrom: Side | null = null
+  #shown: SidebarPage
   #order: SpaceOrder
-  #swipe: ExpectedSwipe | null = null
 
-  constructor(spaces: SpaceOrder, shownId: SpaceId) {
+  constructor(spaces: SpaceOrder, shown: SidebarPage) {
     this.#order = spaces
-    this.#shownId = shownId
+    this.#shown = shown
   }
 
-  get leavesTo(): Side {
-    return oppositeSide(this.entersFrom)
+  get leavesTo(): Side | null {
+    return this.entersFrom === null ? null : oppositeSide(this.entersFrom)
   }
 
-  /**
-   * Slides the way of the swipe once the Space it switches to is shown, even when the swipe wrapped
-   * around from one end of the Spaces to the other.
-   */
-  expectSwipe(destination: SpaceId, direction: SwipeDirection) {
-    this.#swipe = { destination, direction }
-  }
-
-  /** Call with every view, before the Space it shows is drawn. */
-  follow(spaces: SpaceOrder, shownId: SpaceId) {
-    if (shownId !== this.#shownId) {
-      const direction =
-        this.#swipe?.destination === shownId
-          ? this.#swipe.direction
-          : switchDirection(this.#order, spaces, this.#shownId, shownId)
-      this.entersFrom = enteringSide(direction)
-      this.#swipe = null
-      this.#shownId = shownId
+  /** Call with every view, before the page it shows is drawn. */
+  follow(spaces: SpaceOrder, shown: SidebarPage) {
+    if (!isSamePage(this.#shown, shown)) {
+      this.entersFrom = Option.getOrNull(
+        Option.map(switchDirection(this.#order, spaces, this.#shown, shown), enteringSide),
+      )
+      this.#shown = shown
     }
     this.#order = spaces
   }

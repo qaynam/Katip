@@ -25,17 +25,31 @@ export const detectSwipe = (
     : Option.none()
 }
 
-export const neighborSpaceId = (
+/** What the sidebar shows, as one of the pages a horizontal swipe moves through. */
+export type SidebarPage =
+  | { readonly _tag: "Downloads" }
+  | { readonly _tag: "Space"; readonly spaceId: SpaceId }
+  | { readonly _tag: "NewSpace" }
+
+export const downloadsPage: SidebarPage = { _tag: "Downloads" }
+export const newSpacePage: SidebarPage = { _tag: "NewSpace" }
+export const spacePage = (spaceId: SpaceId): SidebarPage => ({ _tag: "Space", spaceId })
+
+export const isSamePage = (a: SidebarPage, b: SidebarPage): boolean =>
+  a._tag === b._tag && (a._tag !== "Space" || (b._tag === "Space" && a.spaceId === b.spaceId))
+
+/**
+ * The page a swipe goes to. Downloads come before the first Space and a new Space after the last;
+ * past either of those, and from a page not among them, there is nowhere to go.
+ */
+export const swipeDestination = (
   spaces: ReadonlyArray<{ readonly id: SpaceId }>,
-  activeId: SpaceId,
+  current: SidebarPage,
   direction: SwipeDirection,
-): Option.Option<SpaceId> =>
-  pipe(
-    Array.findFirstIndex(spaces, (space) => space.id === activeId),
-    Option.filter(() => spaces.length > 1),
-    Option.flatMap((index) => {
-      const step = direction === "next" ? 1 : -1
-      return Array.get(spaces, (index + step + spaces.length) % spaces.length)
-    }),
-    Option.map((space) => space.id),
+): Option.Option<SidebarPage> => {
+  const pages = [downloadsPage, ...spaces.map((space) => spacePage(space.id)), newSpacePage]
+  return pipe(
+    Array.findFirstIndex(pages, (page) => isSamePage(page, current)),
+    Option.flatMap((index) => Array.get(pages, index + (direction === "next" ? 1 : -1))),
   )
+}

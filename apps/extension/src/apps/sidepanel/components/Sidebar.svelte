@@ -2,6 +2,7 @@
   import { Option } from "effect"
   import { untrack } from "svelte"
   import type { Translator } from "#modules/i18n"
+  import type { SpaceId } from "#modules/space"
   import type { Release } from "#modules/updates"
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { Downloads } from "../connection/downloads"
@@ -10,7 +11,16 @@
   import type { SidePanel } from "../connection/side-panel"
   import type { FaviconResolver } from "../logic/favicon"
   import { openTabOf } from "../logic/drag-drop"
-  import { detectSwipe, neighborSpaceId } from "../logic/swipe"
+  import { newSpaceDraft } from "../logic/space-draft"
+  import { enteringSide, oppositeSide } from "../logic/space-slide"
+  import {
+    detectSwipe,
+    downloadsPage,
+    newSpacePage,
+    spacePage,
+    swipeDestination,
+    type SidebarPage,
+  } from "../logic/swipe"
   import type { BodyPanelController } from "../state/body-panel.svelte"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
@@ -20,6 +30,7 @@
   import { MenuController } from "../state/menu-controller.svelte"
   import { PendingRename } from "../state/pending-rename.svelte"
   import { setSidebarContext } from "../state/sidebar-context"
+  import { SpaceDraftController } from "../state/space-draft.svelte"
   import { PendingSpaceSetup } from "../state/space-setup.svelte"
   import { SpaceSlide } from "../state/space-slide"
   import { ThemeDraft } from "../state/theme-draft.svelte"
@@ -36,8 +47,9 @@
   import FolderIconPicker from "./FolderIconPicker.svelte"
   import FolderSearch from "./FolderSearch.svelte"
   import LiveFolderDialog from "./LiveFolderDialog.svelte"
+  import NewSpacePage from "./NewSpacePage.svelte"
   import PinnedSection from "./PinnedSection.svelte"
-  import { slideAcross } from "./slide-across"
+  import { nudgeToward, slideAcross } from "./slide-across"
   import SpaceTitle from "./SpaceTitle.svelte"
   import SpotlightButton from "./SpotlightButton.svelte"
   import TemporarySection from "./TemporarySection.svelte"
@@ -96,6 +108,7 @@
   const liveFolderDialog = new LiveFolderDialogController()
   const folderSearch = new FolderSearchController()
   const folderIconPicker = new FolderIconPickerController()
+  const spaceDraft = new SpaceDraftController()
   setSidebarContext({
     run: (command) => run(command),
     get view() {
@@ -109,6 +122,7 @@
     drag,
     pendingRename: new PendingRename(),
     spaceSetup: new PendingSpaceSetup(),
+    spaceDraft,
     themePicker,
     themeDraft,
     tooltip,
@@ -139,16 +153,25 @@
   })
 
   let lastSwipeAt = Number.NEGATIVE_INFINITY
-  const spaceSlide = new SpaceSlide(
-    untrack(() => view.spaces),
-    untrack(() => activeSpace.id),
-  )
-  $effect.pre(() => spaceSlide.follow(view.spaces, activeSpace.id))
+  let sidebar = $state<HTMLElement>()
 
   // Downloads belong to no Space, so their view takes the place of everything that shows one
   const isSpaceCovered = $derived(bodyPanel.current === "Downloads")
 
-  const displayedTheme = $derived(themeDraft.themeFor(activeSpace.id) ?? activeSpace.theme)
+  const shownDraft = $derived(spaceDraft.isShownWith(activeSpace.id) ? spaceDraft.current : null)
+  const spaceStripPage = $derived(shownDraft === null ? spacePage(activeSpace.id) : newSpacePage)
+  const shownPage = $derived(isSpaceCovered ? downloadsPage : spaceStripPage)
+
+  const spaceSlide = new SpaceSlide(
+    untrack(() => view.spaces),
+    untrack(() => spaceStripPage),
+  )
+  $effect.pre(() => spaceSlide.follow(view.spaces, spaceStripPage))
+  $effect(() => spaceDraft.settleWith(activeSpace.id))
+
+  const displayedTheme = $derived(
+    shownDraft?.theme ?? themeDraft.themeFor(activeSpace.id) ?? activeSpace.theme,
+  )
 
   $effect(() => {
     const draft = themeDraft.current
@@ -164,15 +187,36 @@
     }
   })
 
+  // Downloads stay over the Space until it has switched, so it slides in once, already the one
+  // swiped to
+  const showSpace = async (spaceId: SpaceId) => {
+    spaceDraft.discard()
+    if (spaceId !== activeSpace.id) {
+      await run({ _tag: "SwitchSpace", windowId: view.windowId, spaceId })
+    }
+    if (isSpaceCovered) bodyPanel.close()
+  }
+
+  const show = (page: SidebarPage) => {
+    switch (page._tag) {
+      case "Downloads":
+        return bodyPanel.show("Downloads")
+      case "NewSpace":
+        return spaceDraft.open(newSpaceDraft(view.spaces, translator), activeSpace.id)
+      case "Space":
+        return void showSpace(page.spaceId)
+    }
+  }
+
   const switchByWheel = (event: WheelEvent) => {
-    if (drag.source !== null || themePicker.current !== null || isSpaceCovered) return
+    if (drag.source !== null || themePicker.current !== null) return
     const direction = detectSwipe(event, event.timeStamp - lastSwipeAt)
     if (Option.isNone(direction)) return
-    const destination = neighborSpaceId(view.spaces, activeSpace.id, direction.value)
-    if (Option.isNone(destination)) return
     lastSwipeAt = event.timeStamp
-    spaceSlide.expectSwipe(destination.value, direction.value)
-    void run({ _tag: "SwitchSpace", windowId: view.windowId, spaceId: destination.value })
+    const destination = swipeDestination(view.spaces, shownPage, direction.value)
+    if (Option.isSome(destination)) show(destination.value)
+    else if (sidebar !== undefined)
+      nudgeToward(sidebar, oppositeSide(enteringSide(direction.value)))
   }
 
   const dropAccepted = (event: DragEvent) => {
@@ -213,8 +257,12 @@
   }
 </script>
 
-<ThemedSurface theme={displayedTheme} transitionKey={activeSpace.id}>
+<ThemedSurface
+  theme={displayedTheme}
+  transitionKey={shownDraft === null ? activeSpace.id : "new-space"}
+>
   <main
+    bind:this={sidebar}
     class="sidebar"
     inert={dialog.current !== null || liveFolderDialog.current !== null}
     onwheel={switchByWheel}
@@ -240,34 +288,42 @@
         {/if}
 
         <div class="spaces">
-          {#key activeSpace.id}
+          {#key shownDraft === null ? activeSpace.id : null}
             <div
               class="space"
               in:slideAcross={{ side: spaceSlide.entersFrom }}
               out:slideAcross={{ side: spaceSlide.leavesTo }}
             >
-              {#if !isSpaceCovered}
-                <SpaceTitle space={activeSpace} />
-              {/if}
-              <div class="space-pages">
-                {#if bodyPanel.current === "Archive"}
-                  <div class="space-body" data-space-body transition:slideAcross={{ side: "left" }}>
-                    <ArchivePanel spaceId={activeSpace.id} />
-                  </div>
-                {:else if bodyPanel.current === "Downloads"}
-                  <div class="space-body"><DownloadsPanel /></div>
-                {:else}
-                  <div
-                    class="space-body"
-                    data-space-body
-                    {@attach keepScrollPosition}
-                    transition:slideAcross={{ side: "right" }}
-                  >
-                    <PinnedSection pinned={activeSpace.pinned} {onReload} />
-                    <TemporarySection space={activeSpace} />
-                  </div>
+              {#if shownDraft !== null}
+                <NewSpacePage draft={shownDraft} />
+              {:else}
+                {#if !isSpaceCovered}
+                  <SpaceTitle space={activeSpace} />
                 {/if}
-              </div>
+                <div class="space-pages">
+                  {#if bodyPanel.current === "Archive"}
+                    <div
+                      class="space-body"
+                      data-space-body
+                      transition:slideAcross={{ side: "left" }}
+                    >
+                      <ArchivePanel spaceId={activeSpace.id} />
+                    </div>
+                  {:else if bodyPanel.current === "Downloads"}
+                    <div class="space-body"><DownloadsPanel /></div>
+                  {:else}
+                    <div
+                      class="space-body"
+                      data-space-body
+                      {@attach keepScrollPosition}
+                      transition:slideAcross={{ side: "right" }}
+                    >
+                      <PinnedSection pinned={activeSpace.pinned} {onReload} />
+                      <TemporarySection space={activeSpace} />
+                    </div>
+                  {/if}
+                </div>
+              {/if}
             </div>
           {/key}
         </div>
