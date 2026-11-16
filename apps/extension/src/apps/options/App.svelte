@@ -54,6 +54,7 @@
     runtime,
     version,
     releasedAt,
+    updatedFromGitHub,
     repositoryUrl,
     browserLanguages,
     faviconUrl,
@@ -62,6 +63,8 @@
     version: string
     /** When the running version was released, in ISO 8601. Null when unknown. */
     releasedAt: string | null
+    /** Whether Katip is updated by hand from its GitHub releases, so checking them is offered. */
+    updatedFromGitHub: boolean
     repositoryUrl: string | null
     /** BCP 47 language tags in order of preference, like `navigator.languages`. */
     browserLanguages: ReadonlyArray<string>
@@ -423,46 +426,48 @@
                 <span {...control} class="value">{version}</span>
               {/snippet}
             </SettingRow>
-            <SettingRow
-              label={t("options.updates.label")}
-              description={updateNote}
-              labelsControl={false}
-            >
-              {#snippet children(control)}
-                {#if availableRelease !== null}
-                  <a
+            {#if updatedFromGitHub}
+              <SettingRow
+                label={t("options.updates.label")}
+                description={updateNote}
+                labelsControl={false}
+              >
+                {#snippet children(control)}
+                  {#if availableRelease !== null}
+                    <a
+                      {...control}
+                      class="value link"
+                      href={availableRelease.pageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("options.updates.openRelease")}
+                      <Glyph name="external" size={12} />
+                    </a>
+                  {:else}
+                    <PushButton
+                      {...control}
+                      disabled={updateCheck._tag === "Checking"}
+                      onclick={checkForUpdates}
+                    >
+                      {t("options.updates.check")}
+                    </PushButton>
+                  {/if}
+                {/snippet}
+              </SettingRow>
+              <SettingRow
+                label={t("options.updates.automatic.label")}
+                description={t("options.updates.automatic.description")}
+              >
+                {#snippet children(control)}
+                  <Switch
                     {...control}
-                    class="value link"
-                    href={availableRelease.pageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("options.updates.openRelease")}
-                    <Glyph name="external" size={12} />
-                  </a>
-                {:else}
-                  <PushButton
-                    {...control}
-                    disabled={updateCheck._tag === "Checking"}
-                    onclick={checkForUpdates}
-                  >
-                    {t("options.updates.check")}
-                  </PushButton>
-                {/if}
-              {/snippet}
-            </SettingRow>
-            <SettingRow
-              label={t("options.updates.automatic.label")}
-              description={t("options.updates.automatic.description")}
-            >
-              {#snippet children(control)}
-                <Switch
-                  {...control}
-                  checked={current.checkForUpdates}
-                  onchange={(checked) => save({ checkForUpdates: checked })}
-                />
-              {/snippet}
-            </SettingRow>
+                    checked={current.checkForUpdates}
+                    onchange={(checked) => save({ checkForUpdates: checked })}
+                  />
+                {/snippet}
+              </SettingRow>
+            {/if}
             <SettingRow label={t("options.welcome.label")} labelsControl={false}>
               {#snippet children(control)}
                 <PushButton {...control} onclick={showTour}>{t("options.welcome.open")}</PushButton>

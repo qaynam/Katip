@@ -15,6 +15,12 @@ export interface UpdateNotices {
   readonly dismiss: (version: string) => void
 }
 
+/** Tells about no release, asking nothing. */
+export const noUpdateNotices: UpdateNotices = {
+  pending: () => Promise.resolve(null),
+  dismiss: () => {},
+}
+
 /** Asks GitHub, once each browser session, for a release later than `installedVersion`. */
 export const makeGitHubUpdateNotices = (installedVersion: string): UpdateNotices => {
   const runtime = ManagedRuntime.make(

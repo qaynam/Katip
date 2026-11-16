@@ -29,6 +29,20 @@ describe("the manifest's extension ID", () => {
   })
 })
 
+describe("the Chrome Web Store package's manifest", () => {
+  it("carries no key, which the store refuses on a new item, leaving the extension ID to the store", () => {
+    expect(Object.keys(buildManifest("chrome-web-store", "1.0.0"))).not.toContain("key")
+  })
+
+  it("is otherwise the release build's, with the same name, permissions and shortcuts", () => {
+    const release = buildManifest("production", "1.0.0")
+
+    const store = buildManifest("chrome-web-store", "1.0.0")
+
+    expect({ ...store, key: release.key }).toStrictEqual(release)
+  })
+})
+
 describe("the manifest's version", () => {
   it.each(["1", "0.1.0", "1.2.3.4", "65535.65535.65535.65535"])(
     "is the given version %s as is",

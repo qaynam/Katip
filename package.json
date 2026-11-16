@@ -8,6 +8,7 @@
     "dev:web": "turbo run dev --filter=@katip/web",
     "build": "turbo run build",
     "package": "turbo run package --filter=@katip/extension",
+    "package:store": "turbo run package:store --filter=@katip/extension",
     "preview:web": "turbo run preview --filter=@katip/web",
     "deploy:web": "turbo run deploy --filter=@katip/web",
     "test": "turbo run test",

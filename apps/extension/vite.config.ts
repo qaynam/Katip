@@ -11,7 +11,7 @@ const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 const manifestSource = fromRoot("./src/apps/manifest.ts")
 const packageJsonPath = fromRoot("./package.json")
 
-type BuildMode = "development" | "production"
+type BuildMode = Manifest.BuildMode
 
 // Not imported statically: a watch build would keep the manifest, version and translations it
 // started with. Each build loads them afresh, and watches the files they came from
@@ -92,10 +92,16 @@ const commitDate = (): string => {
 }
 
 export default defineConfig(({ mode }) => {
-  const buildMode: BuildMode = mode === "development" ? "development" : "production"
+  const buildMode: BuildMode =
+    mode === "development" || mode === "chrome-web-store" ? mode : "production"
   return {
     root: fromRoot("./src/apps"),
-    define: { "import.meta.env.KATIP_COMMITTED_AT": JSON.stringify(commitDate()) },
+    define: {
+      "import.meta.env.KATIP_COMMITTED_AT": JSON.stringify(commitDate()),
+      // Not for the store's package, even though GitHub has the same versions: a release's zip
+      // would install beside the store's Katip as another one
+      "import.meta.env.KATIP_UPDATED_FROM_GITHUB": JSON.stringify(buildMode !== "chrome-web-store"),
+    },
     plugins: [
       svelte({ configFile: fromRoot("./svelte.config.js") }),
       emitManifest(buildMode),
@@ -106,9 +112,9 @@ export default defineConfig(({ mode }) => {
       outDir: fromRoot("./dist"),
       // In watch mode a failed build empties the output when it starts, and the extension that
       // was working can no longer load. Development builds leave stale files instead
-      emptyOutDir: buildMode === "production",
+      emptyOutDir: buildMode !== "development",
       sourcemap: buildMode === "development" ? "inline" : false,
-      minify: buildMode === "production",
+      minify: buildMode !== "development",
       // A service worker has no document, so Vite must not inject its preload polyfill
       modulePreload: { polyfill: false },
       rolldownOptions: {

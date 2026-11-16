@@ -111,6 +111,7 @@ const exportServerAnswering = (answers: Queue.Queue<ExportAnswer>) =>
 
 interface RenderOptions {
   readonly saved?: SettingsPatch
+  readonly updatedFromGitHub?: boolean
   readonly browserLanguages?: ReadonlyArray<string>
   readonly rejectedStorageOperation?: "get" | "set"
   readonly supportsSplitView?: boolean
@@ -151,6 +152,7 @@ const makeRuntime = (
 
 const renderOptions = async ({
   saved = {},
+  updatedFromGitHub = true,
   browserLanguages = ["en-US"],
   assignedKeys = DEFAULT_KEYS,
   ...runtimeOptions
@@ -166,6 +168,7 @@ const renderOptions = async ({
       runtime,
       version: VERSION,
       releasedAt: RELEASED_AT,
+      updatedFromGitHub,
       repositoryUrl: REPOSITORY_URL,
       browserLanguages,
       faviconUrl: () => null,
@@ -615,6 +618,15 @@ describe("updates", () => {
     await waitFor(async () => {
       expect((await readSaved()).checkForUpdates).toBe(false)
     })
+  })
+
+  it("offers no checks in a Katip the Chrome Web Store updates", async () => {
+    await renderLoaded({ updatedFromGitHub: false })
+
+    expect([
+      screen.queryByRole("button", { name: "Check for Updates" }),
+      screen.queryByRole("switch", { name: "Check for updates automatically" }),
+    ]).toStrictEqual([null, null])
   })
 })
 

@@ -18,6 +18,7 @@ mount(App, {
     version,
     releasedAt:
       import.meta.env.KATIP_COMMITTED_AT === "" ? null : import.meta.env.KATIP_COMMITTED_AT,
+    updatedFromGitHub: import.meta.env.KATIP_UPDATED_FROM_GITHUB,
     repositoryUrl: chrome.runtime.getManifest().homepage_url ?? null,
     browserLanguages: navigator.languages,
     faviconUrl,

@@ -4,6 +4,7 @@
     "dev": { "cache": false, "persistent": true },
     "build": { "outputs": ["dist/**"] },
     "package": { "cache": false, "outputs": [".release/**"] },
+    "package:store": { "cache": false, "outputs": [".release/**"] },
     "preview": { "cache": false, "persistent": true, "dependsOn": ["build"] },
     "deploy": {
       "cache": false,

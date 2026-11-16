@@ -1,6 +1,10 @@
 import { Locale, makeTranslator, type MessageKey } from "#modules/i18n"
 
-type BuildMode = "development" | "production"
+/**
+ * What a build is for: `production` is the zip attached to each GitHub release, which people
+ * install and update by hand, and `chrome-web-store` the package uploaded to the store.
+ */
+export type BuildMode = "development" | "production" | "chrome-web-store"
 
 type ManifestMessageKey = Extract<MessageKey, `manifest.${string}`>
 
@@ -172,8 +176,12 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
   ),
   // Not left to Chrome: without a key, Chrome takes the ID from the folder the extension is loaded
   // from, so an update unzipped into another folder would be a new extension with none of Katip's
-  // data. Development builds get another key, so both can be installed side by side
-  key: mode === "development" ? DEVELOPMENT_PUBLIC_KEY : RELEASE_PUBLIC_KEY,
+  // data. Development builds get another key, so both can be installed side by side. Not in the
+  // Chrome Web Store's package: the store refuses a new item whose manifest has a key, and gives
+  // the item an ID of its own
+  ...(mode !== "chrome-web-store" && {
+    key: mode === "development" ? DEVELOPMENT_PUBLIC_KEY : RELEASE_PUBLIC_KEY,
+  }),
   // Browser automation tools can't open extension pages, so development builds let a test page on
   // localhost connect to the background
   ...(mode === "development" && {
