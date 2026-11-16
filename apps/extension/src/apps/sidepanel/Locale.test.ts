@@ -24,7 +24,7 @@ describe("Display language", () => {
   it("shows the side panel in Japanese when Japanese is chosen in the settings", async () => {
     await renderSidebar(view, { locale: "ja" })
 
-    expect(screen.getByRole("button", { name: "検索" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "コマンドパレットを開く" })).toBeTruthy()
     expect(screen.getByRole("button", { name: "新しいタブ" })).toBeTruthy()
     expect(screen.getByRole("region", { name: "ピン留め" })).toBeTruthy()
   })
@@ -32,7 +32,7 @@ describe("Display language", () => {
   it("follows the browser language when the language setting is auto", async () => {
     await renderSidebar(view, { locale: "auto", browserLanguages: ["es-ES", "en"] })
 
-    expect(screen.getByRole("button", { name: "Buscar" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Abrir la paleta de comandos" })).toBeTruthy()
   })
 
   it("switches to the new language when the setting changes while open", async () => {

@@ -13,6 +13,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.update.dismiss": "閉じる",
 
   "sidepanel.spotlight.button": "検索",
+  "sidepanel.spotlight.open": "コマンドパレットを開く",
   "sidepanel.close": "サイドバーを閉じる",
   "sidepanel.split.pageDropHint": "ページの左か右で離すと、表示中のタブと画面分割します",
   "sidepanel.split.unsupported":

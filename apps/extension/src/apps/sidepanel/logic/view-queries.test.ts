@@ -14,6 +14,7 @@ import {
 } from "../testing/view-builders"
 import {
   archiveEntriesFor,
+  compactUrlOf,
   hostOf,
   openSplitViewOf,
   pinnedItemDisplay,
@@ -84,6 +85,28 @@ describe("hostOf", () => {
 
   it("has no host name for a URL without a host", () => {
     expect(Option.isNone(hostOf("about:blank"))).toBe(true)
+  })
+})
+
+describe("compactUrlOf", () => {
+  it("cuts a web page's URL down to its host, without www", () => {
+    expect(
+      [
+        "https://www.github.com/qaynam/katip/pulls?q=is%3Aopen#top",
+        "http://localhost:5173/dev-harness/",
+        "https://mail.google.com/mail/u/0/",
+      ].map((url) => Option.getOrNull(compactUrlOf(url))),
+    ).toStrictEqual(["github.com", "localhost:5173", "mail.google.com"])
+  })
+
+  it.each([
+    "chrome://newtab/",
+    "chrome-extension://abcdefghijklmnop/page.html",
+    "about:blank",
+    "file:///Users/me/notes.txt",
+    "",
+  ])("has nothing to show for %j", (url) => {
+    expect(Option.isNone(compactUrlOf(url))).toBe(true)
   })
 })
 

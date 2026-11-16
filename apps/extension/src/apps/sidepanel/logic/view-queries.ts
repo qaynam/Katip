@@ -40,6 +40,18 @@ export const archiveEntriesFor = (
 export const hostOf = (url: string): Option.Option<string> =>
   Option.liftThrowable(() => new URL(url).host)().pipe(Option.filter((host) => host !== ""))
 
+const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"])
+
+/**
+ * A web page's URL cut down to its host without `www.`, as an address bar shows a URL compactly.
+ * None for any other page, such as the new tab page, the browser's own pages and extension pages.
+ */
+export const compactUrlOf = (url: string): Option.Option<string> =>
+  Option.liftThrowable(() => new URL(url))().pipe(
+    Option.filter((parsed) => WEB_PROTOCOLS.has(parsed.protocol)),
+    Option.map((parsed) => parsed.host.replace(/^www\./, "")),
+  )
+
 export type PinnedItemDisplay =
   | { readonly _tag: "Closed"; readonly title: string }
   | { readonly _tag: "AtPinnedUrl"; readonly title: string }

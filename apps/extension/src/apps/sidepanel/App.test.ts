@@ -2,8 +2,9 @@ import { fireEvent, screen } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { appearanceOf, themeOf, type SpaceTheme } from "#modules/theme"
+import { TabId } from "#platform/browser"
 import { renderSidebar, shownAppearance } from "./testing/render-sidebar"
-import { sidebarView, spaceView, tabView } from "./testing/view-builders"
+import { favoriteView, sidebarView, spaceView, tabView } from "./testing/view-builders"
 
 const yellow = themeOf([{ hue: 90, chroma: 0.8 }])
 const lightYellow: SpaceTheme = { ...yellow, mode: "light" }
@@ -11,6 +12,8 @@ const darkYellow: SpaceTheme = { ...yellow, mode: "dark" }
 
 const viewWithTheme = (theme: SpaceTheme) =>
   sidebarView({ spaces: [spaceView("work", { theme }), spaceView("hobby")] })
+
+const searchField = () => screen.getByRole("button", { name: "Open Command Palette" })
 
 const emulateSystemScheme = (scheme: "light" | "dark") =>
   vi.stubGlobal("matchMedia", (query: string) => ({
@@ -57,24 +60,24 @@ describe("The sidebar", () => {
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenNewTab", windowId: 1 }])
   })
 
-  it("opens Spotlight in this window from the Search button at the top", async () => {
+  it("opens the Command Palette in this window from the search field at the top", async () => {
     const { connection } = await renderSidebar(sidebarView())
 
-    await fireEvent.click(screen.getByRole("button", { name: "Search" }))
+    await fireEvent.click(searchField())
 
     expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenSpotlight", windowId: 1 }])
   })
 
-  it("shows on the Search button the key the browser assigned to Spotlight", async () => {
+  it("shows in the search field the key the browser assigned to the Command Palette", async () => {
     await renderSidebar(sidebarView({ spotlightShortcut: "⌥T" }))
 
-    expect(screen.getByRole("button", { name: "Search" }).textContent).toContain("⌥T")
+    expect(searchField().textContent).toContain("⌥T")
   })
 
-  it("shows no key on the Search button while none is assigned", async () => {
+  it("shows no key in the search field while none is assigned", async () => {
     await renderSidebar(sidebarView({ spotlightShortcut: null }))
 
-    const button = screen.getByRole("button", { name: "Search" })
+    const button = searchField()
     expect([button.querySelector("kbd"), button.getAttribute("aria-keyshortcuts")]).toStrictEqual([
       null,
       null,
@@ -84,9 +87,76 @@ describe("The sidebar", () => {
   it("announces a key written with modifier names, such as Alt+T", async () => {
     await renderSidebar(sidebarView({ spotlightShortcut: "Alt+T" }))
 
-    expect(screen.getByRole("button", { name: "Search" }).getAttribute("aria-keyshortcuts")).toBe(
-      "Alt+T",
+    expect(searchField().getAttribute("aria-keyshortcuts")).toBe("Alt+T")
+  })
+})
+
+describe("The search field at the top", () => {
+  const withActiveTabAt = (url: string) =>
+    sidebarView({
+      spotlightShortcut: null,
+      spaces: [spaceView("work", { temporaryTabs: [tabView(1, { url, isActive: true })] })],
+    })
+
+  it("shows the active tab's host without www, and describes the field with it", async () => {
+    await renderSidebar(withActiveTabAt("https://www.github.com/qaynam/katip/pulls?q=is%3Aopen"))
+
+    expect(searchField().textContent?.trim()).toBe("github.com")
+    expect(
+      screen.getByRole("button", { name: "Open Command Palette", description: "github.com" }),
+    ).toBeTruthy()
+  })
+
+  it("shows the host of a Favorite that is the active tab", async () => {
+    await renderSidebar(
+      sidebarView({
+        spotlightShortcut: null,
+        favorites: [
+          favoriteView(5, {
+            url: "https://mail.google.com/mail/u/0/#inbox",
+            openTab: { tabId: TabId.make(5), isActive: true },
+          }),
+        ],
+      }),
     )
+
+    expect(searchField().textContent?.trim()).toBe("mail.google.com")
+  })
+
+  it.each([
+    ["a new tab page", "chrome://newtab/"],
+    ["one of the browser's own pages", "chrome://settings/"],
+    ["an extension's page", "chrome-extension://abcdefghijklmnop/page.html"],
+    ["a tab with no URL yet", ""],
+  ])("shows Search instead of a URL for %s", async (_, url) => {
+    await renderSidebar(withActiveTabAt(url))
+
+    expect([
+      searchField().textContent?.trim(),
+      searchField().getAttribute("aria-describedby"),
+    ]).toStrictEqual(["Search", null])
+  })
+
+  it("shows Search while the sidebar shows no active tab", async () => {
+    await renderSidebar(sidebarView({ spotlightShortcut: null }))
+
+    expect(searchField().textContent?.trim()).toBe("Search")
+  })
+
+  it("follows the tab the window switches to", async () => {
+    const { pushView } = await renderSidebar(withActiveTabAt("https://example.com/"))
+
+    await pushView(withActiveTabAt("https://developer.mozilla.org/en-US/"))
+
+    expect(searchField().textContent?.trim()).toBe("developer.mozilla.org")
+  })
+
+  it("opens the Command Palette when a URL is shown in it, as when it says Search", async () => {
+    const { connection } = await renderSidebar(withActiveTabAt("https://github.com/"))
+
+    await fireEvent.click(searchField())
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "OpenSpotlight", windowId: 1 }])
   })
 })
 

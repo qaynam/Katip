@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Option } from "effect"
+  import { activeTabUrlIn } from "../logic/active-tab"
+  import { compactUrlOf } from "../logic/view-queries"
   import { getSidebarContext } from "../state/sidebar-context"
   import Icon from "./Icon.svelte"
 
@@ -10,16 +13,27 @@
   const announcedShortcut = $derived(
     shortcut !== null && /^[\w ]+(\+[\w ]+)+$/.test(shortcut) ? shortcut : undefined,
   )
+  const compactUrl = $derived(
+    Option.getOrNull(Option.flatMap(activeTabUrlIn(ctx.view), compactUrlOf)),
+  )
+  const id = $props.id()
+  const urlId = `${id}-url`
 </script>
 
 <button
   class="spotlight"
   type="button"
+  aria-label={t("sidepanel.spotlight.open")}
+  aria-describedby={compactUrl === null ? undefined : urlId}
   aria-keyshortcuts={announcedShortcut}
   onclick={() => void ctx.run({ _tag: "OpenSpotlight", windowId: ctx.view.windowId })}
 >
   <Icon name="search" size={14} />
-  <span class="label">{t("sidepanel.spotlight.button")}</span>
+  {#if compactUrl === null}
+    <span class="label">{t("sidepanel.spotlight.button")}</span>
+  {:else}
+    <span class="label url" id={urlId}>{compactUrl}</span>
+  {/if}
   {#if shortcut !== null}
     <kbd class="shortcut" aria-hidden="true">{shortcut}</kbd>
   {/if}
@@ -43,6 +57,7 @@
     transition:
       background-color 140ms ease,
       color 140ms ease;
+    container-type: inline-size;
   }
 
   .spotlight:hover {
@@ -52,9 +67,18 @@
 
   .label {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .url {
+    color: var(--text);
   }
 
   .shortcut {
+    flex: none;
     padding: 1px 6px;
     border-radius: 5px;
     background: var(--surface-hover);
@@ -63,5 +87,12 @@
     font-weight: 600;
     letter-spacing: 0.02em;
     opacity: 0.85;
+  }
+
+  /* Dropped rather than leaving the host only a few letters */
+  @container (width < 160px) {
+    .shortcut {
+      display: none;
+    }
   }
 </style>

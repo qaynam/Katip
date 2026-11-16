@@ -1,3 +1,4 @@
+import { Option } from "effect"
 import type { TabId } from "#platform/browser"
 import type {
   FavoriteView,
@@ -63,11 +64,15 @@ export const withActiveTab = (view: SidebarView, tabId: TabId): SidebarView => {
   return { ...view, spaces: view.spaces.map(space), favorites: view.favorites.map(favorite) }
 }
 
-/** Every tab the view shows as active. The same tab is listed again for each place it shows. */
-export const activeTabIdsIn = (view: SidebarView): ReadonlyArray<TabId> => {
-  const found: Array<TabId> = []
+interface ActiveTab {
+  readonly tabId: TabId
+  readonly url: string
+}
+
+const activeTabsIn = (view: SidebarView): ReadonlyArray<ActiveTab> => {
+  const found: Array<ActiveTab> = []
   const tab = (shown: TabView) => {
-    if (shown.isActive) found.push(shown.tabId)
+    if (shown.isActive) found.push({ tabId: shown.tabId, url: shown.url })
   }
   const item = (pin: PinnedItemView) => {
     if (pin.openTab !== null) tab(pin.openTab.tab)
@@ -97,7 +102,17 @@ export const activeTabIdsIn = (view: SidebarView): ReadonlyArray<TabId> => {
     }
   }
   for (const favorite of view.favorites) {
-    if (favorite.openTab?.isActive === true) found.push(favorite.openTab.tabId)
+    if (favorite.openTab?.isActive === true) {
+      found.push({ tabId: favorite.openTab.tabId, url: favorite.url })
+    }
   }
   return found
 }
+
+/** Every tab the view shows as active. The same tab is listed again for each place it shows. */
+export const activeTabIdsIn = (view: SidebarView): ReadonlyArray<TabId> =>
+  activeTabsIn(view).map(({ tabId }) => tabId)
+
+/** The URL of the window's active tab. None while the view shows that tab nowhere. */
+export const activeTabUrlIn = (view: SidebarView): Option.Option<string> =>
+  Option.map(Option.fromNullishOr(activeTabsIn(view)[0]), ({ url }) => url)

@@ -12,6 +12,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.update.dismiss": "关闭",
 
   "sidepanel.spotlight.button": "搜索",
+  "sidepanel.spotlight.open": "打开命令面板",
   "sidepanel.close": "关闭侧边栏",
   "sidepanel.split.pageDropHint": "在页面左侧或右侧松开，即可与当前显示的标签页分屏",
   "sidepanel.split.unsupported": "此浏览器不支持分屏视图（需要 Chrome 155 或更高版本）",

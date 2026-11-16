@@ -28,7 +28,7 @@ const openSpotlightOver = async (
     if (tab?.id !== undefined) await chrome.tabs.update(tab.id, { active: true })
   }, url)
   const opened = context.waitForEvent("page", (page) => page.url().includes("/spotlight/"))
-  await sidebar.getByRole("button", { name: "Search" }).click()
+  await sidebar.getByRole("button", { name: "Open Command Palette" }).click()
   const spotlight = await opened
   await expect(spotlight.getByRole("combobox")).toBeFocused()
   return spotlight

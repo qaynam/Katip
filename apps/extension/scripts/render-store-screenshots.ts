@@ -323,7 +323,7 @@ const captureSpotlight = async (session: Session, query: string, path: string) =
   const [spotlight] = await Promise.all([
     session.context.waitForEvent("page", (page) => page.url().includes("/spotlight/")),
     session.sidebar
-      .getByRole("button", { name: labelsOf(session)["sidepanel.spotlight.button"], exact: true })
+      .getByRole("button", { name: labelsOf(session)["sidepanel.spotlight.open"], exact: true })
       .click(),
   ])
   await spotlight.setViewportSize({ width: SPOTLIGHT.width, height: SPOTLIGHT.height })

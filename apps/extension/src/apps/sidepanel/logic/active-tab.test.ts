@@ -1,3 +1,4 @@
+import { Option } from "effect"
 import { describe, expect, it } from "vitest"
 import { TabId } from "#platform/browser"
 import {
@@ -14,7 +15,7 @@ import {
   temporarySplit,
   temporaryTab,
 } from "../testing/view-builders"
-import { activeTabIdsIn, withActiveTab } from "./active-tab"
+import { activeTabIdsIn, activeTabUrlIn, withActiveTab } from "./active-tab"
 
 const open = (id: number) => openPinnedTab(tabView(id))
 
@@ -80,5 +81,20 @@ describe("withActiveTab", () => {
 
   it("shows no tab active for a tab the view doesn't show", () => {
     expect(activeTabIdsIn(withActiveTab(view, TabId.make(99)))).toStrictEqual([])
+  })
+})
+
+describe("activeTabUrlIn", () => {
+  it.each([
+    [1, "https://example.com/1"],
+    [6, "https://example.com/6"],
+    [10, "https://example.com/10"],
+    [8, "https://example.com/favorite/8"],
+  ])("is the URL of tab %i while it is the active one", (id, url) => {
+    expect(activeTabUrlIn(withActiveTab(view, TabId.make(id)))).toStrictEqual(Option.some(url))
+  })
+
+  it("is none while the view shows no tab as active", () => {
+    expect(Option.isNone(activeTabUrlIn(withActiveTab(view, TabId.make(99))))).toBe(true)
   })
 })

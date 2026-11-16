@@ -12,6 +12,7 @@ export const sidepanel = {
   "sidepanel.update.dismiss": "Dismiss",
 
   "sidepanel.spotlight.button": "Search",
+  "sidepanel.spotlight.open": "Open Command Palette",
   "sidepanel.close": "Close Sidebar",
   "sidepanel.split.pageDropHint":
     "Let go on the left or right of the page to split it with the tab shown there",
