@@ -24,17 +24,29 @@ import {
 } from "./space-folder-reconciliation"
 import { storedValue } from "./stored-value"
 
+/** How an installation names the bookmark folder that holds a folder for each Space. */
+export interface RootFolderNaming {
+  /** The title looked for when no folder is saved, and given to the folder created. */
+  readonly title: string
+  /**
+   * Whether a saved folder stops counting once its title differs from `title`, instead of being
+   * followed through renames.
+   */
+  readonly requiresTitle: boolean
+}
+
 /**
- * The title of the bookmark folder that holds a folder for each Space, by which an installation
- * without one saved takes it up.
+ * The naming of this installation's root folder.
  *
  * @remarks
- * Another title keeps a second installation in the same profile, such as a development build, from
- * taking up the folder of the first and rewriting its pins.
+ * A second installation in the same profile, such as a development build, needs another title and
+ * requires it. Sharing the folder, either would remove the other's pins along with its own. A saved
+ * folder of another title is one it took up before it had a title of its own, from an older build.
  */
-export const RootFolderTitle = Context.Reference<string>("katip/pinned/RootFolderTitle", {
-  defaultValue: () => "Katip",
-})
+export const RootFolderNaming = Context.Reference<RootFolderNaming>(
+  "katip/pinned/RootFolderNaming",
+  { defaultValue: () => ({ title: "Katip", requiresTitle: false }) },
+)
 
 /** Carries the name as well as the ID, since recreating the folder needs a name. */
 export type SpaceFolderOwner = Pick<Space, "id" | "name">
@@ -58,8 +70,8 @@ export class SpaceFolders extends Context.Service<
      *
      * @remarks
      * The folder with the saved ID is used wherever it has been moved, as long as it still exists.
-     * Only when it doesn't is a folder titled {@link RootFolderTitle} looked for directly inside
-     * Other Bookmarks; if there is none either, one is created and its ID saved.
+     * Only when it doesn't is a folder titled as {@link RootFolderNaming} says looked for directly
+     * inside Other Bookmarks; if there is none either, one is created and its ID saved.
      */
     readonly ensureRoot: Effect.Effect<BookmarkId, BrowserApiError>
     /**
@@ -112,7 +124,7 @@ export class SpaceFolders extends Context.Service<
     Effect.gen(function* () {
       const bookmarks = yield* Bookmarks
       const storage = yield* Storage
-      const rootFolderTitle = yield* RootFolderTitle
+      const naming = yield* RootFolderNaming
       const savedRootId = storedValue(storage.local, "katip/pinned/root-folder-id", BookmarkId)
       const savedSpaceFolders = storedValue(
         storage.local,
@@ -152,18 +164,37 @@ export class SpaceFolders extends Context.Service<
         const searchedFolders = otherBookmarks.length > 0 ? otherBookmarks : topLevelFolders
         const existing = Array.findFirst(
           searchedFolders.flatMap(loadedChildren),
-          (node) => isFolder(node) && node.title === rootFolderTitle,
+          (node) => isFolder(node) && node.title === naming.title,
         )
         if (Option.isSome(existing)) {
           return existing.value.id
         }
-        const created = yield* bookmarks.create({ title: rootFolderTitle })
+        const created = yield* bookmarks.create({ title: naming.title })
         return created.id
       })
 
+      const loadOwnRootId: Effect.Effect<
+        Option.Option<BookmarkId>,
+        BrowserApiError
+      > = naming.requiresTitle
+        ? Effect.flatMap(
+            savedRootId.load,
+            Option.match({
+              onNone: () => Effect.succeedNone,
+              onSome: (id) =>
+                Effect.map(findFolder(id), (folder) =>
+                  Option.map(
+                    Option.filter(folder, ({ title }) => title === naming.title),
+                    ({ id }) => id,
+                  ),
+                ),
+            }),
+          )
+        : savedRootId.load
+
       const ensureRootUnlocked = Effect.gen(function* () {
         const saved = yield* Effect.flatMap(
-          savedRootId.load,
+          loadOwnRootId,
           Option.match({ onNone: () => Effect.succeedNone, onSome: findFolder }),
         )
         if (Option.isSome(saved)) {
@@ -278,7 +309,7 @@ export class SpaceFolders extends Context.Service<
           if (Option.isNone(linkedFolderId)) {
             return
           }
-          const rootId = yield* savedRootId.load
+          const rootId = yield* loadOwnRootId
           const folder = yield* Option.match(rootId, {
             onNone: () => Effect.succeedNone,
             onSome: (rootId) => findFolderUnder(linkedFolderId.value, rootId),
@@ -306,7 +337,7 @@ export class SpaceFolders extends Context.Service<
           return reconciled.spaces
         }, exclusively),
         readSpaceSubtrees: Effect.gen(function* () {
-          const rootId = yield* savedRootId.load
+          const rootId = yield* loadOwnRootId
           if (Option.isNone(rootId)) {
             return new Map()
           }
@@ -325,7 +356,7 @@ export class SpaceFolders extends Context.Service<
           )
         }).pipe(Effect.withSpan("SpaceFolders.readSpaceSubtrees")),
         isWithinKatip: Effect.fn("SpaceFolders.isWithinKatip")(function* (bookmarkId) {
-          const rootId = yield* savedRootId.load
+          const rootId = yield* loadOwnRootId
           return yield* Option.match(rootId, {
             onNone: () => Effect.succeed(false),
             onSome: (rootId) => isSelfOrDescendant(bookmarkId, rootId),

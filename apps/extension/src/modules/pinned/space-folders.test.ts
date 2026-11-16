@@ -10,9 +10,25 @@ import {
   type BookmarkNode,
 } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
-import { RootFolderTitle, SpaceFolders } from "./space-folders"
+import { RootFolderNaming, SpaceFolders } from "./space-folders"
 
 const TestLayer = SpaceFolders.layer.pipe(Layer.provideMerge(FakeBrowser.layer))
+
+const asDevelopmentBuild = Effect.provideService(RootFolderNaming, {
+  title: "Katip (dev)",
+  requiresTitle: true,
+})
+
+// What an older development build left behind: the release's root saved as its own, with a Space
+// mapped to the release's Space folder
+const saveReleaseFoldersAsOwn = Effect.fnUntraced(function* (
+  releaseRootId: BookmarkId,
+  spaceFolders: Readonly<Record<string, BookmarkId>> = {},
+) {
+  const storage = yield* Storage
+  yield* storage.local.set("katip/pinned/root-folder-id", releaseRootId)
+  yield* storage.local.set("katip/pinned/space-folders", spaceFolders)
+})
 
 const numbered = (number: number) => `Space ${number}`
 
@@ -97,7 +113,27 @@ describe("ensuring the Katip root folder", () => {
           "Katip",
           "Katip (dev)",
         ])
-      }).pipe(Effect.provide(TestLayer), Effect.provideService(RootFolderTitle, "Katip (dev)")),
+      }).pipe(Effect.provide(TestLayer), asDevelopmentBuild),
+  )
+
+  it.effect(
+    "requiring its own title, gives up a saved root of another title and makes its own, leaving that root's folders as they are",
+    () =>
+      Effect.gen(function* () {
+        const otherBookmarksId = yield* topLevelFolderId("other")
+        const releaseRootId = yield* createFolder(otherBookmarksId, "Katip")
+        const releaseSpaceId = yield* createFolder(releaseRootId, "Home")
+        yield* saveReleaseFoldersAsOwn(releaseRootId)
+
+        const rootId = yield* (yield* SpaceFolders).ensureRoot
+
+        assert.notStrictEqual(rootId, releaseRootId)
+        assert.strictEqual((yield* (yield* Bookmarks).get(rootId)).title, "Katip (dev)")
+        assert.deepStrictEqual(
+          (yield* childrenOf(releaseRootId)).map((node) => node.id),
+          [releaseSpaceId],
+        )
+      }).pipe(Effect.provide(TestLayer), asDevelopmentBuild),
   )
 
   it.effect("a Katip folder on the bookmarks bar doesn't count as the root", () =>
@@ -262,6 +298,22 @@ describe("ensuring a Space folder", () => {
       }).pipe(Effect.provide(TestLayer)),
   )
 
+  it.effect(
+    "requiring its own title, removing a Space mapped to a folder in a saved root of another title leaves that folder and its pins",
+    () =>
+      Effect.gen(function* () {
+        const releaseRootId = yield* createFolder(yield* topLevelFolderId("other"), "Katip")
+        const releaseSpaceId = yield* createFolder(releaseRootId, "Home")
+        const pinId = yield* createBookmark(releaseSpaceId, "pin")
+        yield* saveReleaseFoldersAsOwn(releaseRootId, { home: releaseSpaceId })
+
+        yield* (yield* SpaceFolders).removeSpaceFolder(SpaceId.make("home"))
+
+        assert.isTrue(yield* exists(releaseSpaceId))
+        assert.isTrue(yield* exists(pinId))
+      }).pipe(Effect.provide(TestLayer), asDevelopmentBuild),
+  )
+
   it.effect("removing the Space leaves a folder that was moved out of Katip in place", () =>
     Effect.gen(function* () {
       const folders = yield* SpaceFolders
@@ -411,6 +463,18 @@ describe("telling whether a node is within Katip", () => {
 
       assert.isTrue(yield* folders.isWithinKatip(yield* folders.ensureRoot))
     }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect(
+    "requiring its own title, a bookmark in a saved root of another title isn't within Katip",
+    () =>
+      Effect.gen(function* () {
+        const releaseRootId = yield* createFolder(yield* topLevelFolderId("other"), "Katip")
+        const pinId = yield* createBookmark(releaseRootId, "pin")
+        yield* saveReleaseFoldersAsOwn(releaseRootId)
+
+        assert.isFalse(yield* (yield* SpaceFolders).isWithinKatip(pinId))
+      }).pipe(Effect.provide(TestLayer), asDevelopmentBuild),
   )
 
   it.effect("a bookmark outside Katip isn't within Katip", () =>

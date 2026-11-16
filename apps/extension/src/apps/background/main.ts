@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect"
-import { RootFolderTitle } from "#modules/pinned"
+import { RootFolderNaming } from "#modules/pinned"
 import { captureBrowserEvents, liveBrowserLayer } from "#platform/browser"
 import { Clipboard } from "#platform/clipboard"
 import { History } from "#platform/history"
@@ -42,7 +42,7 @@ Effect.runFork(
   import.meta.env.MODE === "development"
     ? runnable.pipe(
         Effect.provideService(AcceptsExternalConnection, isLocalDevelopmentPage),
-        Effect.provideService(RootFolderTitle, "Katip (dev)"),
+        Effect.provideService(RootFolderNaming, { title: "Katip (dev)", requiresTitle: true }),
       )
     : runnable,
 )
