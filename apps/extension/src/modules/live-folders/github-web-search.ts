@@ -2,7 +2,7 @@ import { Array, DateTime, Option, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import { githubAvatarIcon, type GitHubQuery, type LiveItem } from "./live-source"
+import { githubAvatarIcon, type GitHubSearchQuery, type LiveItem } from "./live-source"
 
 /** The result kind chosen on github.com's search page (`type` in the URL). */
 export type GitHubWebSearchType = "pullrequests" | "issues"
@@ -12,30 +12,31 @@ export interface GitHubWebSearch {
   readonly query: string
 }
 
-const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<GitHubWebSearch>>> =
-  {
-    "review-requested": [
-      {
-        type: "pullrequests",
-        query: "is:open is:pr review-requested:@me archived:false sort:updated-desc",
-      },
-    ],
-    "authored-pull-requests": [
-      { type: "pullrequests", query: "is:open is:pr author:@me archived:false sort:updated-desc" },
-    ],
-    "assigned-issues": [
-      { type: "issues", query: "is:open is:issue assignee:@me archived:false sort:updated-desc" },
-    ],
-    // Two searches: the web search returns pull requests and issues as separate result kinds
-    mentioned: [
-      { type: "pullrequests", query: "is:open mentions:@me archived:false sort:updated-desc" },
-      { type: "issues", query: "is:open mentions:@me archived:false sort:updated-desc" },
-    ],
-  }
+const searchesByQuery: Readonly<
+  Record<GitHubSearchQuery, Array.NonEmptyReadonlyArray<GitHubWebSearch>>
+> = {
+  "review-requested": [
+    {
+      type: "pullrequests",
+      query: "is:open is:pr review-requested:@me archived:false sort:updated-desc",
+    },
+  ],
+  "authored-pull-requests": [
+    { type: "pullrequests", query: "is:open is:pr author:@me archived:false sort:updated-desc" },
+  ],
+  "assigned-issues": [
+    { type: "issues", query: "is:open is:issue assignee:@me archived:false sort:updated-desc" },
+  ],
+  // Two searches: the web search returns pull requests and issues as separate result kinds
+  mentioned: [
+    { type: "pullrequests", query: "is:open mentions:@me archived:false sort:updated-desc" },
+    { type: "issues", query: "is:open mentions:@me archived:false sort:updated-desc" },
+  ],
+}
 
 /** The searches for one live folder. With several, the folder holds all their results. */
 export const githubWebSearchesFor = (
-  query: GitHubQuery,
+  query: GitHubSearchQuery,
 ): Array.NonEmptyReadonlyArray<GitHubWebSearch> => searchesByQuery[query]
 
 /**

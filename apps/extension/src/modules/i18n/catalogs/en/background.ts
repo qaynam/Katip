@@ -31,6 +31,10 @@ export const background = {
   "background.liveFolder.notSignedInGmail": "You aren't signed in to Gmail with this account",
   "background.liveFolder.notSignedInGitHub": "You aren't signed in to GitHub",
   "background.liveFolder.tokenRejected": "The GitHub access token is invalid",
+  "background.liveFolder.tokenMissing":
+    "GitHub notifications can only be read with an access token",
+  "background.liveFolder.tokenCannotReadNotifications":
+    "This token can't read notifications. Use a personal access token (classic) with the notifications or repo scope",
   "background.liveFolder.accessDenied": "Access to the source was denied",
   "background.liveFolder.rateLimited": "{site} usage limit reached. Katip will try again later",
   "background.liveFolder.unreachable": "Couldn't connect to the source",
@@ -46,4 +50,5 @@ export const background = {
   "background.liveFolder.title.authoredPullRequests": "My GitHub Pull Requests",
   "background.liveFolder.title.assignedIssues": "Assigned GitHub Issues",
   "background.liveFolder.title.mentioned": "GitHub Mentions",
+  "background.liveFolder.title.notifications": "GitHub Notifications",
 } as const satisfies Readonly<Record<`background.${string}`, Message>>

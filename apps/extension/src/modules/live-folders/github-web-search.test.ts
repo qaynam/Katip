@@ -8,7 +8,7 @@ import {
   parseGitHubWebSearch,
   type GitHubWebSearch,
 } from "./github-web-search"
-import type { GitHubQuery } from "./live-source"
+import type { GitHubSearchQuery } from "./live-source"
 
 const NOW = Date.UTC(2026, 9, 30, 9, 0, 0)
 
@@ -72,7 +72,7 @@ const itemsOf = (body: string, search: GitHubWebSearch = pullRequests) =>
   Option.map(parseGitHubWebSearch(body, search.type), (page) => page.items)
 
 describe("web search queries", () => {
-  it.each<[GitHubQuery, ReadonlyArray<GitHubWebSearch>]>([
+  it.each<[GitHubSearchQuery, ReadonlyArray<GitHubWebSearch>]>([
     [
       "review-requested",
       [

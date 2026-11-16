@@ -277,6 +277,36 @@ describe("pinned", () => {
   })
 })
 
+describe("live folders version 1 files have no place for", () => {
+  it("leaves out GitHub notifications folders, also inside folders, and keeps the rest", () => {
+    const tree: PinnedTree = [
+      {
+        _tag: "PinnedLiveFolder",
+        id: BookmarkId.make("1"),
+        title: "Inbox",
+        source: { _tag: "GitHub", query: "notifications" },
+      },
+      {
+        _tag: "PinnedFolder",
+        id: BookmarkId.make("2"),
+        title: "Work",
+        children: [
+          {
+            _tag: "PinnedLiveFolder",
+            id: BookmarkId.make("3"),
+            title: "Inbox",
+            source: { _tag: "GitHub", query: "notifications" },
+          },
+        ],
+      },
+    ]
+
+    const home = homeOf(sourcesWith({ pinnedTrees: new Map([[HOME, tree]]) }))
+
+    expect(home.pinned).toStrictEqual([{ type: "folder", title: "Work", icon: null, children: [] }])
+  })
+})
+
 describe("temporary tabs", () => {
   const tabs = [browserTab(1), browserTab(2), browserTab(3)]
 

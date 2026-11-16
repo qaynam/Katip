@@ -23,7 +23,7 @@ Katip makes network requests only to check for updates and for live folders.
 **Live folders** make requests only after you create one and allow access to that site:
 
 - **Gmail live folders** read the feed of your unread mail, in the inbox or a label, from `mail.google.com`, using the session you are already signed in with in your browser, along with the feed of the mail Gmail marks important. The icon shown for a sender is the one your browser already saved for the sender's site; no request is made for it.
-- **GitHub live folders** read search results from `github.com`, using the session you are already signed in with, or from `api.github.com`. The avatar of each item's repository owner is loaded from `github.com`.
+- **GitHub live folders** read search results from `github.com`, using the session you are already signed in with, or from `api.github.com`. A GitHub live folder of your notifications reads your unread notifications from `api.github.com`. The avatar of each item's repository owner is loaded from `github.com`.
 - If you choose to enter a **GitHub personal access token** for a live folder, it is stored in the extension's local storage on your device and is sent only to `api.github.com`.
 
 These requests go directly from your browser to Gmail or GitHub. What they return (for example email subjects and senders, or pull request titles) is shown in your side panel and kept in local storage so the folder can be displayed; it is never sent anywhere else.
@@ -79,7 +79,7 @@ Katip が通信するのは、アップデートの確認とライブフォル�
 **ライブフォルダ** は、ライブフォルダを作り、そのサイトへのアクセスを許可した後に限り通信します。
 
 - **Gmail のライブフォルダ**: ブラウザでログイン済みのセッションを使い、`mail.google.com` から受信トレイやラベルの未読メールのフィードと、Gmail が重要マークを付けたメールのフィードを読みます。差出人のアイコンには、ブラウザがそのサイトについてすでに保存しているものを使い、そのための通信はしません。
-- **GitHub のライブフォルダ**: ログイン済みのセッションを使って `github.com` から、または `api.github.com` から検索結果を読みます。各項目のリポジトリの持ち主のアバターは `github.com` から読み込みます。
+- **GitHub のライブフォルダ**: ログイン済みのセッションを使って `github.com` から、または `api.github.com` から検索結果を読みます。通知のライブフォルダは、未読の通知を `api.github.com` から読みます。各項目のリポジトリの持ち主のアバターは `github.com` から読み込みます。
 - **GitHub のアクセストークン**: ライブフォルダに入力した場合は、端末の拡張機能のローカルストレージに保存し、`api.github.com` にだけ送ります。
 
 通信はお使いのブラウザから Gmail や GitHub へ直接行います。取得した内容（メールの件名や差出人、プルリクエストのタイトルなど）は、サイドパネルに表示するために端末の中に保存するだけで、ほかへは送りません。

@@ -7,7 +7,7 @@ import {
   githubApiSearchRequest,
   parseGitHubApiSearch,
 } from "./github-api-search"
-import type { GitHubQuery } from "./live-source"
+import type { GitHubSearchQuery } from "./live-source"
 
 const NOW = Date.UTC(2026, 9, 30, 9, 0, 0)
 
@@ -45,7 +45,7 @@ const searchBody = (items: ReadonlyArray<unknown>) =>
   JSON.stringify({ total_count: items.length, incomplete_results: false, items })
 
 describe("official API search queries", () => {
-  it.each<[GitHubQuery, ReadonlyArray<string>]>([
+  it.each<[GitHubSearchQuery, ReadonlyArray<string>]>([
     ["review-requested", ["is:pr is:open review-requested:@me archived:false"]],
     ["authored-pull-requests", ["is:pr is:open author:@me archived:false"]],
     ["assigned-issues", ["is:issue is:open assignee:@me archived:false"]],

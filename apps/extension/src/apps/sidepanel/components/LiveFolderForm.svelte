@@ -39,6 +39,7 @@
     "authored-pull-requests": "sidepanel.liveFolder.github.authoredPullRequests",
     "assigned-issues": "sidepanel.liveFolder.github.assignedIssues",
     mentioned: "sidepanel.liveFolder.github.mentioned",
+    notifications: "sidepanel.liveFolder.github.notifications",
   } as const satisfies Record<GitHubQuery, MessageKey>
 
   const gmailMailboxMessages = {
@@ -106,7 +107,7 @@
       return
     }
     // Chrome only prompts while handling a user gesture, so ask before any await
-    const access = ctx.originAccess.request(sourceOrigins(kind))
+    const access = ctx.originAccess.request(sourceOrigins(draft.success))
     void whileSubmitting(async () => {
       if (!(await access)) {
         error = () =>
@@ -212,7 +213,10 @@
         {/if}
       {:else if initial._tag === "Create"}
         <p class="description">{t("sidepanel.liveFolderDialog.gitHubDescription")}</p>
-        <fieldset class="choices">
+        <fieldset
+          class="choices"
+          aria-describedby={query === "notifications" ? `${ids}-query-hint` : undefined}
+        >
           <legend class="label">{t("sidepanel.liveFolderDialog.queryLegend")}</legend>
           {#each GitHubQuery.literals as option (option)}
             <label class="choice">
@@ -220,6 +224,11 @@
               <span>{t(gitHubQueryMessages[option])}</span>
             </label>
           {/each}
+          {#if query === "notifications"}
+            <p id="{ids}-query-hint" class="hint">
+              {t("sidepanel.liveFolderDialog.notificationsHint")}
+            </p>
+          {/if}
         </fieldset>
       {/if}
 

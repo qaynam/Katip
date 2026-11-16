@@ -33,10 +33,20 @@ describe("unseenBadgeText", () => {
 
 describe("sourceOrigins", () => {
   it("asks for access to mail.google.com for Gmail", () => {
-    expect(sourceOrigins("Gmail")).toStrictEqual(["https://mail.google.com/*"])
+    expect(sourceOrigins({ _tag: "Gmail", accountIndex: 0, label: null })).toStrictEqual([
+      "https://mail.google.com/*",
+    ])
   })
 
-  it("asks for access to github.com for GitHub, which uses the browser's sign-in", () => {
-    expect(sourceOrigins("GitHub")).toStrictEqual(["https://github.com/*"])
+  it("asks for access to github.com for a GitHub search, which uses the browser's sign-in", () => {
+    expect(sourceOrigins({ _tag: "GitHub", query: "mentioned" })).toStrictEqual([
+      "https://github.com/*",
+    ])
+  })
+
+  it("asks for access to the official API for GitHub's notifications, which only it lists", () => {
+    expect(sourceOrigins({ _tag: "GitHub", query: "notifications" })).toStrictEqual([
+      "https://api.github.com/*",
+    ])
   })
 })

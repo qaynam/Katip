@@ -2,11 +2,11 @@ import { Clock, Context, type Duration, Effect, Layer, Match, Option, type Resul
 import { Http, type HttpRequest, type HttpResponse } from "#platform/http"
 import { Permissions } from "#platform/permissions"
 import {
-  GITHUB_API_ORIGIN,
   githubApiItemsFrom,
   githubApiSearchesFor,
   githubApiSearchRequest,
 } from "./github-api-search"
+import { githubNotificationItemsFrom, githubNotificationsRequest } from "./github-notifications"
 import { GitHubTokenStore } from "./github-token-store"
 import {
   githubWebItemsFrom,
@@ -17,8 +17,11 @@ import { gmailFeedRequest, gmailItemsFrom, markImportant } from "./gmail-feed"
 import { LiveFetchError, type LiveFetchFailure } from "./live-fetch-failure"
 import { mergeNewestFirst } from "./live-item-order"
 import {
+  GITHUB_API_ORIGIN,
+  GITHUB_WEB_ORIGIN,
   GMAIL_IMPORTANT_LABEL,
   originPatternOf,
+  type GitHubSearchQuery,
   type LiveItem,
   type LiveSource,
 } from "./live-source"
@@ -37,8 +40,9 @@ export class LiveFetcher extends Context.Service<
     /**
      * Takes in items from the source, in the source's newest-first order.
      *
-     * GitHub is read through the official API when a token is set, and otherwise with the
-     * browser's signed-in session.
+     * GitHub's searches are read through the official API when a token is set, and otherwise with
+     * the browser's signed-in session. GitHub's notifications are read only through the official
+     * API: without a token, fetching them fails without sending a request.
      *
      * Fails without sending a request when access to the source isn't granted. Never asks for the
      * permission (the dialog asking for it can only come from a page the user is acting on).
@@ -76,12 +80,12 @@ export class LiveFetcher extends Context.Service<
         ),
       )
 
-      const fetchGitHubWithToken = Effect.fnUntraced(function* (
-        source: Extract<LiveSource, { _tag: "GitHub" }>,
+      const searchGitHubWithToken = Effect.fnUntraced(function* (
+        query: GitHubSearchQuery,
         token: string,
       ) {
         yield* requirePermission(GITHUB_API_ORIGIN)
-        const results = yield* Effect.forEach(githubApiSearchesFor(source.query), (search) =>
+        const results = yield* Effect.forEach(githubApiSearchesFor(query), (search) =>
           Effect.flatMap(send(githubApiSearchRequest(search, token)), (response) =>
             Effect.flatMap(Clock.currentTimeMillis, (now) =>
               fromInterpretation(githubApiItemsFrom(response, now)),
@@ -91,11 +95,9 @@ export class LiveFetcher extends Context.Service<
         return mergeNewestFirst(results)
       })
 
-      const fetchGitHubWithSession = Effect.fnUntraced(function* (
-        source: Extract<LiveSource, { _tag: "GitHub" }>,
-      ) {
-        yield* requirePermission(originPatternOf(source))
-        const results = yield* Effect.forEach(githubWebSearchesFor(source.query), (search) =>
+      const searchGitHubWithSession = Effect.fnUntraced(function* (query: GitHubSearchQuery) {
+        yield* requirePermission(GITHUB_WEB_ORIGIN)
+        const results = yield* Effect.forEach(githubWebSearchesFor(query), (search) =>
           Effect.flatMap(send(githubWebSearchRequest(search)), (response) =>
             Effect.flatMap(Clock.currentTimeMillis, (now) =>
               fromInterpretation(githubWebItemsFrom(response, search, now)),
@@ -105,13 +107,24 @@ export class LiveFetcher extends Context.Service<
         return mergeNewestFirst(results)
       })
 
-      const fetchGitHub = (source: Extract<LiveSource, { _tag: "GitHub" }>) =>
-        Effect.flatMap(
-          loadToken,
-          Option.match({
-            onNone: () => fetchGitHubWithSession(source),
-            onSome: (token) => fetchGitHubWithToken(source, token),
-          }),
+      const fetchGitHubNotifications = Effect.fnUntraced(function* (token: string) {
+        yield* requirePermission(GITHUB_API_ORIGIN)
+        const response = yield* send(githubNotificationsRequest(token))
+        const now = yield* Clock.currentTimeMillis
+        return yield* fromInterpretation(githubNotificationItemsFrom(response, now))
+      })
+
+      const fetchGitHub = ({ query }: Extract<LiveSource, { _tag: "GitHub" }>) =>
+        Effect.flatMap(loadToken, (token) =>
+          query === "notifications"
+            ? Option.match(token, {
+                onNone: () => failWith({ _tag: "TokenMissing" }),
+                onSome: fetchGitHubNotifications,
+              })
+            : Option.match(token, {
+                onNone: () => searchGitHubWithSession(query),
+                onSome: (token) => searchGitHubWithToken(query, token),
+              }),
         )
 
       const fetchGmailFeed = (source: Extract<LiveSource, { _tag: "Gmail" }>) =>

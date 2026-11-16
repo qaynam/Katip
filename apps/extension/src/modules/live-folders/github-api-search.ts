@@ -2,12 +2,14 @@ import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import { githubAvatarIcon, isOpenableUrl, type GitHubQuery, type LiveItem } from "./live-source"
+import {
+  githubAvatarIcon,
+  isOpenableUrl,
+  type GitHubSearchQuery,
+  type LiveItem,
+} from "./live-source"
 
-/** The host permission needed for the official API, which is used with a token. */
-export const GITHUB_API_ORIGIN = "https://api.github.com/*"
-
-const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<string>>> = {
+const searchesByQuery: Readonly<Record<GitHubSearchQuery, Array.NonEmptyReadonlyArray<string>>> = {
   "review-requested": ["is:pr is:open review-requested:@me archived:false"],
   "authored-pull-requests": ["is:pr is:open author:@me archived:false"],
   "assigned-issues": ["is:issue is:open assignee:@me archived:false"],
@@ -19,25 +21,34 @@ const searchesByQuery: Readonly<Record<GitHubQuery, Array.NonEmptyReadonlyArray<
 }
 
 /** The search queries for one live folder. With several, the folder holds all their results. */
-export const githubApiSearchesFor = (query: GitHubQuery): Array.NonEmptyReadonlyArray<string> =>
-  searchesByQuery[query]
+export const githubApiSearchesFor = (
+  query: GitHubSearchQuery,
+): Array.NonEmptyReadonlyArray<string> => searchesByQuery[query]
 
-export const githubApiSearchRequest = (search: string, token: string): HttpRequest => ({
-  url: `https://api.github.com/search/issues?${new URLSearchParams({
-    q: search,
-    sort: "updated",
-    order: "desc",
-    per_page: "50",
-  })}`,
+/** A request to the official API, authenticated by the token alone. */
+export const githubApiRequest = (url: string, token: string): HttpRequest => ({
+  url,
   headers: {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
     "X-GitHub-Api-Version": "2022-11-28",
   },
   credentials: "omit",
-  // Not the browser's cache: a copy kept there would go on listing what has since been closed
+  // Not the browser's cache: a copy kept there would go on listing what has since been closed or
+  // read
   cache: "no-store",
 })
+
+export const githubApiSearchRequest = (search: string, token: string): HttpRequest =>
+  githubApiRequest(
+    `https://api.github.com/search/issues?${new URLSearchParams({
+      q: search,
+      sort: "updated",
+      order: "desc",
+      per_page: "50",
+    })}`,
+    token,
+  )
 
 const SearchResponse = Schema.fromJsonString(Schema.Struct({ items: Schema.Array(Schema.Unknown) }))
 

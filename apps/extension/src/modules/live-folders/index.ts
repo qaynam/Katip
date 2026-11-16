@@ -28,7 +28,6 @@ export {
   LiveSort,
   LiveSource,
   originPatternOf,
-  originPatternOfKind,
   signInUrlOf,
   type GmailSource,
 } from "./live-source"

@@ -1,4 +1,4 @@
-import { gmailMailboxUrl, originPatternOfKind, type LiveSource } from "#modules/live-folders"
+import { gmailMailboxUrl, originPatternOf, type LiveSource } from "#modules/live-folders"
 import type { PinnedLiveFolderView } from "#protocol"
 
 export type LiveSourceKind = LiveSource["_tag"]
@@ -20,8 +20,8 @@ export const GITHUB_TOKEN_PAGE_URL =
  * Origins that need permission before reading from the source. Keep in sync with
  * optional_host_permissions in the manifest.
  */
-export const sourceOrigins = (kind: LiveSourceKind): ReadonlyArray<string> => [
-  originPatternOfKind(kind),
+export const sourceOrigins = (source: LiveSource): ReadonlyArray<string> => [
+  originPatternOf(source),
 ]
 
 export const unseenCount = (folder: PinnedLiveFolderView): number =>

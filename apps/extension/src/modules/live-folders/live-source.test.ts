@@ -25,6 +25,12 @@ describe("host permission a source needs", () => {
       originPatternOf({ _tag: "GitHub", query: "mentioned" }),
     ]).toStrictEqual(["https://mail.google.com/*", "https://github.com/*"])
   })
+
+  it("GitHub's notifications need the official API, the only way to read them", () => {
+    expect(originPatternOf({ _tag: "GitHub", query: "notifications" })).toBe(
+      "https://api.github.com/*",
+    )
+  })
 })
 
 describe("page opened to sign in", () => {
@@ -51,9 +57,10 @@ describe("name given on creation", () => {
   })
 
   it("names a GitHub folder after what it lists", () => {
-    expect(defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" }, en)).toBe(
-      "GitHub Review Requests",
-    )
+    expect([
+      defaultLiveFolderTitle({ _tag: "GitHub", query: "review-requested" }, en),
+      defaultLiveFolderTitle({ _tag: "GitHub", query: "notifications" }, en),
+    ]).toStrictEqual(["GitHub Review Requests", "GitHub Notifications"])
   })
 })
 
@@ -62,6 +69,7 @@ describe("language of the name given on creation", () => {
     expect([
       defaultLiveFolderTitle(gmail(1, null), ja),
       defaultLiveFolderTitle({ _tag: "GitHub", query: "mentioned" }, ja),
-    ]).toStrictEqual(["Gmail の受信トレイ（u/1）", "GitHub のメンション"])
+      defaultLiveFolderTitle({ _tag: "GitHub", query: "notifications" }, ja),
+    ]).toStrictEqual(["Gmail の受信トレイ（u/1）", "GitHub のメンション", "GitHub の通知"])
   })
 })

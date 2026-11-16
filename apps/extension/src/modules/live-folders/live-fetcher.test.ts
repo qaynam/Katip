@@ -17,6 +17,7 @@ const GITHUB_ORIGIN = "https://github.com/*"
 const GITHUB_API_ORIGIN = "https://api.github.com/*"
 const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
 const mentioned: LiveSource = { _tag: "GitHub", query: "mentioned" }
+const notifications: LiveSource = { _tag: "GitHub", query: "notifications" }
 
 const gmailFeed = `<?xml version="1.0" encoding="UTF-8"?><feed version="0.3" xmlns="http://purl.org/atom/ns#"><title>Gmail - Inbox for taro.yamada@example.com</title><fullcount>1</fullcount><entry><title>Your invoice</title><link rel="alternate" href="https://mail.google.com/mail?account_id=taro.yamada@example.com&amp;message_id=19a&amp;view=conv&amp;extsrc=atom" type="text/html" /><modified>2026-10-30T09:10:01Z</modified><issued>2026-10-30T09:10:01Z</issued><id>tag:gmail.google.com,2004:1</id><author><name>Accounting</name><email>accounting@example.co.jp</email></author></entry></feed>`
 
@@ -42,6 +43,17 @@ const webResult = (number: number, created: string) => ({
 
 const webPage = (results: ReadonlyArray<unknown>, loggedIn = true) =>
   JSON.stringify({ payload: { blackbirdSearchRoute: { results, logged_in: loggedIn } } })
+
+const notificationThread = (id: string, updatedAt: string) => ({
+  id,
+  updated_at: updatedAt,
+  subject: {
+    title: `#${id}`,
+    url: `https://api.github.com/repos/katip-dev/katip/issues/${id}`,
+    type: "Issue",
+  },
+  repository: { full_name: "katip-dev/katip", owner: { login: "katip-dev" } },
+})
 
 const fetchFailure = (source: LiveSource) =>
   Effect.map(
@@ -277,6 +289,86 @@ describe("GitHub with a token", () => {
 
       const requests = yield* (yield* FakeHttp).requests
       assert.isTrue(requests.every((request) => request.url.startsWith("https://github.com/")))
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})
+
+describe("GitHub notifications", () => {
+  it.effect("with a token set, reads the unread notifications from the official API with it", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
+      yield* (yield* GitHubTokenStore).save("ghp_secret")
+      yield* (yield* FakeHttp).route("https://api.github.com/notifications", () =>
+        Effect.succeed(
+          httpResponse(
+            200,
+            JSON.stringify([
+              notificationThread("2", "2026-11-16T08:00:00Z"),
+              notificationThread("1", "2026-11-15T08:00:00Z"),
+            ]),
+          ),
+        ),
+      )
+
+      const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(notifications))
+
+      const requests = yield* (yield* FakeHttp).requests
+      assert.deepStrictEqual(
+        [
+          items.map((item) => item.url),
+          requests.map((request) => [request.headers?.["Authorization"], request.credentials]),
+        ],
+        [
+          [
+            "https://github.com/katip-dev/katip/issues/2",
+            "https://github.com/katip-dev/katip/issues/1",
+          ],
+          [["Bearer ghp_secret", "omit"]],
+        ],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("without a token, fails as needing one without sending a request", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN, GITHUB_API_ORIGIN])
+
+      const failure = yield* fetchFailure(notifications)
+
+      assert.deepStrictEqual(
+        [failure, yield* (yield* FakeHttp).requests],
+        [{ _tag: "TokenMissing" }, []],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("without access to the official API, fails without sending a request", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_ORIGIN])
+      yield* (yield* GitHubTokenStore).save("ghp_secret")
+
+      const failure = yield* fetchFailure(notifications)
+
+      assert.deepStrictEqual(
+        [failure, yield* (yield* FakeHttp).requests],
+        [{ _tag: "PermissionMissing" }, []],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("fails as unable to read notifications when GitHub refuses the token for them", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GITHUB_API_ORIGIN])
+      yield* (yield* GitHubTokenStore).save("github_pat_fine_grained")
+      yield* (yield* FakeHttp).route("https://api.github.com/", () =>
+        Effect.succeed(
+          httpResponse(403, '{"message":"Resource not accessible by personal access token"}'),
+        ),
+      )
+
+      assert.deepStrictEqual(yield* fetchFailure(notifications), {
+        _tag: "TokenCannotReadNotifications",
+      })
     }).pipe(Effect.provide(TestLayer)),
   )
 })

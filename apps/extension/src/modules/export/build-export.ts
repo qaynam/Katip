@@ -74,36 +74,44 @@ const pinOf = (bookmark: PinnedBookmark): ExportedPin => ({
   url: bookmark.url,
 })
 
-const liveSourceOf = (source: LiveSource): ExportedLiveSource =>
+/** None for a source version 1 files have no place for. */
+const liveSourceOf = (source: LiveSource): Option.Option<ExportedLiveSource> =>
   Match.valueTags(source, {
-    Gmail: ({ accountIndex, label }): ExportedLiveSource => ({
-      kind: "gmail",
-      accountIndex,
-      label,
-    }),
-    GitHub: ({ query }): ExportedLiveSource => ({ kind: "github", query }),
+    Gmail: ({ accountIndex, label }) =>
+      Option.some<ExportedLiveSource>({ kind: "gmail", accountIndex, label }),
+    GitHub: ({ query }) =>
+      query === "notifications"
+        ? Option.none()
+        : Option.some<ExportedLiveSource>({ kind: "github", query }),
   })
 
 const nodesOf = (tree: PinnedTree, sources: ExportSources): ReadonlyArray<ExportedNode> =>
-  tree.map((node) =>
+  tree.flatMap((node) =>
     Match.valueTags(node, {
-      PinnedBookmark: pinOf,
-      PinnedSplit: ({ items: [left, right] }): ExportedNode => ({
-        type: "split",
-        items: [pinOf(left), pinOf(right)],
-      }),
-      PinnedLiveFolder: (live): ExportedNode => ({
-        type: "liveFolder",
-        title: live.title,
-        source: liveSourceOf(live.source),
-        sort: sources.liveSorts.get(live.id) ?? DEFAULT_LIVE_SORT,
-      }),
-      PinnedFolder: (folder): ExportedNode => ({
-        type: "folder",
-        title: folder.title,
-        icon: sources.folderIcons.get(folder.id) ?? null,
-        children: nodesOf(folder.children, sources),
-      }),
+      PinnedBookmark: (bookmark): ReadonlyArray<ExportedNode> => [pinOf(bookmark)],
+      PinnedSplit: ({ items: [left, right] }): ReadonlyArray<ExportedNode> => [
+        { type: "split", items: [pinOf(left), pinOf(right)] },
+      ],
+      PinnedLiveFolder: (live): ReadonlyArray<ExportedNode> =>
+        Option.match(liveSourceOf(live.source), {
+          onNone: () => [],
+          onSome: (source) => [
+            {
+              type: "liveFolder",
+              title: live.title,
+              source,
+              sort: sources.liveSorts.get(live.id) ?? DEFAULT_LIVE_SORT,
+            },
+          ],
+        }),
+      PinnedFolder: (folder): ReadonlyArray<ExportedNode> => [
+        {
+          type: "folder",
+          title: folder.title,
+          icon: sources.folderIcons.get(folder.id) ?? null,
+          children: nodesOf(folder.children, sources),
+        },
+      ],
     }),
   )
 
@@ -176,8 +184,9 @@ export const exportedSettingsOf = (settings: Settings): LatestExport["settings"]
  * @remarks
  * The GitHub token, what live folders fetched, which folders are open, the archive and the records
  * for restoring tabs aren't exported. Neither are tabs in incognito windows, tabs showing Katip's
- * own pages, or blank new tabs. Settings and themes added after version 1, such as whether to check
- * for updates and a theme's texture, have no place in its files and are left out too.
+ * own pages, or blank new tabs. Settings, themes and live folders added after version 1, such as
+ * whether to check for updates, a theme's texture and GitHub notifications folders, have no place
+ * in its files and are left out too.
  *
  * @returns {@link PinnedTreeUnavailable} when any Space's pinned tree couldn't be read, so that no
  *   file is left with some Spaces' pins missing without anyone noticing.

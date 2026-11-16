@@ -14,6 +14,10 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 Gmail live folders follow the mail Gmail marks important, and every live item shows who it is from.
 
+#### New
+
+- **GitHub notifications in a live folder** — A GitHub live folder can list the unread notifications in your GitHub inbox. It reads them with a personal access token (classic) with the notifications or repo scope, and asks you for one once the folder is made. Exports leave such a folder out, as the export file has no place for it yet.
+
 #### Improved
 
 - **Important mail in Gmail live folders** — A new Gmail live folder lists the unread mail Gmail marks important. You can choose the Primary tab instead, which leaves out what Gmail sorts into Promotions, Social and Updates, or the whole inbox, or a label by its name. A folder made before keeps what it lists; make a new one to change it.
@@ -30,6 +34,10 @@ Gmail live folders follow the mail Gmail marks important, and every live item sh
 ### 日本語
 
 Gmail のライブフォルダが Gmail の「重要」なメールを追えるようになり、ライブフォルダの項目には差出人がわかるアイコンが付きました。
+
+#### 新機能
+
+- **GitHub の通知をライブフォルダに** — GitHub のライブフォルダで、GitHub の通知の受信トレイにある未読の通知を並べられるようになりました。通知は notifications か repo のスコープを付けた Personal access token (classic) で読むので、フォルダを作ったあとにトークンの設定を求めます。エクスポートのファイルにはまだ置き場所がないため、このフォルダはエクスポートに含まれません。
 
 #### 改善
 

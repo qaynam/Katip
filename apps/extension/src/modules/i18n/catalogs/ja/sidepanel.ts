@@ -140,6 +140,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolder.github.authoredPullRequests": "自分の PR",
   "sidepanel.liveFolder.github.assignedIssues": "担当の Issue",
   "sidepanel.liveFolder.github.mentioned": "メンション",
+  "sidepanel.liveFolder.github.notifications": "通知",
 
   "sidepanel.liveFolderDialog.gmailTitle": "Gmail のライブフォルダ",
   "sidepanel.liveFolderDialog.gmailDescription": "未読のメールを並べます。",
@@ -159,10 +160,12 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.gitHubDescription":
     "ブラウザで GitHub にログインしていれば使えます。",
   "sidepanel.liveFolderDialog.queryLegend": "並べる項目",
+  "sidepanel.liveFolderDialog.notificationsHint":
+    "通知は、ログイン中のセッションではなく Personal access token で読みます。フォルダを作ったあとにトークンの設定を求めます。",
   "sidepanel.liveFolderDialog.tokenTitle": "GitHub のトークンを設定",
   "sidepanel.liveFolderDialog.token": "アクセストークン",
   "sidepanel.liveFolderDialog.tokenHowTo":
-    "github.com で Personal access token (classic) を発行して貼り付けてください。非公開のリポジトリも並べるなら repo にチェックを入れます。トークンは GitHub への問い合わせにだけ使います。",
+    "github.com で Personal access token (classic) を発行して貼り付けてください。非公開のリポジトリも並べるなら repo にチェックを入れます。通知を並べるには repo か notifications が必要です。トークンは GitHub への問い合わせにだけ使います。",
   "sidepanel.liveFolderDialog.tokenLink": "github.com でトークンを発行する",
   "sidepanel.liveFolderDialog.create": "作成",
   "sidepanel.liveFolderDialog.save": "保存",

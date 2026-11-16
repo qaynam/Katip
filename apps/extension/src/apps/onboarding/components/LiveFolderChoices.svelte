@@ -1,10 +1,6 @@
 <script lang="ts">
   import type { Translator } from "#modules/i18n"
-  import {
-    GMAIL_IMPORTANT_LABEL,
-    type LiveSource,
-    originPatternOfKind,
-  } from "#modules/live-folders"
+  import { GMAIL_IMPORTANT_LABEL, type LiveSource, originPatternOf } from "#modules/live-folders"
   import type { SpaceId } from "#modules/space"
   import type { CommandOutcome, SidebarCommand } from "#protocol"
   import type { OriginAccess } from "../../sidepanel/connection/origin-access"
@@ -89,7 +85,7 @@
 
   const add = (choice: Choice) => {
     // Chrome only asks for access while handling the press, so it is asked before any await
-    const access = originAccess.request([originPatternOfKind(choice.source._tag)])
+    const access = originAccess.request([originPatternOf(choice.source)])
     settle(choice.key, { _tag: "Adding" })
     void (async () => {
       if (!(await access)) {

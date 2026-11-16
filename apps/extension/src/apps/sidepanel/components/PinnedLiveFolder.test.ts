@@ -304,6 +304,21 @@ describe("A live folder that failed to refresh", () => {
     )
   })
 
+  it("asks for access to GitHub's official API for a notifications folder, the only way to read them", async () => {
+    const { originAccess } = await renderSidebar(
+      viewWithPins(
+        inbox({
+          source: { _tag: "GitHub", query: "notifications" },
+          status: failed({ needsPermission: true }),
+        }),
+      ),
+    )
+
+    await fireEvent.click(screen.getByRole("button", { name: "Allow Access" }))
+
+    expect(originAccess.requestedOrigins).toStrictEqual([["https://api.github.com/*"]])
+  })
+
   it("doesn't refresh when access is denied and reports the missing permission", async () => {
     const { connection } = await renderSidebar(
       viewWithPins(inbox({ status: failed({ needsPermission: true }) })),

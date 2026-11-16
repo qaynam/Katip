@@ -139,6 +139,7 @@ export const sidepanel = {
   "sidepanel.liveFolder.github.authoredPullRequests": "My Pull Requests",
   "sidepanel.liveFolder.github.assignedIssues": "Assigned Issues",
   "sidepanel.liveFolder.github.mentioned": "Mentions",
+  "sidepanel.liveFolder.github.notifications": "Notifications",
 
   "sidepanel.liveFolderDialog.gmailTitle": "Gmail Live Folder",
   "sidepanel.liveFolderDialog.gmailDescription": "Shows your unread emails.",
@@ -158,10 +159,12 @@ export const sidepanel = {
   "sidepanel.liveFolderDialog.gitHubDescription":
     "Works when you’re signed in to GitHub in this browser.",
   "sidepanel.liveFolderDialog.queryLegend": "Show",
+  "sidepanel.liveFolderDialog.notificationsHint":
+    "Notifications are read with a personal access token instead of your sign-in. The folder asks for one once it’s created.",
   "sidepanel.liveFolderDialog.tokenTitle": "Set GitHub Token",
   "sidepanel.liveFolderDialog.token": "Access token",
   "sidepanel.liveFolderDialog.tokenHowTo":
-    "Create a personal access token (classic) on github.com and paste it here. To include private repositories, select the repo scope. The token is only used for requests to GitHub.",
+    "Create a personal access token (classic) on github.com and paste it here. To include private repositories, select the repo scope; notifications need it or the notifications scope. The token is only used for requests to GitHub.",
   "sidepanel.liveFolderDialog.tokenLink": "Create a token on github.com",
   "sidepanel.liveFolderDialog.create": "Create",
   "sidepanel.liveFolderDialog.save": "Save",

@@ -125,7 +125,7 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 | `activeTab`                                                                    | Limits that notice to the tab the user's keyboard shortcut ran on, without asking for access to every site.                                          |
 | `history` (optional)                                                           | Searches the browsing history locally in Spotlight, only after the user turns on history search.                                                     |
 | Host permission `https://mail.google.com/*` (optional)                         | Reads the Gmail inbox or label feed for a Gmail live folder the user creates.                                                                        |
-| Host permissions `https://github.com/*`, `https://api.github.com/*` (optional) | Reads GitHub search results for a GitHub live folder the user creates.                                                                               |
+| Host permissions `https://github.com/*`, `https://api.github.com/*` (optional) | Reads GitHub search results or notifications for a GitHub live folder the user creates.                                                              |
 
 **Are you using remote code?** No. All code is included in the package.
 

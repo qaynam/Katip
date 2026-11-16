@@ -178,7 +178,7 @@ export const addLiveFolderMenu = (ctx: SidebarContext, parentId: BookmarkId | nu
  * is handling a user gesture, so call this synchronously from a click handler or similar.
  */
 export const grantAccessAndRefresh = async (ctx: SidebarContext, folder: PinnedLiveFolderView) => {
-  const isGranted = await ctx.originAccess.request(sourceOrigins(folder.source._tag))
+  const isGranted = await ctx.originAccess.request(sourceOrigins(folder.source))
   if (!isGranted) {
     ctx.toasts.show(
       ctx.translator.t("sidepanel.liveFolder.accessDenied", {
