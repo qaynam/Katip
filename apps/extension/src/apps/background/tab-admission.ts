@@ -67,18 +67,27 @@ const claimFromRestoreQueue = Effect.fnUntraced(function* (tab: BrowserTab, url:
   return true
 })
 
-const admit = Effect.fnUntraced(function* (tab: BrowserTab, claimsRestoreRecord = true) {
+const admit = Effect.fnUntraced(function* <R>(
+  tab: BrowserTab,
+  claimsRestoreRecord: boolean,
+  beforeTracking: (workspaceWithTab: Workspace) => Effect.Effect<void, never, R>,
+) {
   const state = yield* KatipState
-  if (Option.isSome(spaceOf(yield* state.workspace.get, tab.id)) || tab.pinned) return "Skipped"
+  if (Option.isSome(spaceOf(yield* state.workspace.get, tab.id)) || tab.pinned) return
   const url = urlOf(tab)
-  if (claimsRestoreRecord && (yield* claimFromRestoreQueue(tab, url))) return "Restored"
+  if (claimsRestoreRecord && (yield* claimFromRestoreQueue(tab, url))) return
   const context = yield* placementContext
-  yield* state.workspace.update((workspace) => trackTab(workspace, newTabFrom(tab), context))
+  const track = (workspace: Workspace) => trackTab(workspace, newTabFrom(tab), context)
+  // Not tracked first: views list only tracked tabs, and one built while beforeTracking moved the
+  // tab would show it where Chrome opened it
+  yield* beforeTracking(track(yield* state.workspace.get))
+  yield* state.workspace.update(track)
   if (url === "" && (yield* state.restoreQueue.get) !== null) {
     MutableHashSet.add(provisionalTabs, tab.id)
   }
-  return "Tracked"
 })
+
+const leaveWhereItIs = () => Effect.void
 
 /**
  * Places a tab that belongs to no Space yet in one, preferring a restore record from before the
@@ -87,7 +96,7 @@ const admit = Effect.fnUntraced(function* (tab: BrowserTab, claimsRestoreRecord 
  * Does nothing to a tab that already has a Space, so it's safe to call any number of times for
  * the same tab.
  */
-export const admitTab = (tab: BrowserTab) => Effect.asVoid(admit(tab))
+export const admitTab = (tab: BrowserTab) => admit(tab, true, leaveWhereItIs)
 
 /**
  * Places a tab Chrome has just unpinned, as {@link admitTab} does, but never by a restore record.
@@ -96,7 +105,7 @@ export const admitTab = (tab: BrowserTab) => Effect.asVoid(admit(tab))
  * Chrome unpins a Favorite's tab right before closing it. Claiming a record then would spend it on
  * a tab about to close, and the tab it was kept for, opened after, would lose its Space.
  */
-export const admitUnpinnedTab = (tab: BrowserTab) => Effect.asVoid(admit(tab, false))
+export const admitUnpinnedTab = (tab: BrowserTab) => admit(tab, false, leaveWhereItIs)
 
 const placementBelowOpener = (
   workspace: Workspace,
@@ -110,47 +119,42 @@ const placementBelowOpener = (
     ? { _tag: "Below", tabId: openerTabId }
     : { _tag: "Top" }
 
-// Chrome creates a link's tab before its URL is known, the same as a new tab page, which can have an
-// opener too. Such a tab is placed once its URL tells them apart. Kept only in memory, like
-// provisionalTabs: the URL follows within moments
-const tabsAwaitingPlacement = MutableHashSet.empty<TabId>()
+// Not counting a tab without a URL as a new tab page, as choosing its Space does: Chrome gives the
+// new tab pages it opens their URL from the start, and only a tab a page opens itself (a link with
+// target="_blank", window.open) comes without one, for as long as the page takes to start loading.
+// Waiting for that URL would let views show the tab where Chrome opened it until then
+const opensNewTabPage = (tab: BrowserTab) => {
+  const url = urlOf(tab)
+  return url !== "" && isNewTabPage(url)
+}
 
-const placeOpenedTab = Effect.fnUntraced(function* (tab: BrowserTab) {
+const placeOpenedTab = Effect.fnUntraced(function* (tab: BrowserTab, workspaceWithTab: Workspace) {
   const opener = tab.openerTabId
-  if (Option.isNone(opener) || isNewTabPage(urlOf(tab))) return
-  const workspace = yield* (yield* KatipState).workspace.get
-  const opened = trackedTab(workspace, tab.id)
+  if (Option.isNone(opener) || opensNewTabPage(tab)) return
+  const opened = trackedTab(workspaceWithTab, tab.id)
   if (Option.isNone(opened) || !isTemporary(opened.value)) return
   yield* moveAmongTemporary(
     [tab],
     opened.value.spaceId,
-    placementBelowOpener(workspace, opened.value, opener.value),
+    placementBelowOpener(workspaceWithTab, opened.value, opener.value),
   )
 })
 
 /**
  * Admits a tab Chrome has just created, as {@link admitTab} does. A tab opened from another tab,
- * such as by a link, then moves to show right below that tab, above the ones it opened before.
- * Opened from a pin, from a live item's tab, or from a tab outside the Space, it goes to the top
- * of the temporary tabs.
+ * such as by a link, shows right below that tab, above the ones it opened before. Opened from a
+ * pin, from a live item's tab, or from a tab outside the Space, it shows at the top of the
+ * temporary tabs. A new tab page stays where Chrome opened it.
  *
- * A tab created without its URL moves once {@link placeOnceUrlIsKnown} sees the URL.
+ * The tab is moved before it joins its Space, so no view shows it anywhere else first.
  */
-export const admitCreatedTab = Effect.fnUntraced(function* (tab: BrowserTab) {
-  if ((yield* admit(tab)) !== "Tracked" || Option.isNone(tab.openerTabId)) return
-  if (urlOf(tab) === "") {
-    MutableHashSet.add(tabsAwaitingPlacement, tab.id)
-    return
-  }
-  yield* placeOpenedTab(tab)
-})
-
-/** Moves a tab that {@link admitCreatedTab} admitted without a URL, once the URL is known. */
-export const placeOnceUrlIsKnown = Effect.fnUntraced(function* (tab: BrowserTab) {
-  if (!MutableHashSet.has(tabsAwaitingPlacement, tab.id) || urlOf(tab) === "") return
-  MutableHashSet.remove(tabsAwaitingPlacement, tab.id)
-  yield* placeOpenedTab(tab)
-})
+export const admitCreatedTab = (tab: BrowserTab) =>
+  admit(tab, true, (workspaceWithTab) =>
+    placeOpenedTab(tab, workspaceWithTab).pipe(
+      // Not failing the admission: a tab Chrome wouldn't move still has to join its Space
+      Effect.catch((error) => Effect.logWarning("Couldn't place the opened tab", error)),
+    ),
+  )
 
 /** Once a provisionally placed tab's URL is known, matches it against the restore records again. */
 export const settleProvisionalTab = Effect.fnUntraced(function* (tab: BrowserTab) {
@@ -163,7 +167,4 @@ export const settleProvisionalTab = Effect.fnUntraced(function* (tab: BrowserTab
 
 /** Forgets what is kept about a closed tab until its URL is known. */
 export const forgetPendingTab = (tabId: TabId) =>
-  Effect.sync(() => {
-    MutableHashSet.remove(provisionalTabs, tabId)
-    MutableHashSet.remove(tabsAwaitingPlacement, tabId)
-  })
+  Effect.sync(() => MutableHashSet.remove(provisionalTabs, tabId))

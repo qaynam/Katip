@@ -13,7 +13,6 @@ import {
   admitTab,
   admitUnpinnedTab,
   forgetPendingTab,
-  placeOnceUrlIsKnown,
   settleProvisionalTab,
 } from "./tab-admission"
 import { KatipState } from "./katip-state"
@@ -39,7 +38,6 @@ const handleTabUpdated = Effect.fnUntraced(function* (
   if (changes.url !== undefined) yield* settleProvisionalTab(tab)
   if (changes.url !== undefined) yield* admitTab(tab)
   else if (changes.pinned === false) yield* admitUnpinnedTab(tab)
-  if (changes.url !== undefined) yield* placeOnceUrlIsKnown(tab)
 })
 
 /**

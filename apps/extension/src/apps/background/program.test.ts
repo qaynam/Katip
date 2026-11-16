@@ -747,6 +747,196 @@ describe("tabs opened from another tab", () => {
   )
 })
 
+describe("a new tab shows in its place from the first view that lists it", () => {
+  const temporaryTabIds = (view: SidebarView) =>
+    Option.match(spaceNamed(view, "Home"), {
+      onNone: (): ReadonlyArray<TabId> => [],
+      onSome: (space) => temporaryTabsIn(space).map((tab) => tab.tabId),
+    })
+
+  const listsUrl = (url: string) => (view: SidebarView) =>
+    Option.exists(spaceNamed(view, "Home"), (space) =>
+      temporaryTabsIn(space).some((tab) => tab.url === url),
+    )
+
+  /** Each order the views list the temporary tabs in while `tabId` is among them, once. */
+  const ordersListing = (views: ReadonlyArray<SidebarView>, tabId: TabId) =>
+    Array.dedupe(views.map(temporaryTabIds).filter((ids) => ids.includes(tabId)))
+
+  /**
+   * Starts the background with temporary tabs a, b and c in that index order, and opens a side
+   * panel. `viewsBefore` counts the views it received by then.
+   */
+  const startWithTemporaryTabs = (newTabsOnTop: boolean) =>
+    Effect.gen(function* () {
+      const fake = yield* FakeBrowser
+      const { windowId, tabIds } = yield* fake.seedWindow({
+        tabs: [
+          { url: "https://a.example/" },
+          { url: "https://b.example/", active: true },
+          { url: "https://c.example/" },
+        ],
+      })
+      yield* Storage.use((storage) => storage.sync.set("katip/settings", { newTabsOnTop }))
+      yield* startBackground
+      const sidebar = yield* openSidebar(windowId)
+      yield* sidebar.viewWhere((view) => temporaryTabIds(view).length === 3)
+      const viewsBefore = (yield* sidebar.receivedViews).length
+      return { windowId, tabIds, sidebar, viewsBefore }
+    })
+
+  const bothWays = [{ newTabsOnTop: true }, { newTabsOnTop: false }]
+
+  it.live.each(bothWays)(
+    "a link from a temporary tab lists right below it, even before its URL arrives (newTabsOnTop: $newTabsOnTop)",
+    ({ newTabsOnTop }) =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const {
+            tabIds: [a, b, c],
+            sidebar,
+            viewsBefore,
+          } = yield* startWithTemporaryTabs(newTabsOnTop)
+
+          const link = yield* fake.openLinkBeforeLoading(b, { active: true })
+          yield* sidebar.viewWhere((view) => temporaryTabIds(view).includes(link))
+          yield* fake.updatePage(link, { url: "https://link.example/", status: "loading" })
+          yield* sidebar.viewWhere(listsUrl("https://link.example/"))
+
+          expect(
+            ordersListing((yield* sidebar.receivedViews).slice(viewsBefore), link),
+          ).toStrictEqual([newTabsOnTop ? [c, b, link, a] : [a, b, link, c]])
+        }),
+      ),
+  )
+
+  it.live.each(bothWays)(
+    "a link from a pin lists at the top of the temporary tabs, even before its URL arrives (newTabsOnTop: $newTabsOnTop)",
+    ({ newTabsOnTop }) =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const {
+            tabIds: [a, pin, c],
+            sidebar,
+          } = yield* startWithTemporaryTabs(newTabsOnTop)
+          yield* sidebar.run({ _tag: "PinTab", tabId: pin })
+          yield* sidebar.viewWhere((view) => temporaryTabIds(view).length === 2)
+          const viewsBefore = (yield* sidebar.receivedViews).length
+
+          const link = yield* fake.openLinkBeforeLoading(pin, { active: true })
+          yield* sidebar.viewWhere((view) => temporaryTabIds(view).includes(link))
+          yield* fake.updatePage(link, { url: "https://link.example/", status: "loading" })
+          yield* sidebar.viewWhere(listsUrl("https://link.example/"))
+
+          expect(
+            ordersListing((yield* sidebar.receivedViews).slice(viewsBefore), link),
+          ).toStrictEqual([newTabsOnTop ? [link, c, a] : [link, a, c]])
+        }),
+      ),
+  )
+
+  it.live("a link whose tab Chrome won't move still lists, where Chrome opened it", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          tabIds: [a, b, c],
+          sidebar,
+        } = yield* startWithTemporaryTabs(true)
+        yield* fake.failNext("tabs.move")
+
+        const link = yield* fake.openLinkBeforeLoading(b)
+        const view = yield* sidebar.viewWhere((v) => temporaryTabIds(v).includes(link))
+
+        expect(temporaryTabIds(view)).toStrictEqual([c, link, b, a])
+      }),
+    ),
+  )
+
+  it.live.each(bothWays)(
+    "a link opened in the background with its URL already known lists right below its tab (newTabsOnTop: $newTabsOnTop)",
+    ({ newTabsOnTop }) =>
+      inBackground(
+        Effect.gen(function* () {
+          const {
+            windowId,
+            tabIds: [a, b, c],
+            sidebar,
+            viewsBefore,
+          } = yield* startWithTemporaryTabs(newTabsOnTop)
+
+          const link = yield* (yield* Tabs).create({
+            windowId,
+            url: "https://link.example/",
+            openerTabId: b,
+            active: false,
+          })
+          yield* sidebar.viewWhere(listsUrl("https://link.example/"))
+
+          expect(
+            ordersListing((yield* sidebar.receivedViews).slice(viewsBefore), link.id),
+          ).toStrictEqual([newTabsOnTop ? [c, b, link.id, a] : [a, b, link.id, c]])
+        }),
+      ),
+  )
+
+  it.live.each(bothWays)(
+    "a tab from the New Tab row lists where new tabs show (newTabsOnTop: $newTabsOnTop)",
+    ({ newTabsOnTop }) =>
+      inBackground(
+        Effect.gen(function* () {
+          const {
+            windowId,
+            tabIds: [a, b, c],
+            sidebar,
+            viewsBefore,
+          } = yield* startWithTemporaryTabs(newTabsOnTop)
+
+          yield* sidebar.run({ _tag: "OpenNewTab", windowId })
+          const view = yield* sidebar.viewWhere((v) => temporaryTabIds(v).length === 4)
+          const opened = temporaryTabIds(view).find((id) => ![a, b, c].includes(id)) as TabId
+
+          expect(
+            ordersListing((yield* sidebar.receivedViews).slice(viewsBefore), opened),
+          ).toStrictEqual([newTabsOnTop ? [opened, c, b, a] : [a, b, c, opened]])
+        }),
+      ),
+  )
+
+  it.live.each([
+    { newTabsOnTop: true, opener: "no opener" },
+    { newTabsOnTop: false, opener: "no opener" },
+    { newTabsOnTop: true, opener: "the active tab as its opener" },
+    { newTabsOnTop: false, opener: "the active tab as its opener" },
+  ])(
+    "a new tab page opened with $opener lists where new tabs show (newTabsOnTop: $newTabsOnTop)",
+    ({ newTabsOnTop, opener }) =>
+      inBackground(
+        Effect.gen(function* () {
+          const {
+            windowId,
+            tabIds: [a, b, c],
+            sidebar,
+            viewsBefore,
+          } = yield* startWithTemporaryTabs(newTabsOnTop)
+
+          const opened = yield* (yield* Tabs).create({
+            windowId,
+            url: "chrome://newtab/",
+            ...(opener === "no opener" ? {} : { openerTabId: b }),
+          })
+          yield* sidebar.viewWhere(listsUrl("chrome://newtab/"))
+
+          expect(
+            ordersListing((yield* sidebar.receivedViews).slice(viewsBefore), opened.id),
+          ).toStrictEqual([newTabsOnTop ? [opened.id, c, b, a] : [a, b, c, opened.id]])
+        }),
+      ),
+  )
+})
+
 describe("split view", () => {
   const entriesShape = (view: SidebarView) =>
     Option.match(spaceNamed(view, "Home"), {

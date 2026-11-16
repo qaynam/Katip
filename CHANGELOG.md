@@ -28,6 +28,10 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
 - **The Archive from the Space menu and the Command Palette** — Open Archive in a Space’s … menu, or the Open Archive command in the Command Palette, shows the tabs Katip archived, with the × at its top right to go back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
 
+### 🐛 Fixed
+
+- **Links open in their place** — A tab opened from a link shows right below the tab it came from as soon as it appears in the sidebar, instead of showing up above that tab and then moving down. A link opened from a pin shows at the top of the temporary tabs straight away.
+
 ## 日本語
 
 Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、Spotlight はコマンドパレットという名前になりました。
@@ -45,6 +49,10 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **コマンドパレット** — Spotlight の名前をコマンドパレットに変えました。設定や Chrome のショートカット設定など、Katip がこの機能の名前を出すところはすべてこの名前になります。使い方は変わらず、サイズや開く位置などの設定もそのまま引き継ぎます。
 - **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
 - **Space のメニューとコマンドパレットからアーカイブ** — Space の「…」メニューの「アーカイブを開く」や、コマンドパレットの「アーカイブを開く」で、Katip がアーカイブしたタブを表示できるようになりました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
+
+### 🐛 修正
+
+- **リンクのタブを最初から定位置に** — リンクから開いたタブは、サイドバーに現れた時点から、開いた元のタブのすぐ下に表示されるようになりました。これまでは元のタブの上に一度表示されてから、下へ移動していました。ピン留めから開いたリンクも、最初から一時タブの一番上に表示されます。
 
 ## 1.9.0 — 2026-11-16
 
