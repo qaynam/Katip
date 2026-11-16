@@ -47,7 +47,8 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > A folder that keeps up with the mail Gmail marks important, your Primary tab, inbox or a label, or with your GitHub review requests, pull requests, issues, mentions and notifications, using the accounts you're already signed in to. Items open right in the folder, and Katip can tell you with a notification when important mail or a new GitHub item arrives.
 >
 > AND MORE
-> • Favorites: the pages you keep at hand as a row of icons, kept even when their tabs are closed
+> • Favorites: the pages you keep at hand as a row of icons in each Space, kept even when their tabs are closed
+> • Downloads: your recent downloads in the sidebar, searchable and filtered by kind
 > • Archive: tabs you haven't used for a while are closed and kept, ready to bring back
 > • Keyboard shortcuts for the side panel, the Command Palette and copying links
 > • Export your data to a file and import it again
@@ -87,7 +88,8 @@ The text to paste into the Chrome Web Store Developer Dashboard, field by field,
 > Gmail の重要なメール・メインタブ・受信トレイ・ラベルや、GitHub のレビュー依頼・プルリクエスト・Issue・メンション・通知を、常に最新の状態で一覧にするフォルダです。ログイン済みのアカウントをそのまま使います。項目はフォルダの中でそのまま開けて、重要なメールや GitHub の新しい項目が届いたときは通知でも知らせます。
 >
 > そのほか
-> • Favorites: よく使うページをアイコンで並べて表示。タブを閉じても残ります
+> • Favorites: Space ごとに、よく使うページをアイコンで並べて表示。タブを閉じても残ります
+> • ダウンロード: 最近のダウンロードをサイドバーで一覧。検索や種類での絞り込みもできます
 > • アーカイブ: しばらく使っていないタブを閉じて保存し、いつでも戻せます
 > • サイドパネル、コマンドパレット、リンクのコピーのキーボードショートカット
 > • データをファイルに書き出し、読み込み直せます

@@ -31,7 +31,7 @@ export const en: Copy = {
       },
       {
         title: "Favorites",
-        text: "Your most-used pages sit as icons at the top, in every Space.",
+        text: "Each Space keeps its own most-used pages as icons at the top.",
       },
     ],
   },

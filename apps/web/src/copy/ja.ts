@@ -31,7 +31,7 @@ export const ja: Copy = {
       },
       {
         title: "Favorites",
-        text: "よく使うページを、どの Space でも上にアイコンで並べます。",
+        text: "Space ごとに、よく使うページを上にアイコンで並べます。",
       },
     ],
   },
