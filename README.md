@@ -91,5 +91,4 @@ Load `apps/extension/dist/` as an unpacked extension in Developer mode.
 
 ## License
 
-Released under the [MIT License](LICENSE).  
-_The Katip name, logo, and brand icons are trademarks. When creating a fork, please use your own distinct name and icon._
+[MIT License](LICENSE).

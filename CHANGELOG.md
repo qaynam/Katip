@@ -10,55 +10,53 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ## Unreleased
 
-### English
+## English
 
 Gmail live folders follow the mail Gmail marks important, and every live item shows who it is from.
 
-#### New
+### 🚀 New
 
 - **GitHub notifications in a live folder** — A GitHub live folder can list the unread notifications in your GitHub inbox. It reads them with a personal access token (classic) with the notifications or repo scope, and asks you for one once the folder is made. Exports leave such a folder out, as the export file has no place for it yet.
 - **Search History** — The Search History command in Spotlight searches your browsing history alone, forgiving typos as the rest of Spotlight does, and lists the pages you visited most recently before you type. Backspace in the empty field or Esc takes you back to the usual search. It needs history search turned on in the settings; until it is, the command offers to open the settings there.
 - **Notifications for live folders** — Turn on “Notify about new items in live folders” in the settings, under Tabs, and Katip shows a system notification when mail Gmail marks important arrives in a Gmail live folder, or a new item in a GitHub live folder. Items that arrive together share one notification, and clicking it opens the item as clicking it in the side panel does. What a folder lists when it’s made isn’t announced.
 
-#### Improved
+### ✨ Improved
 
 - **Important mail in Gmail live folders** — A new Gmail live folder lists the unread mail Gmail marks important. You can choose the Primary tab instead, which leaves out what Gmail sorts into Promotions, Social and Updates, or the whole inbox, or a label by its name. A folder made before keeps what it lists; make a new one to change it.
 - **Important mail marked** — In any Gmail live folder, mail Gmail marks important carries a yellow marker, as in Gmail.
 - **Read mail leaves sooner** — Live folders refresh every two minutes instead of five, and a Gmail live folder refreshes again soon after you open a mail from it, so the mail you’ve read leaves it.
 - **Who each item is from** — A live folder shows the icon of Gmail or GitHub with a red dot for live. Its items show the icon of the sender’s site, or the sender’s initial for an address at a free mail service or a site not visited yet, and GitHub items show the avatar of the repository’s owner, in place of the same Gmail or GitHub icon on every row.
 - **Live items open in place** — Opening a mail or a GitHub item from a live folder turns its row into the tab, as opening a pin does, instead of adding it to the temporary tabs. The row lights up while its tab is shown and has a close button, and clicking it again goes back to the tab. A mail Gmail has since counted read stays until you close its tab, and leaves the folder then. A collapsed live folder keeps the shown tab’s item in view under it, as a folder does with its pins.
-- **A copy notice you notice** — When Katip copies the tab’s URL or Markdown link, from a keyboard shortcut or Spotlight, the notice slides in at the top right of the page as a card in Katip’s look, with a check mark and what was copied, in place of a small dark label at the bottom. It follows the system’s light or dark mode.
 
-#### Fixed
+### 🐛 Fixed
 
 - **Fresh live folders** — Refreshing a live folder always asks Gmail or GitHub again, never answering from a copy the browser may have kept.
 - **Deleting a live folder** — Delete Live Folder in a live folder’s menu removes it. Before, it did nothing.
 - **Site icons on any theme** — A site icon drawn in one color for the system’s dark or light mode, such as GitHub’s or ChatGPT’s, no longer fades into a Space theme of the same lightness: it turns dark on a light theme and light on a dark one.
 
-### 日本語
+## 日本語
 
-Gmail のライブフォルダが Gmail の「重要」なメールを追えるようになり、ライブフォルダの項目には差出人がわかるアイコンが付きました。
+Gmail のライブフォルダで「重要」メールを追えるようになり、各項目に差出人がひと目でわかるアイコンが付きました。
 
-#### 新機能
+### 🚀 新機能
 
-- **GitHub の通知をライブフォルダに** — GitHub のライブフォルダで、GitHub の通知の受信トレイにある未読の通知を並べられるようになりました。通知は notifications か repo のスコープを付けた Personal access token (classic) で読むので、フォルダを作ったあとにトークンの設定を求めます。エクスポートのファイルにはまだ置き場所がないため、このフォルダはエクスポートに含まれません。
-- **履歴を検索** — Spotlight の「履歴を検索」コマンドで、閲覧履歴だけを検索できるようになりました。ほかの検索と同じく多少の入力ミスがあっても見つかり、何も入力していないときは最近開いたページを並べます。空欄で Backspace か Esc を押すと、通常の検索に戻ります。設定で閲覧履歴の検索をオンにしておく必要があり、オフのあいだはこのコマンドからその設定を開けます。
-- **ライブフォルダの新着通知** — 設定の「タブ」で「ライブフォルダの新着を通知する」をオンにすると、Gmail のライブフォルダに Gmail が重要マークを付けたメールが届いたときや、GitHub のライブフォルダに新しい項目が加わったときに、システムの通知で知らせます。同時に届いたものは 1 つの通知にまとめ、クリックするとサイドパネルで項目をクリックしたときと同じように開きます。フォルダを作ったときにすでにある項目は通知しません。
+- **GitHub の通知をライブフォルダに** — GitHub の未読通知を受信トレイから直接並べられるようになりました。notifications または repo スコープの Personal access token (classic) を使って読み取るため、フォルダ作成後にトークンの設定を案内します（※エクスポート形式に未対応のため、現在の設定書き出しには含まれません）。
+- **履歴を検索** — Spotlight の「履歴を検索」コマンドで、閲覧履歴だけを検索できるようになりました。通常の検索と同じく多少の入力ミスがあってもヒットし、何も入力していないときは直近に開いたページを並べます。空欄で Backspace か Esc を押すと通常検索に戻ります。設定で履歴検索をオンにする必要があり、オフの場合はコマンドから直接設定を開けます。
+- **ライブフォルダの新着通知** — 設定の「タブ」で「ライブフォルダの新着を通知する」をオンにすると、Gmail で「重要」マークのメールが届いたときや、GitHub で新しい項目が届いたときに、システムの通知で知らせます。同時に届いたものは 1 つにまとめられ、クリックするとサイドパネルから開いたときと同じように直接ページを開きます（フォルダ作成時点で既にある項目は通知しません）。
 
-#### 改善
+### ✨ 改善
 
-- **Gmail のライブフォルダで重要なメール** — 新しく作る Gmail のライブフォルダは、Gmail が重要マークを付けた未読メールを並べます。代わりにメインタブ（プロモーション・ソーシャル・新着に振り分けられたメールを除く）、受信トレイ全体、名前を指定したラベルも選べます。これまでに作ったフォルダは並べる内容を変えないので、変えるには作り直してください。
-- **重要なメールに印** — どの Gmail のライブフォルダでも、Gmail が重要マークを付けたメールには Gmail と同じ黄色の印が付きます。
-- **読んだメールがすぐ消える** — ライブフォルダは 5 分ではなく 2 分ごとに更新します。Gmail のライブフォルダは、そこからメールを開いた少しあとにも更新するので、読んだメールがすぐに消えます。
-- **差出人がわかるアイコン** — ライブフォルダには Gmail や GitHub のアイコンと、ライブを示す赤い点が付きます。項目には、どの行にも同じ Gmail や GitHub のアイコンを出す代わりに、差出人のサイトのアイコンを出します。フリーメールのアドレスや、まだ訪れていないサイトからのメールは、差出人の頭文字です。GitHub の項目には、リポジトリの持ち主のアバターを出します。
+- **Gmail ライブフォルダの表示対象** — 新しく作成する Gmail ライブフォルダは、デフォルトで未読の「重要」メールを並べるようになりました。メインタブ（プロモーションやソーシャル等を除く）、受信トレイ全体、任意のラベル指定も選べます（※既存のフォルダの設定は維持されるため、変更したい場合は新しくフォルダを作成してください）。
+- **重要なメールに印** — Gmail のライブフォルダでも、Gmail が重要マークを付けたメールには Gmail と同じ黄色の印が付きます。
+- **読んだメールがすぐ消える** — ライブフォルダの更新間隔を 5 分から 2 分に短縮しました。Gmail のライブフォルダからメールを開いた少しあとにも更新が走るため、読んだメールがすぐに消えます。
+- **差出人がわかるアイコン** — フォルダには Gmail や GitHub のアイコンと、ライブ中を示す赤い点が付きます。フォルダ内の項目には、一律のアイコンではなく差出人サイトのアイコンを表示します（フリーメールのアドレスや未訪問サイトは差出人の頭文字、GitHub の項目にはリポジトリ所有者のアバターを表示します）。
 - **ライブフォルダの項目をその場で開く** — ライブフォルダのメールや GitHub の項目を開くと、ピン留めを開いたときと同じように、その行がそのままタブになります。一時的なタブには加わりません。そのタブを表示しているあいだは行が強調され、閉じるボタンが付きます。もう一度クリックすると、そのタブに戻ります。開いたあとに Gmail で既読になったメールはタブを閉じるまで残り、閉じるとフォルダから消えます。ライブフォルダを畳んでも、表示中のタブの項目はフォルダの下に残ります（フォルダのピン留めと同じです）。
-- **目に留まるコピーの通知** — キーボードショートカットや Spotlight でタブの URL や Markdown のリンクをコピーすると、ページ下部の小さな黒いラベルの代わりに、Katip の見た目に合わせたカードがページの右上にすべり込み、チェックマークとコピーした内容を表示します。システムのライトモードとダークモードに合わせます。
 
-#### 修正
+### 🐛 修正
 
-- **ライブフォルダを最新に** — ライブフォルダの更新では、ブラウザが保存しておいたコピーを使わず、毎回 Gmail や GitHub に問い合わせます。
-- **ライブフォルダの削除** — ライブフォルダのメニューの「ライブフォルダを削除」で、削除されるようになりました。これまでは何も起きませんでした。
-- **どのテーマでも見えるサイトのアイコン** — GitHub や ChatGPT のように、システムのダークモードやライトモードに合わせて一色で描かれたアイコンが、同じ明るさの Space のテーマに溶けて見えなくなることがなくなりました。明るいテーマでは暗く、暗いテーマでは明るく表示します。
+- **ライブフォルダを最新に** — ライブフォルダの更新では、ブラウザのキャッシュを使わず、毎回 Gmail や GitHub に直接問い合わせて最新情報を取得します。
+- **ライブフォルダの削除** — ライブフォルダのメニューの「ライブフォルダを削除」で、正しく削除できるようになりました（以前は何も起きないことがありました）。
+- **どのテーマでも見えるサイトのアイコン** — GitHub や ChatGPT のように、システムのダーク／ライトモードに合わせて単色で描かれたアイコンが、同系色の Space テーマに溶けて見えなくなる問題を修正しました。明るいテーマでは暗く、暗いテーマでは明るく表示します。
 
 ## 1.8.0 — 2026-11-12
 
