@@ -3,7 +3,12 @@ import { BookmarkId, Storage, type BrowserApiError } from "#platform/browser"
 import { makePersistedRef } from "#platform/persisted-ref"
 import { LiveFolderRecord } from "./live-folder-record"
 
-const LiveFolderRecords = Schema.Record(BookmarkId, LiveFolderRecord)
+// Not discarding every record when one doesn't decode, such as one kept by another version of
+// Katip: that folder alone fetches anew, and the others keep what was seen in them
+const LiveFolderRecords = Schema.Record(
+  BookmarkId,
+  LiveFolderRecord.pipe(Schema.catchDecoding(() => Effect.succeed(Option.none()))),
+)
 type LiveFolderRecords = typeof LiveFolderRecords.Type
 
 /**
