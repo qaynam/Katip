@@ -64,6 +64,14 @@ export type LiveItem = typeof LiveItem.Type
 export type GmailSource = Extract<LiveSource, { readonly _tag: "Gmail" }>
 
 /**
+ * Whether the source lists what is still unread, as an inbox does, so an item stops belonging in
+ * the folder once read. Gmail and GitHub's notifications; not GitHub's searches, whose review
+ * requests and pull requests stay to be done after they've been looked at.
+ */
+export const listsUnreadOnly = (source: LiveSource): boolean =>
+  source._tag === "Gmail" || source.query === "notifications"
+
+/**
  * The label of the mail in Gmail's Primary tab: the inbox without what Gmail sorts into
  * Promotions, Social, Updates and Forums.
  */

@@ -657,6 +657,42 @@ describe("live folders", () => {
     ])
   })
 
+  it("keeps the items already read in a folder of GitHub searches, which stay to be done", () => {
+    const node = liveFolderOf({
+      liveFolders: {
+        records: new Map([[LIVE, fetched([liveItem("1", 50)], { "1": 50 })]]),
+        refreshing: new Set(),
+        sorts: new Map(),
+      },
+    })
+
+    expect(node?.items.map((item) => item.id)).toStrictEqual(["1"])
+  })
+
+  it("leaves out the items already read in a folder of unread mail or notifications", () => {
+    const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
+    const notifications: LiveSource = { _tag: "GitHub", query: "notifications" }
+    const itemsShownFor = (source: LiveSource) =>
+      (
+        pinnedNodesOf(
+          project({
+            pinnedTrees: homeWithPin([
+              { _tag: "PinnedLiveFolder", id: LIVE, title: "Unread", source },
+            ]),
+            liveFolders: {
+              records: new Map([
+                [LIVE, fetched([liveItem("1", 50), liveItem("2", 80)], { "2": 80 })],
+              ]),
+              refreshing: new Set(),
+              sorts: new Map(),
+            },
+          }),
+        )[0] as PinnedLiveFolderView | undefined
+      )?.items.map((item) => item.id)
+
+    expect([itemsShownFor(inbox), itemsShownFor(notifications)]).toStrictEqual([["1"], ["1"]])
+  })
+
   it("once fetched, shows it is ready along with when it was fetched", () => {
     const node = liveFolderOf({
       liveFolders: {

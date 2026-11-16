@@ -12,6 +12,7 @@ import {
   DEFAULT_LIVE_SORT,
   explainFailure,
   isUnseen,
+  listsUnreadOnly,
   mergeNewestFirst,
   sortLiveItems,
   type LiveFolderRecord,
@@ -366,6 +367,11 @@ const pinnedLiveFolderView = (
       }
     },
   )
+  // Not kept greyed out like a search's items: the source still has a mail read only in Katip
+  // unread, and would list it until it's read there too
+  const shownItems = listsUnreadOnly(live.source)
+    ? items.filter((item) => item.isUnseen || item.openTab !== null)
+    : items
   const isExpanded = isFolderExpanded(projection.folderExpansion, live.id)
   return {
     _tag: "PinnedLiveFolder",
@@ -380,10 +386,10 @@ const pinnedLiveFolderView = (
       projection.translator,
     ),
     sort,
-    items,
+    items: shownItems,
     peekedItems: isExpanded
       ? []
-      : peekableLiveItems(items, projection.showAllOpenTabsInCollapsedFolders),
+      : peekableLiveItems(shownItems, projection.showAllOpenTabsInCollapsedFolders),
   }
 }
 

@@ -8,6 +8,24 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Gmail live folders and GitHub notifications show only what’s still unread.
+
+### ✨ Improved
+
+- **Only unread in Gmail and GitHub notifications** — A Gmail live folder, or a GitHub folder of notifications, lists only what you haven’t read: an item you open, or mark read with Mark All as Read, leaves the list once its tab is closed. Gmail itself still counts a mail marked read only in Katip as unread. Folders of GitHub searches keep their read items, as review requests and pull requests stay to be done.
+
+## 日本語
+
+Gmail のライブフォルダと GitHub の通知に、未読のものだけが並ぶようになりました。
+
+### ✨ 改善
+
+- **未読だけを表示** — Gmail のライブフォルダと GitHub の通知のフォルダには、まだ読んでいないものだけが並びます。開いた項目や「すべて既読にする」で既読にした項目は、タブを閉じると一覧から消えます（※Katip で既読にしただけのメールは、Gmail 上では未読のままです）。GitHub の検索のフォルダでは、レビュー依頼やプルリクエストは対応が済むまで残るため、既読のものも引き続き表示します。
+
 ## 1.9.0 — 2026-11-16
 
 ## English

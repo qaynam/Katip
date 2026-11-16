@@ -651,7 +651,7 @@ describe("opening items and marking them read", () => {
   )
 
   it.live(
-    "closing the tab of an item the source still returns turns its row back into an item",
+    "closing the tab of a mail Gmail still counts unread takes it out of the folder, as it was read in Katip",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -679,7 +679,7 @@ describe("opening items and marking them read", () => {
           expect([
             Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
             temporaryUrls(view),
-          ]).toStrictEqual([Option.some(["Invoice attached"]), ["https://a.example/"]])
+          ]).toStrictEqual([Option.some([]), ["https://a.example/"]])
         }),
       ),
   )
@@ -850,7 +850,7 @@ describe("opening items and marking them read", () => {
       ),
   )
 
-  it.live("marking all as read marks every item read", () =>
+  it.live("marking all as read takes every mail out of a Gmail folder's list", () =>
     inBackground(
       Effect.gen(function* () {
         yield* grant(GMAIL_ORIGIN)
@@ -861,13 +861,11 @@ describe("opening items and marking them read", () => {
         const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
 
         yield* sidebar.run({ _tag: "MarkLiveFolderSeen", bookmarkId: ready.bookmarkId })
-        const view = yield* sidebar.viewWhere(
-          hasLiveFolderWith((live) => live.items.every((item) => !item.isUnseen)),
-        )
+        const view = yield* sidebar.viewWhere(hasLiveFolderWith((live) => live.items.length === 0))
 
         expect(
-          Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.isUnseen)),
-        ).toStrictEqual(Option.some([false, false]))
+          Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
+        ).toStrictEqual(Option.some([]))
       }),
     ),
   )
