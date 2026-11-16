@@ -73,7 +73,11 @@ import {
 import { newSpaceId } from "./initialize"
 import { KatipState } from "./katip-state"
 import { openSpotlight } from "./spotlight-window"
-import { refreshLiveFoldersWhere, scheduleLiveFolderRefresh } from "./live-folder-refresh"
+import {
+  RefreshAfterOpeningMail,
+  refreshLiveFoldersWhere,
+  scheduleLiveFolderRefresh,
+} from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
 import { byIndex, moveAmongTemporary } from "./temporary-order"
 import { pageSideOfDrop, type PageSide } from "./page-drop"
@@ -860,7 +864,7 @@ const liveFolderCommands = {
     itemId: string
   }) {
     const liveFolders = yield* LiveFolders
-    yield* liveFolderOrReject(bookmarkId)
+    const folder = yield* liveFolderOrReject(bookmarkId)
     const item = yield* Effect.flatMap(
       liveFolders.findItem(bookmarkId, itemId),
       Option.match({
@@ -870,6 +874,10 @@ const liveFolderCommands = {
     )
     yield* openInActiveSpace(windowId, item.url)
     yield* liveFolders.markItemSeen(bookmarkId, itemId)
+    if (folder.source._tag === "Gmail") {
+      const delay = yield* RefreshAfterOpeningMail
+      yield* Effect.forkDetach(Effect.delay(liveFolders.refresh(bookmarkId, folder.source), delay))
+    }
   }),
 
   MarkLiveFolderSeen: ({ bookmarkId }: { bookmarkId: BookmarkId }) =>

@@ -18,6 +18,7 @@ Gmail live folders follow the mail Gmail marks important, and every live item sh
 
 - **Important mail in Gmail live folders** — A new Gmail live folder lists the unread mail Gmail marks important. You can choose the Primary tab instead, which leaves out what Gmail sorts into Promotions, Social and Updates, or the whole inbox, or a label by its name. A folder made before keeps what it lists; make a new one to change it.
 - **Important mail marked** — In any Gmail live folder, mail Gmail marks important carries a yellow marker, as in Gmail.
+- **Read mail leaves sooner** — Live folders refresh every two minutes instead of five, and a Gmail live folder refreshes again soon after you open a mail from it, so the mail you’ve read leaves it.
 - **Who each item is from** — A live folder shows the icon of Gmail or GitHub with a red dot for live. Its items show the icon of the sender’s site, or the sender’s initial for an address at a free mail service or a site not visited yet, and GitHub items show the avatar of the repository’s owner, in place of the same Gmail or GitHub icon on every row.
 
 #### Fixed
@@ -34,6 +35,7 @@ Gmail のライブフォルダが Gmail の「重要」なメールを追える�
 
 - **Gmail のライブフォルダで重要なメール** — 新しく作る Gmail のライブフォルダは、Gmail が重要マークを付けた未読メールを並べます。代わりにメインタブ（プロモーション・ソーシャル・新着に振り分けられたメールを除く）、受信トレイ全体、名前を指定したラベルも選べます。これまでに作ったフォルダは並べる内容を変えないので、変えるには作り直してください。
 - **重要なメールに印** — どの Gmail のライブフォルダでも、Gmail が重要マークを付けたメールには Gmail と同じ黄色の印が付きます。
+- **読んだメールがすぐ消える** — ライブフォルダは 5 分ではなく 2 分ごとに更新します。Gmail のライブフォルダは、そこからメールを開いた少しあとにも更新するので、読んだメールがすぐに消えます。
 - **差出人がわかるアイコン** — ライブフォルダには Gmail や GitHub のアイコンと、ライブを示す赤い点が付きます。項目には、どの行にも同じ Gmail や GitHub のアイコンを出す代わりに、差出人のサイトのアイコンを出します。フリーメールのアドレスや、まだ訪れていないサイトからのメールは、差出人の頭文字です。GitHub の項目には、リポジトリの持ち主のアバターを出します。
 
 #### 修正

@@ -1,4 +1,4 @@
-import { Clock, Effect, Option } from "effect"
+import { Clock, Context, type Duration, Effect, Option } from "effect"
 import { isRefreshDue, LiveFolders, type LiveSource } from "#modules/live-folders"
 import { LiveFolderStore, liveFoldersIn, PinnedBookmarks } from "#modules/pinned"
 import { Alarms } from "#platform/browser"
@@ -6,7 +6,21 @@ import { KatipState } from "./katip-state"
 
 export const LIVE_FOLDER_REFRESH_ALARM = "katip/live-folders/refresh"
 
-const REFRESH_PERIOD_MINUTES = 5
+// Short enough that new mail shows up within a couple of minutes. Each refresh is a request or two
+// per folder, small next to what an open Gmail tab sends
+const REFRESH_PERIOD_MINUTES = 2
+
+/**
+ * How long after a mail is opened from a Gmail live folder the folder refreshes.
+ *
+ * @remarks
+ * Gmail marks a mail read once it is shown and the unread feed then leaves it out, so the folder
+ * lets go of it without waiting for the next scheduled refresh.
+ */
+export const RefreshAfterOpeningMail = Context.Reference<Duration.Input>(
+  "katip/live-folders/RefreshAfterOpeningMail",
+  { defaultValue: () => "15 seconds" },
+)
 
 // Side panels reopen in each window, so refreshing on every open would pile up requests
 const MIN_REFRESH_INTERVAL_MS = 60_000

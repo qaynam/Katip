@@ -13,6 +13,7 @@ import {
   spaceNamed,
   startBackground,
 } from "./testing/background-harness"
+import { RefreshAfterOpeningMail } from "./live-folder-refresh"
 
 const inBackground = <A, E>(
   effect: Effect.Effect<A, E, Layer.Success<typeof backgroundTestLayer> | Scope.Scope>,
@@ -491,6 +492,36 @@ describe("opening items and marking them read", () => {
       ),
   )
 
+  it.live(
+    "opening a mail refreshes its Gmail folder soon after, so the mail Gmail then counts read leaves it",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(
+            gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+          )
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          yield* serveGmail(gmailFeed(gmailEntry("2", "Meeting notes")))
+
+          yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId: ready.items[0]?.id ?? "",
+          })
+          const view = yield* sidebar.viewWhere(
+            hasLiveFolderWith((live) => live.items.length === 1),
+          )
+
+          expect(
+            Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
+          ).toStrictEqual(Option.some(["Meeting notes"]))
+        }).pipe(Effect.provideService(RefreshAfterOpeningMail, "10 millis")),
+      ),
+  )
+
   it.live("marking all as read marks every item read", () =>
     inBackground(
       Effect.gen(function* () {
@@ -695,7 +726,7 @@ describe("periodic refresh", () => {
           expect([
             Option.getOrNull(Option.fromNullishOr(scheduled?.periodInMinutes).pipe(Option.flatten)),
             yield* findAlarm,
-          ]).toStrictEqual([5, undefined])
+          ]).toStrictEqual([2, undefined])
         }),
       ),
   )
