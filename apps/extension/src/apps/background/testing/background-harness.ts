@@ -99,6 +99,8 @@ export const openSidebar = (windowId: WindowId) =>
             )
           case "Notice":
             return Ref.update(notices, (all) => [...all, message.message])
+          case "ShowArchive":
+            return Effect.void
         }
       }),
       Effect.forkScoped,
@@ -130,7 +132,7 @@ export const openSidebar = (windowId: WindowId) =>
     const noticeWhere = (predicate: (notice: string) => boolean) =>
       eventually(Effect.map(Ref.get(notices), (all) => Array.findLast(all, predicate)))
 
-    return { viewWhere, run, noticeWhere }
+    return { viewWhere, run, noticeWhere, receivedViews: Ref.get(views) }
   })
 
 export const spaceNamed = (view: SidebarView, name: string): Option.Option<SpaceView> =>

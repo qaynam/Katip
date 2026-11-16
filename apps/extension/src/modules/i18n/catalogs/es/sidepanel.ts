@@ -184,6 +184,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.archive.title": "Archivo",
   "sidepanel.archive.autoArchive": "Archivar automáticamente las pestañas inactivas",
+  "sidepanel.archive.close": "Cerrar el archivo",
   "sidepanel.archive.idleTime": "Tiempo antes de archivar",
   "sidepanel.archive.idleTimeSuffix": "de inactividad",
   "sidepanel.archive.scope": "Mostrar",

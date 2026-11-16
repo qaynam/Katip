@@ -55,7 +55,8 @@ describe("Scroll position", () => {
     const closed = await renderSidebar(view, { scrollPositions })
     await restored()
     await scrollTo(spaceList(closed.container), 240)
-    await fireEvent.click(screen.getByRole("button", { name: "Archive" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Space menu" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Open Archive" }))
     await scrollTo(spaceList(closed.container), 900)
     closed.unmount()
 

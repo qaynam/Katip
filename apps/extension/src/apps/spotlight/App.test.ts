@@ -59,6 +59,7 @@ const renderSpotlight = (
   const connection = createFakeConnection(options)
   const close = vi.fn()
   const setCollapsed = vi.fn<(collapsed: boolean) => void>()
+  const openSidePanel = vi.fn<() => void>()
   render(App, {
     props: {
       connection,
@@ -67,9 +68,10 @@ const renderSpotlight = (
       translator: makeTranslator(locale),
       size,
       setCollapsed,
+      openSidePanel,
     },
   })
-  return { connection, close, setCollapsed, input: screen.getByRole("combobox") }
+  return { connection, close, setCollapsed, openSidePanel, input: screen.getByRole("combobox") }
 }
 
 const optionNames = () => screen.getAllByRole("option").map((option) => option.textContent ?? "")
@@ -422,6 +424,30 @@ describe("a command row", () => {
     await fireEvent.keyDown(input, { key: "Enter" })
 
     expect(connection.chosen).toStrictEqual([commands[1]])
+  })
+
+  it("opens the side panel as Open Archive is chosen, for the background to show the archive in", async () => {
+    const openArchive: SpotlightResult = {
+      _tag: "Action",
+      action: { _tag: "OpenArchive" },
+      title: "Open Archive",
+      shortcut: null,
+    }
+    const { connection, openSidePanel, input } = renderSpotlight({ respond: () => [openArchive] })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect([openSidePanel.mock.calls.length, connection.chosen]).toStrictEqual([1, [openArchive]])
+  })
+
+  it("leaves the side panel as it is for a command that shows nothing there", async () => {
+    const { openSidePanel, input } = renderSpotlight({ respond: () => commands })
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2))
+
+    await fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(openSidePanel).not.toHaveBeenCalled()
   })
 })
 

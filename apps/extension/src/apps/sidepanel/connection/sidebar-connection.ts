@@ -1,6 +1,9 @@
 import type { CommandOutcome, ServerMessage, SidebarCommand } from "#protocol"
 
-export type SidebarEvent = Extract<ServerMessage, { readonly _tag: "ViewUpdated" | "Notice" }>
+export type SidebarEvent = Extract<
+  ServerMessage,
+  { readonly _tag: "ViewUpdated" | "Notice" | "ShowArchive" }
+>
 
 /**
  * A command that couldn't reach the background, or whose delivery became uncertain.

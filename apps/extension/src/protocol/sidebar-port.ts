@@ -29,5 +29,6 @@ export const ServerMessage = Schema.Union([
   Schema.TaggedStruct("ViewUpdated", { view: SidebarView }),
   Schema.TaggedStruct("CommandSettled", { requestId: RequestId, outcome: CommandOutcome }),
   Schema.TaggedStruct("Notice", { message: Schema.String }),
+  Schema.TaggedStruct("ShowArchive", {}),
 ])
 export type ServerMessage = typeof ServerMessage.Type

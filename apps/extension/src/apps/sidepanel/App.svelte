@@ -21,6 +21,7 @@
   import type { UpdateNotices } from "./connection/update-notices"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
   import { findActiveSpace } from "./logic/view-queries"
+  import { BodyPanelController } from "./state/body-panel.svelte"
   import { PendingActivation } from "./state/pending-activation.svelte"
   import { ToastQueue } from "./state/toast-queue.svelte"
 
@@ -77,13 +78,15 @@
   const view = $derived(receivedView === null ? null : pendingActivation.shown(receivedView))
   const activeSpace = $derived(view === null ? null : Option.getOrNull(findActiveSpace(view)))
   const toasts = new ToastQueue()
+  const bodyPanel = new BodyPanelController()
 
   $effect(() =>
     connection.listen((event) => {
       if (event._tag === "ViewUpdated") {
         receivedView = event.view
         pendingActivation.settleWith(event.view)
-      } else toasts.show(event.message)
+      } else if (event._tag === "Notice") toasts.show(event.message)
+      else bodyPanel.show("Archive")
     }),
   )
 
@@ -113,6 +116,7 @@
     {activeSpace}
     {run}
     {toasts}
+    {bodyPanel}
     {translator}
     {originAccess}
     {faviconUrl}

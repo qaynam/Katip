@@ -102,6 +102,16 @@ describe("When connected", () => {
     expect(events).toStrictEqual([{ _tag: "ViewUpdated", view }])
   })
 
+  it("passes a request to show the Archive to listeners", () => {
+    connect()
+    const events: Array<SidebarEvent> = []
+    connection.listen((event) => events.push(event))
+
+    latestPort().deliver({ _tag: "ShowArchive" })
+
+    expect(events).toStrictEqual([{ _tag: "ShowArchive" }])
+  })
+
   it("gives a late listener the last received view", () => {
     connect()
     const view = sidebarView()

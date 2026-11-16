@@ -4,6 +4,7 @@ import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#pr
 import type { OriginAccess } from "../connection/origin-access"
 import type { SidePanel } from "../connection/side-panel"
 import type { FaviconResolver } from "../logic/favicon"
+import type { BodyPanelController } from "./body-panel.svelte"
 import type { DialogController } from "./dialog-controller.svelte"
 import type { DragSession } from "./drag-session.svelte"
 import type { FolderIconPickerController } from "./folder-icon-picker.svelte"
@@ -32,6 +33,7 @@ export interface SidebarContext {
   readonly tooltip: TooltipController
   readonly faviconUrl: FaviconResolver
   readonly toasts: ToastQueue
+  readonly bodyPanel: BodyPanelController
   /**
    * The configured language. It is replaced when the language changes while the panel is open,
    * so read it on every use.

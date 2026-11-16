@@ -13,6 +13,7 @@ export const actions: CatalogSection<"actions"> = {
   "actions.unmuteTab": "Activar sonido de la pestaña",
   "actions.moveTabToSpace": "Mover pestaña a {space}",
   "actions.closeTemporaryTabs": "Cerrar todas las pestañas temporales",
+  "actions.openArchive": "Abrir el archivo de pestañas",
   "actions.searchHistory": "Buscar en el historial",
   "actions.openSettings": "Abrir ajustes",
   "actions.site.googleDoc": "Nuevo documento de Google",

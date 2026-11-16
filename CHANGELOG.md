@@ -25,6 +25,8 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **A live mark that isn't a badge** — A live folder’s icon carries a small feed mark instead of the red dot, which looked like unread mail even when nothing was unread. How many items are unread still shows on the right of the folder.
 - **Folder icons that stand out** — A folder with an icon shows the icon itself, full size and in the text color, in place of the folder with a small icon inside. It tips forward a little while the folder is open.
 - **Command Palette** — Spotlight is now called the Command Palette, in the settings, on Chrome’s shortcuts page and everywhere else Katip names it. It works as before, and its size, position and other settings stay as you set them.
+- **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
+- **The Archive from the Space menu and the Command Palette** — Open Archive in a Space’s … menu, or the Open Archive command in the Command Palette, shows the tabs Katip archived, with the × at its top right to go back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
 
 ## 日本語
 
@@ -41,6 +43,8 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **未読バッジに見えないライブの印** — ライブフォルダのアイコンの赤い点を、小さなフィードの印に変えました。赤い点は、未読がなくても未読があるように見えていました。未読の件数は、これまでどおりフォルダの右側に表示します。
 - **目立つフォルダのアイコン** — アイコンを設定したフォルダは、フォルダの中に小さくアイコンを描く代わりに、アイコンそのものを文字と同じ色で大きく表示します。フォルダを開いているあいだは、少し傾きます。
 - **コマンドパレット** — Spotlight の名前をコマンドパレットに変えました。設定や Chrome のショートカット設定など、Katip がこの機能の名前を出すところはすべてこの名前になります。使い方は変わらず、サイズや開く位置などの設定もそのまま引き継ぎます。
+- **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
+- **Space のメニューとコマンドパレットからアーカイブ** — Space の「…」メニューの「アーカイブを開く」や、コマンドパレットの「アーカイブを開く」で、Katip がアーカイブしたタブを表示できるようになりました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
 
 ## 1.9.0 — 2026-11-16
 

@@ -186,11 +186,13 @@ describe("a command's display", () => {
     expect([
       glyphOf({ _tag: "CloseTab" }),
       glyphOf({ _tag: "ToggleMute" }),
+      glyphOf({ _tag: "OpenArchive" }),
       glyphOf({ _tag: "SearchHistory" }),
       glyphOf({ _tag: "OpenSettings" }),
     ]).toStrictEqual([
       { _tag: "Glyph", glyph: "close" },
       { _tag: "Glyph", glyph: "speaker" },
+      { _tag: "Glyph", glyph: "archive" },
       { _tag: "Glyph", glyph: "clock" },
       { _tag: "Glyph", glyph: "settings" },
     ])

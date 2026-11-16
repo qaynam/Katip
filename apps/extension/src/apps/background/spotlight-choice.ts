@@ -19,6 +19,7 @@ import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
 import { ExtensionInfo } from "./extension-info"
 import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
+import { SidebarHub } from "./sidebar-hub"
 import { currentTranslator, translate } from "./translation"
 
 const succeeded: SpotlightOutcome = { _tag: "Succeeded" }
@@ -186,6 +187,11 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
         runAsSidebarCommand(callerWindowId, { _tag: "MoveTabToSpace", tabId: tab.id, spaceId }),
       ),
     CloseTemporaryTabs: () => closeTemporaryTabs(callerWindowId),
+    OpenArchive: () =>
+      Effect.andThen(
+        SidebarHub.use((hub) => hub.showArchive(callerWindowId)),
+        finishInCaller(callerWindowId),
+      ),
     // Spotlight puts itself in history mode instead of sending it: one sent anyway has nothing to
     // open
     SearchHistory: () => Effect.map(translate("background.spotlight.cannotOpen"), failed),

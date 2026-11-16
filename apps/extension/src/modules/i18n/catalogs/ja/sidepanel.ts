@@ -178,6 +178,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.archive.title": "アーカイブ",
   "sidepanel.archive.autoArchive": "使っていないタブを自動でアーカイブ",
+  "sidepanel.archive.close": "アーカイブを閉じる",
   "sidepanel.archive.idleTime": "自動でアーカイブするまでの時間",
   "sidepanel.archive.idleTimeSuffix": "使われなかったら",
   "sidepanel.archive.scope": "表示する範囲",

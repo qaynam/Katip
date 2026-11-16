@@ -21,6 +21,7 @@
     entersHistoryMode,
     isMatchedCandidate,
     searchTextIn,
+    showsInSidePanel,
   } from "./logic/result-display"
   import { selectionStepOf, stepSelection } from "./logic/selection"
   import { currentSystemScheme, watchSystemScheme } from "./state/system-scheme"
@@ -37,9 +38,16 @@
      * whose window collapses.
      */
     setCollapsed: (collapsed: boolean) => void
+    /**
+     * Opens the side panel of the window Spotlight was opened over. Chrome opens it only in
+     * response to a key press or click, so it is called as the choice is made, before the
+     * outcome is awaited.
+     */
+    openSidePanel: () => void
   }
 
-  const { connection, faviconUrl, close, translator, size, setCollapsed }: Props = $props()
+  const { connection, faviconUrl, close, translator, size, setCollapsed, openSidePanel }: Props =
+    $props()
   const t = $derived(translator.t)
 
   const RESULTS_ID = "spotlight-results"
@@ -190,6 +198,7 @@
       enterBangMode(site)
       return
     }
+    if (showsInSidePanel(result)) openSidePanel()
     isChoosing = true
     const outcome = await connection.choose(result)
     isChoosing = false

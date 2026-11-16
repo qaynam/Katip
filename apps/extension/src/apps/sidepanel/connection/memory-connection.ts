@@ -18,6 +18,8 @@ export interface MemoryConnection extends SidebarConnection {
   readonly sentCommands: ReadonlyArray<SidebarCommand>
   readonly pushView: (view: SidebarView) => void
   readonly pushNotice: (message: string) => void
+  /** Simulates the Command Palette asking for the Archive. */
+  readonly pushShowArchive: () => void
 }
 
 const succeedWithoutChange = (): CommandResponse => ({
@@ -43,6 +45,7 @@ export const createMemoryConnection = (options: MemoryConnectionOptions = {}): M
     sentCommands,
     pushView,
     pushNotice,
+    pushShowArchive: () => emit({ _tag: "ShowArchive" }),
     listen: (listener) => {
       listeners.add(listener)
       if (latestView !== null) listener({ _tag: "ViewUpdated", view: latestView })

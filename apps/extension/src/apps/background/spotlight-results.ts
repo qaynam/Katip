@@ -338,6 +338,7 @@ const shortcutOf = (action: Action, environment: ShortcutEnvironment): string | 
     ToggleMute: () => null,
     MoveTabToSpace: () => null,
     CloseTemporaryTabs: () => null,
+    OpenArchive: () => null,
     SearchHistory: () => null,
     OpenSettings: () => null,
   })

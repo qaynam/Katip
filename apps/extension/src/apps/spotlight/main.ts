@@ -57,6 +57,7 @@ if (callerWindowId === null) {
       connection: createSpotlightPortConnection({ openPort, callerWindowId }),
       faviconUrl,
       close: () => window.close(),
+      openSidePanel: () => void chrome.sidePanel.open({ windowId: callerWindowId }).catch(() => {}),
       translator,
       size: spotlightSize,
       setCollapsed: (collapsed: boolean) => {

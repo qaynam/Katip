@@ -177,6 +177,7 @@ export const sidepanel = {
 
   "sidepanel.archive.title": "Archive",
   "sidepanel.archive.autoArchive": "Archive inactive tabs automatically",
+  "sidepanel.archive.close": "Close Archive",
   "sidepanel.archive.idleTime": "Time before archiving",
   "sidepanel.archive.idleTimeSuffix": "of inactivity",
   "sidepanel.archive.scope": "Show",

@@ -8,6 +8,7 @@
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
   import Icon from "./Icon.svelte"
+  import PanelHeader from "./PanelHeader.svelte"
 
   interface Props {
     spaceId: SpaceId
@@ -42,7 +43,11 @@
 </script>
 
 <section class="archive" aria-labelledby="{ids}-heading">
-  <h2 id="{ids}-heading" class="heading">{t("sidepanel.archive.title")}</h2>
+  <PanelHeader
+    headingId="{ids}-heading"
+    title={t("sidepanel.archive.title")}
+    closeLabel={t("sidepanel.archive.close")}
+  />
 
   <div class="settings">
     <label class="toggle">
@@ -144,12 +149,6 @@
     gap: 10px;
     padding: 2px 0 12px;
     animation: archive-in 160ms ease-out;
-  }
-
-  .heading {
-    margin: 4px 10px 0;
-    font-size: 14px;
-    font-weight: 700;
   }
 
   @keyframes archive-in {

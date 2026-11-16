@@ -58,6 +58,7 @@ describe("available actions", () => {
       "Move Tab to Work",
       "Move Tab to Hobbies",
       "Close All Temporary Tabs",
+      "Open Archive",
       "Search History",
       "Open Settings",
     ])
@@ -75,6 +76,7 @@ describe("available actions", () => {
   it("without an active tab, leaves out the actions on a tab", () => {
     expect(titlesIn(context({ activeTab: Option.none() }))).toStrictEqual([
       "Close All Temporary Tabs",
+      "Open Archive",
       "Search History",
       "Open Settings",
     ])
@@ -96,6 +98,7 @@ describe("available actions", () => {
       "CloseTab",
       "ToggleMute",
       "CloseTemporaryTabs",
+      "OpenArchive",
       "SearchHistory",
       "OpenSettings",
     ])
@@ -120,12 +123,12 @@ describe("available actions", () => {
     expect(tags.filter((tag) => tag === "Unsplit" || tag === "SplitWithNewTab")).toStrictEqual([])
   })
 
-  it("whatever the window and tab, offers searching the history", () => {
+  it("whatever the window and tab, offers opening the archive, searching the history and the settings", () => {
     const tags = availableActions(
       context({ activeTab: Option.none(), activeSpaceId: Option.none() }),
     ).map(({ _tag }) => _tag)
 
-    expect(tags).toStrictEqual(["SearchHistory", "OpenSettings"])
+    expect(tags).toStrictEqual(["OpenArchive", "SearchHistory", "OpenSettings"])
   })
 
   it("without a shown Space, leaves out closing the temporary tabs", () => {

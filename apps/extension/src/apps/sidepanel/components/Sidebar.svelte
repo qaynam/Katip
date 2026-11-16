@@ -10,6 +10,7 @@
   import type { FaviconResolver } from "../logic/favicon"
   import { openTabOf } from "../logic/drag-drop"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
+  import type { BodyPanelController } from "../state/body-panel.svelte"
   import { DialogController } from "../state/dialog-controller.svelte"
   import { DragSession } from "../state/drag-session.svelte"
   import { FolderIconPickerController } from "../state/folder-icon-picker.svelte"
@@ -47,6 +48,7 @@
     activeSpace: SpaceView
     run: (command: SidebarCommand) => Promise<CommandOutcome>
     toasts: ToastQueue
+    bodyPanel: BodyPanelController
     translator: Translator
     originAccess: OriginAccess
     faviconUrl: FaviconResolver
@@ -63,6 +65,7 @@
     activeSpace,
     run,
     toasts,
+    bodyPanel,
     translator,
     originAccess,
     faviconUrl,
@@ -109,6 +112,9 @@
     get toasts() {
       return toasts
     },
+    get bodyPanel() {
+      return bodyPanel
+    },
     get translator() {
       return translator
     },
@@ -123,7 +129,6 @@
     folderIconPicker,
   })
 
-  let isArchiveOpen = $state(false)
   let lastSwipeAt = Number.NEGATIVE_INFINITY
 
   const displayedTheme = $derived(themeDraft.themeFor(activeSpace.id) ?? activeSpace.theme)
@@ -176,9 +181,11 @@
       isRestored = true
     })
     // Not saved before the position is restored: the active tab scrolling itself into view as the
-    // list first shows would overwrite it. Nor while the archive is shown in the list's place
+    // list first shows would overwrite it. Nor while a panel is shown in the list's place
     const save = () => {
-      if (isRestored && !isArchiveOpen) scrollPositions.save(windowId, spaceId, body.scrollTop)
+      if (isRestored && bodyPanel.current === null) {
+        scrollPositions.save(windowId, spaceId, body.scrollTop)
+      }
     }
     body.addEventListener("scrollend", save)
     return () => {
@@ -208,7 +215,7 @@
       <div class="space">
         <SpaceTitle space={activeSpace} />
         <div class="space-body" data-space-body {@attach keepScrollPosition}>
-          {#if isArchiveOpen}
+          {#if bodyPanel.current === "Archive"}
             <ArchivePanel spaceId={activeSpace.id} />
           {:else}
             <PinnedSection pinned={activeSpace.pinned} {onReload} />
@@ -234,12 +241,7 @@
           onDismiss={onDismissUpdate}
         />
       {/if}
-      <BottomBar
-        spaces={view.spaces}
-        activeSpaceId={activeSpace.id}
-        {isArchiveOpen}
-        onToggleArchive={() => (isArchiveOpen = !isArchiveOpen)}
-      />
+      <BottomBar spaces={view.spaces} activeSpaceId={activeSpace.id} />
     </div>
   </main>
 

@@ -13,6 +13,7 @@ export const actions = {
   "actions.unmuteTab": "Unmute Tab",
   "actions.moveTabToSpace": "Move Tab to {space}",
   "actions.closeTemporaryTabs": "Close All Temporary Tabs",
+  "actions.openArchive": "Open Archive",
   "actions.searchHistory": "Search History",
   "actions.openSettings": "Open Settings",
   "actions.site.googleDoc": "New Google Doc",

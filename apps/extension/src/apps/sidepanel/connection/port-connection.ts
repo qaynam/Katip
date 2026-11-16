@@ -70,6 +70,7 @@ export const createPortConnection = (options: PortConnectionOptions): PortConnec
         emit(message)
         return
       case "Notice":
+      case "ShowArchive":
         emit(message)
         return
       case "CommandSettled": {

@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
+import { tick } from "svelte"
 import { describe, expect, it } from "vitest"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId } from "#modules/space"
@@ -17,11 +18,16 @@ const archived = [
   }),
 ]
 
+const openArchiveFromSpaceMenu = async () => {
+  await fireEvent.click(screen.getByRole("button", { name: "Space menu" }))
+  await fireEvent.click(screen.getByRole("menuitem", { name: "Open Archive" }))
+}
+
 const renderArchive = async (overrides: Parameters<typeof sidebarView>[0] = {}) => {
   const rendered = await renderSidebar(
     sidebarView({ spaces: [work, hobby], archive: archived, ...overrides }),
   )
-  await fireEvent.click(screen.getByRole("button", { name: "Archive" }))
+  await openArchiveFromSpaceMenu()
   return rendered
 }
 
@@ -30,6 +36,54 @@ const entryTitles = () =>
   within(archiveRegion())
     .getAllByRole("listitem")
     .map((item) => within(item).getAllByRole("button")[0]?.textContent ?? "")
+
+describe("Opening the archive", () => {
+  it("shows it in place of the Space's tabs when Open Archive is chosen in the Space menu", async () => {
+    await renderSidebar(sidebarView({ spaces: [work, hobby], archive: archived }))
+
+    await openArchiveFromSpaceMenu()
+
+    expect([
+      screen.queryByRole("region", { name: "Archive" }) !== null,
+      screen.queryByRole("region", { name: "Temporary tabs" }),
+    ]).toStrictEqual([true, null])
+  })
+
+  it("from another Space's menu, switches to that Space and shows the archive", async () => {
+    const { connection } = await renderSidebar(
+      sidebarView({ spaces: [work, hobby], archive: archived }),
+    )
+    const spaceBar = screen.getByRole("navigation", { name: "Switch Space" })
+    await fireEvent.contextMenu(within(spaceBar).getByRole("button", { name: hobby.name }))
+
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Open Archive" }))
+
+    expect([connection.sentCommands, archiveRegion() !== null]).toStrictEqual([
+      [{ _tag: "SwitchSpace", windowId: 1, spaceId: "hobby" }],
+      true,
+    ])
+  })
+
+  it("shows it when the Command Palette asks for it", async () => {
+    const { connection } = await renderSidebar(sidebarView({ spaces: [work], archive: archived }))
+
+    connection.pushShowArchive()
+    await tick()
+
+    expect(archiveRegion()).toBeTruthy()
+  })
+
+  it("goes back to the Space's tabs with Close Archive", async () => {
+    await renderArchive()
+
+    await fireEvent.click(screen.getByRole("button", { name: "Close Archive" }))
+
+    expect([
+      screen.queryByRole("region", { name: "Archive" }),
+      screen.queryByRole("region", { name: "Temporary tabs" }) !== null,
+    ]).toStrictEqual([null, true])
+  })
+})
 
 describe("Archive panel", () => {
   it("lists the active Space's archive, newest first, when opened", async () => {

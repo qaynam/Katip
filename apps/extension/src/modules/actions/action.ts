@@ -15,6 +15,7 @@ export const Action = Schema.TaggedUnion({
   ToggleMute: {},
   MoveTabToSpace: { spaceId: SpaceId },
   CloseTemporaryTabs: {},
+  OpenArchive: {},
   // Not run by the background: Spotlight turns into a search of the browsing history alone
   SearchHistory: {},
   OpenSettings: {},

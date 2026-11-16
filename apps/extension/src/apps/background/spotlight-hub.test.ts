@@ -140,24 +140,42 @@ const actionsOfKind = (kind: Action["_tag"]) => (results: ReadonlyArray<Spotligh
 const encodeSidebarMessage = Schema.encodeEffect(ClientMessage)
 const decodeSidebarMessage = Schema.decodeUnknownEffect(ServerMessage)
 
-/** Subscribes as a side panel, and returns an Effect that waits for the next notice. */
-const watchSidebarNotices = Effect.fnUntraced(function* (windowId: WindowId) {
+/**
+ * Subscribes as a side panel, and returns an Effect that waits for the next message `pick` keeps.
+ */
+const watchSidebar = Effect.fnUntraced(function* <A>(
+  windowId: WindowId,
+  pick: (message: ServerMessage) => Option.Option<A>,
+) {
   const hub = yield* SidebarHub
   const { client, server } = makePortPair(SIDEBAR_PORT_NAME, spotlightPageSender)
   yield* Effect.forkScoped(
     hub.serve(server, () => Effect.succeed({ _tag: "Succeeded", createdBookmarkId: null })),
   )
-  const notices = yield* Queue.unbounded<string>()
+  const picked = yield* Queue.unbounded<A>()
   yield* client.messages.pipe(
     Stream.mapEffect((raw) => decodeSidebarMessage(raw)),
     Stream.runForEach((message) =>
-      message._tag === "Notice" ? Queue.offer(notices, message.message) : Effect.void,
+      Option.match(pick(message), {
+        onNone: () => Effect.void,
+        onSome: (value) => Queue.offer(picked, value),
+      }),
     ),
     Effect.forkScoped,
   )
   yield* client.post(yield* encodeSidebarMessage({ _tag: "Subscribe", windowId }))
-  return Queue.take(notices)
+  return Queue.take(picked)
 })
+
+const watchSidebarNotices = (windowId: WindowId) =>
+  watchSidebar(windowId, (message) =>
+    message._tag === "Notice" ? Option.some(message.message) : Option.none(),
+  )
+
+const watchSidebarArchiveRequests = (windowId: WindowId) =>
+  watchSidebar(windowId, (message) =>
+    message._tag === "ShowArchive" ? Option.some(message._tag) : Option.none(),
+  )
 
 const firstSpaceId = KatipState.use((state) =>
   Effect.flatMap(state.spaces.get, (all) =>
@@ -626,6 +644,7 @@ describe("Spotlight commands", () => {
             "Close Tab",
             "Mute Tab",
             "Close All Temporary Tabs",
+            "Open Archive",
             "Search History",
             "Open Settings",
             ...DEFAULT_SITE_COMMANDS.map((command) => english.t(command.title)),
@@ -919,6 +938,45 @@ describe("choosing a Spotlight command", () => {
         expect((yield* (yield* Tabs).get(tabIds[0])).splitViewId).toStrictEqual(Option.none())
       }),
     ),
+  )
+
+  it.effect("choosing Open Archive has the side panel of that window show the Archive", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId } = yield* seedPage
+        const nextArchiveRequest = yield* watchSidebarArchiveRequests(windowId)
+        const spotlight = yield* connectSpotlight(windowId)
+        const openArchive = yield* firstOf(
+          actionsOfKind("OpenArchive")((yield* spotlight.search("", "Actions")).results),
+        )
+
+        const outcome = yield* spotlight.choose(openArchive)
+
+        expect([outcome, yield* nextArchiveRequest]).toStrictEqual([
+          { _tag: "Succeeded" },
+          "ShowArchive",
+        ])
+      }),
+    ),
+  )
+
+  it.effect(
+    "choosing Open Archive with no side panel open in that window has the one opened next there show it",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId } = yield* seedPage
+          const spotlight = yield* connectSpotlight(windowId)
+          const openArchive = yield* firstOf(
+            actionsOfKind("OpenArchive")((yield* spotlight.search("", "Actions")).results),
+          )
+          yield* spotlight.choose(openArchive)
+
+          const nextArchiveRequest = yield* watchSidebarArchiveRequests(windowId)
+
+          expect(yield* nextArchiveRequest).toBe("ShowArchive")
+        }),
+      ),
   )
 
   it.effect("choosing to move to another Space moves the active tab to it", () =>

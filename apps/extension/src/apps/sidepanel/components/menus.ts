@@ -299,6 +299,14 @@ const setUpSpace = (ctx: SidebarContext, space: SpaceView, steps: SpaceSetupStep
   }
 }
 
+/** For a Space that isn't on screen, first switches to that Space, whose archive is then shown. */
+const showArchiveOf = (ctx: SidebarContext, space: SpaceView) => () => {
+  if (space.id !== ctx.activeSpace.id) {
+    void ctx.run({ _tag: "SwitchSpace", windowId: ctx.view.windowId, spaceId: space.id })
+  }
+  ctx.bodyPanel.show("Archive")
+}
+
 export const spaceMenuEntries = (
   ctx: SidebarContext,
   space: SpaceView,
@@ -326,6 +334,7 @@ export const spaceMenuEntries = (
       disabled: ctx.view.spaces.length <= 1,
     }),
     separator,
+    action(t("actions.openArchive"), showArchiveOf(ctx, space)),
     action(t("actions.openSettings"), () => void ctx.run({ _tag: "OpenSettings" })),
   ]
 }

@@ -171,6 +171,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.archive.title": "归档",
   "sidepanel.archive.autoArchive": "自动归档不活跃的标签页",
+  "sidepanel.archive.close": "关闭归档",
   "sidepanel.archive.idleTime": "自动归档前的时间",
   "sidepanel.archive.idleTimeSuffix": "未使用后",
   "sidepanel.archive.scope": "显示范围",

@@ -38,6 +38,11 @@ export class SidebarHub extends Context.Service<
     /** Sends every subscribed side panel its view, if it changed since the last one sent. */
     readonly publish: Effect.Effect<void>
     notify(message: string): Effect.Effect<void>
+    /**
+     * Has the side panels of `windowId` show the Archive. When none is open there, the next one to
+     * subscribe to that window shows it.
+     */
+    showArchive(windowId: WindowId): Effect.Effect<void>
   }
 >()("katip/background/SidebarHub") {
   static readonly layer = Layer.effect(
@@ -52,6 +57,7 @@ export class SidebarHub extends Context.Service<
       // Sending the whole view every time would keep side panels redrawing nonstop while tabs load
       const lastSent = yield* Ref.make<ReadonlyMap<number, string>>(new Map())
       const nextId = yield* Ref.make(0)
+      const archiveAwaitedIn = yield* Ref.make<ReadonlySet<WindowId>>(new Set())
 
       const resolveWindow = (subscriber: Subscriber) =>
         Option.match(subscriber.windowId, {
@@ -90,6 +96,12 @@ export class SidebarHub extends Context.Service<
           }),
         )
 
+      const takeAwaitedArchive = (windowId: WindowId) =>
+        Ref.modify(archiveAwaitedIn, (awaited) => [
+          awaited.has(windowId),
+          new Set([...awaited].filter((awaitedId) => awaitedId !== windowId)),
+        ])
+
       const serve = <R>(
         port: BrowserPort,
         run: (command: SidebarCommand) => Effect.Effect<CommandOutcome, never, R>,
@@ -105,6 +117,9 @@ export class SidebarHub extends Context.Service<
                     yield* unsubscribe(id)
                     yield* Ref.update(subscribers, (all) => [...all, subscriber])
                     yield* publishTo(subscriber)
+                    if (windowId !== null && (yield* takeAwaitedArchive(windowId))) {
+                      yield* post(port, { _tag: "ShowArchive" })
+                    }
                   }),
                 Run: ({ requestId, command }) =>
                   Effect.flatMap(run(command), (outcome) =>
@@ -123,6 +138,21 @@ export class SidebarHub extends Context.Service<
           )
         })
 
+      // Not the side panels that follow the last focused window: that is the development page,
+      // which the Command Palette isn't opened over
+      const showArchive = (windowId: WindowId) =>
+        Effect.gen(function* () {
+          const shownIn = (yield* Ref.get(subscribers)).filter((subscriber) =>
+            Option.contains(subscriber.windowId, windowId),
+          )
+          const delivered = yield* Effect.forEach(shownIn, (subscriber) =>
+            post(subscriber.port, { _tag: "ShowArchive" }),
+          )
+          if (!delivered.includes(true)) {
+            yield* Ref.update(archiveAwaitedIn, (awaited) => new Set([...awaited, windowId]))
+          }
+        })
+
       const notify = (message: string) =>
         Effect.flatMap(Ref.get(subscribers), (all) =>
           Effect.forEach(all, (subscriber) => post(subscriber.port, { _tag: "Notice", message }), {
@@ -130,7 +160,7 @@ export class SidebarHub extends Context.Service<
           }),
         )
 
-      return SidebarHub.of({ serve, publish, notify })
+      return SidebarHub.of({ serve, publish, notify, showArchive })
     }),
   )
 }

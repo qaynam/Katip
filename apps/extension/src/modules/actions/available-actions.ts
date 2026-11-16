@@ -62,6 +62,7 @@ export const availableActions = (context: ActionContext): ReadonlyArray<Action> 
     onSome: (target) => tabActions(target, context),
   }),
   ...(Option.isSome(context.activeSpaceId) ? [{ _tag: "CloseTemporaryTabs" } as const] : []),
+  { _tag: "OpenArchive" },
   { _tag: "SearchHistory" },
   { _tag: "OpenSettings" },
 ]
@@ -103,6 +104,7 @@ export const actionTitle = (
         ),
       }),
     CloseTemporaryTabs: () => translator.t("actions.closeTemporaryTabs"),
+    OpenArchive: () => translator.t("actions.openArchive"),
     SearchHistory: () => translator.t("actions.searchHistory"),
     OpenSettings: () => translator.t("actions.openSettings"),
   })

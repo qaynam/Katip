@@ -11,11 +11,9 @@
   interface Props {
     spaces: ReadonlyArray<SpaceView>
     activeSpaceId: SpaceId
-    isArchiveOpen: boolean
-    onToggleArchive: () => void
   }
 
-  const { spaces, activeSpaceId, isArchiveOpen, onToggleArchive }: Props = $props()
+  const { spaces, activeSpaceId }: Props = $props()
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
 
@@ -95,11 +93,12 @@
 <footer class="bottom-bar">
   <button
     class="icon-button"
-    class:pressed={isArchiveOpen}
+    class:pressed={ctx.bodyPanel.current === "Archive"}
     type="button"
     aria-label={t("sidepanel.archive.title")}
-    aria-pressed={isArchiveOpen}
-    onclick={onToggleArchive}
+    aria-pressed={ctx.bodyPanel.current === "Archive"}
+    onclick={() =>
+      ctx.bodyPanel.current === "Archive" ? ctx.bodyPanel.close() : ctx.bodyPanel.show("Archive")}
   >
     <Icon name="archive" />
   </button>
