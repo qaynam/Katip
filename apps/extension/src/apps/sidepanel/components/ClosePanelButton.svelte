@@ -17,7 +17,7 @@
   onpointerleave={() => ctx.tooltip.hide()}
   onpointerdown={() => ctx.tooltip.hide()}
 >
-  <Icon name="close" />
+  <Icon name="sidebar" size={20} />
 </button>
 
 <style>
@@ -25,20 +25,21 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     border: none;
     border-radius: 8px;
     background: none;
-    color: var(--text-muted);
+    color: var(--text);
+    opacity: 0.75;
     transition:
       background-color 120ms ease,
-      color 120ms ease;
+      opacity 120ms ease;
   }
 
   .close-panel:hover {
     background: var(--surface-hover);
-    color: var(--text);
+    opacity: 1;
   }
 </style>

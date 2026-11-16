@@ -16,7 +16,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 
 ### 🚀 New
 
-- **A button that closes the sidebar** — The × to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
+- **A button that closes the sidebar** — The sidebar button to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
 - **Downloads in the sidebar** — The button at the bottom left of the sidebar lists your recent downloads, newest first, each with its file’s icon, the site it came from and how far it got. Click a finished file to open it, show it in Finder or in its folder, pause, resume or cancel one still downloading, or choose Show All Downloads for Chrome’s downloads page. The first click asks to read your downloads; if you don’t allow it, the button opens Chrome’s downloads page instead, and right-clicking it asks again.
 
 ### ✨ Improved
@@ -39,7 +39,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 
 ### 🚀 新機能
 
-- **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にある × で、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
+- **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にあるサイドバーのボタンで、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
 - **サイドバーにダウンロード** — サイドバー左下のボタンで、最近のダウンロードを新しい順に表示できるようになりました。ファイルのアイコン、ダウンロード元のサイト、どこまで進んだかも表示します。ダウンロードし終えたファイルはクリックで開くほか、Finder やフォルダで表示でき、ダウンロード中のものは一時停止・再開・キャンセルできます。「すべてのダウンロードを表示」で Chrome のダウンロードのページを開きます。最初のクリックでダウンロードを読む許可を求めます（※許可しなかった場合、ボタンは代わりに Chrome のダウンロードのページを開きます。右クリックからあらためて許可できます）。
 
 ### ✨ 改善
