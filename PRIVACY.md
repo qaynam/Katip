@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: November 6, 2026_
+_Last updated: November 16, 2026_
 
 Katip is a browser extension that organizes your tabs into Spaces in the side panel. This policy explains what data Katip handles and where it goes. In short: Katip has no server, collects nothing, and sends nothing to its developer or to anyone else.
 
@@ -18,12 +18,12 @@ If you have turned on sync in your browser (for example Chrome Sync), your brows
 
 Katip makes network requests only to check for updates and for live folders.
 
-**Update checks**: the first time the side panel opens after your browser starts, and whenever you press "Check for Updates" in Katip's settings, Katip asks `api.github.com` which release of Katip is the latest. The request carries no data from Katip and no cookies; like any request, it lets GitHub see your IP address and your browser. You can turn the automatic check off in Katip's settings.
+**Update checks**: Katip installed from a release on GitHub asks `api.github.com` which release of Katip is the latest, the first time the side panel opens after your browser starts and whenever you press "Check for Updates" in Katip's settings. The request carries no data from Katip and no cookies; like any request, it lets GitHub see your IP address and your browser. You can turn the automatic check off in Katip's settings. Katip installed from the Chrome Web Store makes no such request, as the store updates it.
 
 **Live folders** make requests only after you create one and allow access to that site:
 
-- **Gmail live folders** read your Gmail inbox or label feed from `mail.google.com`, using the session you are already signed in with in your browser.
-- **GitHub live folders** read search results from `github.com`, using the session you are already signed in with, or from `api.github.com`.
+- **Gmail live folders** read the feed of your unread mail, in the inbox or a label, from `mail.google.com`, using the session you are already signed in with in your browser, along with the feed of the mail Gmail marks important. The icon shown for a sender is the one your browser already saved for the sender's site; no request is made for it.
+- **GitHub live folders** read search results from `github.com`, using the session you are already signed in with, or from `api.github.com`. The avatar of each item's repository owner is loaded from `github.com`.
 - If you choose to enter a **GitHub personal access token** for a live folder, it is stored in the extension's local storage on your device and is sent only to `api.github.com`.
 
 These requests go directly from your browser to Gmail or GitHub. What they return (for example email subjects and senders, or pull request titles) is shown in your side panel and kept in local storage so the folder can be displayed; it is never sent anywhere else.
@@ -56,7 +56,7 @@ If this policy changes, the new version will be published at this address with a
 
 # プライバシーポリシー（日本語）
 
-_最終更新: 2026 年 11 月 6 日_
+_最終更新: 2026 年 11 月 16 日_
 
 Katip は、サイドパネルでタブを Space ごとに整理するブラウザの拡張機能です。Katip はサーバーを持たず、データを集めず、開発者を含む誰にも何も送りません。
 
@@ -74,12 +74,12 @@ Katip が保存するものは、すべてお使いのブラウザの中にあ�
 
 Katip が通信するのは、アップデートの確認とライブフォルダのときだけです。
 
-**アップデートの確認**: ブラウザを起動して初めてサイドパネルを開いたときと、Katip の設定で「アップデートを確認」を押したときに、Katip の最新のリリースを `api.github.com` に問い合わせます。この通信は Katip のデータも Cookie も含みません。ほかの通信と同じく、IP アドレスとブラウザの種類は GitHub に伝わります。自動の確認は Katip の設定で止められます。
+**アップデートの確認**: GitHub のリリースから入れた Katip は、ブラウザを起動して初めてサイドパネルを開いたときと、Katip の設定で「アップデートを確認」を押したときに、Katip の最新のリリースを `api.github.com` に問い合わせます。この通信は Katip のデータも Cookie も含みません。ほかの通信と同じく、IP アドレスとブラウザの種類は GitHub に伝わります。自動の確認は Katip の設定で止められます。Chrome ウェブストアから入れた Katip はストアが更新するので、この問い合わせをしません。
 
 **ライブフォルダ** は、ライブフォルダを作り、そのサイトへのアクセスを許可した後に限り通信します。
 
-- **Gmail のライブフォルダ**: ブラウザでログイン済みのセッションを使い、`mail.google.com` から受信トレイやラベルのフィードを読みます。
-- **GitHub のライブフォルダ**: ログイン済みのセッションを使って `github.com` から、または `api.github.com` から検索結果を読みます。
+- **Gmail のライブフォルダ**: ブラウザでログイン済みのセッションを使い、`mail.google.com` から受信トレイやラベルの未読メールのフィードと、Gmail が重要マークを付けたメールのフィードを読みます。差出人のアイコンには、ブラウザがそのサイトについてすでに保存しているものを使い、そのための通信はしません。
+- **GitHub のライブフォルダ**: ログイン済みのセッションを使って `github.com` から、または `api.github.com` から検索結果を読みます。各項目のリポジトリの持ち主のアバターは `github.com` から読み込みます。
 - **GitHub のアクセストークン**: ライブフォルダに入力した場合は、端末の拡張機能のローカルストレージに保存し、`api.github.com` にだけ送ります。
 
 通信はお使いのブラウザから Gmail や GitHub へ直接行います。取得した内容（メールの件名や差出人、プルリクエストのタイトルなど）は、サイドパネルに表示するために端末の中に保存するだけで、ほかへは送りません。
