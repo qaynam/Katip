@@ -2,7 +2,7 @@ import { Array, Effect, Option, Order } from "effect"
 import { SettingsRepository } from "#modules/settings"
 import type { SpaceId } from "#modules/space"
 import { moveIndexFor, type DisplayPlacement } from "#modules/tab-order"
-import { trackedTab } from "#modules/workspace"
+import { isTemporary, trackedTab } from "#modules/workspace"
 import { type BrowserTab, type TabId, Tabs } from "#platform/browser"
 import { KatipState } from "./katip-state"
 
@@ -48,7 +48,7 @@ export const moveAmongTemporary = Effect.fnUntraced(function* (
     .filter((candidate) =>
       Option.exists(
         trackedTab(workspace, candidate.id),
-        (tracked) => tracked.spaceId === spaceId && tracked.pinned === null,
+        (tracked) => tracked.spaceId === spaceId && isTemporary(tracked),
       ),
     )
     .map((candidate) => candidate.id)

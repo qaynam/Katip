@@ -3,6 +3,12 @@ import { slide, type TransitionConfig } from "svelte/transition"
 /** How long a folder takes to slide open or closed. Its icon opens over the same time. */
 export const DISCLOSURE_DURATION_MS = 420
 
+/** How long the rows peeking out under a collapsed folder take to go when the folder opens. */
+export const PEEK_EXIT_DURATION_MS = 160
+
+/** How long after a folder starts to close the rows peeking out under it start to come back. */
+export const PEEK_RETURN_DELAY_MS = DISCLOSURE_DURATION_MS * 0.4
+
 // A critically damped spring, the kind Apple's interface animations use: it moves off at once and
 // settles without overshooting. The stiffness is the spring's angular frequency times the duration,
 // chosen so that the motion is within half a percent of its end when the duration runs out

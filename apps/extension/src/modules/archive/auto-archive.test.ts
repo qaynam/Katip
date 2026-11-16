@@ -23,7 +23,7 @@ const tab = (label: string, overrides: Partial<AutoArchiveTab> = {}): LabeledTab
   isActive: false,
   isAudible: false,
   isChromePinned: false,
-  isBoundToPin: false,
+  isBound: false,
   lastActiveAt: now - minutes(idleMinutes + 1),
   ...overrides,
 })
@@ -61,7 +61,7 @@ describe("selectAutoArchiveTargets", () => {
       ["an active tab", { isActive: true }],
       ["a tab playing audio", { isAudible: true }],
       ["a tab pinned in Chrome", { isChromePinned: true }],
-      ["a tab bound to a pin", { isBoundToPin: true }],
+      ["a tab bound to a pin or a live item", { isBound: true }],
     ] as const)("%s isn't selected even past the threshold", (_, protection) => {
       expect(selectLabels([tab("protected", protection)])).toStrictEqual([])
     })

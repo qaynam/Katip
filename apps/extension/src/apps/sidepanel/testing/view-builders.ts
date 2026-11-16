@@ -100,6 +100,7 @@ export const liveItem = (id: string, overrides: Partial<LiveItemView> = {}): Liv
   url: `https://mail.google.com/mail/u/0/#inbox/${id}`,
   updatedAt: 0,
   isUnseen: false,
+  openTab: null,
   ...overrides,
 })
 
@@ -117,6 +118,7 @@ export const pinnedLiveFolder = (
   status: { _tag: "Ready", refreshedAt: 0 },
   sort: "newest",
   items: [],
+  peekedItems: [],
   ...overrides,
 })
 

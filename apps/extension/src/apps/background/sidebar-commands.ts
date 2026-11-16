@@ -37,16 +37,21 @@ import { settleTheme } from "#modules/theme"
 import {
   activeSpaceOf,
   assignTab,
+  bindLiveItem,
   bindPinned,
+  isTemporary,
   moveTabToSpace,
   releaseSpace,
   setTitleOverride,
   spaceOf,
   switchSpace,
   tabsBoundTo,
+  tabsBoundToLiveItem,
   tabToFocus,
   trackedTab,
   unbindBookmark,
+  unbindLiveFolder,
+  unbindLiveItem,
   unbindPinned,
   type TrackedTab,
   type Workspace,
@@ -242,7 +247,8 @@ const removePin = Effect.fnUntraced(function* (tracked: TrackedTab) {
 
 /**
  * Makes the tabs (two for a split view) temporary tabs of the Space, and moves them to the given
- * position in display order. Unpins them if they're pinned, in Katip or in Chrome.
+ * position in display order. Unpins them if they're pinned, in Katip or in Chrome, and takes them
+ * off their live items.
  */
 const placeInTemporary = Effect.fnUntraced(function* (
   tabIds: ReadonlyArray<TabId>,
@@ -264,7 +270,10 @@ const placeInTemporary = Effect.fnUntraced(function* (
   )
   const now = yield* Clock.currentTimeMillis
   yield* state.workspace.update((current) =>
-    moving.reduce((acc, tab) => assignTab(acc, tab.id, spaceId, now), current),
+    moving.reduce(
+      (acc, tab) => assignTab(unbindLiveItem(acc, tab.id), tab.id, spaceId, now),
+      current,
+    ),
   )
   yield* moveAmongTemporary(moving, spaceId, placement)
 })
@@ -574,8 +583,13 @@ const tabCommands = {
       })
     }
     const tab = yield* tabs.get(tabId)
+    // Not kept on its live item: the item's row is in the live folder's Space, which the tab leaves
     yield* state.workspace.update((workspace) =>
-      switchSpace(moveTabToSpace(workspace, tabId, spaceId), tab.windowId, spaceId),
+      switchSpace(
+        moveTabToSpace(unbindLiveItem(workspace, tabId), tabId, spaceId),
+        tab.windowId,
+        spaceId,
+      ),
     )
     yield* tabs.update(tabId, { active: true })
   }),
@@ -617,7 +631,7 @@ const tabCommands = {
       .filter((tab) =>
         Option.exists(
           trackedTab(workspace, tab.id),
-          (tracked) => tracked.spaceId === spaceId && tracked.pinned === null,
+          (tracked) => tracked.spaceId === spaceId && isTemporary(tracked),
         ),
       )
       .map((tab) => tab.id)
@@ -722,7 +736,7 @@ const pinnedCommands = {
     const { node } = yield* pinned.locate(bookmarkId)
     yield* pinned.removeBookmark(bookmarkId)
     yield* (yield* KatipState).workspace.update((workspace) =>
-      pinnedIdsOf(node).reduce(unbindBookmark, workspace),
+      pinnedIdsOf(node).reduce(unbindBookmark, unbindLiveFolder(workspace, bookmarkId)),
     )
     if (node._tag === "PinnedLiveFolder") yield* releaseLiveFolders([bookmarkId])
   }),
@@ -807,9 +821,9 @@ const pinnedCommands = {
 }
 
 const liveFolderOrReject = Effect.fnUntraced(function* (bookmarkId: BookmarkId) {
-  const { node } = yield* (yield* PinnedBookmarks).locate(bookmarkId)
+  const { node, spaceId } = yield* (yield* PinnedBookmarks).locate(bookmarkId)
   if (node._tag !== "PinnedLiveFolder") return yield* reject("background.liveFolder.notFound")
-  return node
+  return { live: node, spaceId }
 })
 
 const parseUrl = Option.liftThrowable((url: string) => new URL(url))
@@ -848,12 +862,14 @@ const liveFolderCommands = {
   }),
 
   RefreshLiveFolder: Effect.fnUntraced(function* ({ bookmarkId }: { bookmarkId: BookmarkId }) {
-    const live = yield* liveFolderOrReject(bookmarkId)
+    const { live } = yield* liveFolderOrReject(bookmarkId)
     yield* (yield* LiveFolders).refresh(live.id, live.source)
   }),
 
-  // Not in the live folder's own Space but in the one shown in the calling window: while another
-  // Space is shown, the tab would open somewhere out of sight
+  // Not a temporary tab of the Space shown in the calling window: bound to the item, the tab shows
+  // on the item's row, in the live folder's own Space, as a pin's tab shows on the pin. The tab is
+  // looked for before the item, not after: the source may no longer return an item whose row stays
+  // for its open tab
   OpenLiveItem: Effect.fnUntraced(function* ({
     windowId,
     bookmarkId,
@@ -863,8 +879,15 @@ const liveFolderCommands = {
     bookmarkId: BookmarkId
     itemId: string
   }) {
+    const state = yield* KatipState
+    const tabs = yield* Tabs
     const liveFolders = yield* LiveFolders
-    const folder = yield* liveFolderOrReject(bookmarkId)
+    const { live, spaceId } = yield* liveFolderOrReject(bookmarkId)
+    const windowTabIds = new Set<TabId>((yield* tabs.query({ windowId })).map((tab) => tab.id))
+    const opened = tabsBoundToLiveItem(yield* state.workspace.get, bookmarkId, itemId).find((tab) =>
+      windowTabIds.has(tab.tabId),
+    )
+    if (opened !== undefined) return yield* tabs.update(opened.tabId, { active: true })
     const item = yield* Effect.flatMap(
       liveFolders.findItem(bookmarkId, itemId),
       Option.match({
@@ -872,11 +895,18 @@ const liveFolderCommands = {
         onSome: Effect.succeed,
       }),
     )
-    yield* openInActiveSpace(windowId, item.url)
+    const tab = yield* tabs.create({ windowId, url: item.url, active: true })
+    const now = yield* Clock.currentTimeMillis
+    yield* state.workspace.update((workspace) =>
+      bindLiveItem(assignTab(workspace, tab.id, spaceId, now), tab.id, {
+        folderId: bookmarkId,
+        item,
+      }),
+    )
     yield* liveFolders.markItemSeen(bookmarkId, itemId)
-    if (folder.source._tag === "Gmail") {
+    if (live.source._tag === "Gmail") {
       const delay = yield* RefreshAfterOpeningMail
-      yield* Effect.forkDetach(Effect.delay(liveFolders.refresh(bookmarkId, folder.source), delay))
+      yield* Effect.forkDetach(Effect.delay(liveFolders.refresh(bookmarkId, live.source), delay))
     }
   }),
 

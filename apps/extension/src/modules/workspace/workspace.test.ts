@@ -1,21 +1,27 @@
 import { Option } from "effect"
 import { describe, expect, it } from "vitest"
+import type { LiveItem } from "#modules/live-folders"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
 import { neutralTheme } from "#modules/theme"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 import {
   activeSpaceOf,
+  bindLiveItem,
   bindPinned,
   emptyWorkspace,
   forgetTab,
+  isTemporary,
   moveTabToSpace,
   recordActivation,
   releaseSpace,
   replaceTab,
   spaceOf,
   switchSpace,
+  tabsBoundToLiveItem,
   tabToFocus,
+  trackedTab,
   trackTab,
+  unbindLiveFolder,
   type NewTab,
   type Workspace,
 } from "./workspace"
@@ -181,6 +187,70 @@ describe("closing a tab", () => {
     const workspace = forgetTab(tracked, tabId(10))
 
     expect(spaceOf(workspace, tabId(10))).toStrictEqual(Option.none())
+  })
+})
+
+describe("binding a tab to a live folder item", () => {
+  const LIVE = BookmarkId.make("live")
+  const mail: LiveItem = {
+    id: "mail-1",
+    title: "Invoice attached",
+    subtitle: "Hanako Sato",
+    url: "https://mail.google.com/mail/u/0/#inbox/mail-1",
+    updatedAt: 100,
+  }
+  const pin = { bookmarkId: BookmarkId.make("b1"), pinnedUrl: "https://example.com/" }
+  const tracked = track(withActiveSpace("work"), newTab(10))
+  const bindingOf = (workspace: Workspace) =>
+    Option.map(trackedTab(workspace, tabId(10)), (tab) => [tab.pinned, tab.liveItem])
+
+  it("makes the tab the item's tab, which is no longer a temporary tab", () => {
+    const workspace = bindLiveItem(tracked, tabId(10), { folderId: LIVE, item: mail })
+
+    expect({
+      boundTabs: tabsBoundToLiveItem(workspace, LIVE, "mail-1").map((tab) => tab.tabId),
+      isTemporary: Option.map(trackedTab(workspace, tabId(10)), isTemporary),
+    }).toStrictEqual({ boundTabs: [tabId(10)], isTemporary: Option.some(false) })
+  })
+
+  it("takes a pinned tab off its pin", () => {
+    const workspace = bindLiveItem(bindPinned(tracked, tabId(10), pin), tabId(10), {
+      folderId: LIVE,
+      item: mail,
+    })
+
+    expect(bindingOf(workspace)).toStrictEqual(Option.some([null, { folderId: LIVE, item: mail }]))
+  })
+
+  it("pinning the tab takes it off the item", () => {
+    const workspace = bindPinned(
+      bindLiveItem(tracked, tabId(10), { folderId: LIVE, item: mail }),
+      tabId(10),
+      pin,
+    )
+
+    expect(bindingOf(workspace)).toStrictEqual(Option.some([pin, null]))
+  })
+
+  it("unbinding the live folder makes its items' tabs temporary again", () => {
+    const workspace = unbindLiveFolder(
+      bindLiveItem(tracked, tabId(10), { folderId: LIVE, item: mail }),
+      LIVE,
+    )
+
+    expect(Option.map(trackedTab(workspace, tabId(10)), isTemporary)).toStrictEqual(
+      Option.some(true),
+    )
+  })
+
+  it("releasing the tab's Space unbinds it, as the live folder goes with the Space", () => {
+    const workspace = releaseSpace(
+      bindLiveItem(tracked, tabId(10), { folderId: LIVE, item: mail }),
+      spaceId("work"),
+      spaceId("home"),
+    )
+
+    expect(bindingOf(workspace)).toStrictEqual(Option.some([null, null]))
   })
 })
 

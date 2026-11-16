@@ -1,12 +1,13 @@
 import { Array, Option, pipe, Schema } from "effect"
 import { SpaceId } from "#modules/space"
 import type { TabId } from "#platform/browser"
-import { PinnedBinding, trackedTab, type Workspace } from "./workspace"
+import { OptionalLiveItemBinding, PinnedBinding, trackedTab, type Workspace } from "./workspace"
 
 export const RestoreRecord = Schema.Struct({
   url: Schema.String,
   spaceId: SpaceId,
   pinned: Schema.NullOr(PinnedBinding),
+  liveItem: OptionalLiveItemBinding,
   titleOverride: Schema.NullOr(Schema.String),
 })
 export type RestoreRecord = typeof RestoreRecord.Type
@@ -42,6 +43,7 @@ export const takeSnapshot = (
             url,
             spaceId: tab.spaceId,
             pinned: tab.pinned,
+            liveItem: tab.liveItem,
             titleOverride: tab.titleOverride,
           })),
     ),
@@ -91,6 +93,7 @@ export const restoreTab = (
       tabId,
       spaceId: record.spaceId,
       pinned: record.pinned,
+      liveItem: record.liveItem,
       titleOverride: record.titleOverride,
       lastActiveAt: now,
     },

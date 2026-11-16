@@ -7,7 +7,8 @@ export interface AutoArchiveTab {
   readonly isActive: boolean
   readonly isAudible: boolean
   readonly isChromePinned: boolean
-  readonly isBoundToPin: boolean
+  /** Bound to a pin or to a live folder item, whose row shows it. */
+  readonly isBound: boolean
   /**
    * When the tab last became active, in epoch milliseconds. For a tab that has never been active,
    * pass its creation time or the browser's startup time instead.
@@ -29,7 +30,7 @@ export interface AutoArchiveCriteria {
 // Not protected by matching a pin's URL: merely opening a pin's page in a temporary tab would keep
 // that tab from ever being archived
 const isProtected = (tab: AutoArchiveTab) =>
-  tab.isActive || tab.isAudible || tab.isChromePinned || tab.isBoundToPin
+  tab.isActive || tab.isAudible || tab.isChromePinned || tab.isBound
 
 const hasBeenIdleLongerThanThreshold = (tab: AutoArchiveTab, criteria: AutoArchiveCriteria) =>
   criteria.now - tab.lastActiveAt > criteria.idleMinutes * 60_000

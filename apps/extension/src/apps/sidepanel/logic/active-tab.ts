@@ -1,6 +1,7 @@
 import type { TabId } from "#platform/browser"
 import type {
   FavoriteView,
+  LiveItemView,
   PinnedItemView,
   PinnedNodeView,
   PinnedSplitView,
@@ -19,6 +20,8 @@ export const withActiveTab = (view: SidebarView, tabId: TabId): SidebarView => {
     ...pin,
     items: [item(pin.items[0]), item(pin.items[1])],
   })
+  const liveItem = (live: LiveItemView): LiveItemView =>
+    live.openTab === null ? live : { ...live, openTab: tab(live.openTab) }
   const node = (pinned: PinnedNodeView): PinnedNodeView => {
     switch (pinned._tag) {
       case "PinnedItem":
@@ -34,7 +37,11 @@ export const withActiveTab = (view: SidebarView, tabId: TabId): SidebarView => {
           ),
         }
       case "PinnedLiveFolder":
-        return pinned
+        return {
+          ...pinned,
+          items: pinned.items.map(liveItem),
+          peekedItems: pinned.peekedItems.map(liveItem),
+        }
     }
   }
   const entry = (temporary: TemporaryEntry): TemporaryEntry =>
@@ -65,6 +72,9 @@ export const activeTabIdsIn = (view: SidebarView): ReadonlyArray<TabId> => {
   const item = (pin: PinnedItemView) => {
     if (pin.openTab !== null) tab(pin.openTab.tab)
   }
+  const liveItem = (live: LiveItemView) => {
+    if (live.openTab !== null) tab(live.openTab)
+  }
   const node = (pinned: PinnedNodeView): void => {
     switch (pinned._tag) {
       case "PinnedItem":
@@ -75,7 +85,8 @@ export const activeTabIdsIn = (view: SidebarView): ReadonlyArray<TabId> => {
         pinned.children.forEach(node)
         return pinned.peekedItems.forEach(node)
       case "PinnedLiveFolder":
-        return
+        pinned.items.forEach(liveItem)
+        return pinned.peekedItems.forEach(liveItem)
     }
   }
   for (const space of view.spaces) {

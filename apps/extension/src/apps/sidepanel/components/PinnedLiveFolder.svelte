@@ -8,7 +8,7 @@
   import { selfAndDescendantFolderIds } from "../logic/view-queries"
   import { FolderExpansion } from "../state/folder-expansion.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
-  import { disclose } from "./disclose"
+  import { disclose, PEEK_EXIT_DURATION_MS, PEEK_RETURN_DELAY_MS } from "./disclose"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import Icon from "./Icon.svelte"
   import LiveItemRow from "./LiveItemRow.svelte"
@@ -192,6 +192,16 @@
         </p>
       {/if}
     </div>
+  {:else if folder.peekedItems.length > 0}
+    <ul
+      class="items"
+      in:disclose={{ delay: PEEK_RETURN_DELAY_MS }}
+      out:disclose={{ duration: PEEK_EXIT_DURATION_MS }}
+    >
+      {#each folder.peekedItems as item (item.id)}
+        <LiveItemRow {item} folderId={folder.bookmarkId} />
+      {/each}
+    </ul>
   {/if}
 </li>
 

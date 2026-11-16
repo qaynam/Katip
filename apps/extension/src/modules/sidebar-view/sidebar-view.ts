@@ -12,14 +12,17 @@ import {
   DEFAULT_LIVE_SORT,
   explainFailure,
   isUnseen,
+  mergeNewestFirst,
   sortLiveItems,
   type LiveFolderRecord,
   type LiveFolderSnapshot,
+  type LiveItem,
 } from "#modules/live-folders"
 import {
   canCreateFolderInside,
   hasNavigatedAway,
   isFolderExpanded,
+  liveFoldersIn,
   SPACE_ROOT_DEPTH,
   type FolderExpansion,
   type FolderIcon,
@@ -31,11 +34,18 @@ import {
 } from "#modules/pinned"
 import type { Space, SpaceId, SpaceList } from "#modules/space"
 import { displayOrder } from "#modules/tab-order"
-import { activeSpaceOf, trackedTab, type TrackedTab, type Workspace } from "#modules/workspace"
+import {
+  activeSpaceOf,
+  trackedTab,
+  type LiveItemBinding,
+  type TrackedTab,
+  type Workspace,
+} from "#modules/workspace"
 import type { BookmarkId, BrowserTab, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
   LiveFolderStatus,
+  LiveItemView,
   PinnedItemView,
   PinnedLiveFolderView,
   PinnedNodeView,
@@ -179,32 +189,51 @@ const collectBookmarkIds = (tree: PinnedTree): ReadonlySet<BookmarkId> =>
     ),
   )
 
-// When several tabs are bound to the same pin (after a mix-up while restoring, say), only the
-// lowest-index one goes on the pin and the rest show as temporary tabs. Not hidden: a hidden tab
-// couldn't be closed
-const splitPinnedTabs = (spaceTabs: ReadonlyArray<SpaceTab>, tree: Option.Option<PinnedTree>) => {
-  const existing = Option.match(tree, {
-    onNone: () => new Set<BookmarkId>(),
-    onSome: collectBookmarkIds,
-  })
+interface LiveItemTab extends SpaceTab {
+  readonly binding: LiveItemBinding
+}
+
+const isSameLiveItem = (a: LiveItemBinding, b: LiveItemBinding) =>
+  a.folderId === b.folderId && a.item.id === b.item.id
+
+// When several tabs are bound to the same pin or live item (after a mix-up while restoring, say),
+// only the lowest-index one goes on the pin or item and the rest show as temporary tabs. Not
+// hidden: a hidden tab couldn't be closed
+const sortOutSpaceTabs = (spaceTabs: ReadonlyArray<SpaceTab>, tree: Option.Option<PinnedTree>) => {
+  const nodes = Option.getOrElse(tree, (): PinnedTree => [])
+  const existingPins = collectBookmarkIds(nodes)
+  const existingLiveFolders = new Set(liveFoldersIn(nodes).map((live) => live.id))
   return Array.reduce(
     spaceTabs,
     {
       byBookmark: new Map<BookmarkId, SpaceTab>(),
+      liveItemTabs: [] as ReadonlyArray<LiveItemTab>,
       temporary: [] as ReadonlyArray<SpaceTab>,
     },
     (acc, spaceTab) => {
-      const bookmarkId = spaceTab.tracked.pinned?.bookmarkId
-      if (bookmarkId === undefined || !existing.has(bookmarkId) || acc.byBookmark.has(bookmarkId)) {
-        return { ...acc, temporary: [...acc.temporary, spaceTab] }
+      const { pinned, liveItem } = spaceTab.tracked
+      if (
+        pinned !== null &&
+        existingPins.has(pinned.bookmarkId) &&
+        !acc.byBookmark.has(pinned.bookmarkId)
+      ) {
+        return { ...acc, byBookmark: new Map(acc.byBookmark).set(pinned.bookmarkId, spaceTab) }
       }
-      return { ...acc, byBookmark: new Map(acc.byBookmark).set(bookmarkId, spaceTab) }
+      if (
+        liveItem !== null &&
+        existingLiveFolders.has(liveItem.folderId) &&
+        !acc.liveItemTabs.some((taken) => isSameLiveItem(taken.binding, liveItem))
+      ) {
+        return { ...acc, liveItemTabs: [...acc.liveItemTabs, { ...spaceTab, binding: liveItem }] }
+      }
+      return { ...acc, temporary: [...acc.temporary, spaceTab] }
     },
   )
 }
 
 interface PinnedProjection {
   readonly openTabs: ReadonlyMap<BookmarkId, SpaceTab>
+  readonly liveItemTabs: ReadonlyArray<LiveItemTab>
   readonly folderExpansion: FolderExpansion
   readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
   readonly liveFolders: LiveFolderSnapshot
@@ -290,18 +319,60 @@ const liveFolderStatus = (
   })
 }
 
+/**
+ * The items of a collapsed live folder to peek out under its heading, in their order in the folder.
+ *
+ * @param showAll - Whether every item with an open tab peeks out. When false, only the item of the
+ *   active tab does.
+ */
+export const peekableLiveItems = (
+  items: ReadonlyArray<LiveItemView>,
+  showAll: boolean,
+): ReadonlyArray<LiveItemView> =>
+  items.filter((item) => item.openTab !== null && (showAll || item.openTab.isActive))
+
+const byNewest = Order.flip(Order.mapInput(Order.Number, (item: LiveItem) => item.updatedAt))
+
 const pinnedLiveFolderView = (
   live: PinnedLiveFolder,
   projection: PinnedProjection,
 ): PinnedLiveFolderView => {
   const record = Option.fromNullishOr(projection.liveFolders.records.get(live.id))
   const sort = projection.liveFolders.sorts.get(live.id) ?? DEFAULT_LIVE_SORT
+  const openTabs = projection.liveItemTabs.filter((open) => open.binding.folderId === live.id)
+  const fetched = Option.match(record, { onNone: () => [], onSome: (loaded) => loaded.items })
+  const fetchedIds = new Set(fetched.map((item) => item.id))
+  const goneButOpen = Array.sort(
+    openTabs.map((open) => open.binding.item).filter((item) => !fetchedIds.has(item.id)),
+    byNewest,
+  )
+  const items = sortLiveItems(mergeNewestFirst([fetched, goneButOpen]), sort, live.source).map(
+    (item): LiveItemView => {
+      const open = openTabs.find((candidate) => candidate.binding.item.id === item.id)
+      return {
+        ...item,
+        title:
+          item.title.trim() === ""
+            ? projection.translator.t("background.liveFolder.noSubject")
+            : item.title,
+        isUnseen: Option.exists(
+          record,
+          (loaded) => fetchedIds.has(item.id) && isUnseen(loaded, item),
+        ),
+        openTab:
+          open === undefined
+            ? null
+            : tabView(open.tab, pageTitleOf(open.tab, projection.untitledTab)),
+      }
+    },
+  )
+  const isExpanded = isFolderExpanded(projection.folderExpansion, live.id)
   return {
     _tag: "PinnedLiveFolder",
     bookmarkId: live.id,
     title: live.title,
     source: live.source,
-    isExpanded: isFolderExpanded(projection.folderExpansion, live.id),
+    isExpanded,
     status: liveFolderStatus(
       live,
       record,
@@ -309,18 +380,10 @@ const pinnedLiveFolderView = (
       projection.translator,
     ),
     sort,
-    items: Option.match(record, {
-      onNone: () => [],
-      onSome: (loaded) =>
-        sortLiveItems(loaded.items, sort, live.source).map((item) => ({
-          ...item,
-          title:
-            item.title.trim() === ""
-              ? projection.translator.t("background.liveFolder.noSubject")
-              : item.title,
-          isUnseen: isUnseen(loaded, item),
-        })),
-    }),
+    items,
+    peekedItems: isExpanded
+      ? []
+      : peekableLiveItems(items, projection.showAllOpenTabsInCollapsedFolders),
   }
 }
 
@@ -355,10 +418,11 @@ const spaceView = (
   sources: SidebarSources,
 ): SpaceView => {
   const tree = Option.fromNullishOr(sources.pinnedTrees.get(space.id))
-  const { byBookmark, temporary } = splitPinnedTabs(spaceTabs, tree)
+  const { byBookmark, liveItemTabs, temporary } = sortOutSpaceTabs(spaceTabs, tree)
   const rule = { isTabGroupSyncEnabled: sources.preferences.syncTabGroups }
   const projection: PinnedProjection = {
     openTabs: byBookmark,
+    liveItemTabs,
     folderExpansion: sources.folderExpansion,
     folderIcons: sources.folderIcons,
     liveFolders: sources.liveFolders,

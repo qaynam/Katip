@@ -134,6 +134,12 @@ const mapOpenTabs = (view: SidebarView, update: (tab: TabView) => TabView | null
             const tab = update(item.openTab.tab)
             return { ...item, openTab: tab === null ? null : { ...item.openTab, tab } }
           },
+          onLiveFolder: (folder) => ({
+            ...folder,
+            items: folder.items.map((item) =>
+              item.openTab === null ? item : { ...item, openTab: update(item.openTab) },
+            ),
+          }),
         }),
     ),
   )
@@ -156,9 +162,13 @@ const flattenNodes = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<Pinne
 
 const openTabsOf = (space: SpaceView): ReadonlyArray<TabView> => [
   ...space.temporaryEntries.flatMap(tabsOfEntry),
-  ...flattenNodes(pinnedNodesOf(space)).flatMap((node) =>
-    node._tag === "PinnedItem" && node.openTab !== null ? [node.openTab.tab] : [],
-  ),
+  ...flattenNodes(pinnedNodesOf(space)).flatMap((node): ReadonlyArray<TabView> => {
+    if (node._tag === "PinnedItem") return node.openTab === null ? [] : [node.openTab.tab]
+    if (node._tag === "PinnedLiveFolder") {
+      return node.items.flatMap((item) => (item.openTab === null ? [] : [item.openTab]))
+    }
+    return []
+  }),
 ]
 
 const nextTabId = (view: SidebarView) => {
@@ -665,17 +675,15 @@ const openLiveItem = (view: SidebarView, bookmarkId: BookmarkId, itemId: string)
     ),
   )
   if (Option.isNone(item)) return view
-  const seen = mapLiveFolder(view, bookmarkId, (folder) => ({
+  const tab =
+    item.value.openTab ?? tabView(nextTabId(view), { title: item.value.title, url: item.value.url })
+  const opened = mapLiveFolder(view, bookmarkId, (folder) => ({
     ...folder,
     items: folder.items.map((candidate) =>
-      candidate.id === itemId ? { ...candidate, isUnseen: false } : candidate,
+      candidate.id === itemId ? { ...candidate, isUnseen: false, openTab: tab } : candidate,
     ),
   }))
-  return openTemporaryTab(
-    seen,
-    view.activeSpaceId,
-    tabView(nextTabId(view), { title: item.value.title, url: item.value.url }),
-  )
+  return activateTab(opened, tab.tabId)
 }
 
 const moveSpace = (view: SidebarView, spaceId: SpaceId, toIndex: number): SidebarView => {

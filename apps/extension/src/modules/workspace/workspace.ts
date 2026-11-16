@@ -1,4 +1,5 @@
-import { Array, Option, Order, pipe, Schema } from "effect"
+import { Array, Effect, Option, Order, pipe, Schema } from "effect"
+import { LiveItem } from "#modules/live-folders"
 import { SpaceId, type SpaceList } from "#modules/space"
 import { BookmarkId, TabId, WindowId } from "#platform/browser"
 
@@ -10,10 +11,27 @@ export const PinnedBinding = Schema.Struct({
 })
 export type PinnedBinding = typeof PinnedBinding.Type
 
+/** The live folder item a tab is open for. The tab shows on the item's row in the live folder. */
+export const LiveItemBinding = Schema.Struct({
+  folderId: BookmarkId,
+  // Not only the item's ID: the row stays while the tab is open, after the source stops returning
+  // the item (Gmail drops a mail once it's read), and is drawn from this copy then
+  item: LiveItem,
+})
+export type LiveItemBinding = typeof LiveItemBinding.Type
+
+// Not required: workspaces and restore snapshots saved before tabs could be bound to live items
+// have no such key, and failing to read a snapshot would send every restored tab to no Space
+export const OptionalLiveItemBinding = Schema.NullOr(LiveItemBinding).pipe(
+  Schema.withDecodingDefaultKey(Effect.succeed(null)),
+)
+
+/** A tab is bound to a pin, to a live item, or to neither (a temporary tab), never to both. */
 export const TrackedTab = Schema.Struct({
   tabId: TabId,
   spaceId: SpaceId,
   pinned: Schema.NullOr(PinnedBinding),
+  liveItem: OptionalLiveItemBinding,
   titleOverride: Schema.NullOr(Schema.String),
   lastActiveAt: Schema.Number,
 })
@@ -154,7 +172,7 @@ export const assignTab = (
         ...workspace,
         tabs: [
           ...workspace.tabs,
-          { tabId, spaceId, pinned: null, titleOverride: null, lastActiveAt: now },
+          { tabId, spaceId, pinned: null, liveItem: null, titleOverride: null, lastActiveAt: now },
         ],
       }
 
@@ -186,8 +204,11 @@ export const recordActivation = (
       ),
   })
 
+export const isTemporary = (tab: TrackedTab): boolean =>
+  tab.pinned === null && tab.liveItem === null
+
 export const bindPinned = (workspace: Workspace, tabId: TabId, binding: PinnedBinding) =>
-  updateTab(workspace, tabId, (tab) => ({ ...tab, pinned: binding }))
+  updateTab(workspace, tabId, (tab) => ({ ...tab, pinned: binding, liveItem: null }))
 
 export const unbindPinned = (workspace: Workspace, tabId: TabId) =>
   updateTab(workspace, tabId, (tab) => ({ ...tab, pinned: null }))
@@ -202,6 +223,24 @@ export const unbindBookmark = (workspace: Workspace, bookmarkId: BookmarkId): Wo
 export const tabsBoundTo = (workspace: Workspace, bookmarkId: BookmarkId) =>
   workspace.tabs.filter((tab) => tab.pinned?.bookmarkId === bookmarkId)
 
+export const bindLiveItem = (workspace: Workspace, tabId: TabId, binding: LiveItemBinding) =>
+  updateTab(workspace, tabId, (tab) => ({ ...tab, pinned: null, liveItem: binding }))
+
+export const unbindLiveItem = (workspace: Workspace, tabId: TabId) =>
+  updateTab(workspace, tabId, (tab) => ({ ...tab, liveItem: null }))
+
+export const unbindLiveFolder = (workspace: Workspace, folderId: BookmarkId): Workspace => ({
+  ...workspace,
+  tabs: workspace.tabs.map((tab) =>
+    tab.liveItem?.folderId === folderId ? { ...tab, liveItem: null } : tab,
+  ),
+})
+
+export const tabsBoundToLiveItem = (workspace: Workspace, folderId: BookmarkId, itemId: string) =>
+  workspace.tabs.filter(
+    (tab) => tab.liveItem?.folderId === folderId && tab.liveItem.item.id === itemId,
+  )
+
 export const setTitleOverride = (
   workspace: Workspace,
   tabId: TabId,
@@ -211,7 +250,7 @@ export const setTitleOverride = (
 /**
  * Moves the tabs of a Space being deleted, and the windows that had it active, to the successor.
  *
- * The Space's bookmarks go with it, so the moved tabs lose their pin bindings.
+ * The Space's bookmarks go with it, so the moved tabs lose their pin and live item bindings.
  */
 export const releaseSpace = (
   workspace: Workspace,
@@ -219,7 +258,7 @@ export const releaseSpace = (
   successor: SpaceId,
 ): Workspace => ({
   tabs: workspace.tabs.map((tab) =>
-    tab.spaceId === released ? { ...tab, spaceId: successor, pinned: null } : tab,
+    tab.spaceId === released ? { ...tab, spaceId: successor, pinned: null, liveItem: null } : tab,
   ),
   windows: workspace.windows.map((window) =>
     window.activeSpaceId === released ? { ...window, activeSpaceId: successor } : window,

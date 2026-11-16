@@ -15,7 +15,8 @@ const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId
     Match.valueTags(node, {
       PinnedItem: ({ openTab }) => (openTab === null ? [] : [openTab.tab.tabId]),
       PinnedSplit: ({ items }) => openTabIdsIn(items),
-      PinnedLiveFolder: () => [],
+      PinnedLiveFolder: ({ items }) =>
+        items.flatMap((item) => (item.openTab === null ? [] : [item.openTab.tabId])),
       PinnedFolder: ({ children }) => openTabIdsIn(children),
     }),
   )

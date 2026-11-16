@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest"
 import { TabId } from "#platform/browser"
 import {
   favoriteView,
+  liveItem,
   openPinnedTab,
   pinnedFolder,
   pinnedItem,
+  pinnedLiveFolder,
   pinnedSplit,
   sidebarView,
   spaceView,
@@ -18,8 +20,8 @@ const open = (id: number) => openPinnedTab(tabView(id))
 
 /**
  * A tab in every place one can show: temporary tab 1, temporary split 2 and 3, pin 4, split pin
- * 5 and 6 inside a collapsed folder that also peeks it out, other Space's tab 7, Favorite 8.
- * Tab 1 is active.
+ * 5 and 6 inside a collapsed folder that also peeks it out, other Space's tab 7, Favorite 8, live
+ * item 10 in a collapsed live folder that also peeks it out. Tab 1 is active.
  */
 const view = sidebarView({
   spaces: [
@@ -41,6 +43,11 @@ const view = sidebarView({
             ]),
           ],
         }),
+        pinnedLiveFolder("inbox", {
+          isExpanded: false,
+          items: [liveItem("mail", { openTab: tabView(10) }), liveItem("other")],
+          peekedItems: [liveItem("mail", { openTab: tabView(10) })],
+        }),
       ],
       temporaryEntries: [
         temporaryTab(tabView(1, { isActive: true })),
@@ -55,6 +62,13 @@ const view = sidebarView({
 describe("withActiveTab", () => {
   it.each([1, 2, 3, 4, 7, 8])("makes tab %i the only active one", (id) => {
     expect(activeTabIdsIn(withActiveTab(view, TabId.make(id)))).toStrictEqual([TabId.make(id)])
+  })
+
+  it("makes a live item's tab active both in its live folder and where the folder peeks it out", () => {
+    expect(activeTabIdsIn(withActiveTab(view, TabId.make(10)))).toStrictEqual([
+      TabId.make(10),
+      TabId.make(10),
+    ])
   })
 
   it("makes a split pin's tab active both in its folder and where the folder peeks it out", () => {

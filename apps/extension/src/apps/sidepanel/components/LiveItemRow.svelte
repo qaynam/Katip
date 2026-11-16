@@ -2,6 +2,7 @@
   import type { BookmarkId } from "#platform/browser"
   import type { LiveItemView } from "#protocol"
   import { getSidebarContext } from "../state/sidebar-context"
+  import Icon from "./Icon.svelte"
   import LiveItemIcon from "./LiveItemIcon.svelte"
 
   interface Props {
@@ -13,13 +14,41 @@
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
 
-  const open = () =>
-    void ctx.run({
-      _tag: "OpenLiveItem",
-      windowId: ctx.view.windowId,
-      bookmarkId: folderId,
-      itemId: item.id,
-    })
+  let row = $state<HTMLLIElement>()
+  const openTab = $derived(item.openTab)
+  const isActive = $derived(openTab?.isActive ?? false)
+
+  // Through isActive, not openTab: reading the tab directly would rerun this on every update of
+  // it, such as its loading state, and scroll the row back into view each time
+  $effect(() => {
+    if (isActive) row?.scrollIntoView({ block: "nearest" })
+  })
+
+  const activate = () =>
+    void ctx.run(
+      openTab === null
+        ? {
+            _tag: "OpenLiveItem",
+            windowId: ctx.view.windowId,
+            bookmarkId: folderId,
+            itemId: item.id,
+          }
+        : { _tag: "ActivateTab", tabId: openTab.tabId },
+    )
+
+  const close = () => {
+    if (openTab !== null) void ctx.run({ _tag: "CloseTab", tabId: openTab.tabId })
+  }
+
+  const closeOnMiddleClick = (event: MouseEvent) => {
+    if (event.button !== 1 || openTab === null) return
+    event.preventDefault()
+    close()
+  }
+
+  const suppressAutoscroll = (event: MouseEvent) => {
+    if (event.button === 1) event.preventDefault()
+  }
 
   const scheduleTooltip = (event: PointerEvent) => {
     if (ctx.drag.source !== null) return
@@ -30,11 +59,20 @@
   }
 </script>
 
-<li class="item" class:unseen={item.isUnseen}>
+<li
+  bind:this={row}
+  class="item"
+  class:unseen={item.isUnseen}
+  class:open={openTab !== null}
+  class:active={isActive}
+  onauxclick={closeOnMiddleClick}
+>
   <button
     class="main"
     type="button"
-    onclick={open}
+    aria-current={isActive ? "true" : undefined}
+    onclick={activate}
+    onmousedown={suppressAutoscroll}
     onpointerenter={scheduleTooltip}
     onpointermove={(event) => ctx.tooltip.follow({ x: event.clientX, y: event.clientY })}
     onpointerleave={() => ctx.tooltip.hide()}
@@ -60,11 +98,30 @@
       {/if}
     </span>
   </button>
+  {#if openTab !== null}
+    <button class="close" type="button" aria-label={t("actions.closeTab")} onclick={close}>
+      <Icon name="close" size={13} />
+    </button>
+  {/if}
 </li>
 
 <style>
   .item {
+    position: relative;
+    border-radius: var(--radius-row);
     list-style: none;
+    transition:
+      background-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .item:hover {
+    background: var(--surface-hover);
+  }
+
+  .item.active {
+    background: var(--surface-active);
+    box-shadow: var(--shadow-active);
   }
 
   .main {
@@ -79,11 +136,38 @@
     border-radius: var(--radius-row);
     background: none;
     text-align: start;
-    transition: background-color 120ms ease;
   }
 
-  .main:hover {
+  .item.open .main {
+    padding-right: 34px;
+  }
+
+  .close {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-muted);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity 100ms ease;
+  }
+
+  .item:hover .close,
+  .close:focus-visible {
+    opacity: 1;
+  }
+
+  .close:hover {
     background: var(--surface-hover);
+    color: var(--text);
   }
 
   .unseen-dot {
@@ -135,6 +219,10 @@
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
+  }
+
+  .item.open .title {
+    color: var(--text);
   }
 
   .item.unseen .title {

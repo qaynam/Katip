@@ -1,4 +1,4 @@
-import { peekableItems } from "#modules/sidebar-view"
+import { peekableItems, peekableLiveItems } from "#modules/sidebar-view"
 import type { PinnedNodeView, SidebarView } from "#protocol"
 
 // The fixture looks as it does with "Show all open tabs in collapsed folders" turned on
@@ -6,6 +6,14 @@ const SHOW_ALL_OPEN_TABS_IN_COLLAPSED_FOLDERS = true
 
 const withPeeksIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<PinnedNodeView> =>
   nodes.map((node) => {
+    if (node._tag === "PinnedLiveFolder") {
+      return {
+        ...node,
+        peekedItems: node.isExpanded
+          ? []
+          : peekableLiveItems(node.items, SHOW_ALL_OPEN_TABS_IN_COLLAPSED_FOLDERS),
+      }
+    }
     if (node._tag !== "PinnedFolder") return node
     const children = withPeeksIn(node.children)
     return {

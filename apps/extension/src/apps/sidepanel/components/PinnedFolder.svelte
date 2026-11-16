@@ -14,7 +14,7 @@
   import { FolderExpansion } from "../state/folder-expansion.svelte"
   import { action } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
-  import { disclose, DISCLOSURE_DURATION_MS } from "./disclose"
+  import { disclose, PEEK_EXIT_DURATION_MS, PEEK_RETURN_DELAY_MS } from "./disclose"
   import FolderGlyph from "./FolderGlyph.svelte"
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import { addLiveFolderMenu, createFolder } from "./menus"
@@ -27,9 +27,6 @@
     folder: PinnedFolderView
     position: PinnedPosition
   }
-
-  const PEEK_EXIT_DURATION_MS = 160
-  const PEEK_RETURN_DELAY_MS = DISCLOSURE_DURATION_MS * 0.4
 
   const { folder, position }: Props = $props()
   const ctx = getSidebarContext()

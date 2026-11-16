@@ -9,6 +9,7 @@ import { neutralTheme } from "#modules/theme"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
 import {
   assignTab,
+  bindLiveItem,
   bindPinned,
   emptyWorkspace,
   setTitleOverride,
@@ -738,6 +739,162 @@ describe("live folders", () => {
       ["PinnedLiveFolder"],
       [],
     ])
+  })
+})
+
+describe("live folder items open in tabs", () => {
+  const inbox: LiveSource = { _tag: "Gmail", accountIndex: 0, label: null }
+  const LIVE = bookmarkId("live")
+  const liveTree: PinnedTree = [
+    { _tag: "PinnedLiveFolder", id: LIVE, title: "Inbox", source: inbox },
+  ]
+  const mail = (id: string, updatedAt: number, title = `Mail ${id}`): LiveItem => ({
+    id,
+    title,
+    subtitle: "Hanako Sato",
+    url: `https://mail.google.com/mail/u/0/#inbox/${id}`,
+    updatedAt,
+  })
+  const fetched = (items: ReadonlyArray<LiveItem>): SidebarSources["liveFolders"] => ({
+    records: new Map([
+      [LIVE, { items, lastAttempt: { _tag: "Fetched", at: 1000 }, seenVersions: {} }],
+    ]),
+    refreshing: new Set(),
+    sorts: new Map(),
+  })
+  const openFor = (workspace: Workspace, tab: number, item: LiveItem) =>
+    bindLiveItem(inHome(workspace, tab), tabId(tab), { folderId: LIVE, item })
+  const shown = switchSpace(emptyWorkspace, WINDOW, spaceId("home"))
+  const viewOf = (overrides: Partial<SidebarSources>) =>
+    project({ pinnedTrees: homeWithPin(liveTree), folderExpansion: { [LIVE]: true }, ...overrides })
+  const liveFolderIn = (view: SidebarView) => pinnedNodesOf(view)[0] as PinnedLiveFolderView
+  const rowsOf = (view: SidebarView) =>
+    liveFolderIn(view).items.map((item) => [item.id, item.openTab?.tabId ?? null])
+
+  it("shows an item's tab on the item's row and not among the temporary tabs", () => {
+    const view = viewOf({
+      workspace: openFor(shown, 1, mail("a", 50)),
+      windowTabs: [browserTab(1, { active: true })],
+      liveFolders: fetched([mail("a", 50), mail("b", 40)]),
+    })
+
+    expect({
+      rows: rowsOf(view),
+      isActive: liveFolderIn(view).items[0]?.openTab?.isActive,
+      temporary: temporaryTabIds(homeOf(view)),
+    }).toStrictEqual({
+      rows: [
+        ["a", tabId(1)],
+        ["b", null],
+      ],
+      isActive: true,
+      temporary: [],
+    })
+  })
+
+  it("keeps an item the source no longer returns while its tab is open, as seen, from the copy made when it opened", () => {
+    const view = viewOf({
+      workspace: openFor(shown, 1, mail("read", 50, "Invoice attached")),
+      windowTabs: [browserTab(1)],
+      liveFolders: fetched([mail("unread", 40)]),
+    })
+
+    expect(
+      liveFolderIn(view).items.map((item) => [item.title, item.isUnseen, item.openTab?.tabId]),
+    ).toStrictEqual([
+      ["Invoice attached", false, tabId(1)],
+      ["Mail unread", true, undefined],
+    ])
+  })
+
+  it("drops an item the source no longer returns once its tab has closed", () => {
+    const view = viewOf({
+      workspace: inHome(shown),
+      windowTabs: [],
+      liveFolders: fetched([mail("unread", 40)]),
+    })
+
+    expect(rowsOf(view)).toStrictEqual([["unread", null]])
+  })
+
+  it("places a kept item among the others by when it was updated", () => {
+    const view = viewOf({
+      workspace: openFor(shown, 1, mail("middle", 50)),
+      windowTabs: [browserTab(1)],
+      liveFolders: fetched([mail("newer", 80), mail("older", 20)]),
+    })
+
+    expect(rowsOf(view).map(([id]) => id)).toStrictEqual(["newer", "middle", "older"])
+  })
+
+  it("shows what the source returns now over the copy made when the item opened", () => {
+    const view = viewOf({
+      workspace: openFor(shown, 1, mail("a", 50, "Old subject")),
+      windowTabs: [browserTab(1)],
+      liveFolders: fetched([mail("a", 60, "New subject")]),
+    })
+
+    expect(liveFolderIn(view).items.map((item) => item.title)).toStrictEqual(["New subject"])
+  })
+
+  it("shows a tab bound to an item of a live folder that no longer exists as a temporary tab", () => {
+    const view = viewOf({
+      pinnedTrees: homeWithPin([]),
+      workspace: openFor(shown, 1, mail("a", 50)),
+      windowTabs: [browserTab(1)],
+    })
+
+    expect(temporaryTabIds(homeOf(view))).toStrictEqual([tabId(1)])
+  })
+
+  it("puts only the lower-index of two tabs bound to the same item on its row, and the other among the temporary tabs", () => {
+    const view = viewOf({
+      workspace: openFor(openFor(shown, 2, mail("a", 50)), 1, mail("a", 50)),
+      windowTabs: [browserTab(1), browserTab(2)],
+      liveFolders: fetched([mail("a", 50)]),
+    })
+
+    expect([rowsOf(view), temporaryTabIds(homeOf(view))]).toStrictEqual([
+      [["a", tabId(1)]],
+      [tabId(2)],
+    ])
+  })
+
+  it("peeks out only the active tab's item under a collapsed live folder", () => {
+    const view = viewOf({
+      folderExpansion: { [LIVE]: false },
+      workspace: openFor(openFor(shown, 1, mail("a", 50)), 2, mail("b", 40)),
+      windowTabs: [browserTab(1), browserTab(2, { active: true })],
+      liveFolders: fetched([mail("a", 50), mail("b", 40)]),
+    })
+
+    expect(liveFolderIn(view).peekedItems.map((item) => item.id)).toStrictEqual(["b"])
+  })
+
+  it("peeks out every item with an open tab when all open tabs show in collapsed folders", () => {
+    const view = viewOf({
+      folderExpansion: { [LIVE]: false },
+      workspace: openFor(openFor(shown, 1, mail("a", 50)), 2, mail("b", 40)),
+      windowTabs: [browserTab(1), browserTab(2, { active: true })],
+      liveFolders: fetched([mail("a", 50), mail("b", 40), mail("c", 30)]),
+      preferences: {
+        newTabsOnTop: false,
+        showAllOpenTabsInCollapsedFolders: true,
+        syncTabGroups: false,
+      },
+    })
+
+    expect(liveFolderIn(view).peekedItems.map((item) => item.id)).toStrictEqual(["a", "b"])
+  })
+
+  it("peeks out nothing under an expanded live folder, whose rows show the tabs", () => {
+    const view = viewOf({
+      workspace: openFor(shown, 1, mail("a", 50)),
+      windowTabs: [browserTab(1, { active: true })],
+      liveFolders: fetched([mail("a", 50)]),
+    })
+
+    expect(liveFolderIn(view).peekedItems).toStrictEqual([])
   })
 })
 

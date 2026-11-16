@@ -1,9 +1,15 @@
 import { fireEvent, screen, within } from "@testing-library/svelte"
 import { describe, expect, it, vi } from "vitest"
-import { BookmarkId } from "#platform/browser"
+import { BookmarkId, TabId } from "#platform/browser"
 import type { LiveFolderStatus, PinnedLiveFolderView, PinnedNodeView } from "#protocol"
 import { commandsOf, renderSidebar } from "../testing/render-sidebar"
-import { liveItem, pinnedLiveFolder, sidebarView, spaceView } from "../testing/view-builders"
+import {
+  liveItem,
+  pinnedLiveFolder,
+  sidebarView,
+  spaceView,
+  tabView,
+} from "../testing/view-builders"
 
 const viewWithPins = (...nodes: ReadonlyArray<PinnedNodeView>) =>
   sidebarView({ spaces: [spaceView("work", { pinnedNodes: nodes })] })
@@ -129,6 +135,70 @@ describe("Showing a live folder", () => {
     await renderSidebar(viewWithPins(inbox({ items: [] })))
 
     expect(within(pinnedRegion()).getByText("No new items")).toBeTruthy()
+  })
+})
+
+describe("An item open in a tab", () => {
+  const withOpenQuote = (
+    overrides: Partial<Omit<PinnedLiveFolderView, "_tag" | "bookmarkId">> = {},
+  ) =>
+    inbox({
+      items: [
+        liveItem("quote", {
+          title: "Re: Quote",
+          openTab: tabView(7, { title: "Re: Quote - Gmail", isActive: true }),
+        }),
+        liveItem("lunch", { title: "Lunch invite" }),
+      ],
+      ...overrides,
+    })
+  const row = (title: string) => screen.getByRole("button", { name: new RegExp(title) })
+
+  it("shows as the open tab on its own row, highlighted while it's the active tab", async () => {
+    await renderSidebar(viewWithPins(withOpenQuote()))
+
+    expect([
+      row("Re: Quote").getAttribute("aria-current"),
+      row("Lunch invite").getAttribute("aria-current"),
+      within(pinnedRegion()).getAllByRole("button", { name: "Close Tab" }).length,
+    ]).toStrictEqual(["true", null, 1])
+  })
+
+  it("switches to its tab when clicked, instead of opening the item again", async () => {
+    const { connection } = await renderSidebar(viewWithPins(withOpenQuote()))
+
+    await fireEvent.click(row("Re: Quote"))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "ActivateTab", tabId: TabId.make(7) }])
+  })
+
+  it("closes its tab with the close button", async () => {
+    const { connection } = await renderSidebar(viewWithPins(withOpenQuote()))
+
+    await fireEvent.click(within(pinnedRegion()).getByRole("button", { name: "Close Tab" }))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "CloseTab", tabId: TabId.make(7) }])
+  })
+
+  it("closes its tab with a middle click", async () => {
+    const { connection } = await renderSidebar(viewWithPins(withOpenQuote()))
+
+    await fireEvent(row("Re: Quote"), new MouseEvent("auxclick", { bubbles: true, button: 1 }))
+
+    expect(connection.sentCommands).toStrictEqual([{ _tag: "CloseTab", tabId: TabId.make(7) }])
+  })
+
+  it("peeks out under its collapsed live folder, while the other items stay hidden", async () => {
+    const open = liveItem("quote", {
+      title: "Re: Quote",
+      openTab: tabView(7, { isActive: true }),
+    })
+    await renderSidebar(viewWithPins(withOpenQuote({ isExpanded: false, peekedItems: [open] })))
+
+    expect([
+      within(pinnedRegion()).queryByRole("button", { name: /Re: Quote/ }) !== null,
+      within(pinnedRegion()).queryByText("Lunch invite"),
+    ]).toStrictEqual([true, null])
   })
 })
 

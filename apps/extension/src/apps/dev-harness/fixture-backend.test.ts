@@ -292,21 +292,72 @@ describe("the fixture's naive responses", () => {
     expect(liveFolder(next, "live-inbox").items.some((item) => item.isUnseen)).toBe(false)
   })
 
-  it("opening a live folder item opens it as a temporary tab and marks it read", () => {
+  describe("a live folder item", () => {
     const [first] = liveFolder(view, "live-inbox").items
     if (first === undefined) throw new Error("the fixture's inbox is empty")
+    const open = (from: SidebarView = view) =>
+      viewAfter(
+        {
+          _tag: "OpenLiveItem",
+          windowId: from.windowId,
+          bookmarkId: BookmarkId.make("live-inbox"),
+          itemId: first.id,
+        },
+        from,
+      )
+    const openTabOf = (next: SidebarView) =>
+      liveFolder(next, "live-inbox").items.find((item) => item.id === first.id)?.openTab ?? null
 
-    const next = viewAfter({
-      _tag: "OpenLiveItem",
-      windowId: view.windowId,
-      bookmarkId: BookmarkId.make("live-inbox"),
-      itemId: first.id,
+    it("opens as the active tab on its own row, not among the temporary tabs, and is marked read", () => {
+      const next = open()
+
+      expect({
+        openTab: openTabOf(next),
+        isUnseen: liveFolder(next, "live-inbox").items[0]?.isUnseen,
+        temporary: temporaryTabIds(next),
+      }).toMatchObject({
+        openTab: { url: first.url, isActive: true },
+        isUnseen: false,
+        temporary: temporaryTabIds(view),
+      })
     })
 
-    expect(activeSpace(next)?.temporaryEntries[0]).toMatchObject({
-      tab: { url: first.url, isActive: true },
+    it("opened again switches to its tab instead of opening another", () => {
+      const opened = open()
+      const elsewhere = viewAfter(
+        { _tag: "ActivateTab", tabId: temporaryTabIds(opened)[0] ?? TabId.make(0) },
+        opened,
+      )
+
+      const again = open(elsewhere)
+
+      expect([openTabOf(again)?.tabId, openTabOf(again)?.isActive]).toStrictEqual([
+        openTabOf(opened)?.tabId,
+        true,
+      ])
     })
-    expect(liveFolder(next, "live-inbox").items[0]?.isUnseen).toBe(false)
+
+    it("turns back into a plain item when its tab closes", () => {
+      const opened = open()
+
+      const closed = viewAfter(
+        { _tag: "CloseTab", tabId: openTabOf(opened)?.tabId ?? TabId.make(0) },
+        opened,
+      )
+
+      expect(openTabOf(closed)).toBeNull()
+    })
+
+    it("peeks out under its live folder once the folder collapses", () => {
+      const collapsed = viewAfter(
+        { _tag: "SetFolderExpanded", bookmarkId: BookmarkId.make("live-inbox"), isExpanded: false },
+        open(),
+      )
+
+      expect(liveFolder(collapsed, "live-inbox").peekedItems.map((item) => item.id)).toStrictEqual([
+        first.id,
+      ])
+    })
   })
 
   it("changing a live folder's sort reorders its items by it", () => {

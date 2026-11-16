@@ -5,7 +5,7 @@ import {
   selectAutoArchiveTargets,
 } from "#modules/archive"
 import { SettingsRepository } from "#modules/settings"
-import { trackedTab } from "#modules/workspace"
+import { isTemporary, trackedTab } from "#modules/workspace"
 import { Alarms, Tabs } from "#platform/browser"
 import { KatipState } from "./katip-state"
 import { urlOf } from "./tab-admission"
@@ -41,7 +41,7 @@ export const runAutoArchive = Effect.gen(function* () {
       isActive: tab.active,
       isAudible: tab.audible,
       isChromePinned: tab.pinned,
-      isBoundToPin: Option.exists(tracked, (t) => t.pinned !== null),
+      isBound: Option.exists(tracked, (t) => !isTemporary(t)),
       // A tab in no Space is never archived, so its time doesn't matter
       lastActiveAt: Option.match(tracked, { onNone: () => now, onSome: (t) => t.lastActiveAt }),
     }

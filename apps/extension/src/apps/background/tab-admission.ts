@@ -4,6 +4,7 @@ import type { DisplayPlacement } from "#modules/tab-order"
 import {
   claimRestoreRecord,
   isNewTabPage,
+  isTemporary,
   restoreTab,
   spaceOf,
   trackedTab,
@@ -104,7 +105,7 @@ const placementBelowOpener = (
 ): DisplayPlacement =>
   Option.exists(
     trackedTab(workspace, openerTabId),
-    (opener) => opener.spaceId === opened.spaceId && opener.pinned === null,
+    (opener) => opener.spaceId === opened.spaceId && isTemporary(opener),
   )
     ? { _tag: "Below", tabId: openerTabId }
     : { _tag: "Top" }
@@ -119,7 +120,7 @@ const placeOpenedTab = Effect.fnUntraced(function* (tab: BrowserTab) {
   if (Option.isNone(opener) || isNewTabPage(urlOf(tab))) return
   const workspace = yield* (yield* KatipState).workspace.get
   const opened = trackedTab(workspace, tab.id)
-  if (Option.isNone(opened) || opened.value.pinned !== null) return
+  if (Option.isNone(opened) || !isTemporary(opened.value)) return
   yield* moveAmongTemporary(
     [tab],
     opened.value.spaceId,
@@ -130,7 +131,8 @@ const placeOpenedTab = Effect.fnUntraced(function* (tab: BrowserTab) {
 /**
  * Admits a tab Chrome has just created, as {@link admitTab} does. A tab opened from another tab,
  * such as by a link, then moves to show right below that tab, above the ones it opened before.
- * Opened from a pin or from a tab outside the Space, it goes to the top of the temporary tabs.
+ * Opened from a pin, from a live item's tab, or from a tab outside the Space, it goes to the top
+ * of the temporary tabs.
  *
  * A tab created without its URL moves once {@link placeOnceUrlIsKnown} sees the URL.
  */

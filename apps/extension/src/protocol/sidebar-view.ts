@@ -54,6 +54,11 @@ export const LiveItemView = Schema.Struct({
   ...LiveItem.fields,
   /** Not opened yet: unread in Gmail, updated since last seen on GitHub. */
   isUnseen: Schema.Boolean,
+  /**
+   * The item's tab in this window, which shows on the item's row instead of among the temporary
+   * tabs. null while the item isn't open here.
+   */
+  openTab: Schema.NullOr(TabView),
 })
 export type LiveItemView = typeof LiveItemView.Type
 
@@ -83,8 +88,11 @@ export const PinnedLiveFolderView = Schema.TaggedStruct("PinnedLiveFolder", {
   isExpanded: Schema.Boolean,
   status: LiveFolderStatus,
   sort: LiveSort,
-  // Already in the order of sort
+  // Already in the order of sort. An item whose tab is open stays until the tab closes, even once
+  // the source no longer returns it
   items: Schema.Array(LiveItemView),
+  // Items whose tabs peek out under the collapsed folder's heading, as a folder's open pins do
+  peekedItems: Schema.Array(LiveItemView),
 })
 export type PinnedLiveFolderView = typeof PinnedLiveFolderView.Type
 

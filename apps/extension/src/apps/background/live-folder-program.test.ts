@@ -1,7 +1,14 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Array, Effect, Option, type Scope, type Layer } from "effect"
+import { Array, Effect, Option, Order, type Scope, type Layer } from "effect"
 import type { LiveSource } from "#modules/live-folders"
-import { Alarms, BookmarkId, Storage, type BookmarkNode, type WindowId } from "#platform/browser"
+import {
+  Alarms,
+  BookmarkId,
+  Storage,
+  Tabs,
+  type BookmarkNode,
+  type WindowId,
+} from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
 import { FakeHttp, httpResponse, redirectResponse } from "#platform/http"
 import { FakePermissions } from "#platform/permissions"
@@ -111,6 +118,20 @@ const temporaryUrls = (view: SidebarView): ReadonlyArray<string> =>
         entry._tag === "TemporaryTab" ? [entry.tab.url] : entry.tabs.map((tab) => tab.url),
       ),
   })
+
+const openTabOf = (view: SidebarView, itemId: string) =>
+  Option.flatMap(liveFolderOf(view), (live) =>
+    Option.flatMap(
+      Array.findFirst(live.items, (item) => item.id === itemId),
+      (item) => Option.fromNullishOr(item.openTab),
+    ),
+  )
+
+const gmailRequestCount = Effect.map(
+  FakeHttp.use((http) => http.requests),
+  (requests) =>
+    requests.filter((request) => request.url.startsWith("https://mail.google.com/")).length,
+)
 
 const startWithSidebar = Effect.gen(function* () {
   const fake = yield* FakeBrowser
@@ -459,7 +480,7 @@ describe("sorting", () => {
 
 describe("opening items and marking them read", () => {
   it.live(
-    "opening an item opens it as a temporary tab of the Space being shown and marks only it read",
+    "opening an item opens its tab on the item's row, not among the temporary tabs, and marks only it read",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -477,23 +498,30 @@ describe("opening items and marking them read", () => {
             bookmarkId: ready.bookmarkId,
             itemId: first?.id ?? "",
           })
-          const view = yield* sidebar.viewWhere(
-            (v) =>
-              temporaryUrls(v).includes(first?.url ?? "") &&
-              hasLiveFolderWith((live) => live.items.some((item) => !item.isUnseen))(v),
+          const view = yield* sidebar.viewWhere((v) =>
+            Option.exists(openTabOf(v, first?.id ?? ""), (tab) => tab.isActive),
           )
 
           expect({
             outcome: outcome._tag,
-            unseen: Option.map(liveFolderOf(view), (live) => live.items.map((i) => i.isUnseen)),
-            opened: temporaryUrls(view).filter((url) => url === first?.url).length,
-          }).toStrictEqual({ outcome: "Succeeded", unseen: Option.some([false, true]), opened: 1 })
+            rows: Option.map(liveFolderOf(view), (live) =>
+              live.items.map((item) => [item.isUnseen, item.openTab?.url ?? null]),
+            ),
+            temporary: temporaryUrls(view),
+          }).toStrictEqual({
+            outcome: "Succeeded",
+            rows: Option.some([
+              [false, first?.url],
+              [true, null],
+            ]),
+            temporary: ["https://a.example/"],
+          })
         }),
       ),
   )
 
   it.live(
-    "opening a mail refreshes its Gmail folder soon after, so the mail Gmail then counts read leaves it",
+    "opening an item whose tab is open switches back to that tab instead of opening another",
     () =>
       inBackground(
         Effect.gen(function* () {
@@ -503,7 +531,44 @@ describe("opening items and marking them read", () => {
           )
           const { sidebar, windowId } = yield* createLiveFolder(inbox)
           const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
-          yield* serveGmail(gmailFeed(gmailEntry("2", "Meeting notes")))
+          const [first, second] = ready.items.map((item) => item.id)
+          const open = (itemId = "") =>
+            sidebar.run({ _tag: "OpenLiveItem", windowId, bookmarkId: ready.bookmarkId, itemId })
+          yield* open(first)
+          const opened = yield* sidebar.viewWhere((v) => Option.isSome(openTabOf(v, first ?? "")))
+          yield* open(second)
+          yield* sidebar.viewWhere((v) =>
+            Option.exists(openTabOf(v, second ?? ""), (tab) => tab.isActive),
+          )
+
+          yield* open(first)
+          const view = yield* sidebar.viewWhere((v) =>
+            Option.exists(openTabOf(v, first ?? ""), (tab) => tab.isActive),
+          )
+
+          expect({
+            sameTab: Option.map(openTabOf(view, first ?? ""), (tab) => tab.tabId),
+            tabsInWindow: (yield* Tabs.use((tabs) => tabs.query({ windowId }))).length,
+          }).toStrictEqual({
+            sameTab: Option.map(openTabOf(opened, first ?? ""), (tab) => tab.tabId),
+            tabsInWindow: 3,
+          })
+        }),
+      ),
+  )
+
+  it.live(
+    "opening a mail refreshes its Gmail folder soon after, so it lists the unread mail Gmail has then",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(
+            gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+          )
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          yield* serveGmail(gmailFeed(gmailEntry("2", "Meeting notes"), gmailEntry("3", "Lunch")))
 
           yield* sidebar.run({
             _tag: "OpenLiveItem",
@@ -512,13 +577,276 @@ describe("opening items and marking them read", () => {
             itemId: ready.items[0]?.id ?? "",
           })
           const view = yield* sidebar.viewWhere(
-            hasLiveFolderWith((live) => live.items.length === 1),
+            hasLiveFolderWith((live) => live.items.some((item) => item.title === "Lunch")),
           )
 
           expect(
-            Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
-          ).toStrictEqual(Option.some(["Meeting notes"]))
+            Option.map(liveFolderOf(view), (live) =>
+              Array.sort(
+                live.items.map((item) => item.title),
+                Order.String,
+              ),
+            ),
+          ).toStrictEqual(Option.some(["Invoice attached", "Lunch", "Meeting notes"]))
         }).pipe(Effect.provideService(RefreshAfterOpeningMail, "10 millis")),
+      ),
+  )
+
+  it.live(
+    "a mail Gmail no longer returns stays on its row while its tab is open, and leaves as soon as the tab closes",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(
+            gmailFeed(gmailEntry("1", "Invoice attached"), gmailEntry("2", "Meeting notes")),
+          )
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          const firstFetchAt = ready.status._tag === "Ready" ? ready.status.refreshedAt : 0
+          yield* serveGmail(gmailFeed(gmailEntry("2", "Meeting notes")))
+          yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId: ready.items[0]?.id ?? "",
+          })
+          const kept = yield* sidebar.viewWhere(
+            hasLiveFolderWith(
+              (live) => live.status._tag === "Ready" && live.status.refreshedAt > firstFetchAt,
+            ),
+          )
+          const keptRows = Option.map(liveFolderOf(kept), (live) =>
+            Array.sort(
+              live.items.map((item) => [item.title, item.openTab === null] as const),
+              Order.mapInput(Order.String, ([title]: readonly [string, boolean]) => title),
+            ),
+          )
+          const tabId = Option.getOrThrow(openTabOf(kept, ready.items[0]?.id ?? "")).tabId
+          const fetchesBeforeClosing = yield* gmailRequestCount
+
+          yield* sidebar.run({ _tag: "CloseTab", tabId })
+          const closed = yield* sidebar.viewWhere(
+            hasLiveFolderWith((live) => live.items.length === 1),
+          )
+
+          expect({
+            keptRows,
+            afterClosing: Option.map(liveFolderOf(closed), (live) =>
+              live.items.map((item) => item.title),
+            ),
+            fetchedAgain: (yield* gmailRequestCount) > fetchesBeforeClosing,
+            temporary: temporaryUrls(closed),
+          }).toStrictEqual({
+            keptRows: Option.some([
+              ["Invoice attached", false],
+              ["Meeting notes", true],
+            ]),
+            afterClosing: Option.some(["Meeting notes"]),
+            fetchedAgain: false,
+            temporary: ["https://a.example/"],
+          })
+        }).pipe(Effect.provideService(RefreshAfterOpeningMail, "10 millis")),
+      ),
+  )
+
+  it.live(
+    "closing the tab of an item the source still returns turns its row back into an item",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          const itemId = ready.items[0]?.id ?? ""
+          yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId,
+          })
+          const opened = yield* sidebar.viewWhere((v) => Option.isSome(openTabOf(v, itemId)))
+
+          yield* sidebar.run({
+            _tag: "CloseTab",
+            tabId: Option.getOrThrow(openTabOf(opened, itemId)).tabId,
+          })
+          const view = yield* sidebar.viewWhere(
+            hasLiveFolderWith((live) => live.items.every((item) => item.openTab === null)),
+          )
+
+          expect([
+            Option.map(liveFolderOf(view), (live) => live.items.map((item) => item.title)),
+            temporaryUrls(view),
+          ]).toStrictEqual([Option.some(["Invoice attached"]), ["https://a.example/"]])
+        }),
+      ),
+  )
+
+  it.live("an item's tab stays on its row after the background restarts", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GMAIL_ORIGIN)
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
+        // Closing the first start's scope makes sure its background has stopped
+        const { windowId, itemId, tabId } = yield* Effect.scoped(
+          Effect.gen(function* () {
+            const { sidebar, windowId } = yield* createLiveFolder(inbox)
+            const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+            const itemId = ready.items[0]?.id ?? ""
+            yield* sidebar.run({
+              _tag: "OpenLiveItem",
+              windowId,
+              bookmarkId: ready.bookmarkId,
+              itemId,
+            })
+            const opened = yield* sidebar.viewWhere((v) => Option.isSome(openTabOf(v, itemId)))
+            return { windowId, itemId, tabId: Option.getOrThrow(openTabOf(opened, itemId)).tabId }
+          }),
+        )
+
+        yield* startBackground
+        // The fake reuses the first start's connection channel, so a connection made before the
+        // second background subscribes to it reaches no one
+        yield* Effect.sleep("300 millis")
+        const reopened = yield* openSidebar(windowId)
+        const view = yield* reopened.viewWhere((v) => Option.isSome(openTabOf(v, itemId)))
+
+        expect([
+          Option.map(openTabOf(view, itemId), (tab) => tab.tabId),
+          temporaryUrls(view),
+        ]).toStrictEqual([Option.some(tabId), ["https://a.example/"]])
+      }),
+    ),
+  )
+
+  it.live("deleting a live folder leaves its items' open tabs as temporary tabs", () =>
+    inBackground(
+      Effect.gen(function* () {
+        yield* grant(GMAIL_ORIGIN)
+        yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
+        const { sidebar, windowId } = yield* createLiveFolder(inbox)
+        const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+        const item = Option.getOrThrow(Array.head(ready.items))
+        yield* sidebar.run({
+          _tag: "OpenLiveItem",
+          windowId,
+          bookmarkId: ready.bookmarkId,
+          itemId: item.id,
+        })
+        yield* sidebar.viewWhere((v) => Option.isSome(openTabOf(v, item.id)))
+
+        yield* sidebar.run({ _tag: "RemovePinnedItem", bookmarkId: ready.bookmarkId })
+        const view = yield* sidebar.viewWhere((v) => Option.isNone(liveFolderOf(v)))
+
+        expect(Array.sort(temporaryUrls(view), Order.String)).toStrictEqual(
+          Array.sort(["https://a.example/", item.url], Order.String),
+        )
+      }),
+    ),
+  )
+
+  it.live(
+    "deleting the folder a live folder is in makes its items' open tabs temporary tabs, which closing the temporary tabs closes",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
+          const { sidebar, spaceId, windowId } = yield* startWithSidebar
+          const windowTabs = Tabs.use((tabs) => tabs.query({ windowId }))
+          const [seeded] = yield* windowTabs
+          if (seeded === undefined) return yield* Effect.die("no tab to keep")
+          yield* sidebar.run({ _tag: "PinTab", tabId: seeded.id })
+          const folder = yield* sidebar.run({ _tag: "CreateFolder", spaceId, parentId: null })
+          const folderId = folder._tag === "Succeeded" ? folder.createdBookmarkId : null
+          if (folderId === null) return yield* Effect.die("couldn't create it")
+          yield* sidebar.run({
+            _tag: "CreateLiveFolder",
+            spaceId,
+            parentId: folderId,
+            source: inbox,
+          })
+          const nestedLiveFolder = (view: SidebarView) =>
+            Array.findFirst(
+              homeNodes(view).flatMap((node) =>
+                node._tag === "PinnedFolder" ? node.children : [],
+              ),
+              (node) => (node._tag === "PinnedLiveFolder" ? Option.some(node) : Option.none()),
+            )
+          const ready = Option.getOrThrow(
+            nestedLiveFolder(
+              yield* sidebar.viewWhere((v) =>
+                Option.exists(nestedLiveFolder(v), (live) => live.status._tag === "Ready"),
+              ),
+            ),
+          )
+          yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId: ready.items[0]?.id ?? "",
+          })
+          yield* sidebar.viewWhere((v) =>
+            Option.exists(nestedLiveFolder(v), (live) =>
+              live.items.some((item) => item.openTab !== null),
+            ),
+          )
+
+          yield* sidebar.run({ _tag: "DeleteFolder", bookmarkId: folderId })
+          yield* sidebar.run({ _tag: "CloseTemporaryTabs", windowId, spaceId })
+          const remaining = yield* eventually(
+            Effect.map(
+              windowTabs,
+              Option.liftPredicate((tabs) => tabs.length === 1),
+            ),
+          )
+
+          expect(remaining.map((tab) => tab.id)).toStrictEqual([seeded.id])
+        }),
+      ),
+  )
+
+  it.live(
+    "the next-tab shortcut steps from an item's tab to the tab below it in the side panel",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* grant(GMAIL_ORIGIN)
+          yield* serveGmail(gmailFeed(gmailEntry("1", "Invoice attached")))
+          const { sidebar, windowId } = yield* createLiveFolder(inbox)
+          const ready = Option.getOrThrow(liveFolderOf(yield* sidebar.viewWhere(isReady)))
+          const itemId = ready.items[0]?.id ?? ""
+          yield* sidebar.run({
+            _tag: "OpenLiveItem",
+            windowId,
+            bookmarkId: ready.bookmarkId,
+            itemId,
+          })
+          const opened = yield* sidebar.viewWhere((v) =>
+            Option.exists(openTabOf(v, itemId), (tab) => tab.isActive),
+          )
+          const itemTab = yield* Tabs.use((tabs) =>
+            tabs.get(Option.getOrThrow(openTabOf(opened, itemId)).tabId),
+          )
+
+          yield* (yield* FakeBrowser).emit({
+            _tag: "CommandTriggered",
+            command: "next-tab-in-space",
+            tab: Option.some(itemTab),
+          })
+          const [active] = yield* eventually(
+            Effect.map(
+              Tabs.use((tabs) => tabs.query({ windowId, active: true })),
+              Option.liftPredicate((tabs) => tabs[0]?.id !== itemTab.id),
+            ),
+          )
+
+          expect(Option.flatMap(Option.fromNullishOr(active), (tab) => tab.url)).toStrictEqual(
+            Option.some("https://a.example/"),
+          )
+        }),
       ),
   )
 

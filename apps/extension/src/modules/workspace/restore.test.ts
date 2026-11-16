@@ -1,16 +1,24 @@
-import { Array, Option } from "effect"
+import { Array, Option, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpaceId } from "#modules/space"
 import { BookmarkId, TabId } from "#platform/browser"
 import {
   claimRestoreRecord,
   RESTORE_WINDOW_MS,
+  RestoreSnapshot,
   restoreTab,
   startRestore,
   takeSnapshot,
   type RestoreRecord,
 } from "./restore"
-import { assignTab, bindPinned, emptyWorkspace, setTitleOverride, trackedTab } from "./workspace"
+import {
+  assignTab,
+  bindLiveItem,
+  bindPinned,
+  emptyWorkspace,
+  setTitleOverride,
+  trackedTab,
+} from "./workspace"
 
 const tabId = (value: number) => TabId.make(value)
 const spaceId = (value: string) => SpaceId.make(value)
@@ -20,6 +28,7 @@ const record = (url: string, overrides: Partial<RestoreRecord> = {}): RestoreRec
   url,
   spaceId: spaceId("work"),
   pinned: null,
+  liveItem: null,
   titleOverride: null,
   ...overrides,
 })
@@ -120,6 +129,7 @@ describe("restoring a tab", () => {
         tabId: tabId(7),
         spaceId: spaceId("work"),
         pinned,
+        liveItem: null,
         titleOverride: "Mail",
         lastActiveAt: 500,
       }),
@@ -142,5 +152,42 @@ describe("restoring a tab", () => {
     expect(
       Option.map(trackedTab(after, tabId(9)), (t) => [t.pinned, t.titleOverride]),
     ).toStrictEqual(Option.some([pinned, "Mail"]))
+  })
+
+  it("brings back the live folder item the snapshot recorded", () => {
+    const liveItem = {
+      folderId: BookmarkId.make("live"),
+      item: {
+        id: "mail-1",
+        title: "Invoice attached",
+        subtitle: "Hanako Sato",
+        url: "https://mail.google.com/mail/u/0/#inbox/mail-1",
+        updatedAt: 100,
+      },
+    }
+    const before = bindLiveItem(
+      assignTab(emptyWorkspace, tabId(1), spaceId("work"), 0),
+      tabId(1),
+      liveItem,
+    )
+
+    const saved = Option.getOrThrow(
+      Array.head(takeSnapshot(before, [{ tabId: tabId(1), url: liveItem.item.url }])),
+    )
+    const after = restoreTab(emptyWorkspace, tabId(9), saved, 0)
+
+    expect(Option.map(trackedTab(after, tabId(9)), (t) => t.liveItem)).toStrictEqual(
+      Option.some(liveItem),
+    )
+  })
+
+  it("reads a snapshot saved before tabs could be bound to live items as bound to none", () => {
+    const saved = [
+      { url: "https://a.example/", spaceId: "work", pinned: null, titleOverride: null },
+    ]
+
+    const snapshot = Schema.decodeUnknownSync(RestoreSnapshot)(saved)
+
+    expect(snapshot.map((record) => record.liveItem)).toStrictEqual([null])
   })
 })
