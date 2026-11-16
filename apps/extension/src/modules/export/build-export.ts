@@ -1,5 +1,5 @@
 import { Array, Match, Option, Order, pipe, Result } from "effect"
-import type { FavoriteList } from "#modules/favorites"
+import { favoritesOf, type SpaceFavorites } from "#modules/favorites"
 import {
   DEFAULT_LIVE_LIMIT,
   DEFAULT_LIVE_SORT,
@@ -44,8 +44,8 @@ export interface ExportSources {
   /** A live folder missing here uses the default limit. */
   readonly liveLimits: ReadonlyMap<BookmarkId, LiveLimit>
   readonly workspace: Workspace
-  /** Every Favorite, open or closed, in order. */
-  readonly favorites: FavoriteList
+  /** Every Space's Favorites, open or closed, in order. */
+  readonly spaceFavorites: SpaceFavorites
   /** The tabs of every window, in any order. */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly settings: Settings
@@ -228,6 +228,9 @@ export const buildExport = (
               theme: exportedThemeOf(space.theme),
               pinned: nodesOf(tree, sources),
               tabs: temporaryTabsOf(space, tree, openTabs, sources),
+              favorites: favoritesOf(sources.spaceFavorites, space.id).map(
+                ({ title, url }): ExportedLink => ({ title, url }),
+              ),
             }),
         }),
       ),
@@ -238,7 +241,10 @@ export const buildExport = (
       exportedAt: new Date(sources.exportedAt).toISOString(),
       generator: { name: "Katip", version: sources.katipVersion },
       spaces,
-      favorites: sources.favorites.map(({ title, url }): ExportedLink => ({ title, url })),
+      favorites: Array.dedupeWith(
+        spaces.flatMap((space) => space.favorites ?? []),
+        (a, b) => a.url === b.url,
+      ),
       settings: exportedSettingsOf(sources.settings),
     }),
   )

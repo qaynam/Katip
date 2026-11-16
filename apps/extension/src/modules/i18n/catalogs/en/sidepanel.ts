@@ -35,7 +35,7 @@ export const sidepanel = {
   "sidepanel.space.delete": "Delete Space",
   "sidepanel.space.deleteTitle": "Delete “{name}”?",
   "sidepanel.space.deleteMessage":
-    "Pinned tabs and folders in this Space will be deleted too. Open temporary tabs aren’t closed — they move to another Space.",
+    "Pinned tabs, folders and Favorites in this Space will be deleted too. Open tabs aren’t closed — they move to another Space.",
 
   "sidepanel.pinned.region": "Pinned",
   "sidepanel.pinned.empty": "Drag tabs here to pin them",

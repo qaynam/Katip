@@ -24,7 +24,7 @@ export const exportFileContent = Effect.gen(function* () {
       liveSorts: liveFolders.sorts,
       liveLimits: liveFolders.limits,
       workspace: yield* state.workspace.get,
-      favorites: yield* state.favorites.get,
+      spaceFavorites: yield* state.spaceFavorites.get,
       tabs: yield* (yield* Tabs).query({}),
       settings: yield* (yield* SettingsRepository).get,
     }),

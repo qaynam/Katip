@@ -26,7 +26,7 @@ const twoLevels = { isTabGroupSyncEnabled: false }
 const oneLevel = { isTabGroupSyncEnabled: true }
 
 const summaryOf = (document: ReturnType<typeof choose>["document"], rule = twoLevels) =>
-  planImport(document, { rule, savedFavoriteUrls: new Set() }).summary
+  planImport(document, { rule }).summary
 
 describe("wholeSidebar", () => {
   it("chooses every Arc Space, each as a Space of its own", () => {
@@ -99,6 +99,20 @@ describe("arcImportOf", () => {
       ])
     })
 
+    it("go to each chosen Space from its own profile, as Arc shows them", () => {
+      const { document } = choose(["space-reading", "space-personal"])
+
+      expect(
+        document.spaces.map(({ name, favorites }) => [
+          name,
+          (favorites ?? []).map(({ url }) => url),
+        ]),
+      ).toStrictEqual([
+        ["Reading", ["https://calendar.example.com/", "https://music.example.com/"]],
+        ["Personal", ["https://photos.example.com/", "https://calendar.example.com/"]],
+      ])
+    })
+
     it("left behind with their profile aren't counted as left out for not being web pages", () => {
       expect([
         choose(["space-reading"]).report.nonWebLinks,
@@ -122,6 +136,28 @@ describe("arcImportOf", () => {
         choose(["space-personal"], "Separate", orphaned).document.favorites,
         choose([], "Separate", orphaned).document.favorites,
       ]).toStrictEqual([[{ title: "Lone", url: "https://lone.example/" }], []])
+    })
+
+    it("of a profile with no Space in the file go to every chosen Space", () => {
+      const orphaned: ArcConversion = {
+        ...conversion,
+        favorites: [
+          {
+            profile: ArcProfile.Custom({ directory: "Profile 9" }),
+            links: [{ title: "Lone", url: "https://lone.example/" }],
+            tally: { nonWebLinks: 0, widerSplits: 0, unsupportedItems: 0 },
+          },
+        ],
+      }
+
+      expect(
+        choose(["space-work", "space-personal"], "Separate", orphaned).document.spaces.map(
+          ({ favorites }) => favorites,
+        ),
+      ).toStrictEqual([
+        [{ title: "Lone", url: "https://lone.example/" }],
+        [{ title: "Lone", url: "https://lone.example/" }],
+      ])
     })
   })
 
@@ -178,6 +214,16 @@ describe("arcImportOf", () => {
         widerSplits: separate.report.widerSplits,
         unsupportedItems: separate.report.unsupportedItems,
       })
+    })
+
+    it("gives the combined Space the Favorites of every chosen Space's profile, each page once", () => {
+      const { document } = choose(["space-reading", "space-personal"], "Combined")
+
+      expect(document.spaces[0]?.favorites?.map(({ url }) => url)).toStrictEqual([
+        "https://calendar.example.com/",
+        "https://music.example.com/",
+        "https://photos.example.com/",
+      ])
     })
 
     it("with nothing chosen, makes no Space", () => {

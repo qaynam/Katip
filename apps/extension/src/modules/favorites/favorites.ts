@@ -4,8 +4,8 @@ export const FavoriteId = Schema.String.pipe(Schema.brand("FavoriteId"))
 export type FavoriteId = typeof FavoriteId.Type
 
 /**
- * A page kept in Favorites, whether a tab is open for it or not. Every window shows the same
- * Favorites, and opens each one as a tab pinned in Chrome.
+ * A page kept in a Space's Favorites, whether a tab is open for it or not. Its tab is pinned in
+ * Chrome while the Space is shown in the tab's window.
  */
 export const Favorite = Schema.Struct({
   id: FavoriteId,

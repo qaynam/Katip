@@ -1,17 +1,80 @@
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Effect, Layer, Option, Schema } from "effect"
 import {
+  carrySharedFavorites,
   FavoriteList,
   FavoriteRestoreQueue,
   FavoriteRestoreSnapshot,
   FavoriteTabs,
+  SpaceFavorites,
 } from "#modules/favorites"
 import { SpaceList } from "#modules/space"
 import { emptyWorkspace, RestoreQueue, RestoreSnapshot, Workspace } from "#modules/workspace"
-import { Storage } from "#platform/browser"
+import { Storage, type StorageArea } from "#platform/browser"
 import { makePersistedRef, type PersistedRef } from "#platform/persisted-ref"
 
 export const RESTORE_SNAPSHOT_KEY = "katip/restore-snapshot"
 export const FAVORITE_RESTORE_SNAPSHOT_KEY = "katip/favorite-restore-snapshot"
+/** Where the Favorites every Space shared were kept, before each Space had its own. */
+export const SHARED_FAVORITES_KEY = "katip/favorites"
+export const SPACE_FAVORITES_KEY = "katip/space-favorites"
+
+const loadSharedFavorites = (area: StorageArea) =>
+  area
+    .getDecoded(SHARED_FAVORITES_KEY, FavoriteList)
+    .pipe(
+      Effect.catch((error) =>
+        Effect.as(Effect.logWarning("Couldn't read the shared Favorites", error), Option.none()),
+      ),
+    )
+
+/**
+ * Copies the Favorites every Space shared into each Space, the first time Katip starts with each
+ * Space having its own.
+ *
+ * @returns The shared Favorites when they couldn't be copied yet, as when there is no Space to copy
+ *   them into. They are still kept where they were, to be carried once a Space exists.
+ */
+// Copied only while nothing is stored under the key of each Space's own Favorites, and in a single
+// write of that key: copying again after an interruption would bring back Favorites removed since,
+// and give them to Spaces created since, which start with none. The old key goes only after that
+const carryOverSharedFavorites = Effect.fnUntraced(function* (
+  area: StorageArea,
+  spaceFavorites: PersistedRef<SpaceFavorites>,
+  spaces: SpaceList,
+) {
+  const shared = yield* loadSharedFavorites(area)
+  if (Option.isNone(shared)) return Option.none<FavoriteList>()
+  if (!spaceFavorites.wasStored) {
+    if (spaces.length === 0) return shared
+    const isCarried = yield* spaceFavorites
+      .update((favorites) =>
+        carrySharedFavorites(
+          favorites,
+          shared.value,
+          spaces.map((space) => space.id),
+        ),
+      )
+      .pipe(
+        Effect.as(true),
+        Effect.catch((error) =>
+          Effect.as(Effect.logWarning("Couldn't carry the shared Favorites", error), false),
+        ),
+      )
+    if (!isCarried) return shared
+  }
+  yield* forgetSharedFavorites(area)
+  return Option.none<FavoriteList>()
+})
+
+/** Removes the Favorites every Space shared, once each Space has its copy. */
+export const forgetSharedFavorites = (area: StorageArea) =>
+  area
+    .remove(SHARED_FAVORITES_KEY)
+    .pipe(
+      Effect.catch((error) =>
+        Effect.logWarning("Couldn't remove the shared Favorites after carrying them", error),
+      ),
+    )
 
 export class KatipState extends Context.Service<
   KatipState,
@@ -19,7 +82,12 @@ export class KatipState extends Context.Service<
     readonly spaces: PersistedRef<SpaceList>
     readonly workspace: PersistedRef<Workspace>
     readonly restoreQueue: PersistedRef<RestoreQueue | null>
-    readonly favorites: PersistedRef<FavoriteList>
+    readonly spaceFavorites: PersistedRef<SpaceFavorites>
+    /**
+     * The Favorites every Space shared, found at startup with no Space to copy them into. None
+     * once they have been copied.
+     */
+    readonly sharedFavoritesAwaitingSpace: Option.Option<FavoriteList>
     /** Which tab is open for which Favorite. Tab IDs last only for a browser session. */
     readonly favoriteTabs: PersistedRef<FavoriteTabs>
     readonly favoriteRestoreQueue: PersistedRef<FavoriteRestoreQueue | null>
@@ -53,12 +121,17 @@ export class KatipState extends Context.Service<
         schema: Schema.NullOr(RestoreQueue),
         initial: () => null,
       })
-      const favorites = yield* makePersistedRef({
+      const spaceFavorites = yield* makePersistedRef({
         area: storage.local,
-        key: "katip/favorites",
-        schema: FavoriteList,
-        initial: () => [],
+        key: SPACE_FAVORITES_KEY,
+        schema: SpaceFavorites,
+        initial: () => ({}),
       })
+      const sharedFavoritesAwaitingSpace = yield* carryOverSharedFavorites(
+        storage.local,
+        spaceFavorites,
+        yield* spaces.get,
+      )
       const favoriteTabs = yield* makePersistedRef({
         area: storage.session,
         key: "katip/favorite-tabs",
@@ -75,7 +148,8 @@ export class KatipState extends Context.Service<
         spaces,
         workspace,
         restoreQueue,
-        favorites,
+        spaceFavorites,
+        sharedFavoritesAwaitingSpace,
         favoriteTabs,
         favoriteRestoreQueue,
         isFreshSession: !workspace.wasStored,

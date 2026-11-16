@@ -32,9 +32,9 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "可以带上你的空间及其中固定的标签页、文件夹和分屏视图，以及收藏。在设置中选择 Arc 的侧边栏文件，它只会在你的浏览器中读取。",
   "onboarding.arcImport.open": "从 Arc 导入…",
 
-  "onboarding.favorites.title": "收藏在每个空间都在",
+  "onboarding.favorites.title": "每个空间有自己的收藏",
   "onboarding.favorites.body":
-    "把标签页拖到侧边栏顶部，或右键点击并选择“添加到收藏”。无论你在哪个空间，收藏都在同一个地方。",
+    "把标签页拖到侧边栏顶部，或右键点击并选择“添加到收藏”。每个空间都有自己的收藏。",
 
   "onboarding.themes.title": "每个空间一种颜色",
   "onboarding.themes.try": "在这里试试，和侧边栏里是同一个编辑器：你选的会用在“{space}”上。",

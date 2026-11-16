@@ -81,8 +81,12 @@ export const SidebarCommand = Schema.Union([
     placement: PinnedPlacement,
   }),
   Schema.TaggedStruct("ArchiveTab", { tabId: TabId }),
-  // index is the place among the Favorites, closed ones included
-  Schema.TaggedStruct("AddToFavorites", { tabId: TabId, index: Schema.optionalKey(Schema.Int) }),
+  // index is the place among the Space's Favorites, closed ones included
+  Schema.TaggedStruct("AddToFavorites", {
+    tabId: TabId,
+    spaceId: SpaceId,
+    index: Schema.optionalKey(Schema.Int),
+  }),
   Schema.TaggedStruct("MoveFavorite", { favoriteId: FavoriteId, toIndex: Schema.Int }),
   Schema.TaggedStruct("OpenFavorite", { windowId: WindowId, favoriteId: FavoriteId }),
   Schema.TaggedStruct("RemoveFavorite", { favoriteId: FavoriteId }),

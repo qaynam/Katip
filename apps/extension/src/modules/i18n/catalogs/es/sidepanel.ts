@@ -37,7 +37,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.space.delete": "Eliminar espacio",
   "sidepanel.space.deleteTitle": "¿Eliminar «{name}»?",
   "sidepanel.space.deleteMessage":
-    "También se eliminarán las pestañas fijadas y las carpetas de este espacio. Las pestañas temporales abiertas no se cerrarán, sino que se moverán a otro espacio.",
+    "También se eliminarán las pestañas fijadas, las carpetas y los Favoritos de este espacio. Las pestañas abiertas no se cerrarán, sino que se moverán a otro espacio.",
 
   "sidepanel.pinned.region": "Fijadas",
   "sidepanel.pinned.empty": "Arrastra pestañas aquí para fijarlas",

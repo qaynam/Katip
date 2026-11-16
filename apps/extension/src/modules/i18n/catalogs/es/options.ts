@@ -210,10 +210,6 @@ export const options: CatalogSection<"options"> = {
     one: "{count} pestaña sin fijar, porque las pestañas sin fijar son temporales",
     other: "{count} pestañas sin fijar, porque las pestañas sin fijar son temporales",
   },
-  "options.data.import.preview.favoritesAlreadySaved": {
-    one: "{count} página que ya está en Favoritos",
-    other: "{count} páginas que ya están en Favoritos",
-  },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} pestaña que no es una página web, porque solo se importan direcciones http y https",
     other:
@@ -230,9 +226,9 @@ export const options: CatalogSection<"options"> = {
     "Solo se añaden espacios nuevos. Ninguno de tus espacios se renombra, se combina con otro ni se elimina.",
   "options.data.import.addFavorites.label": "Añadir a Favoritos",
   "options.data.import.addFavorites.description":
-    "Se añaden después de los Favoritos que ya tienes, cerrados hasta que los abras.",
+    "Cada espacio recibe sus propios Favoritos del archivo, cerrados hasta que los abras. En un archivo de antes de que cada espacio tuviera los suyos, cada espacio los recibe todos.",
   "options.data.import.addFavorites.descriptionByProfile":
-    "Se añaden después de los Favoritos que ya tienes, cerrados hasta que los abras. Solo se añaden los Favoritos de los perfiles de los espacios que elegiste.",
+    "Cada espacio recibe los Favoritos de su perfil de Arc, cerrados hasta que los abras.",
   "options.data.import.confirm": "Importar",
   "options.data.import.cancel": "Cancelar",
   "options.data.import.problem.notArc":

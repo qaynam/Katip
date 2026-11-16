@@ -122,10 +122,11 @@ describe("Dragging a temporary tab", () => {
     })
   })
 
-  it("adds it to Favorites at the drop position", () => {
+  it("adds it to the Favorites of the Space shown at the drop position", () => {
     expect(drop(temporaryTab(1), { _tag: "Favorites", slot: 3 })).toStrictEqual({
       _tag: "AddToFavorites",
       tabId: tabId(1),
+      spaceId,
       index: 3,
     })
   })
@@ -207,6 +208,7 @@ describe("Dragging a pin", () => {
     expect(drop(source, { _tag: "Favorites", slot: 0 })).toStrictEqual({
       _tag: "AddToFavorites",
       tabId: tabId(7),
+      spaceId,
       index: 0,
     })
   })
@@ -286,6 +288,7 @@ describe("Dragging a Favorite", () => {
     expect(drop(loose, { _tag: "Favorites", slot: 1 })).toStrictEqual({
       _tag: "AddToFavorites",
       tabId: tabId(5),
+      spaceId,
       index: 1,
     })
   })

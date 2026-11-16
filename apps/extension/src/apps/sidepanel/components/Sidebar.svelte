@@ -284,7 +284,6 @@
             <SpotlightButton />
             <ClosePanelButton />
           </div>
-          <FavoritesGrid favorites={view.favorites} />
         {/if}
 
         <div class="spaces">
@@ -298,6 +297,7 @@
                 <NewSpacePage draft={shownDraft} />
               {:else}
                 {#if !isSpaceCovered}
+                  <FavoritesGrid favorites={activeSpace.favorites} />
                   <SpaceTitle space={activeSpace} />
                 {/if}
                 <div class="space-pages">

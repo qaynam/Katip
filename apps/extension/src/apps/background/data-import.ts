@@ -1,12 +1,7 @@
 import { Array, type Cause, Effect, Match, Option, Schema, Stream } from "effect"
 import { decodeExportFile, type LatestExport } from "#modules/export"
-import {
-  planFavorites,
-  planImport,
-  planSpace,
-  type PlannedNode,
-  type PlannedSpace,
-} from "#modules/import"
+import { updateFavoritesOf } from "#modules/favorites"
+import { planImport, planSpace, type PlannedNode, type PlannedSpace } from "#modules/import"
 import { DEFAULT_LIVE_LIMIT, DEFAULT_LIVE_SORT, LiveFolders } from "#modules/live-folders"
 import {
   FolderIconStore,
@@ -18,7 +13,7 @@ import {
   type PinnedNodeNotFound,
 } from "#modules/pinned"
 import type { SettingsRepository } from "#modules/settings"
-import { addSpace, nextSpaceName, SpaceName, unusedSpaceName } from "#modules/space"
+import { addSpace, nextSpaceName, SpaceName, unusedSpaceName, type Space } from "#modules/space"
 import { settleTheme } from "#modules/theme"
 import { type BrowserApiError, type BrowserPort } from "#platform/browser"
 import { ImportClientMessage, ImportServerMessage } from "#protocol"
@@ -42,19 +37,10 @@ type FileSpace = LatestExport["spaces"][number]
 const readDocument = (content: string) =>
   Effect.mapError(Effect.fromResult(decodeExportFile(content)), () => new UnreadableImport())
 
-const savedFavoriteUrls = Effect.map(
-  KatipState.use((state) => state.favorites.get),
-  (favorites): ReadonlySet<string> => new Set(favorites.map((favorite) => favorite.url)),
-)
-
 /** What importing the content would add and leave out. Changes nothing. */
 export const previewImport = Effect.fnUntraced(function* (content: string) {
   const document = yield* readDocument(content)
-  const plan = planImport(document, {
-    rule: yield* currentNestingRule,
-    savedFavoriteUrls: yield* savedFavoriteUrls,
-  })
-  return plan.summary
+  return planImport(document, { rule: yield* currentNestingRule }).summary
 })
 
 const decodeSpaceName = Schema.decodeUnknownOption(SpaceName)
@@ -64,7 +50,21 @@ interface SpaceAdding {
   readonly picksTheme: boolean
   /** Whether the name is the import's suggestion, to number when a Space already has it. */
   readonly isNamedByImport: boolean
+  /** Whether the Space gets its Favorites from the file. */
+  readonly addsFavorites: boolean
 }
+
+// Added closed: opening every Favorite of a file at once would flood the window with tabs
+const addPlannedFavorites = Effect.fnUntraced(function* (planned: PlannedSpace, space: Space) {
+  const added = yield* Effect.forEach(planned.favorites, ({ title, url }) =>
+    Effect.map(newFavoriteId, (id) => ({ id, title, url })),
+  )
+  yield* KatipState.use((state) =>
+    state.spaceFavorites.update((favorites) =>
+      updateFavoritesOf(favorites, space.id, (list) => [...list, ...added]),
+    ),
+  )
+})
 
 const addPlannedSpace = Effect.fnUntraced(function* (planned: PlannedSpace, adding: SpaceAdding) {
   const id = yield* newSpaceId
@@ -81,6 +81,7 @@ const addPlannedSpace = Effect.fnUntraced(function* (planned: PlannedSpace, addi
   )
   const space = yield* Effect.fromOption(Array.findFirst(spaces, (added) => added.id === id))
   yield* (yield* SpaceFolders).ensureSpaceFolder(space)
+  if (adding.addsFavorites) yield* addPlannedFavorites(planned, space)
   return space
 })
 
@@ -126,13 +127,14 @@ const createNode = (
 // Space's top level is a step of its own instead
 const addFileSpace = Effect.fnUntraced(function* (
   space: FileSpace,
+  sharedFavorites: LatestExport["favorites"],
   adding: SpaceAdding,
   serialize: Serialize,
 ) {
   const { planned, created, rule } = yield* serialize(
     Effect.gen(function* () {
       const rule = yield* currentNestingRule
-      const planned = planSpace(space, rule)
+      const planned = planSpace(space, rule, sharedFavorites)
       return { planned, created: yield* addPlannedSpace(planned, adding), rule }
     }),
   )
@@ -143,15 +145,6 @@ const addFileSpace = Effect.fnUntraced(function* (
   return planned
 })
 
-// Added closed: opening every Favorite of a file at once would flood the window with tabs
-const addFavorites = Effect.fnUntraced(function* (favorites: LatestExport["favorites"]) {
-  const planned = planFavorites(favorites, yield* savedFavoriteUrls)
-  const added = yield* Effect.forEach(planned.toAdd, ({ title, url }) =>
-    Effect.map(newFavoriteId, (id) => ({ id, title, url })),
-  )
-  yield* KatipState.use((state) => state.favorites.update((list) => [...list, ...added]))
-})
-
 const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
   nodes.some(
     (node) =>
@@ -159,14 +152,14 @@ const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
   )
 
 /**
- * Adds the content's Spaces and, when asked, its Favorites.
+ * Adds the content's Spaces, each with its Favorites when asked.
  *
  * @remarks
  * Only adds: each Space in the content becomes a new Space after the existing ones, and no
  * existing Space, pin or setting changes. A name the import suggested gets a number when a Space
- * already has it; a name from the file is kept as it is. Favorites go after the existing ones,
- * closed, and pages Favorites already has are skipped. Temporary tabs and settings in the content
- * aren't imported. When a step fails, the Spaces added before it are kept.
+ * already has it; a name from the file is kept as it is. Favorites are added closed. A file from
+ * the time every Space shared the Favorites gives them to each of its Spaces. Temporary tabs and
+ * settings in the content aren't imported. When a step fails, the Spaces added before it are kept.
  */
 export const applyImport = Effect.fnUntraced(function* (
   request: Extract<ImportClientMessage, { readonly _tag: "Apply" }>,
@@ -178,11 +171,15 @@ export const applyImport = Effect.fnUntraced(function* (
   const added = yield* Effect.forEach(document.spaces, (space) =>
     addFileSpace(
       space,
-      { picksTheme: withoutTheme.has(space.id), isNamedByImport: namedByImport.has(space.id) },
+      document.favorites,
+      {
+        picksTheme: withoutTheme.has(space.id),
+        isNamedByImport: namedByImport.has(space.id),
+        addsFavorites: request.addFavorites,
+      },
       serialize,
     ),
   )
-  if (request.addFavorites) yield* serialize(addFavorites(document.favorites))
   if (added.some((space) => hasLiveFolder(space.pinned))) {
     yield* serialize(Effect.andThen(scheduleLiveFolderRefresh, refreshDueLiveFolders))
   }

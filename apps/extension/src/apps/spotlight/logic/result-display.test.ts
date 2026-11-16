@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { FavoriteId } from "#modules/favorites"
 import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme, swatchOf, themeOf } from "#modules/theme"
 import { BookmarkId, TabId } from "#platform/browser"
@@ -50,7 +51,13 @@ describe("an open tab's display", () => {
     expect(display(openTab()).detail).toBe("Work · docs.example/design")
   })
 
-  it("details a Favorites tab as Favorites", () => {
+  it("details a Favorite's tab as in the Favorites of its Space", () => {
+    expect(display(openTab({ isFavorite: true })).detail).toBe(
+      "Work › Favorites · docs.example/design",
+    )
+  })
+
+  it("details a tab pinned in Chrome that isn't a Favorite's yet as in Favorites", () => {
     expect(display(openTab({ isFavorite: true, spaceName: null })).detail).toBe(
       "Favorites · docs.example/design",
     )
@@ -82,6 +89,20 @@ describe("a closed pin's display", () => {
 
   it("details a split view pin as a split view in place of the URL", () => {
     expect(display(pin({ isSplit: true })).detail).toBe("Work · Split View")
+  })
+})
+
+describe("a closed Favorite's display", () => {
+  it("details the Favorites of its Space, and the URL", () => {
+    expect(
+      display({
+        _tag: "Favorite",
+        favoriteId: FavoriteId.make("mail"),
+        title: "Mail",
+        url: "https://mail.example/inbox",
+        spaceName: SpaceName.make("Work"),
+      }).detail,
+    ).toBe("Work › Favorites · mail.example/inbox")
   })
 })
 

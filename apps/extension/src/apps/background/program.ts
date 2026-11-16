@@ -36,6 +36,7 @@ import { serveDataImport } from "./data-import"
 import { makeDebounced } from "./debounced"
 import { AcceptsExternalConnection } from "./external-connection"
 import { ExtensionInfo } from "./extension-info"
+import { favoriteTabSpaces, settleFavoritePins } from "./favorites"
 import { initialize } from "./initialize"
 import { KatipState, saveFavoriteRestoreSnapshot, saveRestoreSnapshot } from "./katip-state"
 import {
@@ -62,7 +63,7 @@ const byWindowThenIndex = Order.combine(
 const saveSnapshot = Effect.gen(function* () {
   const state = yield* KatipState
   const tabs = Array.sort(yield* (yield* Tabs).query({}), byWindowThenIndex)
-  const liveTabs = tabs.map((tab) => ({ tabId: tab.id, url: urlOf(tab) }))
+  const liveTabs = tabs.map((tab) => ({ tabId: tab.id, url: urlOf(tab), pinned: tab.pinned }))
   yield* saveRestoreSnapshot(takeSnapshot(yield* state.workspace.get, liveTabs))
   yield* saveFavoriteRestoreSnapshot(takeFavoriteSnapshot(yield* state.favoriteTabs.get, liveTabs))
 })
@@ -73,10 +74,12 @@ const syncTabGroupsIfEnabled = Effect.gen(function* () {
   const settings = yield* (yield* SettingsRepository).get
   if (!settings.syncTabGroups) return
   const state = yield* KatipState
+  const tabs = yield* (yield* Tabs).query({})
   const desired = desiredGroupsFor(
     yield* state.spaces.get,
     yield* state.workspace.get,
-    yield* (yield* Tabs).query({}),
+    tabs,
+    yield* favoriteTabSpaces(tabs),
   )
   yield* (yield* TabGroupSync)
     .sync(desired)
@@ -123,11 +126,21 @@ export const OperationTimeLimit = Context.Reference<Duration.Input>(
 export const program = Effect.gen(function* () {
   const lock = yield* Semaphore.make(1)
   const timeLimit = yield* OperationTimeLimit
+  const settlePins = Effect.provideContext(
+    logFailure("Couldn't pin the shown Spaces' Favorites")(settleFavoritePins),
+    yield* Effect.context<Effect.Services<typeof settleFavoritePins>>(),
+  )
   // State-changing operations run one at a time, so a single Chrome API call that never returns
   // would block every later operation, switching tabs included. Past the time limit the operation
-  // is cut off and lets go of the lock, so the next one can run
+  // is cut off and lets go of the lock, so the next one can run. Every operation ends by pinning the
+  // Favorites' tabs of the Spaces shown, not only those that switch Spaces: telling whether Katip or
+  // someone else pinned or unpinned such a tab relies on each being pinned exactly while its Space
+  // is shown, whenever no operation is running
   const serialize = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    Semaphore.withPermits(lock, 1)(Effect.timeout(effect, timeLimit))
+    Semaphore.withPermits(
+      lock,
+      1,
+    )(Effect.timeout(Effect.flatten(Effect.tap(Effect.exit(effect), () => settlePins)), timeLimit))
   const hub = yield* SidebarHub
   const spotlight = yield* SpotlightHub
   const events = yield* BrowserEvents

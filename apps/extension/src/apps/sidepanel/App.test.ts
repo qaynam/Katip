@@ -111,10 +111,14 @@ describe("The search field at the top", () => {
     await renderSidebar(
       sidebarView({
         spotlightShortcut: null,
-        favorites: [
-          favoriteView(5, {
-            url: "https://mail.google.com/mail/u/0/#inbox",
-            openTab: { tabId: TabId.make(5), isActive: true },
+        spaces: [
+          spaceView("work", {
+            favorites: [
+              favoriteView(5, {
+                url: "https://mail.google.com/mail/u/0/#inbox",
+                openTab: { tabId: TabId.make(5), isActive: true },
+              }),
+            ],
           }),
         ],
       }),

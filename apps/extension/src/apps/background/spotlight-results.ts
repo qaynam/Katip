@@ -17,7 +17,7 @@ import {
   siteUrlOf,
   triggerBeingTyped,
 } from "#modules/bangs"
-import type { Favorite } from "#modules/favorites"
+import { favoritesOf, type Favorite } from "#modules/favorites"
 import { makeTranslator } from "#modules/i18n"
 import {
   PinnedBookmarks,
@@ -41,6 +41,7 @@ import {
   Bookmarks,
   type BrowserApiError,
   type BrowserTab,
+  type TabId,
   Tabs,
   type WindowId,
   Windows,
@@ -49,6 +50,7 @@ import { History, type HistoryPage } from "#platform/history"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { Permissions } from "#platform/permissions"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
+import { favoriteTabSpaces } from "./favorites"
 import { KatipState } from "./katip-state"
 import { KeyboardCommand } from "./keyboard-commands"
 import { SidebarHub } from "./sidebar-hub"
@@ -85,6 +87,11 @@ const pinsIn = (
     }),
   )
 
+interface FavoriteSource {
+  readonly space: Space
+  readonly favorite: Favorite
+}
+
 const bookmarksOf = (node: PinnedBookmark | PinnedSplit): ReadonlyArray<PinnedBookmark> =>
   node._tag === "PinnedSplit" ? node.items : [node]
 
@@ -100,6 +107,7 @@ const tabCandidate =
     readonly workspace: Workspace
     readonly spaces: ReadonlyMap<SpaceId, Space>
     readonly pinTitles: ReadonlyMap<BookmarkId, string>
+    readonly favoriteTabSpaces: ReadonlyMap<TabId, SpaceId>
   }) =>
   (tab: BrowserTab): ResultCandidate => {
     const tracked = trackedTab(context.workspace, tab.id)
@@ -117,8 +125,13 @@ const tabCandidate =
       Option.orElse(() => tab.title),
       Option.getOrElse(() => url),
     )
-    const space = Option.flatMap(tracked, ({ spaceId }) =>
-      Option.fromNullishOr(context.spaces.get(spaceId)),
+    const favoriteSpace = Option.fromUndefinedOr(context.favoriteTabSpaces.get(tab.id))
+    const space = Option.flatMap(
+      Option.orElse(
+        Option.map(tracked, ({ spaceId }) => spaceId),
+        () => favoriteSpace,
+      ),
+      (spaceId) => Option.fromNullishOr(context.spaces.get(spaceId)),
     )
     return {
       kind: "OpenTab",
@@ -135,7 +148,7 @@ const tabCandidate =
         url,
         favIconUrl: Option.getOrNull(tab.favIconUrl),
         spaceName: Option.getOrNull(Option.map(space, ({ name }) => name)),
-        isFavorite: tab.pinned,
+        isFavorite: tab.pinned || Option.isSome(favoriteSpace),
         isInOtherWindow: tab.windowId !== context.callerWindowId,
       },
     }
@@ -162,13 +175,19 @@ const pinCandidate = ({ space, node, folderPath }: PinSource): ResultCandidate =
   }
 }
 
-const favoriteCandidate = (favorite: Favorite): ResultCandidate => ({
+const favoriteCandidate = ({ space, favorite }: FavoriteSource): ResultCandidate => ({
   kind: "Favorite",
   title: favorite.title,
   url: favorite.url,
   lastUsedAt: Option.none(),
   isCurrent: false,
-  result: { _tag: "Favorite", favoriteId: favorite.id, title: favorite.title, url: favorite.url },
+  result: {
+    _tag: "Favorite",
+    favoriteId: favorite.id,
+    title: favorite.title,
+    url: favorite.url,
+    spaceName: space.name,
+  },
 })
 
 const spaceCandidate =
@@ -277,9 +296,12 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
       openTabIds.has(tabId) ? [favoriteId] : [],
     ),
   )
+  const spaceFavorites = yield* state.spaceFavorites.get
   // Like a pin, an open Favorite is offered only as its tab
-  const closedFavorites = (yield* state.favorites.get).filter(
-    (favorite) => !openFavoriteIds.has(favorite.id),
+  const closedFavorites = spaces.flatMap((space) =>
+    favoritesOf(spaceFavorites, space.id)
+      .filter((favorite) => !openFavoriteIds.has(favorite.id))
+      .map((favorite): FavoriteSource => ({ space, favorite })),
   )
   const pinnedIds = new Set(pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.id)))
   const toTabCandidate = tabCandidate({
@@ -287,6 +309,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
     workspace,
     spaces: new Map(spaces.map((space) => [space.id, space])),
     pinTitles: pinnedTitles(pins),
+    favoriteTabSpaces: yield* favoriteTabSpaces(tabs),
   })
   const bookmarks = yield* bookmarkCandidates(query, pinnedIds).pipe(
     Effect.catch((error) =>
@@ -297,7 +320,7 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
   const shownUrls = new Set([
     ...tabs.map(urlOf),
     ...pins.flatMap(({ node }) => bookmarksOf(node).map((pin) => pin.url)),
-    ...closedFavorites.map((favorite) => favorite.url),
+    ...closedFavorites.map(({ favorite }) => favorite.url),
     ...bookmarks.map((bookmark) => bookmark.url),
   ])
   const history = yield* historyCandidates(query, shownUrls).pipe(

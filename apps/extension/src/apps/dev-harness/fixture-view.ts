@@ -421,10 +421,8 @@ const household = spaceView("household", {
 })
 
 export const fixtureView = (now: number): SidebarView => {
-  const work = workSpace(now)
-  const view = sidebarView({
-    spaces: [work, hobby, reading, travel, household, notes],
-    activeSpaceId: work.id,
+  const work = {
+    ...workSpace(now),
     favorites: [
       favoriteView(1, { title: "Mail", url: "https://mail.example.com/inbox" }),
       favoriteView(2, { title: "Calendar", url: "https://calendar.example.com/" }),
@@ -436,6 +434,17 @@ export const fixtureView = (now: number): SidebarView => {
         openTab: null,
       }),
     ],
+  }
+  const hobbies = {
+    ...hobby,
+    favorites: [
+      favoriteView(6, { title: "Music", url: "https://music.example.com/" }),
+      favoriteView(7, { title: "Photos", url: "https://photos.example.com/", openTab: null }),
+    ],
+  }
+  const view = sidebarView({
+    spaces: [work, hobbies, reading, travel, household, notes],
+    activeSpaceId: work.id,
     archive: [
       archiveEntry("a1", {
         title: "Vite config reference",

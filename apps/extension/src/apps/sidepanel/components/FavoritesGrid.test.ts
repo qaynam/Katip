@@ -2,8 +2,12 @@ import { fireEvent, screen, within } from "@testing-library/svelte"
 import { describe, expect, it } from "vitest"
 import { FavoriteId } from "#modules/favorites"
 import { TabId } from "#platform/browser"
+import type { FavoriteView } from "#protocol"
 import { renderSidebar } from "../testing/render-sidebar"
-import { favoriteView, sidebarView } from "../testing/view-builders"
+import { favoriteView, sidebarView, spaceView } from "../testing/view-builders"
+
+const withFavorites = (favorites: ReadonlyArray<FavoriteView>) =>
+  sidebarView({ spaces: [spaceView("work", { favorites })] })
 
 const favoritesRegion = () => screen.getByRole("region", { name: "Favorites" })
 
@@ -12,7 +16,7 @@ const tile = (name: string) => within(favoritesRegion()).getByRole("button", { n
 describe("Favorites", () => {
   it("activates the tab of an open Favorite", async () => {
     const { connection } = await renderSidebar(
-      sidebarView({ favorites: [favoriteView(1, { title: "Mail" }), favoriteView(2)] }),
+      withFavorites([favoriteView(1, { title: "Mail" }), favoriteView(2)]),
     )
 
     await fireEvent.click(tile("Mail"))
@@ -21,7 +25,7 @@ describe("Favorites", () => {
   })
 
   it("opens a closed Favorite in this window", async () => {
-    const view = sidebarView({ favorites: [favoriteView(1, { title: "Mail", openTab: null })] })
+    const view = withFavorites([favoriteView(1, { title: "Mail", openTab: null })])
     const { connection } = await renderSidebar(view)
 
     await fireEvent.click(tile("Mail"))
@@ -33,12 +37,10 @@ describe("Favorites", () => {
 
   it("shows closed Favorites apart from open ones", async () => {
     await renderSidebar(
-      sidebarView({
-        favorites: [
-          favoriteView(1, { title: "Mail" }),
-          favoriteView(2, { title: "Docs", openTab: null }),
-        ],
-      }),
+      withFavorites([
+        favoriteView(1, { title: "Mail" }),
+        favoriteView(2, { title: "Docs", openTab: null }),
+      ]),
     )
 
     expect(
@@ -48,11 +50,9 @@ describe("Favorites", () => {
 
   it("marks the active tab's tile as current", async () => {
     await renderSidebar(
-      sidebarView({
-        favorites: [
-          favoriteView(1, { title: "Mail", openTab: { tabId: TabId.make(1), isActive: true } }),
-        ],
-      }),
+      withFavorites([
+        favoriteView(1, { title: "Mail", openTab: { tabId: TabId.make(1), isActive: true } }),
+      ]),
     )
 
     expect(tile("Mail").getAttribute("aria-current")).toBe("true")
@@ -60,7 +60,7 @@ describe("Favorites", () => {
 
   it("removes a Favorite from its menu", async () => {
     const { connection } = await renderSidebar(
-      sidebarView({ favorites: [favoriteView(1, { title: "Mail", openTab: null })] }),
+      withFavorites([favoriteView(1, { title: "Mail", openTab: null })]),
     )
 
     await fireEvent.contextMenu(tile("Mail"))
@@ -72,9 +72,7 @@ describe("Favorites", () => {
   })
 
   it("closes an open Favorite's tab from its menu, which keeps the Favorite", async () => {
-    const { connection } = await renderSidebar(
-      sidebarView({ favorites: [favoriteView(1, { title: "Mail" })] }),
-    )
+    const { connection } = await renderSidebar(withFavorites([favoriteView(1, { title: "Mail" })]))
 
     await fireEvent.contextMenu(tile("Mail"))
     await fireEvent.click(screen.getByRole("menuitem", { name: "Close" }))
@@ -83,7 +81,7 @@ describe("Favorites", () => {
   })
 
   it("quietly hints that tabs can be dragged in when empty", async () => {
-    await renderSidebar(sidebarView({ favorites: [] }))
+    await renderSidebar(withFavorites([]))
 
     expect(
       within(favoritesRegion()).getByText(/Drag tabs here to add them to Favorites/),

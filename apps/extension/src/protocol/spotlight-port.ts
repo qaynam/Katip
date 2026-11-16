@@ -36,7 +36,7 @@ export const SpotlightResult = Schema.TaggedUnion({
     title: Schema.String,
     url: Schema.String,
     favIconUrl: Schema.NullOr(Schema.String),
-    // null for a tab in no Space, Favorites included
+    // The Space of the tab, or of the Favorite it is open for. null for a tab in no Space
     spaceName: Schema.NullOr(SpaceName),
     isFavorite: Schema.Boolean,
     isInOtherWindow: Schema.Boolean,
@@ -52,7 +52,12 @@ export const SpotlightResult = Schema.TaggedUnion({
     isSplit: Schema.Boolean,
   },
   // A closed Favorite. An open one arrives as an OpenTab
-  Favorite: { favoriteId: FavoriteId, title: Schema.String, url: Schema.String },
+  Favorite: {
+    favoriteId: FavoriteId,
+    title: Schema.String,
+    url: Schema.String,
+    spaceName: SpaceName,
+  },
   Space: { spaceId: SpaceId, name: SpaceName, theme: SpaceTheme, isActive: Schema.Boolean },
   Bookmark: { bookmarkId: BookmarkId, title: Schema.String, url: Schema.String },
   // A page from the browsing history, leaving out URLs already among the open tabs, pins and

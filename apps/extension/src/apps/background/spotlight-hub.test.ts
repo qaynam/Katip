@@ -233,7 +233,7 @@ describe("Spotlight search", () => {
       ),
   )
 
-  it.effect("returns a Favorites tab as belonging to no Space", () =>
+  it.effect("returns a Favorite's tab as a Favorite of its Space", () =>
     inBackground(
       Effect.gen(function* () {
         const fake = yield* FakeBrowser
@@ -247,7 +247,45 @@ describe("Spotlight search", () => {
 
         expect(
           openTabs(results).map(({ isFavorite, spaceName }) => ({ isFavorite, spaceName })),
-        ).toStrictEqual([{ isFavorite: true, spaceName: null }])
+        ).toStrictEqual([{ isFavorite: true, spaceName: "Home" }])
+      }),
+    ),
+  )
+
+  it.effect("returns the closed Favorites of every Space, each with its Space's name", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          windowId,
+          tabIds: [mail, chat],
+        } = yield* fake.seedWindow({
+          tabs: [
+            { url: "https://mail.example/", title: "Mail", pinned: true },
+            { url: "https://chat.example/", title: "Chat" },
+            { active: true },
+          ],
+        })
+        yield* initialize
+        yield* run({ _tag: "CreateSpace", windowId, name: SpaceName.make("Work") })
+        const work = Option.getOrThrow(
+          Array.findFirst(
+            yield* KatipState.use((state) => state.spaces.get),
+            (space) => space.name === "Work",
+          ),
+        )
+        yield* run({ _tag: "AddToFavorites", tabId: chat, spaceId: work.id })
+        yield* Tabs.use((tabs) => tabs.remove([mail, chat]))
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const { results } = yield* spotlight.search("example")
+
+        expect(
+          ofTag("Favorite")(results).map(({ title, spaceName }) => [title, spaceName]),
+        ).toStrictEqual([
+          ["Mail", "Home"],
+          ["Chat", "Work"],
+        ])
       }),
     ),
   )

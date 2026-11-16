@@ -10,6 +10,7 @@ import { SpaceId, SpaceName } from "#modules/space"
 import type { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type {
+  FavoriteView,
   LiveItemView,
   PinnedFolderView,
   PinnedItemView,
@@ -66,6 +67,14 @@ const mapSpaces = (view: SidebarView, update: (space: SpaceView) => SpaceView): 
 
 const mapSpace = (view: SidebarView, spaceId: SpaceId, update: (space: SpaceView) => SpaceView) =>
   mapSpaces(view, (space) => (space.id === spaceId ? update(space) : space))
+
+const favoritesShownIn = (view: SidebarView): ReadonlyArray<FavoriteView> =>
+  view.spaces.find((space) => space.id === view.activeSpaceId)?.favorites ?? []
+
+const mapFavorites = (
+  view: SidebarView,
+  update: (favorites: ReadonlyArray<FavoriteView>) => ReadonlyArray<FavoriteView>,
+): SidebarView => mapSpaces(view, (space) => ({ ...space, favorites: update(space.favorites) }))
 
 interface TreeUpdates {
   readonly onItem?: (item: PinnedItemView) => PinnedItemView
@@ -178,8 +187,10 @@ const openTabsOf = (space: SpaceView): ReadonlyArray<TabView> => [
 
 const nextTabId = (view: SidebarView) => {
   const ids = [
-    ...view.favorites.flatMap((favorite) =>
-      favorite.openTab === null ? [] : [favorite.openTab.tabId],
+    ...view.spaces.flatMap((space) =>
+      space.favorites.flatMap((favorite) =>
+        favorite.openTab === null ? [] : [favorite.openTab.tabId],
+      ),
     ),
     ...view.spaces.flatMap(openTabsOf).map((tab) => tab.tabId),
   ]
@@ -199,18 +210,21 @@ const spaceOwningTab = (view: SidebarView, tabId: TabId): Option.Option<SpaceId>
   ).pipe(Option.map((space) => space.id))
 
 const activateTab = (view: SidebarView, tabId: TabId): SidebarView => {
-  const activated = mapOpenTabs(view, (tab) => ({ ...tab, isActive: tab.tabId === tabId }))
+  const activated = mapFavorites(
+    mapOpenTabs(view, (tab) => ({ ...tab, isActive: tab.tabId === tabId })),
+    (favorites) =>
+      favorites.map((favorite) =>
+        favorite.openTab === null
+          ? favorite
+          : {
+              ...favorite,
+              openTab: { ...favorite.openTab, isActive: favorite.openTab.tabId === tabId },
+            },
+      ),
+  )
   return {
     ...activated,
     activeSpaceId: Option.getOrElse(spaceOwningTab(view, tabId), () => view.activeSpaceId),
-    favorites: view.favorites.map((favorite) =>
-      favorite.openTab === null
-        ? favorite
-        : {
-            ...favorite,
-            openTab: { ...favorite.openTab, isActive: favorite.openTab.tabId === tabId },
-          },
-    ),
   }
 }
 
@@ -731,6 +745,7 @@ const createSpace = (
     id,
     name: draft.name ?? SpaceName.make(`Space ${view.spaces.length + 1}`),
     theme: draft.theme ?? suggestedTheme(view.spaces),
+    favorites: [],
     pinned: { _tag: "Available", nodes: [], canCreateFolder: true },
     temporaryEntries: [],
   }
@@ -752,17 +767,20 @@ const respondWithoutPeeks = (
       Match.tag("SwitchSpace", ({ spaceId }) => succeeded({ ...view, activeSpaceId: spaceId })),
       Match.tag("ActivateTab", ({ tabId }) => succeeded(activateTab(view, tabId))),
       Match.tag("CloseTab", ({ tabId }) =>
-        succeeded({
-          ...mapOpenTabs(view, (tab) => (tab.tabId === tabId ? null : tab)),
+        succeeded(
           // Closing a Favorite's tab keeps the Favorite, closed
-          favorites: view.favorites.flatMap((favorite) =>
-            favorite.openTab?.tabId !== tabId
-              ? [favorite]
-              : favorite.favoriteId === null
-                ? []
-                : [{ ...favorite, openTab: null }],
+          mapFavorites(
+            mapOpenTabs(view, (tab) => (tab.tabId === tabId ? null : tab)),
+            (favorites) =>
+              favorites.flatMap((favorite) =>
+                favorite.openTab?.tabId !== tabId
+                  ? [favorite]
+                  : favorite.favoriteId === null
+                    ? []
+                    : [{ ...favorite, openTab: null }],
+              ),
           ),
-        }),
+        ),
       ),
       Match.tag("SetFolderExpanded", ({ bookmarkId, isExpanded }) =>
         succeeded(
@@ -789,34 +807,36 @@ const respondWithoutPeeks = (
       ),
       Match.tag("OpenFavorite", ({ favoriteId }) => {
         const tabId = nextTabId(view)
-        const opened = {
-          ...view,
-          favorites: view.favorites.map((favorite) =>
+        const opened = mapFavorites(view, (favorites) =>
+          favorites.map((favorite) =>
             favorite.favoriteId === favoriteId && favorite.openTab === null
               ? { ...favorite, openTab: { tabId, isActive: false } }
               : favorite,
           ),
-        }
-        const existing = view.favorites.find((favorite) => favorite.favoriteId === favoriteId)
+        )
+        const existing = favoritesShownIn(view).find(
+          (favorite) => favorite.favoriteId === favoriteId,
+        )
         return succeeded(activateTab(opened, existing?.openTab?.tabId ?? tabId))
       }),
       Match.tag("RemoveFavorite", ({ favoriteId }) =>
-        succeeded({
-          ...view,
-          favorites: view.favorites.filter((favorite) => favorite.favoriteId !== favoriteId),
-        }),
+        succeeded(
+          mapFavorites(view, (favorites) =>
+            favorites.filter((favorite) => favorite.favoriteId !== favoriteId),
+          ),
+        ),
       ),
-      Match.tag("MoveFavorite", ({ favoriteId, toIndex }) => {
-        const moved = view.favorites.find((favorite) => favorite.favoriteId === favoriteId)
-        const rest = view.favorites.filter((favorite) => favorite.favoriteId !== favoriteId)
-        return succeeded({
-          ...view,
-          favorites:
-            moved === undefined
-              ? view.favorites
-              : [...rest.slice(0, toIndex), moved, ...rest.slice(toIndex)],
-        })
-      }),
+      Match.tag("MoveFavorite", ({ favoriteId, toIndex }) =>
+        succeeded(
+          mapFavorites(view, (favorites) => {
+            const moved = favorites.find((favorite) => favorite.favoriteId === favoriteId)
+            const rest = favorites.filter((favorite) => favorite.favoriteId !== favoriteId)
+            return moved === undefined
+              ? favorites
+              : [...rest.slice(0, toIndex), moved, ...rest.slice(toIndex)]
+          }),
+        ),
+      ),
       Match.tag("CreateSpace", (draft) => succeeded(createSpace(view, draft))),
       Match.tag("OpenNewTab", () =>
         succeeded(

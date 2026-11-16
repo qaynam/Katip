@@ -12,7 +12,7 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ## English
 
-Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, your downloads show in the sidebar, and Spotlight is now called the Command Palette.
+Each Space has Favorites of its own, Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, your downloads show in the sidebar, and Spotlight is now called the Command Palette.
 
 ### 🚀 New
 
@@ -23,6 +23,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 
 ### ✨ Improved
 
+- **Favorites for each Space** — Each Space has Favorites of its own: a new Space starts with none, and adding, moving or removing a Favorite changes only the Space you’re in. The Favorites you already have stay in every Space you have now, and from then on each Space’s change on their own. Chrome pins the tabs of the shown Space’s Favorites only; those of other Spaces stay open, unpinned, as that Space’s other tabs do, and are pinned again when you switch back. Deleting a Space deletes its Favorites too, while their open tabs move to another Space. Exports and imports keep each Space’s Favorites, a file from an earlier version gives its Favorites to every Space it adds, and an import from Arc gives each Space the Favorites of its Arc profile.
 - **GitHub notifications without a token** — A GitHub live folder of notifications reads them from github.com with the session you’re signed in with, as the folders of searches do, instead of asking for a personal access token. It asks for access to github.com rather than api.github.com. Opening a notification from the folder marks it read on GitHub, as opening it from GitHub’s inbox does, and the welcome tour offers a notifications folder alongside the others. A notifications folder you already have switches on its next refresh; if it asks, allow access to github.com.
 - **Only unread in Gmail and GitHub notifications** — A Gmail live folder, or a GitHub folder of notifications, lists only what you haven’t read: an item you open, or mark read with Mark All as Read, leaves the list once its tab is closed. Gmail itself still counts a mail marked read only in Katip as unread. Folders of GitHub searches keep their read items, as review requests and pull requests stay to be done.
 - **A live mark that isn't a badge** — A live folder’s icon carries a small feed mark instead of the red dot, which looked like unread mail even when nothing was unread. How many items are unread still shows on the right of the folder.
@@ -31,7 +32,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
 - **The Archive from the Space menu and the Command Palette** — The Archive moves from the button at the bottom left, which now shows your downloads, to Open Archive in a Space’s … menu and the Open Archive command in the Command Palette. The × at its top right takes you back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
 - **How many items a live folder shows** — A live folder shows its first 10 items, in the order you sorted it, and ends with a row such as “3 more” that opens the rest on Gmail or GitHub. Right-click the folder and choose 5, 10, 20 or All under Items to Show, below Sort By. An item open in a tab stays on its row wherever it falls, and the count on the right of the folder still counts every unread item.
-- **Sliding between Spaces** — Switching Spaces slides the Space’s name, pins and tabs in from the side its dot sits on in the bottom bar, pushing the Space you leave out the other side, while the background changes color along with them. Downloads slide in from the left as a whole, pushing the Space aside, and the Archive slides in from the left under the Space’s name; both slide back when closed. If your system is set to reduce motion, they change at once.
+- **Sliding between Spaces** — Switching Spaces slides the Space’s Favorites, name, pins and tabs in from the side its dot sits on in the bottom bar, pushing the Space you leave out the other side, while the background changes color along with them. Downloads slide in from the left as a whole, pushing the Space aside, and the Archive slides in from the left under the Space’s name; both slide back when closed. If your system is set to reduce motion, they change at once.
 - **Swiping stops at the ends** — Swiping sideways no longer goes around from the last Space to the first. Past the first Space, it shows your downloads; if Katip can’t read them yet, Allow Access to Downloads in the view asks for it. Past the last Space, it shows a new Space to name. Swiping further than either nudges the sidebar instead of going on.
 - **Name a new Space before it’s created** — The + at the bottom right, like swiping past the last Space, shows a new Space with a name ready to edit, and creates it only when you press Enter or Create; the theme picker then opens as before. Esc, Cancel, swiping back or clicking elsewhere gives it up, and neither the Space nor its bookmark folder is created.
 
@@ -41,7 +42,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 
 ## 日本語
 
-Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、サイドバーでダウンロードを見られるようになって、Spotlight はコマンドパレットという名前になりました。
+Favorites を Space ごとに持てるようになり、Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、サイドバーでダウンロードを見られるようになって、Spotlight はコマンドパレットという名前になりました。
 
 ### 🚀 新機能
 
@@ -52,6 +53,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 
 ### ✨ 改善
 
+- **Space ごとの Favorites** — Favorites を Space ごとに持てるようになりました。新しい Space は Favorites が空の状態で始まり、Favorites の追加・並べ替え・削除は表示中の Space にだけ反映されます。今ある Favorites は今ある Space のすべてにそのまま残り、そこからは Space ごとに別々に変えられます。Chrome でピン留めするのは表示中の Space の Favorites のタブだけで、ほかの Space の Favorites のタブは、その Space のほかのタブと同じくピン留めを外して開いたまま残し、その Space に戻るとまたピン留めします。Space を削除すると、その Space の Favorites も削除します（※開いているタブは閉じずに、別の Space に移動します）。エクスポートと読み込みでは Space ごとの Favorites を引き継ぎます。以前のバージョンのファイルからは、追加するどの Space にもそのファイルの Favorites を追加し、Arc からの読み込みでは、各 Space にその Space の Arc のプロファイルの Favorites を追加します。
 - **GitHub の通知をトークンなしで** — GitHub の通知のフォルダは、Personal access token の設定を求める代わりに、検索のフォルダと同じくログイン中のセッションで github.com から通知を読むようになりました。アクセスの許可も api.github.com ではなく github.com に求めます。フォルダから通知を開くと、GitHub の受信トレイから開いたときと同じく GitHub でも既読になります。ようこそツアーからも通知のフォルダを追加できます（※作成済みの通知のフォルダも次の更新から切り替わります。github.com へのアクセスを求められたら許可してください）。
 - **未読だけを表示** — Gmail のライブフォルダと GitHub の通知のフォルダには、まだ読んでいないものだけが並びます。開いた項目や「すべて既読にする」で既読にした項目は、タブを閉じると一覧から消えます（※Katip で既読にしただけのメールは、Gmail 上では未読のままです）。GitHub の検索のフォルダでは、レビュー依頼やプルリクエストは対応が済むまで残るため、既読のものも引き続き表示します。
 - **未読バッジに見えないライブの印** — ライブフォルダのアイコンの赤い点を、小さなフィードの印に変えました。赤い点は、未読がなくても未読があるように見えていました。未読の件数は、これまでどおりフォルダの右側に表示します。
@@ -60,7 +62,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
 - **Space のメニューとコマンドパレットからアーカイブ** — アーカイブは、ダウンロードを表示するようになった左下のボタンから、Space の「…」メニューとコマンドパレットの「アーカイブを開く」に移りました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
 - **ライブフォルダに表示する件数** — ライブフォルダには、並べ替えた順に先頭の 10 件を表示し、最後に「ほか 3 件」のような行を置きます。この行をクリックすると、残りを Gmail や GitHub で開きます。件数は、フォルダの右クリックメニューで「並べ替え」の下にある「表示する件数」から、5 件・10 件・20 件・すべてのいずれかを選べます。タブで開いている項目は、何件目であっても自分の行に表示し、フォルダの右側の未読の件数は、表示していないものも含めてすべて数えます。
-- **Space の切り替えをスライドで** — Space を切り替えると、Space の名前・ピン・タブが、下部のバーでその Space の点がある側からスライドして入り、それまでの Space を反対側へ押し出します。背景の色も一緒に変わります。ダウンロードは画面全体が左から入って Space を横へ押しのけ、アーカイブは Space の名前の下に左から入ります。どちらも閉じると元の向きに戻ります（※システムで視差効果を減らす設定にしている場合は、動かさずに切り替えます）。
+- **Space の切り替えをスライドで** — Space を切り替えると、Space の Favorites・名前・ピン・タブが、下部のバーでその Space の点がある側からスライドして入り、それまでの Space を反対側へ押し出します。背景の色も一緒に変わります。ダウンロードは画面全体が左から入って Space を横へ押しのけ、アーカイブは Space の名前の下に左から入ります。どちらも閉じると元の向きに戻ります（※システムで視差効果を減らす設定にしている場合は、動かさずに切り替えます）。
 - **スワイプは端で止まるように** — 横へのスワイプで、最後の Space から最初の Space へ回り込まなくなりました。最初の Space からさらに戻るとダウンロードを表示します（※ダウンロードを読む許可がまだない場合は、表示した画面の「ダウンロードへのアクセスを許可」から許可できます）。最後の Space からさらに進むと、名前を付ける新しい Space を表示します。その先へスワイプしても、サイドバーが少し揺れるだけで止まります。
 - **新しい Space は名前を決めてから作成** — 右下の ＋ や最後の Space からのスワイプで、名前を編集できる状態の新しい Space を表示し、Enter か「作成」を押したときにはじめて作成します。作成後は、これまでどおりテーマの選択が開きます。Esc、「キャンセル」、スワイプで戻る、ほかの場所をクリックのいずれかで取りやめ、Space もそのブックマークフォルダも作られません。
 

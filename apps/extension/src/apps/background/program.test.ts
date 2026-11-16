@@ -397,9 +397,7 @@ describe("tabs", () => {
     ),
   )
 
-  // Suspected product bug, kept as `fails` until fixed: Chrome sends the unpinning with the window the
-  // tab is leaving, so it lands in the Space shown in that window instead
-  it.live.fails(
+  it.live(
     "moving a Favorite to another window makes it a temporary tab of the Space shown in the destination window",
     () =>
       inBackground(

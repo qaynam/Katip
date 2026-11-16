@@ -162,10 +162,23 @@ export const TemporaryEntry = Schema.Union([
 ])
 export type TemporaryEntry = typeof TemporaryEntry.Type
 
+export const FavoriteView = Schema.Struct({
+  // null for a tab pinned in Chrome that isn't a Favorite's yet, such as one whose URL is unknown
+  favoriteId: Schema.NullOr(FavoriteId),
+  title: Schema.String,
+  url: Schema.String,
+  favIconUrl: Schema.NullOr(Schema.String),
+  // The tab open for it in this window. null while it is closed here
+  openTab: Schema.NullOr(Schema.Struct({ tabId: TabId, isActive: Schema.Boolean })),
+})
+export type FavoriteView = typeof FavoriteView.Type
+
 export const SpaceView = Schema.Struct({
   id: SpaceId,
   name: SpaceName,
   theme: SpaceTheme,
+  // In order. The shown Space's end with the tabs pinned in Chrome that aren't a Favorite's yet
+  favorites: Schema.Array(FavoriteView),
   // Unavailable while bookmarks can't be read, so that pins not read yet don't look like no pins
   pinned: Schema.Union([
     Schema.TaggedStruct("Available", {
@@ -178,22 +191,10 @@ export const SpaceView = Schema.Struct({
 })
 export type SpaceView = typeof SpaceView.Type
 
-export const FavoriteView = Schema.Struct({
-  // null for a tab pinned in Chrome that isn't a Favorite's yet, such as one whose URL is unknown
-  favoriteId: Schema.NullOr(FavoriteId),
-  title: Schema.String,
-  url: Schema.String,
-  favIconUrl: Schema.NullOr(Schema.String),
-  // The tab open for it in this window. null while it is closed here
-  openTab: Schema.NullOr(Schema.Struct({ tabId: TabId, isActive: Schema.Boolean })),
-})
-export type FavoriteView = typeof FavoriteView.Type
-
 export const SidebarView = Schema.Struct({
   windowId: WindowId,
   activeSpaceId: SpaceId,
   spaces: Schema.Array(SpaceView),
-  favorites: Schema.Array(FavoriteView),
   archive: Schema.Array(ArchiveEntry),
   autoArchive: Schema.Struct({ enabled: Schema.Boolean, idleMinutes: IdleMinutes }),
   // Chrome before 155 has no API to create split views, so the split actions are hidden

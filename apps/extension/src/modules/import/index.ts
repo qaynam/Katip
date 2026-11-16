@@ -1,11 +1,9 @@
 export {
   ImportSummary,
-  planFavorites,
   planImport,
   planSpace,
   summarize,
   type ImportContext,
-  type PlannedFavorites,
   type PlannedFolder,
   type PlannedLink,
   type PlannedLiveFolder,

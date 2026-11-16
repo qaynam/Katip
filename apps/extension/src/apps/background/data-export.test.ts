@@ -146,6 +146,7 @@ describe("data export", () => {
                   { title: "News", url: "https://news.example.com/" },
                   { title: "Read later", url: "https://blog.example.com/" },
                 ],
+                favorites: [{ title: "Calendar", url: "https://calendar.example.com/" }],
               },
               {
                 id: Option.getOrThrow(spaceNamed(view, "Work")).id,
@@ -154,6 +155,7 @@ describe("data export", () => {
                 pinned: [],
                 // Creating a Space opens a blank new tab in it, which is left out
                 tabs: [],
+                favorites: [],
               },
             ],
             favorites: [{ title: "Calendar", url: "https://calendar.example.com/" }],

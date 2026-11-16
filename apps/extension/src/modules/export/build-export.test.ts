@@ -70,7 +70,7 @@ const sourcesWith = (overrides: Partial<ExportSources> = {}): ExportSources => (
   liveSorts: new Map(),
   liveLimits: new Map(),
   workspace: emptyWorkspace,
-  favorites: [],
+  spaceFavorites: {},
   tabs: [],
   settings: defaultSettings,
   ...overrides,
@@ -454,15 +454,55 @@ describe("temporary tabs", () => {
 })
 
 describe("Favorites", () => {
-  it("are every saved Favorite in order, closed ones included", () => {
-    const favorites = [
-      { id: FavoriteId.make("calendar"), title: "Calendar", url: "https://calendar.example.com/" },
-      { id: FavoriteId.make("music"), title: "Music", url: "https://music.example.com/" },
-    ]
+  const favorite = (id: string, title: string) => ({
+    id: FavoriteId.make(id),
+    title,
+    url: `https://${id}.example.com/`,
+  })
+  const twoSpaces = {
+    spaces: [space(HOME, "Home"), space(WORK, "Work")],
+    pinnedTrees: new Map([
+      [HOME, []],
+      [WORK, []],
+    ]),
+    spaceFavorites: {
+      [HOME]: [favorite("calendar", "Calendar"), favorite("music", "Music")],
+      [WORK]: [favorite("calendar-at-work", "Calendar"), favorite("chat", "Chat")],
+    },
+  }
 
-    expect(exported(sourcesWith({ favorites })).favorites).toStrictEqual([
+  it("are each Space's own, in order, closed ones included", () => {
+    expect(
+      exported(sourcesWith(twoSpaces)).spaces.map((exportedSpace) =>
+        (exportedSpace.favorites ?? []).map(({ title }) => title),
+      ),
+    ).toStrictEqual([
+      ["Calendar", "Music"],
+      ["Calendar", "Chat"],
+    ])
+  })
+
+  it("are none for a Space without any", () => {
+    expect(homeOf(sourcesWith()).favorites).toStrictEqual([])
+  })
+
+  it("are written all together too, each page once, for the Katip versions where every Space shared them", () => {
+    expect(
+      exported(
+        sourcesWith({
+          ...twoSpaces,
+          spaceFavorites: {
+            [HOME]: [favorite("calendar", "Calendar")],
+            [WORK]: [
+              { ...favorite("calendar", "Calendar"), id: FavoriteId.make("c2") },
+              favorite("chat", "Chat"),
+            ],
+          },
+        }),
+      ).favorites,
+    ).toStrictEqual([
       { title: "Calendar", url: "https://calendar.example.com/" },
-      { title: "Music", url: "https://music.example.com/" },
+      { title: "Chat", url: "https://chat.example.com/" },
     ])
   })
 

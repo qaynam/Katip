@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { exportedSettingsOf, type LatestExport } from "#modules/export"
 import { defaultSettings } from "#modules/settings"
 import { themeOf } from "#modules/theme"
-import { planFavorites, planImport, planSpace } from "./import-plan"
+import { planImport, planSpace } from "./import-plan"
 
 type FileSpace = LatestExport["spaces"][number]
 type FileNode = FileSpace["pinned"][number]
@@ -72,7 +72,7 @@ describe("planSpace", () => {
       },
     ])
 
-    expect(planSpace(space, twoLevels)).toStrictEqual({
+    expect(planSpace(space, twoLevels, [])).toStrictEqual({
       fileId: "file-space",
       name: "Work",
       theme,
@@ -106,6 +106,7 @@ describe("planSpace", () => {
       ],
       flattenedFolders: 0,
       temporaryTabs: 0,
+      favorites: [],
     })
   })
 
@@ -114,7 +115,7 @@ describe("planSpace", () => {
       folder("One", [pin("A"), folder("Two", [pin("B"), folder("Three", [pin("C")]), pin("D")])]),
     ])
 
-    const planned = planSpace(space, twoLevels)
+    const planned = planSpace(space, twoLevels, [])
 
     expect([planned.pinned, planned.flattenedFolders]).toStrictEqual([
       [
@@ -144,7 +145,7 @@ describe("planSpace", () => {
   it("while folders can't hold folders, keeps one level and counts every folder below it", () => {
     const space = spaceWith([folder("One", [folder("Two", [folder("Three", [pin("C")])])])])
 
-    const planned = planSpace(space, oneLevel)
+    const planned = planSpace(space, oneLevel, [])
 
     expect([planned.pinned, planned.flattenedFolders]).toStrictEqual([
       [
@@ -164,7 +165,7 @@ describe("planSpace", () => {
       { type: "folder", title: "Odd", icon: "icon-from-the-future", children: [] },
     ])
 
-    expect(planSpace(space, twoLevels).pinned).toStrictEqual([
+    expect(planSpace(space, twoLevels, []).pinned).toStrictEqual([
       { _tag: "Folder", title: "Odd", icon: null, children: [] },
     ])
   })
@@ -185,7 +186,7 @@ describe("planSpace", () => {
     ])
 
     expect(
-      planSpace(space, twoLevels).pinned.map((node) =>
+      planSpace(space, twoLevels, []).pinned.map((node) =>
         node._tag === "LiveFolder" ? node.limit : "not a live folder",
       ),
     ).toStrictEqual([20, "all", 10, 10])
@@ -200,29 +201,34 @@ describe("planSpace", () => {
       ],
     )
 
-    expect(planSpace(space, twoLevels).temporaryTabs).toBe(2)
+    expect(planSpace(space, twoLevels, []).temporaryTabs).toBe(2)
   })
 })
 
-describe("planFavorites", () => {
-  it("leaves out pages already open as Favorites, and lists each page once", () => {
-    const planned = planFavorites(
-      [
-        { title: "Mail", url: "https://mail.example/" },
-        { title: "Calendar", url: "https://calendar.example/" },
-        { title: "Mail again", url: "https://mail.example/" },
-        { title: "Music", url: "https://music.example/" },
-      ],
-      new Set(["https://calendar.example/"]),
-    )
+describe("a planned Space's Favorites", () => {
+  const mail = { title: "Mail", url: "https://mail.example/" }
+  const calendar = { title: "Calendar", url: "https://calendar.example/" }
 
-    expect(planned).toStrictEqual({
-      toAdd: [
-        { title: "Mail", url: "https://mail.example/" },
-        { title: "Music", url: "https://music.example/" },
-      ],
-      alreadySaved: 1,
-    })
+  it("are the Space's own from the file, each page once", () => {
+    const space = {
+      ...spaceWith([]),
+      favorites: [mail, calendar, { ...mail, title: "Mail again" }],
+    }
+
+    expect(planSpace(space, twoLevels, []).favorites).toStrictEqual([mail, calendar])
+  })
+
+  it("are the document's for a Space of a file from the time every Space shared them", () => {
+    expect(planSpace(spaceWith([]), twoLevels, [calendar, mail]).favorites).toStrictEqual([
+      calendar,
+      mail,
+    ])
+  })
+
+  it("are none for a Space whose own are none, whatever the document's are", () => {
+    const space = { ...spaceWith([]), favorites: [] }
+
+    expect(planSpace(space, twoLevels, [calendar]).favorites).toStrictEqual([])
   })
 })
 
@@ -262,10 +268,7 @@ describe("planImport", () => {
       ],
     )
 
-    const { summary } = planImport(document, {
-      rule: twoLevels,
-      savedFavoriteUrls: new Set(["https://mail.example/"]),
-    })
+    const { summary } = planImport(document, { rule: twoLevels })
 
     expect(summary).toStrictEqual({
       spaces: 2,
@@ -273,8 +276,7 @@ describe("planImport", () => {
       folders: 2,
       splits: 1,
       liveFolders: 1,
-      favorites: 1,
-      favoritesAlreadySaved: 1,
+      favorites: 4,
       flattenedFolders: 1,
       temporaryTabs: 1,
     })

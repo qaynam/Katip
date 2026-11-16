@@ -33,7 +33,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.space.delete": "删除空间",
   "sidepanel.space.deleteTitle": "要删除“{name}”吗？",
   "sidepanel.space.deleteMessage":
-    "此空间中的固定标签页和文件夹也会被删除。打开的临时标签页不会关闭，而是移到其他空间。",
+    "此空间中的固定标签页、文件夹和收藏也会被删除。打开的标签页不会关闭，而是移到其他空间。",
 
   "sidepanel.pinned.region": "已固定",
   "sidepanel.pinned.empty": "将标签页拖到这里以固定",

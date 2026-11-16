@@ -1,4 +1,5 @@
 import { Clock, Effect, MutableHashSet, Option, pipe } from "effect"
+import { favoriteOfTab } from "#modules/favorites"
 import { SettingsRepository } from "#modules/settings"
 import type { DisplayPlacement } from "#modules/tab-order"
 import {
@@ -73,7 +74,15 @@ const admit = Effect.fnUntraced(function* <R>(
   beforeTracking: (workspaceWithTab: Workspace) => Effect.Effect<void, never, R>,
 ) {
   const state = yield* KatipState
-  if (Option.isSome(spaceOf(yield* state.workspace.get, tab.id)) || tab.pinned) return
+  // Nor a Favorite's tab unpinned while another Space is shown: it stays its Favorite's, not a
+  // temporary tab
+  if (
+    Option.isSome(spaceOf(yield* state.workspace.get, tab.id)) ||
+    tab.pinned ||
+    Option.isSome(favoriteOfTab(yield* state.favoriteTabs.get, tab.id))
+  ) {
+    return
+  }
   const url = urlOf(tab)
   if (claimsRestoreRecord && (yield* claimFromRestoreQueue(tab, url))) return
   const context = yield* placementContext
@@ -93,8 +102,8 @@ const leaveWhereItIs = () => Effect.void
  * Places a tab that belongs to no Space yet in one, preferring a restore record from before the
  * restart when there is one.
  *
- * Does nothing to a tab that already has a Space, so it's safe to call any number of times for
- * the same tab.
+ * Does nothing to a tab that already has a Space or is a Favorite's, so it's safe to call any
+ * number of times for the same tab.
  */
 export const admitTab = (tab: BrowserTab) => admit(tab, true, leaveWhereItIs)
 
@@ -164,6 +173,10 @@ export const settleProvisionalTab = Effect.fnUntraced(function* (tab: BrowserTab
   MutableHashSet.remove(provisionalTabs, tab.id)
   yield* claimFromRestoreQueue(tab, url)
 })
+
+/** Whether the tab was placed in a Space before its URL was known, to be matched again once it is. */
+export const isProvisionalTab = (tabId: TabId) =>
+  Effect.sync(() => MutableHashSet.has(provisionalTabs, tabId))
 
 /** Forgets what is kept about a closed tab until its URL is known. */
 export const forgetPendingTab = (tabId: TabId) =>

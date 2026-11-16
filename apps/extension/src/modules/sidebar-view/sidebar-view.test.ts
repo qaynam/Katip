@@ -77,7 +77,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   windowId: WINDOW,
   spaces: [space("home"), space("work")],
   workspace: switchSpace(emptyWorkspace, WINDOW, spaceId("home")),
-  favorites: [],
+  spaceFavorites: {},
   favoriteTabs: [],
   windowTabs: [],
   pinnedTrees: new Map([
@@ -197,15 +197,23 @@ describe("temporary tabs", () => {
 describe("Favorites", () => {
   const mail = FavoriteId.make("mail")
   const docs = FavoriteId.make("docs")
-  const favorites = [
-    { id: mail, url: "https://mail.example/", title: "Mail" },
-    { id: docs, url: "https://docs.example/", title: "Docs" },
-  ]
+  const chat = FavoriteId.make("chat")
+  const spaceFavorites = {
+    [spaceId("home")]: [
+      { id: mail, url: "https://mail.example/", title: "Mail" },
+      { id: docs, url: "https://docs.example/", title: "Docs" },
+    ],
+    [spaceId("work")]: [{ id: chat, url: "https://chat.example/", title: "Chat" }],
+  }
+  const workOf = (view: SidebarView): SpaceView =>
+    Option.getOrThrow(Option.fromNullishOr(view.spaces.find((s) => s.id === spaceId("work"))))
+  const favoritesIn = (space: SpaceView) =>
+    space.favorites.map((f) => [f.favoriteId, f.openTab?.tabId ?? null])
 
-  it("lists every Favorite in order, with the tab open for it in this window, and shows that tab in no Space", () => {
+  it("lists each Space's own Favorites in order, with the tab open for it in this window, and shows that tab among no Space's tabs", () => {
     const view = project({
       workspace: inHome(emptyWorkspace, 3),
-      favorites,
+      spaceFavorites,
       favoriteTabs: [{ tabId: tabId(2), favoriteId: docs }],
       windowTabs: [
         browserTab(2, { pinned: true, index: 0, active: true }),
@@ -214,20 +222,35 @@ describe("Favorites", () => {
     })
 
     expect({
-      favorites: view.favorites.map((f) => [f.favoriteId, f.title, f.openTab]),
-      home: temporaryTabIds(homeOf(view)),
+      home: homeOf(view).favorites.map((f) => [f.favoriteId, f.title, f.openTab]),
+      work: workOf(view).favorites.map((f) => [f.favoriteId, f.title, f.openTab]),
+      homeTabs: temporaryTabIds(homeOf(view)),
     }).toStrictEqual({
-      favorites: [
+      home: [
         [mail, "Mail", null],
         [docs, "Tab 2", { tabId: tabId(2), isActive: true }],
       ],
-      home: [3],
+      work: [[chat, "Chat", null]],
+      homeTabs: [3],
     })
   })
 
-  it("lists a pinned tab that isn't a Favorite's yet after the Favorites, so it can still be closed", () => {
+  it("shows a Space's Favorite as open by its tab left unpinned while another Space is shown, and that tab among no Space's tabs", () => {
     const view = project({
-      favorites,
+      spaceFavorites,
+      favoriteTabs: [{ tabId: tabId(4), favoriteId: chat }],
+      windowTabs: [browserTab(4, { index: 0 })],
+    })
+
+    expect([favoritesIn(workOf(view)), temporaryTabIds(workOf(view))]).toStrictEqual([
+      [[chat, tabId(4)]],
+      [],
+    ])
+  })
+
+  it("lists in the shown Space a pinned tab that isn't a Favorite's yet after its Favorites, so it can still be closed", () => {
+    const view = project({
+      spaceFavorites,
       favoriteTabs: [
         { tabId: tabId(1), favoriteId: mail },
         { tabId: tabId(2), favoriteId: mail },
@@ -239,11 +262,27 @@ describe("Favorites", () => {
       ],
     })
 
-    expect(view.favorites.map((f) => [f.favoriteId, f.openTab?.tabId ?? null])).toStrictEqual([
-      [mail, tabId(1)],
+    expect([favoritesIn(homeOf(view)), favoritesIn(workOf(view))]).toStrictEqual([
+      [
+        [mail, tabId(1)],
+        [docs, null],
+        [null, tabId(2)],
+        [null, tabId(3)],
+      ],
+      [[chat, null]],
+    ])
+  })
+
+  it("leaves out of the shown Space a pinned tab of another Space's Favorite, until Katip unpins it", () => {
+    const view = project({
+      spaceFavorites,
+      favoriteTabs: [{ tabId: tabId(4), favoriteId: chat }],
+      windowTabs: [browserTab(4, { pinned: true, index: 0 })],
+    })
+
+    expect(favoritesIn(homeOf(view))).toStrictEqual([
+      [mail, null],
       [docs, null],
-      [null, tabId(2)],
-      [null, tabId(3)],
     ])
   })
 })

@@ -33,9 +33,9 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "Trae tus espacios con sus pestañas fijadas, carpetas y vistas divididas, y tus Favoritos. Eliges el archivo de la barra lateral de Arc en la configuración y se lee en tu propio navegador.",
   "onboarding.arcImport.open": "Importar de Arc…",
 
-  "onboarding.favorites.title": "Favoritos, en todos los espacios",
+  "onboarding.favorites.title": "Favoritos para cada espacio",
   "onboarding.favorites.body":
-    "Arrastra una pestaña a la parte superior del panel lateral, o haz clic derecho y elige Añadir a Favoritos. Los Favoritos siguen ahí en cualquier espacio.",
+    "Arrastra una pestaña a la parte superior del panel lateral, o haz clic derecho y elige Añadir a Favoritos. Cada espacio tiene sus propios Favoritos.",
 
   "onboarding.themes.title": "Un color para cada espacio",
   "onboarding.themes.try":

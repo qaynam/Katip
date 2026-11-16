@@ -9,6 +9,7 @@ import {
   type LatestExport,
 } from "#modules/export"
 import { defaultSettings } from "#modules/settings"
+import { SpaceName } from "#modules/space"
 import { groupColorOf, neutralTheme, themeOf } from "#modules/theme"
 import { type PortSender } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
@@ -19,6 +20,7 @@ import {
   IMPORT_PORT_NAME,
   ImportClientMessage,
   ImportServerMessage,
+  type SidebarView,
 } from "#protocol"
 import {
   backgroundTestLayer,
@@ -214,8 +216,7 @@ describe("data import", () => {
             folders: 2,
             splits: 1,
             liveFolders: 1,
-            favorites: 1,
-            favoritesAlreadySaved: 1,
+            favorites: 4,
             flattenedFolders: 1,
             temporaryTabs: 1,
           },
@@ -465,9 +466,13 @@ describe("data import", () => {
       { title: "Mail", url: "https://mail.example.com/" },
       { title: "Calendar", url: "https://calendar.example.com/" },
     ]
+    const favoritesIn = (view: SidebarView, name: string) =>
+      Option.map(spaceNamed(view, name), (space) =>
+        space.favorites.map((favorite) => [favorite.title, favorite.openTab !== null]),
+      )
 
     it.live(
-      "are added closed after the saved Favorites, skipping pages Favorites already has, and open no tab",
+      "of a Space in the file go to the Space made from it, closed, opening no tab and leaving the existing Spaces' Favorites as they are",
       () =>
         inBackground(
           Effect.gen(function* () {
@@ -477,34 +482,102 @@ describe("data import", () => {
             })
             yield* startBackground
             const sidebar = yield* openSidebar(windowId)
-            yield* sidebar.viewWhere((view) => view.favorites.length === 1)
+            yield* sidebar.viewWhere((view) => view.spaces[0]?.favorites.length === 1)
             const tabsBefore = (yield* fake.snapshot).tabs.length
 
-            yield* apply(fileWith([], favorites))
-            const view = yield* sidebar.viewWhere((v) => v.favorites.length === 2)
+            yield* apply(
+              fileWith([
+                fileSpace("Work", [], { favorites }),
+                fileSpace("Reading", [], { favorites: [] }),
+              ]),
+            )
+            const view = yield* sidebar.viewWhere((v) => v.spaces.length === 3)
 
             expect([
-              view.favorites.map((favorite) => [favorite.title, favorite.openTab !== null]),
+              favoritesIn(view, "Home"),
+              favoritesIn(view, "Work"),
+              favoritesIn(view, "Reading"),
               (yield* fake.snapshot).tabs.length,
             ]).toStrictEqual([
-              [
-                ["Mail", true],
+              Option.some([["Mail", true]]),
+              Option.some([
+                ["Mail", false],
                 ["Calendar", false],
-              ],
+              ]),
+              Option.some([]),
               tabsBefore,
             ])
           }),
         ),
     )
 
+    it.live("of a file from the time every Space shared them go to each of the file's Spaces", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { sidebar } = yield* startWithHomePin
+
+          yield* apply(fileWith([fileSpace("Work", []), fileSpace("Reading", [])], favorites))
+          const view = yield* sidebar.viewWhere((v) => v.spaces.length === 3)
+
+          expect([
+            favoritesIn(view, "Home"),
+            favoritesIn(view, "Work"),
+            favoritesIn(view, "Reading"),
+          ]).toStrictEqual([
+            Option.some([]),
+            Option.some([
+              ["Mail", false],
+              ["Calendar", false],
+            ]),
+            Option.some([
+              ["Mail", false],
+              ["Calendar", false],
+            ]),
+          ])
+        }),
+      ),
+    )
+
+    it.live("exported and imported again, are each Space's own as they were", () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({
+            tabs: [{ url: "https://mail.example.com/", title: "Mail", pinned: true }, {}],
+          })
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((view) => view.spaces[0]?.favorites.length === 1)
+          yield* sidebar.run({ _tag: "CreateSpace", windowId, name: SpaceName.make("Work") })
+          yield* sidebar.viewWhere((view) => view.spaces.length === 2)
+          const file = Result.getOrThrow(encodeExportFile(yield* exported))
+
+          yield* apply(file, { spacesNamedByImport: [] })
+          const view = yield* sidebar.viewWhere((v) => v.spaces.length === 4)
+
+          expect(
+            view.spaces.map((space) => [space.name, space.favorites.map(({ title }) => title)]),
+          ).toStrictEqual([
+            ["Home", ["Mail"]],
+            ["Work", []],
+            ["Home", ["Mail"]],
+            ["Work", []],
+          ])
+        }),
+      ),
+    )
+
     it.live("with adding Favorites turned off, adds none", () =>
       inBackground(
         Effect.gen(function* () {
-          yield* startWithHomePin
+          const { sidebar } = yield* startWithHomePin
 
-          yield* apply(fileWith([], favorites), { addFavorites: false })
+          yield* apply(fileWith([fileSpace("Work", [], { favorites })], favorites), {
+            addFavorites: false,
+          })
+          const view = yield* sidebar.viewWhere((v) => v.spaces.length === 2)
 
-          expect((yield* exported).favorites).toStrictEqual([])
+          expect(favoritesIn(view, "Work")).toStrictEqual(Option.some([]))
         }),
       ),
     )

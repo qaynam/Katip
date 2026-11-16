@@ -1,4 +1,5 @@
 import { Array, Clock, Effect, Option, Order } from "effect"
+import { carrySharedFavorites } from "#modules/favorites"
 import { SpaceFolders } from "#modules/pinned"
 import { addSpace, SpaceId, SpaceName, type SpaceList } from "#modules/space"
 import {
@@ -10,10 +11,20 @@ import {
   switchSpace,
   type Workspace,
 } from "#modules/workspace"
-import { Tabs, type BrowserTab } from "#platform/browser"
+import { Storage, Tabs, type BrowserTab, type TabId } from "#platform/browser"
 import { pruneStaleBindings } from "./bindings"
-import { reconcileFavoriteTabs } from "./favorites"
-import { KatipState, loadFavoriteRestoreSnapshot, loadRestoreSnapshot } from "./katip-state"
+import {
+  adoptPinnedTab,
+  favoriteTabSpaces,
+  keepOpenFavoriteTabs,
+  restoreUnpinnedFavoriteTab,
+} from "./favorites"
+import {
+  forgetSharedFavorites,
+  KatipState,
+  loadFavoriteRestoreSnapshot,
+  loadRestoreSnapshot,
+} from "./katip-state"
 import { admitTab } from "./tab-admission"
 import { currentTranslator, numberedSpaceName } from "./translation"
 
@@ -41,6 +52,7 @@ const forgetClosedTabs = (workspace: Workspace, alive: ReadonlySet<number>) =>
 const activateSpacesOfActiveTabs = (
   workspace: Workspace,
   tabs: ReadonlyArray<BrowserTab>,
+  favoriteSpaces: ReadonlyMap<TabId, SpaceId>,
 ): Workspace =>
   tabs
     .filter((tab) => tab.active)
@@ -48,12 +60,40 @@ const activateSpacesOfActiveTabs = (
       (acc, tab) =>
         Option.isSome(activeSpaceOf(acc, tab.windowId))
           ? acc
-          : Option.match(spaceOf(acc, tab.id), {
-              onNone: () => acc,
-              onSome: (spaceId) => switchSpace(acc, tab.windowId, spaceId),
-            }),
+          : Option.match(
+              Option.orElse(spaceOf(acc, tab.id), () =>
+                Option.fromUndefinedOr(favoriteSpaces.get(tab.id)),
+              ),
+              {
+                onNone: () => acc,
+                onSome: (spaceId) => switchSpace(acc, tab.windowId, spaceId),
+              },
+            ),
       workspace,
     )
+
+const showSpacesOfActiveTabs = Effect.fnUntraced(function* (tabs: ReadonlyArray<BrowserTab>) {
+  const state = yield* KatipState
+  const favoriteSpaces = yield* favoriteTabSpaces(tabs)
+  yield* state.workspace.update((workspace) =>
+    activateSpacesOfActiveTabs(workspace, tabs, favoriteSpaces),
+  )
+})
+
+/**
+ * Copies the Favorites every Space shared, which startup found before there was a Space, into the
+ * Spaces there are now.
+ */
+const carrySharedFavoritesAwaitingSpace = Effect.gen(function* () {
+  const state = yield* KatipState
+  const shared = state.sharedFavoritesAwaitingSpace
+  if (Option.isNone(shared)) return
+  const spaceIds = (yield* state.spaces.get).map((space) => space.id)
+  yield* state.spaceFavorites.update((favorites) =>
+    carrySharedFavorites(favorites, shared.value, spaceIds),
+  )
+  yield* forgetSharedFavorites((yield* Storage).local)
+})
 
 /**
  * Brings the saved state in line with the browser when the service worker starts.
@@ -87,11 +127,34 @@ export const initialize = Effect.gen(function* () {
     Effect.flatMap(folders.reconcileSpaces(spaces, numbered), ensureAtLeastOneSpace),
   )
 
+  yield* carrySharedFavoritesAwaitingSpace
+
   const tabs = Array.sort(yield* (yield* Tabs).query({}), byWindowThenIndex)
   const alive = new Set<number>(tabs.map((tab) => tab.id))
   yield* state.workspace.update((workspace) => forgetClosedTabs(workspace, alive))
+  yield* keepOpenFavoriteTabs(tabs)
+  // Before the tabs are placed in Spaces, which would take a tab its Favorite left unpinned for a
+  // temporary tab
+  yield* Effect.forEach(
+    tabs.filter((tab) => !tab.pinned),
+    restoreUnpinnedFavoriteTab,
+    { discard: true },
+  )
   yield* Effect.forEach(tabs, admitTab, { discard: true })
-  yield* state.workspace.update((workspace) => activateSpacesOfActiveTabs(workspace, tabs))
+  yield* showSpacesOfActiveTabs(tabs)
+  // The active pinned tab comes first: the Space of its Favorite is the one its window shows, which
+  // the other pinned tabs there are then the Favorites of
+  const pinned = tabs.filter((tab) => tab.pinned)
+  yield* Effect.forEach(
+    pinned.filter((tab) => tab.active),
+    adoptPinnedTab,
+    { discard: true },
+  )
+  yield* showSpacesOfActiveTabs(tabs)
+  yield* Effect.forEach(
+    pinned.filter((tab) => !tab.active),
+    adoptPinnedTab,
+    { discard: true },
+  )
   yield* pruneStaleBindings
-  yield* reconcileFavoriteTabs(tabs)
 })

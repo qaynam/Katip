@@ -23,7 +23,7 @@ export const buildSidebarView = Effect.fnUntraced(function* (windowId: WindowId)
     windowId,
     spaces: yield* state.spaces.get,
     workspace: yield* state.workspace.get,
-    favorites: yield* state.favorites.get,
+    spaceFavorites: yield* state.spaceFavorites.get,
     favoriteTabs: yield* state.favoriteTabs.get,
     windowTabs: yield* (yield* Tabs).query({ windowId }),
     pinnedTrees: yield* (yield* PinnedBookmarks).loadAllSpaceTrees,

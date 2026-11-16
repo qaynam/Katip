@@ -35,7 +35,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.space.delete": "Space を削除",
   "sidepanel.space.deleteTitle": "「{name}」を削除しますか？",
   "sidepanel.space.deleteMessage":
-    "この Space のピン留めとフォルダも削除されます。開いている一時タブは閉じずに、別の Space に移動します。",
+    "この Space のピン留め、フォルダ、Favorites も削除されます。開いているタブは閉じずに、別の Space に移動します。",
 
   "sidepanel.pinned.region": "ピン留め",
   "sidepanel.pinned.empty": "タブをここにドラッグしてピン留め",

@@ -74,9 +74,11 @@ export const displayOf = (
 ): ResultDisplay => {
   const { t } = translator
   const kindLabel = t(kindLabels[result._tag])
+  const favoritesOf = (spaceName: string | null) =>
+    [...(spaceName === null ? [] : [spaceName]), t("spotlight.detail.favorites")].join(" › ")
   const placeOfTab = (tab: Extract<SpotlightResult, { _tag: "OpenTab" }>) =>
     tab.isFavorite
-      ? t("spotlight.detail.favorites")
+      ? favoritesOf(tab.spaceName)
       : (tab.spaceName ?? t("spotlight.detail.notInSpace"))
   return Match.valueTags(result, {
     OpenTab: (tab) =>
@@ -104,7 +106,7 @@ export const displayOf = (
       const title = titleOrUrl(favorite.title, favorite.url)
       return withoutShortcut({
         title,
-        detail: joinDetail([t("spotlight.detail.favorites"), readableUrl(favorite.url)]),
+        detail: joinDetail([favoritesOf(favorite.spaceName), readableUrl(favorite.url)]),
         kindLabel,
         icon: favicon(favorite.url, title),
       })

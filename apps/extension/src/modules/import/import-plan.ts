@@ -65,6 +65,8 @@ export interface PlannedSpace {
   readonly flattenedFolders: number
   /** The file's temporary tabs in this Space, which aren't imported. */
   readonly temporaryTabs: number
+  /** The Space's Favorites, in the file's order, each page once. */
+  readonly favorites: ReadonlyArray<PlannedLink>
 }
 
 /** How many of each thing an import adds, and how many it leaves out. */
@@ -75,10 +77,8 @@ export const ImportSummary = Schema.Struct({
   folders: Schema.Int,
   splits: Schema.Int,
   liveFolders: Schema.Int,
-  /** Favorites to add, closed until they're opened. */
+  /** Favorites to add to the Spaces, all together, closed until they're opened. */
   favorites: Schema.Int,
-  /** Favorites left out because Favorites already has the same page. */
-  favoritesAlreadySaved: Schema.Int,
   /** Folders nested deeper than allowed, whose contents moved into the deepest allowed folder. */
   flattenedFolders: Schema.Int,
   /** Temporary tabs, left out as they're temporary by nature. */
@@ -162,8 +162,15 @@ const planNodes = (
  * Folders nested deeper than `rule` allows aren't made: their contents go, in order, into the
  * deepest folder that is allowed. Unknown folder icons are dropped, and a live folder's limit that
  * isn't among the choices, or that the file leaves out, becomes the default.
+ *
+ * @param sharedFavorites - The document's Favorites, which a Space of a file from the time every
+ *   Space shared them, without Favorites of its own, gets.
  */
-export const planSpace = (space: FileSpace, rule: FolderNestingRule): PlannedSpace => {
+export const planSpace = (
+  space: FileSpace,
+  rule: FolderNestingRule,
+  sharedFavorites: ReadonlyArray<FileLink>,
+): PlannedSpace => {
   const pinned = planNodes(space.pinned, SPACE_ROOT_DEPTH, rule)
   return {
     fileId: space.id,
@@ -173,27 +180,11 @@ export const planSpace = (space: FileSpace, rule: FolderNestingRule): PlannedSpa
     pinned: pinned.nodes,
     flattenedFolders: pinned.flattenedFolders,
     temporaryTabs: space.tabs.length,
+    favorites: Array.dedupeWith(
+      (space.favorites ?? sharedFavorites).map(linkOf),
+      (a, b) => a.url === b.url,
+    ),
   }
-}
-
-export interface PlannedFavorites {
-  /** In the file's order, each page once. */
-  readonly toAdd: ReadonlyArray<PlannedLink>
-  readonly alreadySaved: number
-}
-
-/**
- * Plans the Favorites to add from a Katip export document's Favorites.
- *
- * @param savedFavoriteUrls - Pages Favorites already has, which are left out.
- */
-export const planFavorites = (
-  favorites: ReadonlyArray<FileLink>,
-  savedFavoriteUrls: ReadonlySet<string>,
-): PlannedFavorites => {
-  const distinct = Array.dedupeWith(favorites.map(linkOf), (a, b) => a.url === b.url)
-  const toAdd = distinct.filter(({ url }) => !savedFavoriteUrls.has(url))
-  return { toAdd, alreadySaved: distinct.length - toAdd.length }
 }
 
 interface NodeCounts {
@@ -224,33 +215,26 @@ const countNodes = (nodes: ReadonlyArray<PlannedNode>): NodeCounts =>
     )
     .reduce(addCounts, noNodes)
 
-export const summarize = (
-  spaces: ReadonlyArray<PlannedSpace>,
-  favorites: PlannedFavorites,
-): ImportSummary => ({
+export const summarize = (spaces: ReadonlyArray<PlannedSpace>): ImportSummary => ({
   spaces: spaces.length,
   ...spaces.map((space) => countNodes(space.pinned)).reduce(addCounts, noNodes),
-  favorites: favorites.toAdd.length,
-  favoritesAlreadySaved: favorites.alreadySaved,
+  favorites: spaces.reduce((sum, space) => sum + space.favorites.length, 0),
   flattenedFolders: spaces.reduce((sum, space) => sum + space.flattenedFolders, 0),
   temporaryTabs: spaces.reduce((sum, space) => sum + space.temporaryTabs, 0),
 })
 
 export interface ImportContext {
   readonly rule: FolderNestingRule
-  /** Pages Favorites already has. */
-  readonly savedFavoriteUrls: ReadonlySet<string>
 }
 
 /**
- * Plans adding a Katip export document's Spaces and Favorites.
+ * Plans adding a Katip export document's Spaces, each with its Favorites.
  *
  * @remarks
  * The plan only adds: each Space in the file becomes a new Space, and nothing already there is
  * changed. The file's temporary tabs and settings aren't imported.
  */
 export const planImport = (document: LatestExport, context: ImportContext) => {
-  const spaces = document.spaces.map((space) => planSpace(space, context.rule))
-  const favorites = planFavorites(document.favorites, context.savedFavoriteUrls)
-  return { spaces, favorites, summary: summarize(spaces, favorites) }
+  const spaces = document.spaces.map((space) => planSpace(space, context.rule, document.favorites))
+  return { spaces, summary: summarize(spaces) }
 }

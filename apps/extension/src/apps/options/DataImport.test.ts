@@ -206,7 +206,7 @@ describe("previewing Arc's file", () => {
       applied: await applyRequests(requests),
     }).toStrictEqual({
       file: true,
-      added: ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "3 Favorites"],
+      added: ["4 Spaces", "9 pinned tabs", "3 folders", "2 split views", "8 Favorites"],
       adjusted: [
         "1 folder is nested deeper than Katip allows, so its contents go into the folder above it.",
         "1 split view has more than two tabs. The first two stay split, and the rest become pinned tabs right after them.",
@@ -271,7 +271,7 @@ describe("previewing Arc's file", () => {
 
     const [apply] = await applyRequests(requests)
     expect([
-      added.includes("3 Favorites"),
+      added.some((line) => line.endsWith("Favorites")),
       apply?._tag === "Apply" && apply.addFavorites,
     ]).toStrictEqual([false, false])
   })
@@ -373,7 +373,7 @@ describe("choosing what to import from Arc", () => {
         "7 pinned tabs",
         "2 folders",
         "2 split views",
-        "2 Favorites",
+        "6 Favorites",
       ]),
     )
     await fireEvent.click(importButton())
@@ -518,7 +518,7 @@ describe("choosing what to import from Arc", () => {
     )
   })
 
-  it("says the Favorites added are only those of the chosen Spaces' profiles", async () => {
+  it("says each Space gets the Favorites of its own profile", async () => {
     renderImport()
     await chooseArcFile()
     await ready()
@@ -526,7 +526,7 @@ describe("choosing what to import from Arc", () => {
     expect(
       screen.getByRole("switch", {
         description:
-          "They go after the Favorites you have, closed until you open them. Only Favorites from the profiles of the Spaces you chose are added.",
+          "Each Space gets the Favorites of its Arc profile, closed until you open them.",
       }),
     ).toBeTruthy()
   })

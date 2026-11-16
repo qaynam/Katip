@@ -196,10 +196,6 @@ export const options = {
     one: "{count} unpinned tab, as unpinned tabs are temporary",
     other: "{count} unpinned tabs, as unpinned tabs are temporary",
   },
-  "options.data.import.preview.favoritesAlreadySaved": {
-    one: "{count} page already in Favorites",
-    other: "{count} pages already in Favorites",
-  },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} tab that isn’t a web page, as only http and https addresses are imported",
     other: "{count} tabs that aren’t web pages, as only http and https addresses are imported",
@@ -215,9 +211,9 @@ export const options = {
     "Only new Spaces are added. None of your Spaces are renamed, merged into, or removed.",
   "options.data.import.addFavorites.label": "Add to Favorites",
   "options.data.import.addFavorites.description":
-    "They go after the Favorites you have, closed until you open them.",
+    "Each Space gets its own Favorites from the file, closed until you open them. In a file from before each Space had its own, every Space gets them all.",
   "options.data.import.addFavorites.descriptionByProfile":
-    "They go after the Favorites you have, closed until you open them. Only Favorites from the profiles of the Spaces you chose are added.",
+    "Each Space gets the Favorites of its Arc profile, closed until you open them.",
   "options.data.import.confirm": "Import",
   "options.data.import.cancel": "Cancel",
   "options.data.import.problem.notArc":

@@ -189,9 +189,6 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.temporaryTabs": {
     other: "ピン留めしていない {count} 個のタブ（一時的なタブのため）",
   },
-  "options.data.import.preview.favoritesAlreadySaved": {
-    other: "すでに Favorites にある {count} 個のページ",
-  },
   "options.data.import.preview.nonWebLinks": {
     other: "Web ページではない {count} 個のタブ（http と https のアドレスだけを読み込むため）",
   },
@@ -205,9 +202,9 @@ export const options: CatalogSection<"options"> = {
     "新しい Space を追加するだけです。今ある Space の名前の変更、統合、削除はしません。",
   "options.data.import.addFavorites.label": "Favorites に追加",
   "options.data.import.addFavorites.description":
-    "今ある Favorites の後ろに、閉じた状態で追加します。",
+    "ファイルにある各 Space の Favorites を、その Space に閉じた状態で追加します。Space ごとに Favorites を持つ前のファイルなら、どの Space にもすべての Favorites を追加します。",
   "options.data.import.addFavorites.descriptionByProfile":
-    "今ある Favorites の後ろに、閉じた状態で追加します。追加するのは、選んだ Space のプロファイルの Favorites だけです。",
+    "各 Space に、その Space の Arc のプロファイルの Favorites を、閉じた状態で追加します。",
   "options.data.import.confirm": "読み込む",
   "options.data.import.cancel": "キャンセル",
   "options.data.import.problem.notArc":

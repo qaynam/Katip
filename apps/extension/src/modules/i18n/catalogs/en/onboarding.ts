@@ -32,9 +32,9 @@ export const onboarding = {
     "Bring over your Spaces with their pinned tabs, folders and split views, and your Favorites. You choose Arc’s sidebar file in the settings, and it is read right in your browser.",
   "onboarding.arcImport.open": "Import from Arc…",
 
-  "onboarding.favorites.title": "Favorites, in every Space",
+  "onboarding.favorites.title": "Favorites for each Space",
   "onboarding.favorites.body":
-    "Drag a tab to the top of the side panel, or right-click it and choose Add to Favorites. Favorites stay put whichever Space you’re in.",
+    "Drag a tab to the top of the side panel, or right-click it and choose Add to Favorites. Each Space keeps Favorites of its own.",
 
   "onboarding.themes.title": "A color for each Space",
   "onboarding.themes.try":

@@ -10,7 +10,7 @@ export const ImportClientMessage = Schema.TaggedUnion({
   Preview: { content: Schema.String },
   Apply: {
     content: Schema.String,
-    /** Whether to add the file's Favorites to Favorites. */
+    /** Whether each Space added gets its Favorites from the file. */
     addFavorites: Schema.Boolean,
     /**
      * IDs of the file's Spaces whose theme is only a placeholder. They get the theme Katip picks

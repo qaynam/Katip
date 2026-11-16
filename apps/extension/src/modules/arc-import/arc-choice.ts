@@ -14,6 +14,7 @@ import {
   type ArcTally,
   type ConvertedArcFavorites,
   type ConvertedArcSpace,
+  type ExportedLink,
   type ExportedSpace,
 } from "./arc-to-export"
 
@@ -79,19 +80,31 @@ const favoritesWith = (
           chosen.some(belongsTo(profile)) || !conversion.spaces.some(belongsTo(profile)),
       )
 
+const linksOf = (favorites: ReadonlyArray<ConvertedArcFavorites>) =>
+  Array.dedupeWith(
+    favorites.flatMap(({ links }) => links),
+    (a, b) => a.url === b.url,
+  )
+
 interface Arranged {
   readonly spaces: ReadonlyArray<ExportedSpace>
   readonly spacesWithoutTheme: ReadonlyArray<string>
   readonly spacesNamedByImport: ReadonlyArray<string>
 }
 
-const separate = (chosen: ReadonlyArray<ConvertedArcSpace>): Arranged => ({
-  spaces: chosen.map(({ space }) => space),
+const separate = (
+  chosen: ReadonlyArray<ConvertedArcSpace>,
+  favoritesOf: (space: ConvertedArcSpace) => ReadonlyArray<ExportedLink>,
+): Arranged => ({
+  spaces: chosen.map((converted) => ({ ...converted.space, favorites: favoritesOf(converted) })),
   spacesWithoutTheme: chosen.filter(({ hasTheme }) => !hasTheme).map(({ space }) => space.id),
   spacesNamedByImport: [],
 })
 
-const combined = (chosen: ReadonlyArray<ConvertedArcSpace>): Arranged =>
+const combined = (
+  chosen: ReadonlyArray<ConvertedArcSpace>,
+  favorites: ReadonlyArray<ExportedLink>,
+): Arranged =>
   Option.match(Array.head(chosen), {
     onNone: () => ({ spaces: [], spacesWithoutTheme: [], spacesNamedByImport: [] }),
     onSome: (first) => ({
@@ -107,6 +120,7 @@ const combined = (chosen: ReadonlyArray<ConvertedArcSpace>): Arranged =>
             children: space.pinned,
           })),
           tabs: chosen.flatMap(({ space }) => space.tabs),
+          favorites,
         },
       ],
       spacesWithoutTheme: first.hasTheme ? [] : [COMBINED_SPACE_ID],
@@ -114,19 +128,35 @@ const combined = (chosen: ReadonlyArray<ConvertedArcSpace>): Arranged =>
     }),
   })
 
+// Arc shows a profile's Favorites in every Space of the profile. Those of a profile with no Space
+// in the file have none to follow, so they go with every Space
+const favoritesShownIn =
+  (conversion: ArcConversion, favorites: ReadonlyArray<ConvertedArcFavorites>) =>
+  ({ profile }: ConvertedArcSpace) =>
+    linksOf(
+      favorites.filter(
+        (own) =>
+          Equal.equals(own.profile, profile) || !conversion.spaces.some(belongsTo(own.profile)),
+      ),
+    )
+
 /**
  * The export document for importing the chosen Spaces, arranged as chosen, with what making it
  * left out or changed.
  *
  * @remarks
- * Each profile's Favorites come with any of its Spaces; Favorites of a profile without Spaces in
- * the file come with any Space. Each Favorite is listed once. The Space that chosen Spaces are
- * combined into takes the first one's theme, and the temporary tabs of them all.
+ * Each chosen Space gets the Favorites of its profile; Favorites of a profile without Spaces in the
+ * file go with every Space. The Space that chosen Spaces are combined into gets the Favorites of
+ * them all, takes the first one's theme, and the temporary tabs of them all. Each Favorite is
+ * listed once in a Space, and once in the document's Favorites, which hold them all.
  */
 export const arcImportOf = (conversion: ArcConversion, choice: ArcImportChoice): ArcImport => {
   const chosen = conversion.spaces.filter(({ space }) => choice.spaceIds.has(space.id))
   const favorites = favoritesWith(conversion, chosen)
-  const { spaces, ...named } = (choice.arrangement === "Combined" ? combined : separate)(chosen)
+  const { spaces, ...named } =
+    choice.arrangement === "Combined"
+      ? combined(chosen, linksOf(favorites))
+      : separate(chosen, favoritesShownIn(conversion, favorites))
   return {
     document: {
       format: EXPORT_FORMAT,
@@ -134,10 +164,7 @@ export const arcImportOf = (conversion: ArcConversion, choice: ArcImportChoice):
       exportedAt: conversion.convertedAt,
       generator: conversion.generator,
       spaces,
-      favorites: Array.dedupeWith(
-        favorites.flatMap(({ links }) => links),
-        (a, b) => a.url === b.url,
-      ),
+      favorites: linksOf(favorites),
       settings: exportedSettingsOf(defaultSettings),
     },
     report: {

@@ -34,7 +34,10 @@ export const openTabMenu = (
     }),
   )
   return [
-    action(t("sidepanel.tab.addToFavorites"), run({ _tag: "AddToFavorites", tabId })),
+    action(
+      t("sidepanel.tab.addToFavorites"),
+      run({ _tag: "AddToFavorites", tabId, spaceId: ctx.activeSpace.id }),
+    ),
     options.isPinned
       ? action(t("sidepanel.tab.unpin"), run({ _tag: "UnpinTab", tabId }))
       : action(t("sidepanel.tab.pin"), run({ _tag: "PinTab", tabId })),
@@ -63,7 +66,7 @@ export const favoriteMenu = (
         ? [
             action(
               t("sidepanel.tab.addToFavorites"),
-              run({ _tag: "AddToFavorites", tabId: openTab.tabId }),
+              run({ _tag: "AddToFavorites", tabId: openTab.tabId, spaceId: ctx.activeSpace.id }),
             ),
           ]
         : []

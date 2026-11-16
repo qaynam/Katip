@@ -1,6 +1,11 @@
 import { Array, Clock, Effect, Equal, Match, Option, Schema } from "effect"
 import { ArchiveRepository } from "#modules/archive"
-import type { FavoriteId } from "#modules/favorites"
+import {
+  favoritesOf,
+  forgetSpaceFavorites,
+  tabsOfFavorite,
+  type FavoriteId,
+} from "#modules/favorites"
 import {
   defaultLiveFolderTitle,
   GitHubTokenStore,
@@ -71,10 +76,13 @@ import { pruneStaleBindings } from "./bindings"
 import { ExtensionInfo } from "./extension-info"
 import {
   addToFavorites,
+  lastUsedFavoriteTabIn,
   moveFavoriteTo,
   openFavorite,
+  releaseFavoriteTabs,
   removeFavoriteAndUnpin,
   removeFavoriteOfTab,
+  showSpaceIn,
 } from "./favorites"
 import { newSpaceId } from "./initialize"
 import { KatipState } from "./katip-state"
@@ -119,22 +127,25 @@ const trackedOrReject = Effect.fnUntraced(function* (tabId: TabId) {
 
 const titleOf = (tab: BrowserTab) => Option.getOrElse(tab.title, () => urlOf(tab))
 
-// Switching Spaces brings a tab of the new Space to the front, or opens a new tab if it has none.
-// Otherwise the side panel would show the new Space while the browser kept showing a tab of the
-// previous one, and it would be unclear which is right
+// Switching Spaces brings a tab of the new Space to the front, one of its Favorites' if it has
+// only those open, or opens a new tab if it has none. Otherwise the side panel would show the new
+// Space while the browser kept showing a tab of the previous one, and it would be unclear which is
+// right
 const switchToSpace = Effect.fnUntraced(function* (windowId: WindowId, spaceId: SpaceId) {
   const state = yield* KatipState
   const tabs = yield* Tabs
-  const workspace = yield* state.workspace.update((current) =>
-    switchSpace(current, windowId, spaceId),
-  )
+  yield* showSpaceIn(windowId, spaceId)
   const candidates = (yield* tabs.query({ windowId }))
     .filter((tab) => !tab.pinned)
     .map((tab) => tab.id)
-  yield* Option.match(tabToFocus(workspace, spaceId, candidates), {
-    onSome: (tabId) => tabs.update(tabId, { active: true }),
-    onNone: () => tabs.create({ windowId, active: true }),
-  })
+  const lastUsed = tabToFocus(yield* state.workspace.get, spaceId, candidates)
+  yield* Option.match(
+    Option.isSome(lastUsed) ? lastUsed : yield* lastUsedFavoriteTabIn(windowId, spaceId),
+    {
+      onSome: (tabId) => tabs.update(tabId, { active: true }),
+      onNone: () => tabs.create({ windowId, active: true }),
+    },
+  )
 })
 
 const spaceCommands = {
@@ -175,20 +186,27 @@ const spaceCommands = {
       ),
     ),
 
-  // Pinned tabs go with the Space, bookmarks and all, but open temporary tabs aren't closed: they
-  // move to a remaining Space. Closing them would lose pages in use without asking
+  // Pinned tabs and Favorites go with the Space, bookmarks and all, but open tabs aren't closed:
+  // they move to a remaining Space as temporary tabs. Closing them would lose pages in use without
+  // asking
   DeleteSpace: Effect.fnUntraced(function* ({ spaceId }: { spaceId: SpaceId }) {
     const state = yield* KatipState
+    const bindings = yield* state.favoriteTabs.get
     const successor = Array.findFirst(yield* state.spaces.get, (space) => space.id !== spaceId)
     if (Option.isNone(successor)) return yield* reject("background.space.lastOne")
     const liveFolderIds = yield* (yield* PinnedBookmarks).loadSpaceTree(spaceId).pipe(
       Effect.map((tree) => liveFoldersIn(tree).map((live) => live.id)),
       Effect.orElseSucceed((): ReadonlyArray<BookmarkId> => []),
     )
+    const favoriteTabIds = favoritesOf(yield* state.spaceFavorites.get, spaceId).flatMap(
+      (favorite) => tabsOfFavorite(bindings, favorite.id),
+    )
     yield* state.spaces.updateEffect((spaces) => Effect.fromResult(removeSpace(spaces, spaceId)))
     yield* state.workspace.update((workspace) =>
       releaseSpace(workspace, spaceId, successor.value.id),
     )
+    yield* releaseFavoriteTabs(favoriteTabIds, successor.value.id)
+    yield* state.spaceFavorites.update((favorites) => forgetSpaceFavorites(favorites, spaceId))
     yield* (yield* SpaceFolders).removeSpaceFolder(spaceId)
     yield* (yield* LiveFolderStore).forget(liveFolderIds)
     yield* releaseLiveFolders(liveFolderIds)
@@ -651,8 +669,8 @@ const tabCommands = {
     yield* tabs.remove([tabId])
   }),
 
-  AddToFavorites: ({ tabId, index }: { tabId: TabId; index?: number }) =>
-    addToFavorites(tabId, Option.fromUndefinedOr(index)),
+  AddToFavorites: ({ tabId, spaceId, index }: { tabId: TabId; spaceId: SpaceId; index?: number }) =>
+    addToFavorites(tabId, spaceId, Option.fromUndefinedOr(index)),
 
   MoveFavorite: ({ favoriteId, toIndex }: { favoriteId: FavoriteId; toIndex: number }) =>
     moveFavoriteTo(favoriteId, toIndex),

@@ -22,7 +22,8 @@ const open = (id: number) => openPinnedTab(tabView(id))
 /**
  * A tab in every place one can show: temporary tab 1, temporary split 2 and 3, pin 4, split pin
  * 5 and 6 inside a collapsed folder that also peeks it out, other Space's tab 7, Favorite 8, live
- * item 10 in a collapsed live folder that also peeks it out. Tab 1 is active.
+ * item 10 in a collapsed live folder that also peeks it out, other Space's Favorite 11. Tab 1 is
+ * active.
  */
 const view = sidebarView({
   spaces: [
@@ -54,14 +55,14 @@ const view = sidebarView({
         temporaryTab(tabView(1, { isActive: true })),
         temporarySplit(1, tabView(2), tabView(3)),
       ],
+      favorites: [favoriteView(8), favoriteView(9, { openTab: null })],
     }),
-    spaceView("hobby", { temporaryTabs: [tabView(7)] }),
+    spaceView("hobby", { temporaryTabs: [tabView(7)], favorites: [favoriteView(11)] }),
   ],
-  favorites: [favoriteView(8), favoriteView(9, { openTab: null })],
 })
 
 describe("withActiveTab", () => {
-  it.each([1, 2, 3, 4, 7, 8])("makes tab %i the only active one", (id) => {
+  it.each([1, 2, 3, 4, 7, 8, 11])("makes tab %i the only active one", (id) => {
     expect(activeTabIdsIn(withActiveTab(view, TabId.make(id)))).toStrictEqual([TabId.make(id)])
   })
 

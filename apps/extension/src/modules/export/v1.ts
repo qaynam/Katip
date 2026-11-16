@@ -103,6 +103,11 @@ export const SpaceV1 = Schema.Struct({
   pinned: Schema.Array(PinnedNodeV1),
   /** The temporary tabs open at the time of export, in display order. */
   tabs: Schema.Array(Link),
+  /**
+   * The Space's Favorites, in the order shown. Files from versions of Katip where every Space
+   * shared the Favorites leave it out; the document's `favorites` are every Space's then.
+   */
+  favorites: Schema.optionalKey(Schema.Array(Link)),
 })
 export type SpaceV1 = typeof SpaceV1.Type
 
@@ -132,7 +137,10 @@ export const ExportV1 = Schema.Struct({
   generator: Schema.Struct({ name: Schema.String, version: Schema.String }),
   /** In display order. */
   spaces: Schema.Array(SpaceV1),
-  /** In the order shown in Favorites. */
+  /**
+   * Every Space's Favorites together, each page once, for versions of Katip where every Space
+   * shared the Favorites. A Space's own are in its `favorites`.
+   */
   favorites: Schema.Array(Link),
   settings: SettingsV1,
 })

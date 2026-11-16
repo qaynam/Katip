@@ -61,7 +61,7 @@ export type DropTarget =
   | { readonly _tag: "SpaceBar"; readonly slot: number }
 
 export interface DropContext {
-  /** The Space on screen. Drops into pinned or temporary tabs land in it. */
+  /** The Space on screen. Drops into its Favorites, pinned or temporary tabs land in it. */
   readonly spaceId: SpaceId
   readonly canSplit: boolean
 }
@@ -254,13 +254,17 @@ const dropOnPinned = (
   })
 }
 
-const dropOnFavorites = (source: DragSource, slot: number): Option.Option<SidebarCommand> => {
+const dropOnFavorites = (
+  source: DragSource,
+  slot: number,
+  spaceId: SpaceId,
+): Option.Option<SidebarCommand> => {
   if (source._tag === "Favorite" && source.favoriteId !== null) {
     const { favoriteId } = source
     return reorder(source.index, slot, (toIndex) => ({ _tag: "MoveFavorite", favoriteId, toIndex }))
   }
   return singleTabOf(source).pipe(
-    Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, index: slot })),
+    Option.map((tabId) => ({ _tag: "AddToFavorites", tabId, spaceId, index: slot })),
   )
 }
 
@@ -286,7 +290,7 @@ export const commandForDrop = (
     Temporary: ({ placement }) => dropOnTemporary(source, placement, context.spaceId),
     SplitWith: ({ tabId }) => dropOnSplit(source, tabId, context.canSplit),
     Pinned: (pinned) => dropOnPinned(source, pinned, context.spaceId),
-    Favorites: ({ slot }) => dropOnFavorites(source, slot),
+    Favorites: ({ slot }) => dropOnFavorites(source, slot, context.spaceId),
     SpaceBar: ({ slot }) => dropOnSpaceBar(source, slot),
   })
 

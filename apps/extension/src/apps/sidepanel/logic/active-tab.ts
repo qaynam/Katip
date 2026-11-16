@@ -49,19 +49,20 @@ export const withActiveTab = (view: SidebarView, tabId: TabId): SidebarView => {
     temporary._tag === "TemporaryTab"
       ? { ...temporary, tab: tab(temporary.tab) }
       : { ...temporary, tabs: [tab(temporary.tabs[0]), tab(temporary.tabs[1])] }
+  const favorite = (shown: FavoriteView): FavoriteView =>
+    shown.openTab === null
+      ? shown
+      : { ...shown, openTab: { ...shown.openTab, isActive: shown.openTab.tabId === tabId } }
   const space = (shown: SpaceView): SpaceView => ({
     ...shown,
+    favorites: shown.favorites.map(favorite),
     pinned:
       shown.pinned._tag === "Available"
         ? { ...shown.pinned, nodes: shown.pinned.nodes.map(node) }
         : shown.pinned,
     temporaryEntries: shown.temporaryEntries.map(entry),
   })
-  const favorite = (shown: FavoriteView): FavoriteView =>
-    shown.openTab === null
-      ? shown
-      : { ...shown, openTab: { ...shown.openTab, isActive: shown.openTab.tabId === tabId } }
-  return { ...view, spaces: view.spaces.map(space), favorites: view.favorites.map(favorite) }
+  return { ...view, spaces: view.spaces.map(space) }
 }
 
 interface ActiveTab {
@@ -100,10 +101,10 @@ const activeTabsIn = (view: SidebarView): ReadonlyArray<ActiveTab> => {
       if (temporary._tag === "TemporaryTab") tab(temporary.tab)
       else temporary.tabs.forEach(tab)
     }
-  }
-  for (const favorite of view.favorites) {
-    if (favorite.openTab?.isActive === true) {
-      found.push({ tabId: favorite.openTab.tabId, url: favorite.url })
+    for (const favorite of space.favorites) {
+      if (favorite.openTab?.isActive === true) {
+        found.push({ tabId: favorite.openTab.tabId, url: favorite.url })
+      }
     }
   }
   return found

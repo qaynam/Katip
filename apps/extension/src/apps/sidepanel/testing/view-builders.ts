@@ -138,6 +138,7 @@ export const spaceView = (
     id: SpaceId.make(id),
     name: SpaceName.make(id),
     theme: neutralTheme,
+    favorites: [],
     pinned: pinned ?? { _tag: "Available", nodes: pinnedNodes, canCreateFolder: true },
     temporaryEntries: temporaryTabs.map(temporaryTab),
     ...rest,
@@ -173,7 +174,6 @@ export const sidebarView = (
   return {
     windowId: WindowId.make(1),
     activeSpaceId: spaces[0]?.id ?? SpaceId.make("work"),
-    favorites: [],
     archive: [],
     autoArchive: { enabled: false, idleMinutes: IdleMinutes.make(360) },
     canSplit: true,

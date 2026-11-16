@@ -194,6 +194,24 @@ describe("reading", () => {
     expect(limits).toStrictEqual(Result.succeed([50, "all"]))
   })
 
+  it("reads each Space's own Favorites, though the v1 sample, written while every Space shared them, has none", () => {
+    const withSpaceFavorites = withChanges((json) => ({
+      ...json,
+      spaces: (json["spaces"] as ReadonlyArray<Record<string, unknown>>).map((space, index) => ({
+        ...space,
+        favorites: index === 0 ? [{ title: "Calendar", url: "https://calendar.example.com/" }] : [],
+      })),
+    }))
+
+    const favorites = Result.map(decodeExportFile(withSpaceFavorites), (document) =>
+      document.spaces.map((space) => space.favorites),
+    )
+
+    expect(favorites).toStrictEqual(
+      Result.succeed([[{ title: "Calendar", url: "https://calendar.example.com/" }], []]),
+    )
+  })
+
   it("rejects a file of a newer version than this Katip with an error that asks for an update", () => {
     const fromFuture = withChanges((json) => ({ ...json, version: 2, spaces: "a changed shape" }))
 

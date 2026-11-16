@@ -19,10 +19,7 @@ const previewOf = (content: string): ImportServerMessage =>
     onFailure: (): ImportServerMessage => ({ _tag: "Unreadable" }),
     onSuccess: (document): ImportServerMessage => ({
       _tag: "Previewed",
-      summary: planImport(document, {
-        rule: { isTabGroupSyncEnabled: false },
-        savedFavoriteUrls: new Set(),
-      }).summary,
+      summary: planImport(document, { rule: { isTabGroupSyncEnabled: false } }).summary,
     }),
   })
 

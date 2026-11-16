@@ -1,11 +1,12 @@
 import { Array, Match, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import {
-  favoriteById,
   favoriteOfTab,
+  favoritesOf,
+  findFavorite,
   type FavoriteId,
-  type FavoriteList,
   type FavoriteTabs,
+  type SpaceFavorites,
 } from "#modules/favorites"
 import type { Translator } from "#modules/i18n"
 import {
@@ -38,7 +39,7 @@ import {
 import type { Space, SpaceId, SpaceList } from "#modules/space"
 import { displayOrder } from "#modules/tab-order"
 import {
-  activeSpaceOf,
+  shownSpaceOf,
   trackedTab,
   type LiveItemBinding,
   type TrackedTab,
@@ -63,8 +64,8 @@ export interface SidebarSources {
   readonly windowId: WindowId
   readonly spaces: SpaceList
   readonly workspace: Workspace
-  /** Every Favorite, in order, whether open in this window or not. */
-  readonly favorites: FavoriteList
+  /** Every Space's Favorites, in order, whether open in this window or not. */
+  readonly spaceFavorites: SpaceFavorites
   readonly favoriteTabs: FavoriteTabs
   /** The tabs of the window the view is for, in any order. */
   readonly windowTabs: ReadonlyArray<BrowserTab>
@@ -134,32 +135,39 @@ const openFavoriteView = (
   openTab: { tabId: tab.id, isActive: tab.active },
 })
 
-// When two pinned tabs in the window are the same Favorite's (after a mix-up while restoring, say),
-// only the lower-index one shows as the Favorite and the other shows on its own. Not hidden: a
-// hidden tab couldn't be closed
-const favoriteViews = (sources: SidebarSources): ReadonlyArray<FavoriteView> => {
+// When two tabs in the window are the same Favorite's (after a mix-up while restoring, say), only
+// the lower-index one shows as the Favorite, and the other, pinned, shows on its own in the shown
+// Space. Not hidden: a hidden tab couldn't be closed. A pinned tab of another Space's Favorite,
+// pinned only until Katip unpins it, shows in neither
+const favoriteViews = (
+  space: Space,
+  isShown: boolean,
+  sources: SidebarSources,
+): ReadonlyArray<FavoriteView> => {
   const untitled = sources.translator.t("common.newTab")
+  const list = favoritesOf(sources.spaceFavorites, space.id)
+  const isOwn = (id: FavoriteId) => list.some((favorite) => favorite.id === id)
   const { shown, loose } = Array.reduce(
-    Array.sort(
-      sources.windowTabs.filter((tab) => tab.pinned),
-      byIndex,
-    ),
+    Array.sort(sources.windowTabs, byIndex),
     {
       shown: new Map<FavoriteId, BrowserTab>(),
       loose: [] as ReadonlyArray<BrowserTab>,
     },
     (acc, tab) => {
-      const favoriteId = Option.filter(
-        favoriteOfTab(sources.favoriteTabs, tab.id),
-        (id) => Option.isSome(favoriteById(sources.favorites, id)) && !acc.shown.has(id),
+      const bound = favoriteOfTab(sources.favoriteTabs, tab.id)
+      const favoriteId = Option.filter(bound, (id) => isOwn(id) && !acc.shown.has(id))
+      if (Option.isSome(favoriteId)) {
+        return { ...acc, shown: new Map(acc.shown).set(favoriteId.value, tab) }
+      }
+      const isOtherSpaces = Option.exists(
+        bound,
+        (id) => !isOwn(id) && Option.isSome(findFavorite(sources.spaceFavorites, id)),
       )
-      return Option.isSome(favoriteId)
-        ? { ...acc, shown: new Map(acc.shown).set(favoriteId.value, tab) }
-        : { ...acc, loose: [...acc.loose, tab] }
+      return isShown && tab.pinned && !isOtherSpaces ? { ...acc, loose: [...acc.loose, tab] } : acc
     },
   )
   return [
-    ...sources.favorites.map((favorite): FavoriteView => {
+    ...list.map((favorite): FavoriteView => {
       const tab = shown.get(favorite.id)
       return tab === undefined
         ? {
@@ -439,6 +447,7 @@ const pinnedNodeViews = (
 
 const spaceView = (
   space: Space,
+  isShown: boolean,
   spaceTabs: ReadonlyArray<SpaceTab>,
   sources: SidebarSources,
 ): SpaceView => {
@@ -460,6 +469,7 @@ const spaceView = (
     id: space.id,
     name: space.name,
     theme: space.theme,
+    favorites: favoriteViews(space, isShown, sources),
     pinned: Option.match(tree, {
       onNone: () => ({ _tag: "Unavailable" }),
       onSome: (nodes) => ({
@@ -512,22 +522,18 @@ export const projectSidebarView = (sources: SidebarSources): Option.Option<Sideb
         : Option.map(trackedTab(sources.workspace, tab.id), (tracked) => ({ tab, tracked })),
     ),
   )
-  const activeSpaceId = pipe(
-    activeSpaceOf(sources.workspace, sources.windowId),
-    Option.filter((id) => sources.spaces.some((space) => space.id === id)),
-    Option.orElse(() => Option.map(Array.head(sources.spaces), (space) => space.id)),
-  )
+  const activeSpaceId = shownSpaceOf(sources.workspace, sources.spaces, sources.windowId)
   return Option.map(activeSpaceId, (activeSpaceId) => ({
     windowId: sources.windowId,
     activeSpaceId,
     spaces: sources.spaces.map((space) =>
       spaceView(
         space,
+        space.id === activeSpaceId,
         spaceTabs.filter(({ tracked }) => tracked.spaceId === space.id),
         sources,
       ),
     ),
-    favorites: favoriteViews(sources),
     archive: sources.archive,
     autoArchive: sources.autoArchive,
     canSplit: sources.canSplit,

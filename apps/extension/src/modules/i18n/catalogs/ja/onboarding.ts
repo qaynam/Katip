@@ -32,9 +32,9 @@ export const onboarding: CatalogSection<"onboarding"> = {
     "Space とそのピン留めタブ、フォルダ、分割ビュー、それに Favorites を取り込めます。設定で Arc のサイドバーのファイルを選ぶと、ブラウザの中だけで読み込みます。",
   "onboarding.arcImport.open": "Arc から読み込む…",
 
-  "onboarding.favorites.title": "Favorites は、どの Space にも",
+  "onboarding.favorites.title": "Favorites は Space ごとに",
   "onboarding.favorites.body":
-    "タブをサイドパネルの上のほうへドラッグするか、右クリックして「Favorites に追加」を選びます。Favorites は、どの Space にいても同じ場所にあります。",
+    "タブをサイドパネルの上のほうへドラッグするか、右クリックして「Favorites に追加」を選びます。Space ごとに、別々の Favorites を置けます。",
 
   "onboarding.themes.title": "Space ごとに色を",
   "onboarding.themes.try":

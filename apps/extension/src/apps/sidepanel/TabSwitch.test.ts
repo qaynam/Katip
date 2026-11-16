@@ -19,12 +19,12 @@ const viewWithActive = (activeId: number) => {
       spaceView("work", {
         pinnedNodes: [pinnedItem("docs", { title: "Docs", openTab: openPinnedTab(tab(4)) })],
         temporaryTabs: [tab(1), tab(2), tab(3)],
-      }),
-    ],
-    favorites: [
-      favoriteView(5, {
-        title: "Mail",
-        openTab: { tabId: tab(5).tabId, isActive: activeId === 5 },
+        favorites: [
+          favoriteView(5, {
+            title: "Mail",
+            openTab: { tabId: tab(5).tabId, isActive: activeId === 5 },
+          }),
+        ],
       }),
     ],
   })
