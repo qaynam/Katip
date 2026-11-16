@@ -223,58 +223,77 @@
     ondragleave={forgetDropTargetWhenLeaving}
     ondragstart={() => tooltip.hide()}
   >
-    {#if !isSpaceCovered}
-      <div class="top-bar">
-        <SpotlightButton />
-        <ClosePanelButton />
-      </div>
-      <FavoritesGrid favorites={view.favorites} />
-    {/if}
-
-    <div class="spaces">
-      {#key activeSpace.id}
-        <div
-          class="space"
-          in:slideAcross={{ side: spaceSlide.entersFrom }}
-          out:slideAcross={{ side: spaceSlide.leavesTo }}
-        >
-          {#if !isSpaceCovered}
-            <SpaceTitle space={activeSpace} />
-          {/if}
-          <div class="space-body" data-space-body {@attach keepScrollPosition}>
-            {#if bodyPanel.current === "Archive"}
-              <ArchivePanel spaceId={activeSpace.id} />
-            {:else if bodyPanel.current === "Downloads"}
-              <DownloadsPanel />
-            {:else}
-              <PinnedSection pinned={activeSpace.pinned} {onReload} />
-              <TemporarySection space={activeSpace} />
-            {/if}
+    <!-- Keyed rather than switching each part: the view being left has to keep its parts while it
+         slides out -->
+    {#key isSpaceCovered}
+      <div
+        class="view"
+        in:slideAcross={{ side: isSpaceCovered ? "left" : "right" }}
+        out:slideAcross={{ side: isSpaceCovered ? "right" : "left" }}
+      >
+        {#if !isSpaceCovered}
+          <div class="top-bar">
+            <SpotlightButton />
+            <ClosePanelButton />
           </div>
-        </div>
-      {/key}
-    </div>
+          <FavoritesGrid favorites={view.favorites} />
+        {/if}
 
-    <div class="bottom">
-      <Toasts {toasts} {translator} />
-      {#if view.canSplit && drag.source !== null && openTabOf(drag.source) !== null}
-        <p class="page-drop-hint">{translator.t("sidepanel.split.pageDropHint")}</p>
-      {/if}
-      {#if updateNotice !== null}
-        {@const release = updateNotice}
-        <UpdateCard
-          {release}
-          onOpen={() => {
-            void run({ _tag: "OpenUrl", windowId: view.windowId, url: release.pageUrl })
-            onDismissUpdate()
-          }}
-          onDismiss={onDismissUpdate}
-        />
-      {/if}
-      {#if !isSpaceCovered}
-        <BottomBar spaces={view.spaces} activeSpaceId={activeSpace.id} />
-      {/if}
-    </div>
+        <div class="spaces">
+          {#key activeSpace.id}
+            <div
+              class="space"
+              in:slideAcross={{ side: spaceSlide.entersFrom }}
+              out:slideAcross={{ side: spaceSlide.leavesTo }}
+            >
+              {#if !isSpaceCovered}
+                <SpaceTitle space={activeSpace} />
+              {/if}
+              <div class="space-pages">
+                {#if bodyPanel.current === "Archive"}
+                  <div class="space-body" data-space-body transition:slideAcross={{ side: "left" }}>
+                    <ArchivePanel spaceId={activeSpace.id} />
+                  </div>
+                {:else if bodyPanel.current === "Downloads"}
+                  <div class="space-body"><DownloadsPanel /></div>
+                {:else}
+                  <div
+                    class="space-body"
+                    data-space-body
+                    {@attach keepScrollPosition}
+                    transition:slideAcross={{ side: "right" }}
+                  >
+                    <PinnedSection pinned={activeSpace.pinned} {onReload} />
+                    <TemporarySection space={activeSpace} />
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/key}
+        </div>
+
+        <div class="bottom">
+          <Toasts {toasts} {translator} />
+          {#if view.canSplit && drag.source !== null && openTabOf(drag.source) !== null}
+            <p class="page-drop-hint">{translator.t("sidepanel.split.pageDropHint")}</p>
+          {/if}
+          {#if updateNotice !== null}
+            {@const release = updateNotice}
+            <UpdateCard
+              {release}
+              onOpen={() => {
+                void run({ _tag: "OpenUrl", windowId: view.windowId, url: release.pageUrl })
+                onDismissUpdate()
+              }}
+              onDismiss={onDismissUpdate}
+            />
+          {/if}
+          {#if !isSpaceCovered}
+            <BottomBar spaces={view.spaces} activeSpaceId={activeSpace.id} />
+          {/if}
+        </div>
+      </div>
+    {/key}
   </main>
 
   <ThemePicker />
@@ -289,9 +308,29 @@
 <style>
   .sidebar {
     position: relative;
+    height: 100%;
+  }
+
+  /* What slides out keeps the same cell as what slides in until it has gone. Clipped, not hidden:
+     focus or scrollIntoView can scroll a hidden overflow and leave the contents shifted */
+  .sidebar,
+  .spaces,
+  .space-pages {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
+    overflow-x: clip;
+  }
+
+  .view,
+  .space,
+  .space-body {
+    grid-area: 1 / 1;
+  }
+
+  .view {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 0;
   }
 
@@ -303,26 +342,19 @@
     padding: 8px 8px 0;
   }
 
-  /* The Space left behind keeps the same cell as the one coming in until it has slid out. Clipped,
-     not hidden: focus or scrollIntoView can scroll a hidden overflow and leave the Spaces shifted */
-  .spaces {
-    display: grid;
+  .spaces,
+  .space-pages {
     flex: 1;
-    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-    min-height: 0;
-    overflow-x: clip;
   }
 
   .space {
     display: flex;
-    grid-area: 1 / 1;
     flex-direction: column;
     min-height: 0;
   }
 
   .space-body {
     display: flex;
-    flex: 1;
     flex-direction: column;
     min-height: 0;
     padding: 0 8px;

@@ -148,13 +148,6 @@
     flex-direction: column;
     gap: 10px;
     padding: 2px 0 12px;
-    animation: archive-in 160ms ease-out;
-  }
-
-  @keyframes archive-in {
-    from {
-      opacity: 0;
-    }
   }
 
   .settings {

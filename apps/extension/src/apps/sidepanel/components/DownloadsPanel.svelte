@@ -299,13 +299,6 @@
     gap: 10px;
     min-height: 0;
     padding-top: 8px;
-    animation: downloads-in 160ms ease-out;
-  }
-
-  @keyframes downloads-in {
-    from {
-      opacity: 0;
-    }
   }
 
   .header {
