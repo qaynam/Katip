@@ -1,6 +1,6 @@
 # Chrome Web Store listing
 
-The text to paste into the Chrome Web Store Developer Dashboard, field by field. Keep it in sync with the extension when features or permissions change.
+The text to paste into the Chrome Web Store Developer Dashboard, field by field, and how versions get to the store. Keep it in sync with the extension when features or permissions change.
 
 ## Store listing
 
@@ -148,3 +148,66 @@ Katip does not collect or transmit any user data. Leave every data type unchecke
 ## Notes for reviewers
 
 > Click the toolbar icon (or press ⌃⌘S on macOS, Alt+S elsewhere) to open Katip in the side panel. Open a few tabs and they appear under the current Space; drag a tab into the pinned area to pin it, or onto another tab to open a split view (Chrome 155+). Press Alt+T for Spotlight. Live folders need an account signed in to Gmail or GitHub and are optional. Settings → Data has export and import; a sample Arc file for testing import is at https://github.com/qaynam/Katip/blob/main/apps/extension/src/modules/arc-import/fixtures/arc-sidebar.json
+
+## Publishing
+
+### Which zip
+
+Upload `katip-<version>-chrome-web-store.zip` from `pnpm package:store`, never the zip of a GitHub release from `pnpm package`. The store package is the same code without the manifest's `key`, which the store refuses on a new item, and without the check for newer GitHub releases, since the store updates its installs itself.
+
+### The first version, by hand
+
+The Chrome Web Store API can't create an item.
+
+1. Push the version's tag. The **Chrome Web Store** workflow builds the store package for it, the `chrome-web-store-package` artifact of the run, and goes no further while `CHROME_WEB_STORE_ITEM_ID` isn't set. The artifact downloads as a zip holding the store package. (`pnpm package:store` on the tag builds the same.)
+2. In the Developer Dashboard, choose **Add new item**, upload the store package, fill in the tabs from the sections above, and submit it for review.
+3. Note the item ID, on the item's **Package** tab, and the publisher ID, under **Publisher → Settings**.
+
+### Access for the workflow
+
+The workflow signs in to Google as a service account through Workload Identity Federation, so no key or secret is kept anywhere.
+
+1. In a Google Cloud project, turn on the APIs and create a service account without any roles:
+
+   ```sh
+   gcloud services enable chromewebstore.googleapis.com iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com --project "$PROJECT_ID"
+   gcloud iam service-accounts create katip-chrome-web-store --project "$PROJECT_ID"
+   ```
+
+2. Let only this repository's Chrome Web Store workflow, run on a tag, act as the service account:
+
+   ```sh
+   PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format 'value(projectNumber)')
+   gcloud iam workload-identity-pools create github --project "$PROJECT_ID" --location global
+   gcloud iam workload-identity-pools providers create-oidc katip --project "$PROJECT_ID" --location global \
+     --workload-identity-pool github --issuer-uri https://token.actions.githubusercontent.com \
+     --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository" \
+     --attribute-condition "assertion.repository == 'qaynam/Katip' && assertion.workflow_ref.startsWith('qaynam/Katip/.github/workflows/chrome-web-store.yml@refs/tags/v')"
+   gcloud iam service-accounts add-iam-policy-binding "katip-chrome-web-store@$PROJECT_ID.iam.gserviceaccount.com" \
+     --project "$PROJECT_ID" --role roles/iam.workloadIdentityUser \
+     --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/qaynam/Katip"
+   ```
+
+3. In the Developer Dashboard, add the service account's email under **Account**. A publisher can have only one.
+4. In the repository's **Settings → Secrets and variables → Actions → Variables**, set these. None of them is a secret.
+
+| Variable                                      | Value                                                                                                             |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `CHROME_WEB_STORE_PUBLISHER_ID`               | The publisher ID                                                                                                  |
+| `CHROME_WEB_STORE_SERVICE_ACCOUNT`            | `katip-chrome-web-store@<project ID>.iam.gserviceaccount.com`                                                     |
+| `CHROME_WEB_STORE_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project number>/locations/global/workloadIdentityPools/github/providers/katip`                         |
+| `CHROME_WEB_STORE_ITEM_ID`                    | The item ID. Set it last: from then on, every `v*` tag uploads its version to the store and submits it for review |
+
+### Later versions
+
+Pushing a `v*` tag runs CI, uploads the tag's store package and submits it for review, to be published once approved. The run succeeds once the submission is waiting for review.
+
+Run the workflow by hand from **Actions → Chrome Web Store → Run workflow**, choosing the tag under **Use workflow from**, to:
+
+- send a tag created on GitHub's release page, which can come without a tag push;
+- stage the version once approved, to be published from the Developer Dashboard;
+- upload the version only, to be submitted from the Developer Dashboard.
+
+### Moving from the GitHub zip to the store
+
+The store gives Katip its own ID, not the zip's `ipbjfhfabfhcgdaigheeomapmikalpak`, so the store's Katip is another extension. Remove the zip's Katip from `chrome://extensions` before installing from the store: two Katips in one profile share the "Katip" bookmark folder, and each can remove the other's pins. The pins stay in that folder, where the store's Katip finds them, but it starts without the removed one's extension storage (Favorites, Space colors, folder icons, the archive) and settings.
