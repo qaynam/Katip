@@ -1,5 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte"
+  import { SPRING_EASING_CSS } from "./disclose"
+  import { SLIDE_ACROSS_DURATION_MS } from "./slide-across"
 
   interface Props {
     background: string
@@ -45,7 +47,12 @@
   }
 </script>
 
-<div class="backdrop" aria-hidden="true">
+<div
+  class="backdrop"
+  aria-hidden="true"
+  style:--fade-duration="{SLIDE_ACROSS_DURATION_MS}ms"
+  style:--fade-easing={SPRING_EASING_CSS}
+>
   {#each layers as layer, index (layer.id)}
     <div
       class="layer"
@@ -78,7 +85,7 @@
   }
 
   .layer.entering {
-    animation: layer-in 320ms ease-out;
+    animation: layer-in var(--fade-duration) var(--fade-easing);
   }
 
   /* The overlay blend mode barely changes near-white backgrounds, so the grain vanishes on

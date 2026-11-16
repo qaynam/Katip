@@ -21,6 +21,7 @@
   import { PendingRename } from "../state/pending-rename.svelte"
   import { setSidebarContext } from "../state/sidebar-context"
   import { PendingSpaceSetup } from "../state/space-setup.svelte"
+  import { SpaceSlide } from "../state/space-slide"
   import { ThemeDraft } from "../state/theme-draft.svelte"
   import { ThemePickerController } from "../state/theme-picker.svelte"
   import type { ToastQueue } from "../state/toast-queue.svelte"
@@ -36,6 +37,7 @@
   import FolderSearch from "./FolderSearch.svelte"
   import LiveFolderDialog from "./LiveFolderDialog.svelte"
   import PinnedSection from "./PinnedSection.svelte"
+  import { slideAcross } from "./slide-across"
   import SpaceTitle from "./SpaceTitle.svelte"
   import SpotlightButton from "./SpotlightButton.svelte"
   import TemporarySection from "./TemporarySection.svelte"
@@ -137,6 +139,11 @@
   })
 
   let lastSwipeAt = Number.NEGATIVE_INFINITY
+  const spaceSlide = new SpaceSlide(
+    untrack(() => view.spaces),
+    untrack(() => activeSpace.id),
+  )
+  $effect.pre(() => spaceSlide.follow(view.spaces, activeSpace.id))
 
   // Downloads belong to no Space, so their view takes the place of everything that shows one
   const isSpaceCovered = $derived(bodyPanel.current === "Downloads")
@@ -164,6 +171,7 @@
     const destination = neighborSpaceId(view.spaces, activeSpace.id, direction.value)
     if (Option.isNone(destination)) return
     lastSwipeAt = event.timeStamp
+    spaceSlide.expectSwipe(destination.value, direction.value)
     void run({ _tag: "SwitchSpace", windowId: view.windowId, spaceId: destination.value })
   }
 
@@ -223,23 +231,29 @@
       <FavoritesGrid favorites={view.favorites} />
     {/if}
 
-    {#key activeSpace.id}
-      <div class="space">
-        {#if !isSpaceCovered}
-          <SpaceTitle space={activeSpace} />
-        {/if}
-        <div class="space-body" data-space-body {@attach keepScrollPosition}>
-          {#if bodyPanel.current === "Archive"}
-            <ArchivePanel spaceId={activeSpace.id} />
-          {:else if bodyPanel.current === "Downloads"}
-            <DownloadsPanel />
-          {:else}
-            <PinnedSection pinned={activeSpace.pinned} {onReload} />
-            <TemporarySection space={activeSpace} />
+    <div class="spaces">
+      {#key activeSpace.id}
+        <div
+          class="space"
+          in:slideAcross={{ side: spaceSlide.entersFrom }}
+          out:slideAcross={{ side: spaceSlide.leavesTo }}
+        >
+          {#if !isSpaceCovered}
+            <SpaceTitle space={activeSpace} />
           {/if}
+          <div class="space-body" data-space-body {@attach keepScrollPosition}>
+            {#if bodyPanel.current === "Archive"}
+              <ArchivePanel spaceId={activeSpace.id} />
+            {:else if bodyPanel.current === "Downloads"}
+              <DownloadsPanel />
+            {:else}
+              <PinnedSection pinned={activeSpace.pinned} {onReload} />
+              <TemporarySection space={activeSpace} />
+            {/if}
+          </div>
         </div>
-      </div>
-    {/key}
+      {/key}
+    </div>
 
     <div class="bottom">
       <Toasts {toasts} {translator} />
@@ -289,12 +303,21 @@
     padding: 8px 8px 0;
   }
 
+  /* The Space left behind keeps the same cell as the one coming in until it has slid out. Clipped,
+     not hidden: focus or scrollIntoView can scroll a hidden overflow and leave the Spaces shifted */
+  .spaces {
+    display: grid;
+    flex: 1;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
+    overflow-x: clip;
+  }
+
   .space {
     display: flex;
-    flex: 1;
+    grid-area: 1 / 1;
     flex-direction: column;
     min-height: 0;
-    animation: space-in 200ms ease-out;
   }
 
   .space-body {
@@ -319,17 +342,5 @@
     font-size: 12px;
     line-height: 1.45;
     text-align: center;
-  }
-
-  @keyframes space-in {
-    from {
-      opacity: 0.3;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .space {
-      animation: none;
-    }
   }
 </style>

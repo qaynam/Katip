@@ -16,7 +16,7 @@ const SPRING_STIFFNESS = 7.4
 
 const springAt = (t: number) => 1 - (1 + SPRING_STIFFNESS * t) * Math.exp(-SPRING_STIFFNESS * t)
 
-/** Progress along the spring, from 0 at the start of a disclosure to 1 at its end. */
+/** Progress along the spring, from 0 at the start of an animation to 1 at its end. */
 export const springEasing = (t: number): number => springAt(t) / springAt(1)
 
 /** {@link springEasing} as a CSS easing function, for what CSS animates alongside. */
@@ -24,7 +24,7 @@ export const SPRING_EASING_CSS = `linear(${Array.from({ length: 25 }, (_, step) 
   springEasing(step / 24).toFixed(4),
 ).join(", ")})`
 
-const prefersReducedMotion = () =>
+export const prefersReducedMotion = (): boolean =>
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
