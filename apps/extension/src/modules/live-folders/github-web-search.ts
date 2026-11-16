@@ -27,7 +27,7 @@ const searchesByQuery: Readonly<
   "assigned-issues": [
     { type: "issues", query: "is:open is:issue assignee:@me archived:false sort:updated-desc" },
   ],
-  // Two searches: the web search returns pull requests and issues as separate result kinds
+  // Not one search: the web search returns pull requests and issues as separate result kinds
   mentioned: [
     { type: "pullrequests", query: "is:open mentions:@me archived:false sort:updated-desc" },
     { type: "issues", query: "is:open mentions:@me archived:false sort:updated-desc" },

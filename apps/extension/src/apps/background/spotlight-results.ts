@@ -224,7 +224,8 @@ const historyCandidate = (page: HistoryPage): ResultCandidate => {
   }
 }
 
-// An optional permission: until it's granted, chrome.history doesn't exist at all
+// Not chrome.history unasked: the permission is optional, and the namespace doesn't exist until it
+// is granted
 const searchesHistory = Permissions.use((permissions) => permissions.containsPermission("history"))
 
 const historyCandidates = Effect.fnUntraced(function* (

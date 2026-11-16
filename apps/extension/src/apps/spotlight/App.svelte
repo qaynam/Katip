@@ -210,7 +210,7 @@
     void search(query, next)
   }
 
-  // What was typed found the command, and is no search of the history
+  // Not kept as the first search of the history: what was typed was meant to find the command
   const enterHistoryMode = () => {
     query = ""
     input?.focus()
