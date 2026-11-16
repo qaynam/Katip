@@ -79,7 +79,10 @@ describe("refreshing", () => {
       yield* Deferred.succeed(response, httpResponse(200, feed()))
       yield* settled
 
-      assert.strictEqual((yield* (yield* FakeHttp).requests).length, 1)
+      const folderFeedRequests = (yield* (yield* FakeHttp).requests).filter(
+        (request) => request.url === "https://mail.google.com/mail/u/0/feed/atom",
+      )
+      assert.strictEqual(folderFeedRequests.length, 1)
     }).pipe(Effect.provide(TestLayer)),
   )
 

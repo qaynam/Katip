@@ -1,6 +1,6 @@
 import { Result } from "effect"
 import { describe, expect, it } from "vitest"
-import { GMAIL_PRIMARY_LABEL } from "#modules/live-folders"
+import { GMAIL_IMPORTANT_LABEL, GMAIL_PRIMARY_LABEL } from "#modules/live-folders"
 import { gitHubTokenFrom, gmailSourceFrom, type GmailDraft } from "./live-folder-drafts"
 
 describe("gmailSourceFrom", () => {
@@ -14,6 +14,12 @@ describe("gmailSourceFrom", () => {
     const parsed = gmailSourceFrom(input)
     return Result.isFailure(parsed) ? parsed.failure : null
   }
+
+  it("lists the important mail of the given account through Gmail's label for it", () => {
+    expect(
+      Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2", mailbox: "Important" }))),
+    ).toStrictEqual({ _tag: "Gmail", accountIndex: 2, label: GMAIL_IMPORTANT_LABEL })
+  })
 
   it("lists the Primary tab of the given account through Gmail's label for it", () => {
     expect(Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2" })))).toStrictEqual({

@@ -2,7 +2,7 @@ import { Array, DateTime, Option, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import type { GitHubQuery, LiveItem } from "./live-source"
+import { githubAvatarIcon, type GitHubQuery, type LiveItem } from "./live-source"
 
 /** The result kind chosen on github.com's search page (`type` in the URL). */
 export type GitHubWebSearchType = "pullrequests" | "issues"
@@ -50,6 +50,8 @@ export const githubWebSearchRequest = (search: GitHubWebSearch): HttpRequest => 
   headers: { Accept: "application/json" },
   credentials: "include",
   redirect: "manual",
+  // A copy the browser kept would go on listing what has since been closed or reviewed
+  cache: "no-store",
 })
 
 const SearchResult = Schema.Struct({
@@ -118,6 +120,7 @@ const itemFrom =
       // The web search results have no update time. The query's update order decides the order,
       // and the creation time stands in for the time
       updatedAt: DateTime.toEpochMillis(result.created),
+      icon: githubAvatarIcon(owner),
     }
   }
 

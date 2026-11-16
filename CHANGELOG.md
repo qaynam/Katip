@@ -12,27 +12,33 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ### English
 
-Gmail live folders can list just the Primary tab, so newsletters no longer crowd out your mail.
+Gmail live folders follow the mail Gmail marks important, and every live item shows who it is from.
 
 #### Improved
 
-- **Gmail’s Primary tab** — A new Gmail live folder lists the unread mail in the Primary tab, leaving out what Gmail sorts into Promotions, Social and Updates. You can still choose the whole inbox, or a label by its name. A folder made before keeps listing the whole inbox; make a new one to list the Primary tab.
+- **Important mail in Gmail live folders** — A new Gmail live folder lists the unread mail Gmail marks important. You can choose the Primary tab instead, which leaves out what Gmail sorts into Promotions, Social and Updates, or the whole inbox, or a label by its name. A folder made before keeps what it lists; make a new one to change it.
+- **Important mail marked** — In any Gmail live folder, mail Gmail marks important carries a yellow marker, as in Gmail.
+- **Who each item is from** — A live folder shows the icon of Gmail or GitHub with a red dot for live. Its items show the icon of the sender’s site, or the sender’s initial for an address at a free mail service or a site not visited yet, and GitHub items show the avatar of the repository’s owner, in place of the same Gmail or GitHub icon on every row.
 
 #### Fixed
 
+- **Fresh live folders** — Refreshing a live folder always asks Gmail or GitHub again, never answering from a copy the browser may have kept.
 - **Deleting a live folder** — Delete Live Folder in a live folder’s menu removes it. Before, it did nothing.
 - **Site icons on any theme** — A site icon drawn in one color for the system’s dark or light mode, such as GitHub’s or ChatGPT’s, no longer fades into a Space theme of the same lightness: it turns dark on a light theme and light on a dark one.
 
 ### 日本語
 
-Gmail のライブフォルダで「メイン」タブだけを並べられるようになり、メールマガジンに埋もれなくなりました。
+Gmail のライブフォルダが Gmail の「重要」なメールを追えるようになり、ライブフォルダの項目には差出人がわかるアイコンが付きました。
 
 #### 改善
 
-- **Gmail のメインタブ** — 新しく作る Gmail のライブフォルダは、「メイン」タブの未読メールを並べます。Gmail がプロモーション・ソーシャル・新着に振り分けたメールは入りません。受信トレイ全体や、名前を指定したラベルも選べます。これまでに作ったフォルダは受信トレイ全体のままなので、メインタブにするには作り直してください。
+- **Gmail のライブフォルダで重要なメール** — 新しく作る Gmail のライブフォルダは、Gmail が重要マークを付けた未読メールを並べます。代わりにメインタブ（プロモーション・ソーシャル・新着に振り分けられたメールを除く）、受信トレイ全体、名前を指定したラベルも選べます。これまでに作ったフォルダは並べる内容を変えないので、変えるには作り直してください。
+- **重要なメールに印** — どの Gmail のライブフォルダでも、Gmail が重要マークを付けたメールには Gmail と同じ黄色の印が付きます。
+- **差出人がわかるアイコン** — ライブフォルダには Gmail や GitHub のアイコンと、ライブを示す赤い点が付きます。項目には、どの行にも同じ Gmail や GitHub のアイコンを出す代わりに、差出人のサイトのアイコンを出します。フリーメールのアドレスや、まだ訪れていないサイトからのメールは、差出人の頭文字です。GitHub の項目には、リポジトリの持ち主のアバターを出します。
 
 #### 修正
 
+- **ライブフォルダを最新に** — ライブフォルダの更新では、ブラウザが保存しておいたコピーを使わず、毎回 Gmail や GitHub に問い合わせます。
 - **ライブフォルダの削除** — ライブフォルダのメニューの「ライブフォルダを削除」で、削除されるようになりました。これまでは何も起きませんでした。
 - **どのテーマでも見えるサイトのアイコン** — GitHub や ChatGPT のように、システムのダークモードやライトモードに合わせて一色で描かれたアイコンが、同じ明るさの Space のテーマに溶けて見えなくなることがなくなりました。明るいテーマでは暗く、暗いテーマでは明るく表示します。
 

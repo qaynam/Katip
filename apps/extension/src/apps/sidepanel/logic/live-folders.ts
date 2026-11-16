@@ -1,4 +1,4 @@
-import { originPatternOfKind, type LiveSource } from "#modules/live-folders"
+import { gmailMailboxUrl, originPatternOfKind, type LiveSource } from "#modules/live-folders"
 import type { PinnedLiveFolderView } from "#protocol"
 
 export type LiveSourceKind = LiveSource["_tag"]
@@ -8,6 +8,10 @@ export const liveSourceNames: Readonly<Record<LiveSourceKind, string>> = {
   Gmail: "Gmail",
   GitHub: "GitHub",
 }
+
+/** The page of the source whose favicon stands for its live folders. */
+export const liveSourceSiteUrl = (source: LiveSource): string =>
+  source._tag === "Gmail" ? gmailMailboxUrl(source.accountIndex) : "https://github.com/"
 
 export const GITHUB_TOKEN_PAGE_URL =
   "https://github.com/settings/tokens/new?description=Katip&scopes=repo"

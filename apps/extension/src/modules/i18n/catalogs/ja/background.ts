@@ -40,6 +40,7 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.noSubject": "（件名なし）",
   "background.liveFolder.title.gmailInbox": "Gmail の受信トレイ",
   "background.liveFolder.title.gmailPrimary": "Gmail のメイン",
+  "background.liveFolder.title.gmailImportant": "Gmail の重要なメール",
   "background.liveFolder.title.gmailLabel": "Gmail の {label}",
   "background.liveFolder.title.otherAccount": "{title}（u/{account}）",
   "background.liveFolder.title.reviewRequested": "GitHub のレビュー依頼",

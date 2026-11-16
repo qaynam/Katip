@@ -10,6 +10,8 @@ export interface HttpRequest {
    * {@link HttpResponse.isRedirect} is true.
    */
   readonly redirect?: "follow" | "manual"
+  /** `no-store` skips the browser's HTTP cache, both reading from it and writing to it. */
+  readonly cache?: "default" | "no-store"
 }
 
 export interface HttpResponse {
@@ -51,6 +53,7 @@ export class Http extends Context.Service<
               headers: request.headers ?? {},
               credentials: request.credentials,
               redirect: request.redirect ?? "follow",
+              cache: request.cache ?? "default",
               signal,
             }).then(toHttpResponse),
           catch: (cause) => new HttpRequestError({ url: request.url, cause }),

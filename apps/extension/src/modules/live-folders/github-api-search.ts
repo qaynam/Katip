@@ -2,7 +2,7 @@ import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import { rateLimitRetryAt } from "./github-rate-limit"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import { isOpenableUrl, type GitHubQuery, type LiveItem } from "./live-source"
+import { githubAvatarIcon, isOpenableUrl, type GitHubQuery, type LiveItem } from "./live-source"
 
 /** The host permission needed for the official API, which is used with a token. */
 export const GITHUB_API_ORIGIN = "https://api.github.com/*"
@@ -35,6 +35,8 @@ export const githubApiSearchRequest = (search: string, token: string): HttpReque
     "X-GitHub-Api-Version": "2022-11-28",
   },
   credentials: "omit",
+  // A copy the browser kept would go on listing what has since been closed or reviewed
+  cache: "no-store",
 })
 
 const SearchResponse = Schema.fromJsonString(Schema.Struct({ items: Schema.Array(Schema.Unknown) }))
@@ -56,13 +58,18 @@ const decodeItem = Schema.decodeUnknownOption(SearchItem)
 const repositoryNameOf = (repositoryUrl: string): string =>
   repositoryUrl.match(/\/repos\/([^/]+\/[^/]+)$/)?.[1] ?? repositoryUrl
 
-const itemFrom = (item: SearchItem): LiveItem => ({
-  id: String(item.id),
-  title: item.title,
-  subtitle: `${repositoryNameOf(item.repository_url)}#${item.number}`,
-  url: item.html_url,
-  updatedAt: DateTime.toEpochMillis(item.updated_at),
-})
+const itemFrom = (item: SearchItem): LiveItem => {
+  const repository = repositoryNameOf(item.repository_url)
+  const [owner = repository] = repository.split("/")
+  return {
+    id: String(item.id),
+    title: item.title,
+    subtitle: `${repository}#${item.number}`,
+    url: item.html_url,
+    updatedAt: DateTime.toEpochMillis(item.updated_at),
+    icon: githubAvatarIcon(owner),
+  }
+}
 
 /**
  * Reads the items, most recently updated first, from a search API response body. Leaves out items

@@ -119,6 +119,7 @@ export const sidepanel = {
     "“{title}” will be deleted. The emails and issues it shows aren’t affected.",
   "sidepanel.liveFolder.unseenCount": { one: "{count} unread item", other: "{count} unread items" },
   "sidepanel.liveFolder.unseen": "Unread",
+  "sidepanel.liveFolder.important": "Important",
   "sidepanel.liveFolder.refreshing": "Refreshing",
   "sidepanel.liveFolder.failed": "Couldn’t refresh",
   "sidepanel.liveFolder.grantAccess": "Allow Access",
@@ -145,11 +146,12 @@ export const sidepanel = {
   "sidepanel.liveFolderDialog.accountIndexHint":
     "The number in mail.google.com/mail/u/number/. The first account you signed in to is 0.",
   "sidepanel.liveFolderDialog.mailboxLegend": "Show",
+  "sidepanel.liveFolderDialog.mailbox.important": "Important",
   "sidepanel.liveFolderDialog.mailbox.primary": "Primary tab",
   "sidepanel.liveFolderDialog.mailbox.inbox": "Whole inbox",
   "sidepanel.liveFolderDialog.mailbox.label": "A label",
   "sidepanel.liveFolderDialog.mailboxHint":
-    "The Primary tab leaves out the mail Gmail sorts into Promotions, Social and Updates.",
+    "Important lists what Gmail marks important. The Primary tab leaves out what Gmail sorts into Promotions, Social and Updates.",
   "sidepanel.liveFolderDialog.label": "Label name",
   "sidepanel.liveFolderDialog.labelPlaceholder": "Work",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub Live Folder",

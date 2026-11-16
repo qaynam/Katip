@@ -129,10 +129,14 @@ describe("web search requests", () => {
   it("sends the signed-in session's cookies and doesn't follow a redirect to the sign-in page", () => {
     expect([request.credentials, request.redirect]).toStrictEqual(["include", "manual"])
   })
+
+  it("never answers from the browser's cache, which would keep what has since changed", () => {
+    expect(request.cache).toBe("no-store")
+  })
 })
 
 describe("parsing web search results", () => {
-  it("turns a pull request into an item with the repository and number as the subtitle, opening the pull request's page", () => {
+  it("turns a pull request into an item with the repository and number as the subtitle and the owner's avatar as the icon, opening the pull request's page", () => {
     expect(itemsOf(searchPage([searchResult()]))).toStrictEqual(
       Option.some([
         {
@@ -141,6 +145,7 @@ describe("parsing web search results", () => {
           subtitle: "katip-dev/katip#42",
           url: "https://github.com/katip-dev/katip/pull/42",
           updatedAt: Date.UTC(2026, 9, 28, 2, 11, 9),
+          icon: { _tag: "Image", url: "https://github.com/katip-dev.png?size=40" },
         },
       ]),
     )

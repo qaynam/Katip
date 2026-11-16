@@ -119,6 +119,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     "「{title}」を削除します。取得元のメールや Issue はそのまま残ります。",
   "sidepanel.liveFolder.unseenCount": { other: "未読 {count} 件" },
   "sidepanel.liveFolder.unseen": "未読",
+  "sidepanel.liveFolder.important": "重要",
   "sidepanel.liveFolder.refreshing": "更新中",
   "sidepanel.liveFolder.failed": "更新に失敗しました",
   "sidepanel.liveFolder.grantAccess": "アクセスを許可",
@@ -146,11 +147,12 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndexHint":
     "mail.google.com/mail/u/番号/ の番号です。最初にログインしたアカウントが 0 になります。",
   "sidepanel.liveFolderDialog.mailboxLegend": "並べるメール",
+  "sidepanel.liveFolderDialog.mailbox.important": "重要",
   "sidepanel.liveFolderDialog.mailbox.primary": "メインタブ",
   "sidepanel.liveFolderDialog.mailbox.inbox": "受信トレイ全体",
   "sidepanel.liveFolderDialog.mailbox.label": "ラベルを指定",
   "sidepanel.liveFolderDialog.mailboxHint":
-    "メインタブなら、Gmail がプロモーション・ソーシャル・新着に振り分けたメールは並べません。",
+    "重要は Gmail が重要マークを付けたメールを並べます。メインタブは、プロモーション・ソーシャル・新着に振り分けられたメールを除きます。",
   "sidepanel.liveFolderDialog.label": "ラベル名",
   "sidepanel.liveFolderDialog.labelPlaceholder": "仕事",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub のライブフォルダ",

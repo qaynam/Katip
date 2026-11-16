@@ -83,10 +83,14 @@ describe("search requests to the official API", () => {
       "omit",
     ])
   })
+
+  it("never answers from the browser's cache, which would keep what has since changed", () => {
+    expect(request.cache).toBe("no-store")
+  })
 })
 
 describe("parsing official API search results", () => {
-  it("turns issues and pull requests into items with the repository and number as the subtitle", () => {
+  it("turns issues and pull requests into items with the repository and number as the subtitle, and the owner's avatar as the icon", () => {
     const items = parseGitHubApiSearch(searchBody([searchItem()]))
 
     expect(items).toStrictEqual(
@@ -97,6 +101,7 @@ describe("parsing official API search results", () => {
           subtitle: "katip-dev/katip#42",
           url: "https://github.com/katip-dev/katip/pull/42",
           updatedAt: Date.UTC(2026, 9, 30, 8, 55, 41),
+          icon: { _tag: "Image", url: "https://github.com/katip-dev.png?size=40" },
         },
       ]),
     )

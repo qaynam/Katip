@@ -12,7 +12,7 @@
   import FolderSearchButton from "./FolderSearchButton.svelte"
   import Icon from "./Icon.svelte"
   import LiveItemRow from "./LiveItemRow.svelte"
-  import LiveSourceGlyph from "./LiveSourceGlyph.svelte"
+  import LiveFolderIcon from "./LiveFolderIcon.svelte"
   import { grantAccessAndRefresh, liveFolderMenu, openSignInPage } from "./menus"
   import TitleEditor from "./TitleEditor.svelte"
 
@@ -107,7 +107,7 @@
   >
     {#if isEditing}
       <div class="header editing">
-        <span class="glyph"><LiveSourceGlyph kind={folder.source._tag} /></span>
+        <span class="glyph"><LiveFolderIcon source={folder.source} /></span>
         <TitleEditor
           initial={folder.title}
           label={t("sidepanel.liveFolder.nameLabel")}
@@ -130,7 +130,7 @@
         ondragend={(event) => ctx.drag.finish(event)}
         ondragover={onHeaderDragOver}
       >
-        <span class="glyph"><LiveSourceGlyph kind={folder.source._tag} /></span>
+        <span class="glyph"><LiveFolderIcon source={folder.source} /></span>
         <span class="title">{title}</span>
         {#if folder.status._tag === "Refreshing"}
           <span class="spinner" aria-hidden="true"></span>

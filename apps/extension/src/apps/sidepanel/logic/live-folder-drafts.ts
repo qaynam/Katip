@@ -1,11 +1,11 @@
 import { Result } from "effect"
-import { GMAIL_PRIMARY_LABEL, type LiveSource } from "#modules/live-folders"
+import { GMAIL_IMPORTANT_LABEL, GMAIL_PRIMARY_LABEL, type LiveSource } from "#modules/live-folders"
 
 export type LiveFolderDraftError =
   "InvalidAccountIndex" | "LabelRequired" | "TokenRequired" | "TokenHasWhitespace"
 
-/** Which mail a Gmail live folder lists: the Primary tab, the whole inbox, or a label. */
-export const GMAIL_MAILBOXES = ["Primary", "Inbox", "Label"] as const
+/** Which mail a Gmail live folder lists: important, the Primary tab, the whole inbox, or a label. */
+export const GMAIL_MAILBOXES = ["Important", "Primary", "Inbox", "Label"] as const
 export type GmailMailbox = (typeof GMAIL_MAILBOXES)[number]
 
 export interface GmailDraft {
@@ -21,6 +21,7 @@ const gmailLabelFrom = ({
   mailbox,
   label,
 }: GmailDraft): Result.Result<string | null, LiveFolderDraftError> => {
+  if (mailbox === "Important") return Result.succeed(GMAIL_IMPORTANT_LABEL)
   if (mailbox === "Primary") return Result.succeed(GMAIL_PRIMARY_LABEL)
   if (mailbox === "Inbox") return Result.succeed(null)
   const name = label.trim()

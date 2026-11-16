@@ -1,7 +1,13 @@
 import { Option, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { httpResponse, redirectResponse } from "#platform/http"
-import { gmailFeedRequest, gmailItemsFrom, parseGmailFeed } from "./gmail-feed"
+import {
+  gmailFeedRequest,
+  gmailItemsFrom,
+  markImportant,
+  parseGmailFeed,
+  senderIconOf,
+} from "./gmail-feed"
 import { GMAIL_PRIMARY_LABEL, type GmailSource } from "./live-source"
 
 const inbox: GmailSource = { _tag: "Gmail", accountIndex: 0, label: null }
@@ -44,6 +50,7 @@ describe("parsing the unread feed", () => {
         subtitle: "Hanako Sato",
         url: "https://mail.google.com/mail?account_id=taro.yamada@example.com&message_id=19a3c1f2e4b5d6a7&view=conv&extsrc=atom",
         updatedAt: Date.UTC(2026, 9, 30, 9, 10, 1),
+        icon: { _tag: "SiteFavicon", siteUrl: "https://example.co.jp/" },
       },
     ])
   })
@@ -125,11 +132,12 @@ describe("parsing the unread feed", () => {
 })
 
 describe("requesting the unread feed", () => {
-  it("reads the inbox from the feed of the account's index, with the signed-in cookies", () => {
+  it("reads the inbox from the feed of the account's index, with the signed-in cookies and never from the browser's cache", () => {
     expect(gmailFeedRequest(inbox)).toStrictEqual({
       url: "https://mail.google.com/mail/u/0/feed/atom",
       credentials: "include",
       redirect: "manual",
+      cache: "no-store",
     })
   })
 
@@ -183,5 +191,52 @@ describe("judging the unread feed's response", () => {
     expect(gmailItemsFrom(httpResponse(200, "<html></html>"), inbox)).toStrictEqual(
       Result.fail({ _tag: "UnreadableResponse" }),
     )
+  })
+})
+
+describe("the icon standing for the sender", () => {
+  it("is the icon of the sender's site, without the host kept for sending", () => {
+    expect(Option.getOrNull(senderIconOf("news@mail.notion.so"))).toStrictEqual({
+      _tag: "SiteFavicon",
+      siteUrl: "https://notion.so/",
+    })
+  })
+
+  it("keeps three labels for a domain under a country's second level, as in co.jp", () => {
+    expect(Option.getOrNull(senderIconOf("info@news.example.co.jp"))).toStrictEqual({
+      _tag: "SiteFavicon",
+      siteUrl: "https://example.co.jp/",
+    })
+  })
+
+  it("is none for an address at a free mail service, whose icon says nothing of the sender", () => {
+    expect([senderIconOf("hanako@gmail.com"), senderIconOf("taro@yahoo.co.jp")]).toStrictEqual([
+      Option.none(),
+      Option.none(),
+    ])
+  })
+
+  it("is none without a usable address", () => {
+    expect([senderIconOf(""), senderIconOf("no-domain")]).toStrictEqual([
+      Option.none(),
+      Option.none(),
+    ])
+  })
+})
+
+describe("marking important mail", () => {
+  it("marks the items also found among the important ones, and leaves the rest unmarked", () => {
+    const [first, second] = itemsOf(
+      feedOf(
+        entryOf({ id: "tag:gmail.google.com,2004:1" }) +
+          entryOf({ id: "tag:gmail.google.com,2004:2" }),
+        2,
+      ),
+    )
+    if (first === undefined || second === undefined) throw new Error("two items expected")
+
+    const marked = markImportant([first, second], [second])
+
+    expect(marked.map((item) => item.isImportant)).toStrictEqual([undefined, true])
   })
 })

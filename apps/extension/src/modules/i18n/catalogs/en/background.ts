@@ -39,6 +39,7 @@ export const background = {
   "background.liveFolder.noSubject": "(no subject)",
   "background.liveFolder.title.gmailInbox": "Gmail Inbox",
   "background.liveFolder.title.gmailPrimary": "Gmail Primary",
+  "background.liveFolder.title.gmailImportant": "Gmail Important",
   "background.liveFolder.title.gmailLabel": "Gmail: {label}",
   "background.liveFolder.title.otherAccount": "{title} (u/{account})",
   "background.liveFolder.title.reviewRequested": "GitHub Review Requests",

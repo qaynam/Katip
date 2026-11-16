@@ -42,6 +42,7 @@
   } as const satisfies Record<GitHubQuery, MessageKey>
 
   const gmailMailboxMessages = {
+    Important: "sidepanel.liveFolderDialog.mailbox.important",
     Primary: "sidepanel.liveFolderDialog.mailbox.primary",
     Inbox: "sidepanel.liveFolderDialog.mailbox.inbox",
     Label: "sidepanel.liveFolderDialog.mailbox.label",
@@ -59,8 +60,8 @@
         : "sidepanel.liveFolderDialog.gitHubTitle"
 
   let accountIndex = $state("0")
-  // The whole inbox would fill the folder with newsletters, which Gmail keeps out of this tab
-  let mailbox = $state<GmailMailbox>("Primary")
+  // The whole inbox would fill the folder with newsletters, which Gmail doesn't mark important
+  let mailbox = $state<GmailMailbox>("Important")
   let label = $state("")
   let query = $state<GitHubQuery>("review-requested")
   let token = $state("")

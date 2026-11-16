@@ -56,6 +56,36 @@ describe("Showing a live folder", () => {
     )
   })
 
+  it("marks the items the source marked important", async () => {
+    await renderSidebar(
+      viewWithPins(
+        inbox({
+          items: [
+            liveItem("quote", { title: "Re: Quote", isImportant: true }),
+            liveItem("lunch", { title: "Lunch invite" }),
+          ],
+        }),
+      ),
+    )
+
+    expect(screen.getByRole("button", { name: /Re: Quote/ }).textContent).toContain("Important")
+    expect(screen.getByRole("button", { name: /Lunch invite/ }).textContent).not.toContain(
+      "Important",
+    )
+  })
+
+  it("stands an item with no picture of its own for its sender's initial, not the source's icon", async () => {
+    await renderSidebar(
+      viewWithPins(inbox({ items: [liveItem("quote", { title: "Re: Quote", subtitle: "jane" })] })),
+    )
+
+    const row = screen.getByRole("button", { name: /Re: Quote/ })
+    expect([row.querySelector("img"), row.textContent?.trimStart().startsWith("J")]).toStrictEqual([
+      null,
+      true,
+    ])
+  })
+
   it("shows an item's subtitle below its title", async () => {
     await renderSidebar(viewWithPins(inbox()))
 

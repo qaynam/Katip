@@ -775,10 +775,13 @@ describe("periodic refresh", () => {
             ),
           )
 
-          expect([
-            (yield* (yield* FakeHttp).requests).length,
-            JSON.stringify(records),
-          ]).toStrictEqual([1, expect.stringContaining("Newer email")])
+          const folderFeedRequests = (yield* (yield* FakeHttp).requests).filter(
+            (request) => request.url === "https://mail.google.com/mail/u/0/feed/atom",
+          )
+          expect([folderFeedRequests.length, JSON.stringify(records)]).toStrictEqual([
+            1,
+            expect.stringContaining("Newer email"),
+          ])
         }),
       ),
   )

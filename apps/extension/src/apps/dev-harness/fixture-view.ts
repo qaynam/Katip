@@ -1,3 +1,4 @@
+import { githubAvatarIcon } from "#modules/live-folders"
 import { IdleMinutes } from "#modules/settings"
 import { SpaceId, SpaceName } from "#modules/space"
 import { neutralTheme, themeOf, type SpaceTheme, type ThemeColor } from "#modules/theme"
@@ -45,7 +46,12 @@ const mail = (
   title: string,
   from: string,
   updatedAt: number,
-  options: { readonly isUnseen?: boolean; readonly accountIndex?: number } = {},
+  options: {
+    readonly isUnseen?: boolean
+    readonly accountIndex?: number
+    readonly isImportant?: boolean
+    readonly senderSite?: string
+  } = {},
 ) =>
   liveItem(id, {
     title,
@@ -53,6 +59,10 @@ const mail = (
     url: `https://mail.google.com/mail/u/${options.accountIndex ?? 0}/#inbox/${id}`,
     updatedAt,
     isUnseen: options.isUnseen ?? false,
+    ...(options.isImportant === true ? { isImportant: true } : {}),
+    ...(options.senderSite === undefined
+      ? {}
+      : { icon: { _tag: "SiteFavicon", siteUrl: options.senderSite } as const }),
   })
 
 const pullRequest = (
@@ -68,6 +78,7 @@ const pullRequest = (
     url: `https://github.com/${repository}/pull/${number}`,
     updatedAt,
     isUnseen: options.isUnseen ?? false,
+    icon: githubAvatarIcon(repository.split("/")[0] ?? repository),
   })
 
 const workInbox = (now: number): PinnedLiveFolderView =>
@@ -78,8 +89,13 @@ const workInbox = (now: number): PinnedLiveFolderView =>
     items: [
       mail("m1", "Scheduling next week's design review", "Hanako Sato", now - 8 * MINUTE_MS, {
         isUnseen: true,
+        isImportant: true,
       }),
       mail("m2", "Re: Quote (resent)", "Taro Yamada", now - 47 * MINUTE_MS, { isUnseen: true }),
+      mail("m5", "Your deploy finished", "GitHub", now - 52 * MINUTE_MS, {
+        isUnseen: true,
+        senderSite: "https://github.com/",
+      }),
       mail("m3", "Internal study session", "General Affairs", now - 3 * 60 * MINUTE_MS, {
         isUnseen: true,
       }),

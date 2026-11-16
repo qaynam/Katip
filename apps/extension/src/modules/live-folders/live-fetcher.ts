@@ -13,10 +13,15 @@ import {
   githubWebSearchesFor,
   githubWebSearchRequest,
 } from "./github-web-search"
-import { gmailFeedRequest, gmailItemsFrom } from "./gmail-feed"
+import { gmailFeedRequest, gmailItemsFrom, markImportant } from "./gmail-feed"
 import { LiveFetchError, type LiveFetchFailure } from "./live-fetch-failure"
 import { mergeNewestFirst } from "./live-item-order"
-import { originPatternOf, type LiveItem, type LiveSource } from "./live-source"
+import {
+  GMAIL_IMPORTANT_LABEL,
+  originPatternOf,
+  type LiveItem,
+  type LiveSource,
+} from "./live-source"
 
 /** How long to wait for a source to answer. Past this, it's treated as unreachable. */
 export const FETCH_TIME_LIMIT: Duration.Input = "30 seconds"
@@ -109,12 +114,26 @@ export class LiveFetcher extends Context.Service<
           }),
         )
 
+      const fetchGmailFeed = (source: Extract<LiveSource, { _tag: "Gmail" }>) =>
+        Effect.flatMap(send(gmailFeedRequest(source)), (response) =>
+          fromInterpretation(gmailItemsFrom(response, source)),
+        )
+
       const fetchGmail = Effect.fnUntraced(function* (
         source: Extract<LiveSource, { _tag: "Gmail" }>,
       ) {
         yield* requirePermission(originPatternOf(source))
-        const response = yield* send(gmailFeedRequest(source))
-        return yield* fromInterpretation(gmailItemsFrom(response, source))
+        const [items, important] = yield* Effect.all(
+          [
+            fetchGmailFeed(source),
+            // Without it the folder still lists its mail, only without the marks
+            fetchGmailFeed({ ...source, label: GMAIL_IMPORTANT_LABEL }).pipe(
+              Effect.catch(() => Effect.succeed<ReadonlyArray<LiveItem>>([])),
+            ),
+          ],
+          { concurrency: 2 },
+        )
+        return markImportant(items, important)
       })
 
       return LiveFetcher.of({

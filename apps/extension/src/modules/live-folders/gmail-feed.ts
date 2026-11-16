@@ -2,7 +2,13 @@ import { Array, DateTime, Option, pipe, Result, Schema } from "effect"
 import { XMLParser } from "fast-xml-parser"
 import type { HttpRequest, HttpResponse } from "#platform/http"
 import type { LiveFetchFailure } from "./live-fetch-failure"
-import { gmailMailboxUrl, isOpenableUrl, type GmailSource, type LiveItem } from "./live-source"
+import {
+  gmailMailboxUrl,
+  isOpenableUrl,
+  type GmailSource,
+  type LiveItem,
+  type LiveItemIcon,
+} from "./live-source"
 
 /**
  * The unread feed, read with the signed-in session's cookies.
@@ -17,6 +23,8 @@ export const gmailFeedRequest = ({ accountIndex, label }: GmailSource): HttpRequ
   // accounts.google.com, which has no permission, and become indistinguishable from a connection
   // error, so the redirect is judged without following it
   redirect: "manual",
+  // A copy the browser kept would go on listing mail already read
+  cache: "no-store",
 })
 
 const feedParser = new XMLParser({
@@ -64,6 +72,65 @@ const senderOf = (entry: AtomEntry): string =>
     Option.getOrElse(() => ""),
   )
 
+// Anyone can sign up at these, so their icon says nothing of who sent the mail
+const FREE_MAIL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "outlook.com",
+  "outlook.jp",
+  "hotmail.com",
+  "hotmail.co.jp",
+  "live.com",
+  "live.jp",
+  "msn.com",
+  "yahoo.com",
+  "yahoo.co.jp",
+  "ymail.com",
+  "aol.com",
+  "proton.me",
+  "protonmail.com",
+  "pm.me",
+  "gmx.com",
+  "gmx.net",
+  "yandex.com",
+  "yandex.ru",
+  "mail.ru",
+  "qq.com",
+  "163.com",
+  "126.com",
+  "docomo.ne.jp",
+  "ezweb.ne.jp",
+  "au.com",
+  "softbank.ne.jp",
+  "i.softbank.jp",
+])
+
+// Mail often comes from a host kept for sending, such as mail. or news., while the browser saved
+// the icon of the site people visit. Not a full public suffix list: a two-letter country code under
+// a short second level, as in co.jp, keeps three labels
+const siteDomainOf = (domain: string): string => {
+  const labels = domain.split(".")
+  const [secondLevel, topLevel] = labels.slice(-2)
+  const isCountrySecondLevel =
+    labels.length > 2 &&
+    /^[a-z]{2}$/.test(topLevel ?? "") &&
+    /^(ac|co|com|ed|edu|go|gov|gr|lg|ne|net|or|org)$/.test(secondLevel ?? "")
+  return labels.slice(isCountrySecondLevel ? -3 : -2).join(".")
+}
+
+/** The site whose icon stands for the sender. None for an address at a free mail service. */
+export const senderIconOf = (email: string): Option.Option<LiveItemIcon> => {
+  const domain = email.trim().toLowerCase().split("@")[1] ?? ""
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return Option.none()
+  const site = siteDomainOf(domain)
+  return FREE_MAIL_DOMAINS.has(domain) || FREE_MAIL_DOMAINS.has(site)
+    ? Option.none()
+    : Option.some({ _tag: "SiteFavicon", siteUrl: `https://${site}/` })
+}
+
 const conversationUrlOf = (entry: AtomEntry): Option.Option<string> =>
   pipe(
     Option.fromUndefinedOr(entry.link),
@@ -91,6 +158,10 @@ const itemFrom =
         subtitle: senderOf(entry),
         url: Option.getOrElse(conversationUrlOf(entry), () => gmailMailboxUrl(accountIndex)),
         updatedAt: DateTime.toEpochMillis(updated),
+        ...Option.match(senderIconOf(entry.author?.email ?? ""), {
+          onNone: () => ({}),
+          onSome: (icon) => ({ icon }),
+        }),
       }),
     )
 
@@ -132,4 +203,19 @@ export const gmailItemsFrom = (
   return Result.fromOption(parseGmailFeed(response.body, accountIndex), () => ({
     _tag: "UnreadableResponse" as const,
   }))
+}
+
+/**
+ * Marks the items found among the important ones, by their ID at Gmail.
+ *
+ * @remarks
+ * The unread feed tells nothing of importance, so the feed of Gmail's important label tells which
+ * of a folder's mails are.
+ */
+export const markImportant = (
+  items: ReadonlyArray<LiveItem>,
+  important: ReadonlyArray<LiveItem>,
+): ReadonlyArray<LiveItem> => {
+  const importantIds = new Set(important.map((item) => item.id))
+  return items.map((item) => (importantIds.has(item.id) ? { ...item, isImportant: true } : item))
 }

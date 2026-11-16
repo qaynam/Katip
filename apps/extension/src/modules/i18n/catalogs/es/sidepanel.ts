@@ -125,6 +125,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     other: "{count} elementos sin leer",
   },
   "sidepanel.liveFolder.unseen": "Sin leer",
+  "sidepanel.liveFolder.important": "Importante",
   "sidepanel.liveFolder.refreshing": "Actualizando",
   "sidepanel.liveFolder.failed": "No se pudo actualizar",
   "sidepanel.liveFolder.grantAccess": "Permitir acceso",
@@ -152,11 +153,12 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndexHint":
     "El número de mail.google.com/mail/u/número/. La primera cuenta con la que iniciaste sesión es la 0.",
   "sidepanel.liveFolderDialog.mailboxLegend": "Mostrar",
+  "sidepanel.liveFolderDialog.mailbox.important": "Importantes",
   "sidepanel.liveFolderDialog.mailbox.primary": "Pestaña Principal",
   "sidepanel.liveFolderDialog.mailbox.inbox": "Todo Recibidos",
   "sidepanel.liveFolderDialog.mailbox.label": "Una etiqueta",
   "sidepanel.liveFolderDialog.mailboxHint":
-    "La pestaña Principal deja fuera los correos que Gmail clasifica en Promociones, Social y Notificaciones.",
+    "Importantes muestra lo que Gmail marca como importante. La pestaña Principal deja fuera lo que Gmail clasifica en Promociones, Social y Notificaciones.",
   "sidepanel.liveFolderDialog.label": "Nombre de la etiqueta",
   "sidepanel.liveFolderDialog.labelPlaceholder": "Trabajo",
   "sidepanel.liveFolderDialog.gitHubTitle": "Carpeta en vivo de GitHub",

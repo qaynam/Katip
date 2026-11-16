@@ -115,6 +115,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolder.deleteMessage": "将删除“{title}”。其中显示的邮件和议题不受影响。",
   "sidepanel.liveFolder.unseenCount": { other: "{count} 项未读" },
   "sidepanel.liveFolder.unseen": "未读",
+  "sidepanel.liveFolder.important": "重要",
   "sidepanel.liveFolder.refreshing": "正在刷新",
   "sidepanel.liveFolder.failed": "刷新失败",
   "sidepanel.liveFolder.grantAccess": "允许访问",
@@ -141,11 +142,12 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndexHint":
     "即 mail.google.com/mail/u/编号/ 中的编号。最先登录的账号为 0。",
   "sidepanel.liveFolderDialog.mailboxLegend": "显示邮件",
+  "sidepanel.liveFolderDialog.mailbox.important": "重要邮件",
   "sidepanel.liveFolderDialog.mailbox.primary": "“主要”标签页",
   "sidepanel.liveFolderDialog.mailbox.inbox": "整个收件箱",
   "sidepanel.liveFolderDialog.mailbox.label": "指定标签",
   "sidepanel.liveFolderDialog.mailboxHint":
-    "“主要”标签页不含 Gmail 归入“推广”“社交”和“动态”的邮件。",
+    "“重要邮件”列出 Gmail 标为重要的邮件。“主要”标签页不含归入“推广”“社交”和“动态”的邮件。",
   "sidepanel.liveFolderDialog.label": "标签名称",
   "sidepanel.liveFolderDialog.labelPlaceholder": "工作",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub 实时文件夹",

@@ -80,6 +80,47 @@ describe("Gmail", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
+  it.effect("marks the mails also in Gmail's feed of important mail as important", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])
+      yield* (yield* FakeHttp).route("https://mail.google.com/", () =>
+        Effect.succeed(httpResponse(200, gmailFeed)),
+      )
+
+      const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(inbox))
+
+      const urls = (yield* (yield* FakeHttp).requests).map((request) => request.url).sort()
+      assert.deepStrictEqual(
+        [items.map((item) => item.isImportant), urls],
+        [
+          [true],
+          [
+            "https://mail.google.com/mail/u/0/feed/atom",
+            "https://mail.google.com/mail/u/0/feed/atom/%5Eio_im",
+          ],
+        ],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect("still lists the mail, unmarked, when the feed of important mail can't be read", () =>
+    Effect.gen(function* () {
+      yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])
+      yield* (yield* FakeHttp).route("https://mail.google.com/", (request) =>
+        request.url.endsWith("%5Eio_im")
+          ? unreachable(request)
+          : Effect.succeed(httpResponse(200, gmailFeed)),
+      )
+
+      const items = yield* LiveFetcher.use((fetcher) => fetcher.fetch(inbox))
+
+      assert.deepStrictEqual(
+        items.map((item) => [item.title, item.isImportant]),
+        [["Your invoice", undefined]],
+      )
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
   it.effect("fails as unreachable when it can't connect", () =>
     Effect.gen(function* () {
       yield* (yield* FakePermissions).grant([GMAIL_ORIGIN])

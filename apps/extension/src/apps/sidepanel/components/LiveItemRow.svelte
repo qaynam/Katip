@@ -2,7 +2,7 @@
   import type { BookmarkId } from "#platform/browser"
   import type { LiveItemView } from "#protocol"
   import { getSidebarContext } from "../state/sidebar-context"
-  import Favicon from "./Favicon.svelte"
+  import LiveItemIcon from "./LiveItemIcon.svelte"
 
   interface Props {
     item: LiveItemView
@@ -44,9 +44,17 @@
       <span class="unseen-dot" aria-hidden="true"></span>
       <span class="visually-hidden">{t("sidepanel.liveFolder.unseen")}</span>
     {/if}
-    <span class="favicon"><Favicon pageUrl={item.url} favIconUrl={null} title={item.title} /></span>
+    <span class="favicon"><LiveItemIcon {item} /></span>
     <span class="text">
-      <span class="title">{item.title}</span>
+      <span class="title-line">
+        {#if item.isImportant === true}
+          <svg class="important" width="11" height="9" viewBox="0 0 11 9" aria-hidden="true">
+            <path d="M1 1h6.2L10 4.5 7.2 8H1l2.4-3.5z" />
+          </svg>
+          <span class="visually-hidden">{t("sidepanel.liveFolder.important")}</span>
+        {/if}
+        <span class="title">{item.title}</span>
+      </span>
       {#if item.subtitle !== ""}
         <span class="subtitle">{item.subtitle}</span>
       {/if}
@@ -102,6 +110,18 @@
     flex: 1;
     flex-direction: column;
     min-width: 0;
+  }
+
+  .title-line {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .important {
+    flex: none;
+    fill: #f2b200;
   }
 
   .title,
