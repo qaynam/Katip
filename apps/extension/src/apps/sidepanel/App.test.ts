@@ -90,6 +90,40 @@ describe("The sidebar", () => {
   })
 })
 
+describe("Closing the side panel", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("closes the side panel of this window from the Close Sidebar button at the top", async () => {
+    const { sidePanel } = await renderSidebar(sidebarView())
+
+    await fireEvent.click(screen.getByRole("button", { name: "Close Sidebar" }))
+
+    expect(sidePanel.closedIn).toStrictEqual([1])
+  })
+
+  it("names the close button in a tooltip once the pointer rests on it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    await renderSidebar(sidebarView())
+
+    await fireEvent.pointerEnter(screen.getByRole("button", { name: "Close Sidebar" }), {
+      clientX: 220,
+      clientY: 20,
+    })
+    vi.advanceTimersByTime(1_000)
+    await tick()
+
+    expect(screen.getByRole("tooltip").textContent).toContain("Close Sidebar")
+  })
+
+  it("names the close button in the display language", async () => {
+    await renderSidebar(sidebarView(), { locale: "ja" })
+
+    expect(screen.getByRole("button", { name: "サイドバーを閉じる" })).toBeTruthy()
+  })
+})
+
 describe("Space themes", () => {
   afterEach(() => {
     vi.unstubAllGlobals()

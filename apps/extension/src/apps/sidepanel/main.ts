@@ -6,6 +6,7 @@ import { makeStoredLocalePreferences } from "./connection/locale-preferences"
 import { chromeOriginAccess } from "./connection/origin-access"
 import { createPortConnection, type SidebarPort } from "./connection/port-connection"
 import { makeSessionScrollPositions } from "./connection/scroll-positions"
+import { chromeSidePanel } from "./connection/side-panel"
 import { makeGitHubUpdateNotices, noUpdateNotices } from "./connection/update-notices"
 
 const openPort = (): SidebarPort => {
@@ -37,6 +38,7 @@ mount(App, {
     browserLanguages: navigator.languages,
     faviconUrl,
     scrollPositions: makeSessionScrollPositions(),
+    sidePanel: chromeSidePanel,
     updateNotices: import.meta.env.KATIP_UPDATED_FROM_GITHUB
       ? makeGitHubUpdateNotices(chrome.runtime.getManifest().version)
       : noUpdateNotices,

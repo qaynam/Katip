@@ -13,6 +13,7 @@ import {
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../connection/memory-scroll-positions"
+import { createMemorySidePanel } from "../connection/memory-side-panel"
 import { createMemoryUpdateNotices } from "../connection/memory-update-notices"
 import type { ScrollPositions } from "../connection/scroll-positions"
 
@@ -63,6 +64,7 @@ export const renderSidebar = async (
   const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
   const localePreferences = createMemoryLocalePreferences(locale)
   const updateNotices = createMemoryUpdateNotices(updateNotice)
+  const sidePanel = createMemorySidePanel()
   const onReload = vi.fn()
   const result = render(App, {
     props: {
@@ -72,6 +74,7 @@ export const renderSidebar = async (
       browserLanguages,
       scrollPositions,
       updateNotices,
+      sidePanel,
       onReload,
     },
   })
@@ -81,6 +84,7 @@ export const renderSidebar = async (
     connection,
     originAccess,
     updateNotices,
+    sidePanel,
     onReload,
     /** Simulates changing the language setting while the panel stays open. */
     changeLocale: async (preference: LocalePreference) => {

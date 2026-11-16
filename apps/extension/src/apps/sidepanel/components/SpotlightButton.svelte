@@ -12,32 +12,26 @@
   )
 </script>
 
-<div class="spotlight-bar">
-  <button
-    class="spotlight"
-    type="button"
-    aria-keyshortcuts={announcedShortcut}
-    onclick={() => void ctx.run({ _tag: "OpenSpotlight", windowId: ctx.view.windowId })}
-  >
-    <Icon name="search" size={14} />
-    <span class="label">{t("sidepanel.spotlight.button")}</span>
-    {#if shortcut !== null}
-      <kbd class="shortcut" aria-hidden="true">{shortcut}</kbd>
-    {/if}
-  </button>
-</div>
+<button
+  class="spotlight"
+  type="button"
+  aria-keyshortcuts={announcedShortcut}
+  onclick={() => void ctx.run({ _tag: "OpenSpotlight", windowId: ctx.view.windowId })}
+>
+  <Icon name="search" size={14} />
+  <span class="label">{t("sidepanel.spotlight.button")}</span>
+  {#if shortcut !== null}
+    <kbd class="shortcut" aria-hidden="true">{shortcut}</kbd>
+  {/if}
+</button>
 
 <style>
-  .spotlight-bar {
-    flex: none;
-    padding: 8px 8px 0;
-  }
-
   .spotlight {
     display: flex;
     align-items: center;
+    flex: 1;
     gap: 8px;
-    width: 100%;
+    min-width: 0;
     height: 34px;
     padding: 0 8px 0 11px;
     border: none;

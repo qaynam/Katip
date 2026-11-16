@@ -2,6 +2,7 @@ import { createContext } from "svelte"
 import type { Translator } from "#modules/i18n"
 import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
 import type { OriginAccess } from "../connection/origin-access"
+import type { SidePanel } from "../connection/side-panel"
 import type { FaviconResolver } from "../logic/favicon"
 import type { DialogController } from "./dialog-controller.svelte"
 import type { DragSession } from "./drag-session.svelte"
@@ -37,6 +38,7 @@ export interface SidebarContext {
    */
   readonly translator: Translator
   readonly originAccess: OriginAccess
+  readonly sidePanel: SidePanel
   readonly liveFolderDialog: LiveFolderDialogController
   readonly folderSearch: FolderSearchController
   readonly folderIconPicker: FolderIconPickerController

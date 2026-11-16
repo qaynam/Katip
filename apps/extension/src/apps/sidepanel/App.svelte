@@ -16,6 +16,7 @@
   import type { LocalePreferences } from "./connection/locale-preferences"
   import type { OriginAccess } from "./connection/origin-access"
   import type { ScrollPositions } from "./connection/scroll-positions"
+  import type { SidePanel } from "./connection/side-panel"
   import type { SidebarConnection, Undelivered } from "./connection/sidebar-connection"
   import type { UpdateNotices } from "./connection/update-notices"
   import { noFaviconResolver, type FaviconResolver } from "./logic/favicon"
@@ -35,6 +36,7 @@
     faviconUrl?: FaviconResolver
     scrollPositions: ScrollPositions
     updateNotices: UpdateNotices
+    sidePanel: SidePanel
     onReload?: () => void
   }
 
@@ -46,6 +48,7 @@
     faviconUrl = noFaviconResolver,
     scrollPositions,
     updateNotices,
+    sidePanel,
     onReload = () => location.reload(),
   }: Props = $props()
 
@@ -114,6 +117,7 @@
     {originAccess}
     {faviconUrl}
     {scrollPositions}
+    {sidePanel}
     {updateNotice}
     onDismissUpdate={dismissUpdate}
     {onReload}

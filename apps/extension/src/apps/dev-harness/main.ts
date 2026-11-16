@@ -11,6 +11,7 @@ import { createMemoryScrollPositions } from "../sidepanel/connection/memory-scro
 import { createMemoryUpdateNotices } from "../sidepanel/connection/memory-update-notices"
 import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
+import type { SidePanel } from "../sidepanel/connection/side-panel"
 import { respondInFixture } from "./fixture-backend"
 import { fixtureView } from "./fixture-view"
 
@@ -76,6 +77,11 @@ const originAccess = createMemoryOriginAccess({
   },
 })
 
+// Not chrome.sidePanel, which this page isn't shown in: closing is only logged
+const sidePanel: SidePanel = {
+  close: (windowId) => log(`sidePanel.close ${JSON.stringify({ windowId })}`),
+}
+
 const withCommandLog = (connection: SidebarConnection): SidebarConnection => ({
   listen: connection.listen,
   run: (command) => {
@@ -136,6 +142,7 @@ if (connection === null) {
       localePreferences,
       browserLanguages: navigator.languages,
       scrollPositions: createMemoryScrollPositions(),
+      sidePanel,
       updateNotices: createMemoryUpdateNotices(params.has("update") ? harnessRelease : null),
     },
   })

@@ -6,6 +6,7 @@
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { OriginAccess } from "../connection/origin-access"
   import type { ScrollPositions } from "../connection/scroll-positions"
+  import type { SidePanel } from "../connection/side-panel"
   import type { FaviconResolver } from "../logic/favicon"
   import { openTabOf } from "../logic/drag-drop"
   import { detectSwipe, neighborSpaceId } from "../logic/swipe"
@@ -24,6 +25,7 @@
   import { TooltipController } from "../state/tooltip.svelte"
   import ArchivePanel from "./ArchivePanel.svelte"
   import BottomBar from "./BottomBar.svelte"
+  import ClosePanelButton from "./ClosePanelButton.svelte"
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
@@ -49,6 +51,7 @@
     originAccess: OriginAccess
     faviconUrl: FaviconResolver
     scrollPositions: ScrollPositions
+    sidePanel: SidePanel
     /** A newer release to tell about, or null for none. */
     updateNotice: Release | null
     onDismissUpdate: () => void
@@ -64,6 +67,7 @@
     originAccess,
     faviconUrl,
     scrollPositions,
+    sidePanel,
     updateNotice,
     onDismissUpdate,
     onReload,
@@ -110,6 +114,9 @@
     },
     get originAccess() {
       return originAccess
+    },
+    get sidePanel() {
+      return sidePanel
     },
     liveFolderDialog,
     folderSearch,
@@ -191,7 +198,10 @@
     ondragleave={forgetDropTargetWhenLeaving}
     ondragstart={() => tooltip.hide()}
   >
-    <SpotlightButton />
+    <div class="top-bar">
+      <SpotlightButton />
+      <ClosePanelButton />
+    </div>
     <FavoritesGrid favorites={view.favorites} />
 
     {#key activeSpace.id}
@@ -249,6 +259,14 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+  }
+
+  .top-bar {
+    display: flex;
+    flex: none;
+    gap: 4px;
+    align-items: center;
+    padding: 8px 8px 0;
   }
 
   .space {

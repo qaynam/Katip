@@ -14,6 +14,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.update.dismiss": "Descartar",
 
   "sidepanel.spotlight.button": "Buscar",
+  "sidepanel.close": "Cerrar la barra lateral",
   "sidepanel.split.pageDropHint":
     "Suelta a la izquierda o a la derecha de la página para dividirla con la pestaña que se muestra",
   "sidepanel.split.unsupported":

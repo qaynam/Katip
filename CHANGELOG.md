@@ -14,6 +14,10 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 Gmail live folders and GitHub notifications show only what’s still unread, GitHub notifications no longer need a token, and Spotlight is now called the Command Palette.
 
+### 🚀 New
+
+- **A button that closes the sidebar** — The × to the right of the search field at the top of the sidebar closes the side panel, without reaching for Chrome’s toolbar or a shortcut.
+
 ### ✨ Improved
 
 - **GitHub notifications without a token** — A GitHub live folder of notifications reads them from github.com with the session you’re signed in with, as the folders of searches do, instead of asking for a personal access token. It asks for access to github.com rather than api.github.com. Opening a notification from the folder marks it read on GitHub, as opening it from GitHub’s inbox does, and the welcome tour offers a notifications folder alongside the others. A notifications folder you already have switches on its next refresh; if it asks, allow access to github.com.
@@ -25,6 +29,10 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 ## 日本語
 
 Gmail のライブフォルダと GitHub の通知に未読のものだけが並び、GitHub の通知はトークンなしで読めるようになり、Spotlight はコマンドパレットという名前になりました。
+
+### 🚀 新機能
+
+- **サイドバーを閉じるボタン** — サイドバー上部の検索欄の右にある × で、サイドパネルを閉じられるようになりました。Chrome のツールバーやショートカットを使わずに閉じられます。
 
 ### ✨ 改善
 
