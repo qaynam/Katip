@@ -1459,7 +1459,7 @@ describe("copy shortcuts", () => {
 
           expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
             ["https://copy.example/page?q=1"],
-            ["Copied URL"],
+            [{ tone: "Done", title: "Copied URL", detail: "https://copy.example/page?q=1" }],
           ])
         }),
       ),
@@ -1479,7 +1479,13 @@ describe("copy shortcuts", () => {
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           ["[Release notes](https://copy.example/page)"],
-          ["Copied Markdown link"],
+          [
+            {
+              tone: "Done",
+              title: "Copied Markdown link",
+              detail: "[Release notes](https://copy.example/page)",
+            },
+          ],
         ])
       }),
     ),
@@ -1553,7 +1559,7 @@ describe("copy shortcuts", () => {
 
         expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
           [],
-          ["Couldn’t copy"],
+          [{ tone: "Alert", title: "Couldn’t copy" }],
         ])
       }),
     ),

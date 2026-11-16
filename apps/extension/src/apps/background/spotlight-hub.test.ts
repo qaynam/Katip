@@ -791,7 +791,13 @@ describe("choosing a Spotlight command", () => {
         }).toStrictEqual({
           outcome: { _tag: "Succeeded" },
           written: ["https://docs.example/guide"],
-          shown: [{ tabId: tabIds[0], name: "showPageToast", args: ["Copied URL"] }],
+          shown: [
+            {
+              tabId: tabIds[0],
+              name: "showPageToast",
+              args: [{ tone: "Done", title: "Copied URL", detail: "https://docs.example/guide" }],
+            },
+          ],
         })
       }),
     ),
