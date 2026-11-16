@@ -45,7 +45,13 @@ import { makeFakeTabGroups } from "./fake-tab-groups"
 import { makeFakeTabs, requireTabSnapshot } from "./fake-tabs"
 import { makeFakeWebSearch } from "./fake-web-search"
 import { closeWindowWithTabs, makeFakeWindows } from "./fake-windows"
-import { type FakeApiName, type FakeWorld, makeFakeWorld, transact } from "./fake-world"
+import {
+  type BrowsingTx,
+  type FakeApiName,
+  type FakeWorld,
+  makeFakeWorld,
+  transact,
+} from "./fake-world"
 
 export interface TabSeed {
   /** Defaults to the New Tab page. */
@@ -313,6 +319,25 @@ const pageChanges = (tab: TabRecord, update: PageUpdate): TabChanges => ({
     update.audible !== tab.audible && { audible: update.audible }),
 })
 
+const createLinkTab = Effect.fnUntraced(function* (
+  tx: BrowsingTx,
+  fromTabId: TabId,
+  active: boolean,
+) {
+  const opener = yield* requireTab(tx, fromTabId)
+  const openedBefore = Array.takeWhile(opener.window.tabs.slice(opener.index + 1), (tab) =>
+    Option.contains(tab.openerTabId, fromTabId),
+  )
+  return yield* createTab(tx, {
+    windowId: opener.window.id,
+    index: opener.index + 1 + openedBefore.length,
+    url: "",
+    active,
+    pinned: false,
+    openerTabId: Option.some(fromTabId),
+  })
+})
+
 export interface FakeBrowserOptions {
   /**
    * Defaults to `true`. `false` plays Chrome without the API to create and dissolve split views
@@ -387,6 +412,15 @@ export class FakeBrowser extends Context.Service<
       url: string,
       options?: { readonly active?: boolean },
     ): Effect.Effect<TabId, BrowserApiError>
+    /**
+     * Plays the user opening a link as {@link openLink} does, up to just before the page starts
+     * loading: the tab keeps no URL until `updatePage` gives it one, as in Chrome, where the URL
+     * can take a tenth of a second to follow.
+     */
+    openLinkBeforeLoading(
+      fromTabId: TabId,
+      options?: { readonly active?: boolean },
+    ): Effect.Effect<TabId, BrowserApiError>
     fireAlarm(name: string): Effect.Effect<void, BrowserApiError>
     /**
      * Makes the next call to `api` do nothing and fail with {@link BrowserApiError}. Calling this
@@ -452,24 +486,16 @@ export class FakeBrowser extends Context.Service<
               world,
               "tabs.onCreated",
               Effect.fnUntraced(function* (tx) {
-                const opener = yield* requireTab(tx, fromTabId)
-                const openedBefore = Array.takeWhile(
-                  opener.window.tabs.slice(opener.index + 1),
-                  (tab) => Option.contains(tab.openerTabId, fromTabId),
-                )
-                const tabId = yield* createTab(tx, {
-                  windowId: opener.window.id,
-                  index: opener.index + 1 + openedBefore.length,
-                  url: "",
-                  active: options.active ?? false,
-                  pinned: false,
-                  openerTabId: Option.some(fromTabId),
-                })
+                const tabId = yield* createLinkTab(tx, fromTabId, options.active ?? false)
                 const changes: TabChanges = { url, status: "loading" }
                 yield* updateTab(tx, tabId, (record) => applyPageChanges(record, changes))
                 yield* emitTabUpdated(tx, tabId, changes)
                 return tabId
               }),
+            ),
+          openLinkBeforeLoading: (fromTabId, options = {}) =>
+            transact(world, "tabs.onCreated", (tx) =>
+              createLinkTab(tx, fromTabId, options.active ?? false),
             ),
           fireAlarm: alarms.fire,
           failNext: (api, cause = new Error(`${api} failed (injected by FakeBrowser)`)) =>

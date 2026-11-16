@@ -325,6 +325,24 @@ layer(FakeBrowser.layer, { buildPerTest: true })("FakeBrowser", (it) => {
         )
       }),
     )
+
+    it.effect("stopped before loading, opens the tab with no URL and reports no update", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const {
+          tabIds: [page],
+        } = yield* fake.seedWindow({ tabs: [{ active: true }, {}] })
+
+        const link = yield* fake.openLinkBeforeLoading(page)
+
+        const tab = yield* (yield* Tabs).get(link)
+        const events = yield* fake.takeEmittedEvents
+        assert.deepStrictEqual(
+          [tab.index, tab.url, events.map(({ _tag }) => _tag)],
+          [1, Option.none(), ["TabCreated"]],
+        )
+      }),
+    )
   })
 
   describe("injecting a failure", () => {
