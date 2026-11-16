@@ -199,7 +199,7 @@ const confirmLiveFolderRemoval = async (ctx: SidebarContext, folder: PinnedLiveF
     message: t("sidepanel.liveFolder.deleteMessage", { title }),
     confirmLabel: t("common.delete"),
   })
-  if (confirmed) void ctx.run({ _tag: "DeleteFolder", bookmarkId: folder.bookmarkId })
+  if (confirmed) void ctx.run({ _tag: "RemovePinnedItem", bookmarkId: folder.bookmarkId })
 }
 
 /** Opens the source's sign-in page as a temporary tab in this window. */

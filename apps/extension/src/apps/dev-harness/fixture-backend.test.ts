@@ -218,6 +218,18 @@ describe("the fixture's naive responses", () => {
     expect(rootFolder(next, "design-docs")).toBeUndefined()
   })
 
+  it("deleting a live folder as a folder fails and keeps it, as the background does", () => {
+    const liveId = liveFoldersIn(
+      view.spaces.flatMap((space) => (space.pinned._tag === "Available" ? space.pinned.nodes : [])),
+    )[0]?.bookmarkId
+    if (liveId === undefined) throw new Error("the fixture has no live folder")
+
+    const response = respondInFixture({ _tag: "DeleteFolder", bookmarkId: liveId }, view, NOW)
+
+    expect(response.outcome._tag).toBe("Failed")
+    expect(liveFolder(response.view ?? view, liveId)).toBeDefined()
+  })
+
   it("a created live folder appears with items from its source, and its ID is returned in the outcome", () => {
     const response = respondInFixture(
       {

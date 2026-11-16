@@ -21,7 +21,7 @@ import type {
 } from "#protocol"
 import type { CommandResponse } from "../sidepanel/connection/memory-connection"
 import { suggestedTheme } from "../sidepanel/logic/space-themes"
-import { hostOf } from "../sidepanel/logic/view-queries"
+import { findPinnedNode, hostOf } from "../sidepanel/logic/view-queries"
 import { withRecomputedPeeks } from "./fixture-peeks"
 import {
   liveItem,
@@ -38,6 +38,21 @@ const succeeded = (
   view: SidebarView,
   createdBookmarkId: BookmarkId | null = null,
 ): CommandResponse => ({ outcome: { _tag: "Succeeded", createdBookmarkId }, view })
+
+const failed = (view: SidebarView, reason: string): CommandResponse => ({
+  outcome: { _tag: "Failed", reason },
+  view,
+})
+
+const isLiveFolder = (view: SidebarView, bookmarkId: BookmarkId) =>
+  view.spaces.some(
+    (space) =>
+      space.pinned._tag === "Available" &&
+      Option.exists(
+        findPinnedNode(space.pinned.nodes, bookmarkId),
+        (node) => node._tag === "PinnedLiveFolder",
+      ),
+  )
 
 const mapSpaces = (view: SidebarView, update: (space: SpaceView) => SpaceView): SidebarView => ({
   ...view,
@@ -845,7 +860,12 @@ const respondWithoutPeeks = (
           ),
         ),
       ),
-      Match.tag("DeleteFolder", ({ bookmarkId }) => succeeded(removePinned(view, bookmarkId))),
+      // As in the background, which removes a live folder only as a pinned item
+      Match.tag("DeleteFolder", ({ bookmarkId }) =>
+        isLiveFolder(view, bookmarkId)
+          ? failed(view, "Not a folder")
+          : succeeded(removePinned(view, bookmarkId)),
+      ),
       Match.tag("RemoveArchiveEntry", ({ entryId }) =>
         succeeded({ ...view, archive: view.archive.filter((entry) => entry.id !== entryId) }),
       ),

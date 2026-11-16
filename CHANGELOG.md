@@ -18,6 +18,10 @@ Gmail live folders can list just the Primary tab, so newsletters no longer crowd
 
 - **Gmail’s Primary tab** — A new Gmail live folder lists the unread mail in the Primary tab, leaving out what Gmail sorts into Promotions, Social and Updates. You can still choose the whole inbox, or a label by its name. A folder made before keeps listing the whole inbox; make a new one to list the Primary tab.
 
+#### Fixed
+
+- **Deleting a live folder** — Delete Live Folder in a live folder’s menu removes it. Before, it did nothing.
+
 ### 日本語
 
 Gmail のライブフォルダで「メイン」タブだけを並べられるようになり、メールマガジンに埋もれなくなりました。
@@ -25,6 +29,10 @@ Gmail のライブフォルダで「メイン」タブだけを並べられる�
 #### 改善
 
 - **Gmail のメインタブ** — 新しく作る Gmail のライブフォルダは、「メイン」タブの未読メールを並べます。Gmail がプロモーション・ソーシャル・新着に振り分けたメールは入りません。受信トレイ全体や、名前を指定したラベルも選べます。これまでに作ったフォルダは受信トレイ全体のままなので、メインタブにするには作り直してください。
+
+#### 修正
+
+- **ライブフォルダの削除** — ライブフォルダのメニューの「ライブフォルダを削除」で、削除されるようになりました。これまでは何も起きませんでした。
 
 ## 1.8.0 — 2026-11-12
 

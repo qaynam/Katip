@@ -181,8 +181,8 @@ describe("Live folder actions", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Live Folder" }))
     await fireEvent.click(await screen.findByRole("button", { name: "Delete" }))
 
-    expect(commandsOf(connection.sentCommands, "DeleteFolder")).toStrictEqual([
-      { _tag: "DeleteFolder", bookmarkId: BookmarkId.make("inbox") },
+    expect(commandsOf(connection.sentCommands, "RemovePinnedItem")).toStrictEqual([
+      { _tag: "RemovePinnedItem", bookmarkId: BookmarkId.make("inbox") },
     ])
   })
 
@@ -193,7 +193,7 @@ describe("Live folder actions", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Delete Live Folder" }))
     await fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
-    expect(commandsOf(connection.sentCommands, "DeleteFolder")).toStrictEqual([])
+    expect(commandsOf(connection.sentCommands, "RemovePinnedItem")).toStrictEqual([])
   })
 })
 

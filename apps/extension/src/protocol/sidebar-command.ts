@@ -89,6 +89,7 @@ export const SidebarCommand = Schema.Union([
 
   Schema.TaggedStruct("OpenPinnedItem", { windowId: WindowId, bookmarkId: BookmarkId }),
   Schema.TaggedStruct("MovePinnedItem", { bookmarkId: BookmarkId, placement: PinnedPlacement }),
+  // Any pinned item but a plain folder: a bookmark, a split pin or a live folder
   Schema.TaggedStruct("RemovePinnedItem", { bookmarkId: BookmarkId }),
   Schema.TaggedStruct("RenamePinnedItem", { bookmarkId: BookmarkId, title: Schema.String }),
   Schema.TaggedStruct("ResetPinnedTab", { tabId: TabId }),
@@ -100,6 +101,7 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("SetFolderExpanded", { bookmarkId: BookmarkId, isExpanded: Schema.Boolean }),
   // null goes back to the folder glyph
   Schema.TaggedStruct("SetFolderIcon", { bookmarkId: BookmarkId, icon: Schema.NullOr(FolderIcon) }),
+  // Only a plain folder, with everything in it. Fails for a live folder
   Schema.TaggedStruct("DeleteFolder", { bookmarkId: BookmarkId }),
 
   Schema.TaggedStruct("RestoreArchiveEntry", { windowId: WindowId, entryId: ArchiveEntryId }),
