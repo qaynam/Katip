@@ -28,6 +28,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, Git
 - **Command Palette** — Spotlight is now called the Command Palette, in the settings, on Chrome’s shortcuts page and everywhere else Katip names it. It works as before, and its size, position and other settings stay as you set them.
 - **The site you’re on, at the top** — The search field at the top of the sidebar shows the site of the tab you’re viewing, such as github.com, in place of Search. Clicking it still opens the Command Palette. On a new tab or one of the browser’s own pages, it says Search as before.
 - **The Archive from the Space menu and the Command Palette** — The Archive moves from the button at the bottom left, which now shows your downloads, to Open Archive in a Space’s … menu and the Open Archive command in the Command Palette. The × at its top right takes you back to your tabs. From the Command Palette, it opens the side panel first if it’s closed.
+- **How many items a live folder shows** — A live folder shows its first 10 items, in the order you sorted it, and ends with a row such as “3 more” that opens the rest on Gmail or GitHub. Right-click the folder and choose 5, 10, 20 or All under Items to Show, below Sort By. An item open in a tab stays on its row wherever it falls, and the count on the right of the folder still counts every unread item.
 
 ### 🐛 Fixed
 
@@ -51,6 +52,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 - **コマンドパレット** — Spotlight の名前をコマンドパレットに変えました。設定や Chrome のショートカット設定など、Katip がこの機能の名前を出すところはすべてこの名前になります。使い方は変わらず、サイズや開く位置などの設定もそのまま引き継ぎます。
 - **表示中のサイトを上部に** — サイドバー上部の検索欄に、「検索」の代わりに表示中のタブのサイト（github.com など）を表示します。クリックすると、これまでどおりコマンドパレットが開きます（※新しいタブやブラウザ自体のページでは、これまでどおり「検索」と表示します）。
 - **Space のメニューとコマンドパレットからアーカイブ** — アーカイブは、ダウンロードを表示するようになった左下のボタンから、Space の「…」メニューとコマンドパレットの「アーカイブを開く」に移りました。右上の × でタブの一覧に戻ります。コマンドパレットからは、サイドパネルが閉じていれば先に開きます。
+- **ライブフォルダに表示する件数** — ライブフォルダには、並べ替えた順に先頭の 10 件を表示し、最後に「ほか 3 件」のような行を置きます。この行をクリックすると、残りを Gmail や GitHub で開きます。件数は、フォルダの右クリックメニューで「並べ替え」の下にある「表示する件数」から、5 件・10 件・20 件・すべてのいずれかを選べます。タブで開いている項目は、何件目であっても自分の行に表示し、フォルダの右側の未読の件数は、表示していないものも含めてすべて数えます。
 
 ### 🐛 修正
 

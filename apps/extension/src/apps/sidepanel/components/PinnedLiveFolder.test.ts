@@ -352,6 +352,88 @@ describe("Sorting a live folder", () => {
   })
 })
 
+describe("How many items a live folder shows", () => {
+  const overLimit = (overrides: Partial<Omit<PinnedLiveFolderView, "_tag" | "bookmarkId">> = {}) =>
+    inbox({
+      limit: 5,
+      items: ["a", "b", "c", "d", "e"].map((id) =>
+        liveItem(id, { title: `Mail ${id}`, isUnseen: true }),
+      ),
+      hiddenItems: [
+        liveItem("f", { title: "Mail f", isUnseen: true }),
+        liveItem("g", { title: "Mail g", isUnseen: false }),
+      ],
+      ...overrides,
+    })
+  const openItemsToShow = async () => {
+    await openHeaderMenu("Inbox")
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Items to Show" }))
+  }
+
+  it("offers 5, 10, 20 and All under Items to Show, checking the current one", async () => {
+    await renderSidebar(viewWithPins(inbox({ limit: 20 })))
+
+    await openItemsToShow()
+
+    const choices = screen
+      .getAllByRole("menuitemradio")
+      .map((item) => [item.textContent?.trim(), item.getAttribute("aria-checked")])
+    expect(choices).toStrictEqual([
+      ["5", "false"],
+      ["10", "false"],
+      ["20", "true"],
+      ["All", "false"],
+    ])
+  })
+
+  it("limits the folder to the number chosen under Items to Show", async () => {
+    const { connection } = await renderSidebar(viewWithPins(inbox()))
+
+    await openItemsToShow()
+    await fireEvent.click(screen.getByRole("menuitemradio", { name: "5" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SetLiveFolderLimit", bookmarkId: BookmarkId.make("inbox"), limit: 5 },
+    ])
+  })
+
+  it("ends the list with a row telling how many more items there are", async () => {
+    await renderSidebar(viewWithPins(overLimit()))
+
+    const rows = within(pinnedRegion()).getAllByRole("listitem")
+
+    expect(rows.map((row) => row.textContent?.trim()).slice(-2)).toStrictEqual([
+      expect.stringContaining("Mail e"),
+      "2 more",
+    ])
+  })
+
+  it("opens the source's own list with the row of more items", async () => {
+    const { connection } = await renderSidebar(viewWithPins(overLimit()))
+
+    await fireEvent.click(screen.getByRole("button", { name: "2 more" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "OpenUrl", windowId: 1, url: "https://mail.google.com/mail/u/0/#inbox" },
+    ])
+  })
+
+  it("has no row of more items when nothing is held back", async () => {
+    await renderSidebar(viewWithPins(inbox()))
+
+    expect(screen.queryByRole("button", { name: /more$/ })).toBeNull()
+  })
+
+  it("counts the unread items held back in the badge of the collapsed folder", async () => {
+    await renderSidebar(viewWithPins(overLimit({ isExpanded: false })))
+
+    expect([
+      header("Inbox").textContent,
+      screen.queryByRole("button", { name: /more$/ }),
+    ]).toStrictEqual([expect.stringContaining("6 unread items"), null])
+  })
+})
+
 describe("A live folder that failed to refresh", () => {
   it("shows why it failed", async () => {
     await renderSidebar(viewWithPins(inbox({ status: failed({}) })))

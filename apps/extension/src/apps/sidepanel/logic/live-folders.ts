@@ -24,8 +24,9 @@ export const sourceOrigins = (source: LiveSource): ReadonlyArray<string> => [
   originPatternOf(source),
 ]
 
+/** Counts the items the folder's limit holds back too. */
 export const unseenCount = (folder: PinnedLiveFolderView): number =>
-  folder.items.filter((item) => item.isUnseen).length
+  [...folder.items, ...folder.hiddenItems].filter((item) => item.isUnseen).length
 
 const BADGE_LIMIT = 99
 

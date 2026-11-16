@@ -69,11 +69,15 @@ const nodeEntries = (node: PinnedNodeView, windowId: WindowId): ReadonlyArray<Fo
       split.items.map((item) =>
         pinnedEntry(item, { _tag: "OpenPinnedItem", windowId, bookmarkId: split.bookmarkId }),
       ),
-    PinnedLiveFolder: (folder) => folder.items.map((item) => liveEntry(folder, item, windowId)),
+    PinnedLiveFolder: (folder) =>
+      [...folder.items, ...folder.hiddenItems].map((item) => liveEntry(folder, item, windowId)),
     PinnedFolder: (folder) => folder.children.flatMap((child) => nodeEntries(child, windowId)),
   })
 
-/** Lists entries in their order within the folder, including those in nested folders. */
+/**
+ * Lists entries in their order within the folder, including those in nested folders and the items a
+ * live folder's limit holds back.
+ */
 export const folderSearchEntries = (
   folder: SearchableFolder,
   windowId: WindowId,

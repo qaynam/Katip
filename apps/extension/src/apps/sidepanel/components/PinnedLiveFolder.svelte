@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Option } from "effect"
+  import { sourcePageUrlOf } from "#modules/live-folders"
   import type { PinnedLiveFolderView } from "#protocol"
   import { edgeAt, slotAt, type DragSource, type PinnedPosition } from "../logic/drag-drop"
   import { bookmarkTitleChange } from "../logic/drafts"
@@ -66,6 +67,13 @@
   }
 
   const refresh = () => void ctx.run({ _tag: "RefreshLiveFolder", bookmarkId: folder.bookmarkId })
+
+  const openSourcePage = () =>
+    void ctx.run({
+      _tag: "OpenUrl",
+      windowId: ctx.view.windowId,
+      url: sourcePageUrlOf(folder.source),
+    })
 
   const setToken = () =>
     ctx.liveFolderDialog.open({ _tag: "SetGitHubToken", bookmarkId: folder.bookmarkId })
@@ -183,6 +191,13 @@
           {#each folder.items as item (item.id)}
             <LiveItemRow {item} folderId={folder.bookmarkId} />
           {/each}
+          {#if folder.hiddenItems.length > 0}
+            <li class="more">
+              <button type="button" onclick={openSourcePage}>
+                {t("sidepanel.liveFolder.moreItems", { count: folder.hiddenItems.length })}
+              </button>
+            </li>
+          {/if}
         </ul>
       {:else if failure === null}
         <p class="empty">
@@ -334,6 +349,34 @@
     gap: 2px;
     margin: 2px 0 2px 16px;
     padding: 0;
+  }
+
+  .more {
+    list-style: none;
+  }
+
+  /* The text lines up with the items' titles, past where their icons sit */
+  .more button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 28px;
+    padding: 0 10px 0 36px;
+    border: none;
+    border-radius: var(--radius-row);
+    background: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: start;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+
+  .more button:hover {
+    background: var(--surface-hover);
+    color: var(--text);
   }
 
   .empty {

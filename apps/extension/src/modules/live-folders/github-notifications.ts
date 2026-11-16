@@ -7,6 +7,9 @@ import { githubAvatarIcon, type LiveItem } from "./live-source"
 
 const GITHUB_WEB = "https://github.com"
 
+/** github.com's notifications inbox, showing only the unread notifications. */
+export const GITHUB_UNREAD_NOTIFICATIONS_URL = `${GITHUB_WEB}/notifications?${new URLSearchParams({ query: "is:unread" })}`
+
 /**
  * Reads the unread notifications from github.com's notifications page, with the signed-in
  * session's cookies.
@@ -16,7 +19,7 @@ const GITHUB_WEB = "https://github.com"
  * making the breakage visible.
  */
 export const GITHUB_NOTIFICATIONS_REQUEST: HttpRequest = {
-  url: `${GITHUB_WEB}/notifications?${new URLSearchParams({ query: "is:unread" })}`,
+  url: GITHUB_UNREAD_NOTIFICATIONS_URL,
   // Not JSON, as asked of the search page: the notifications page answers that with 406
   headers: { Accept: "text/html" },
   credentials: "include",

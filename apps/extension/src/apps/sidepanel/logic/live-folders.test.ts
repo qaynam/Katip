@@ -18,6 +18,21 @@ describe("unseenCount", () => {
   it("is 0 when there are no items", () => {
     expect(unseenCount(pinnedLiveFolder("inbox", { items: [] }))).toBe(0)
   })
+
+  it("counts the unread items the folder's limit holds back too, so the count tells there are more", () => {
+    const folder = pinnedLiveFolder("inbox", {
+      limit: 5,
+      items: Array.from({ length: 5 }, (_, index) =>
+        liveItem(`shown-${index}`, { isUnseen: true }),
+      ),
+      hiddenItems: [
+        liveItem("hidden-unread", { isUnseen: true }),
+        liveItem("hidden-read", { isUnseen: false }),
+      ],
+    })
+
+    expect(unseenCount(folder)).toBe(6)
+  })
 })
 
 describe("unseenBadgeText", () => {

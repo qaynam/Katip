@@ -40,6 +40,10 @@ export const githubWebSearchesFor = (
   query: GitHubSearchQuery,
 ): Array.NonEmptyReadonlyArray<GitHubWebSearch> => searchesByQuery[query]
 
+/** github.com's search page showing the search's results. */
+export const githubWebSearchUrl = (search: GitHubWebSearch): string =>
+  `https://github.com/search?${new URLSearchParams({ q: search.query, type: search.type })}`
+
 /**
  * Reads the results of github.com's search page as JSON, with the signed-in session's cookies.
  *
@@ -48,7 +52,7 @@ export const githubWebSearchesFor = (
  * unreadable, making the breakage visible.
  */
 export const githubWebSearchRequest = (search: GitHubWebSearch): HttpRequest => ({
-  url: `https://github.com/search?${new URLSearchParams({ q: search.query, type: search.type })}`,
+  url: githubWebSearchUrl(search),
   headers: { Accept: "application/json" },
   credentials: "include",
   redirect: "manual",

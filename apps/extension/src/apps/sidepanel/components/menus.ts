@@ -1,6 +1,6 @@
 import { Option } from "effect"
 import type { MessageKey } from "#modules/i18n"
-import { LiveSort } from "#modules/live-folders"
+import { LiveLimit, LiveSort } from "#modules/live-folders"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type {
   FavoriteView,
@@ -234,6 +234,23 @@ const liveFolderSortMenu = (ctx: SidebarContext, folder: PinnedLiveFolderView): 
     ),
   )
 
+const limitLabelOf = (ctx: SidebarContext, limit: LiveLimit) =>
+  limit === "all"
+    ? ctx.translator.t("sidepanel.liveFolder.limit.all")
+    : ctx.translator.t("sidepanel.liveFolder.limit.count", { count: limit })
+
+const liveFolderLimitMenu = (ctx: SidebarContext, folder: PinnedLiveFolderView): MenuEntry =>
+  submenu(
+    ctx.translator.t("sidepanel.liveFolder.itemsToShow"),
+    LiveLimit.literals.map((limit) =>
+      action(
+        limitLabelOf(ctx, limit),
+        () => void ctx.run({ _tag: "SetLiveFolderLimit", bookmarkId: folder.bookmarkId, limit }),
+        { checked: limit === folder.limit },
+      ),
+    ),
+  )
+
 export const liveFolderMenu = (
   ctx: SidebarContext,
   folder: PinnedLiveFolderView,
@@ -255,6 +272,7 @@ export const liveFolderMenu = (
       { disabled: unseenCount(folder) === 0 },
     ),
     liveFolderSortMenu(ctx, folder),
+    liveFolderLimitMenu(ctx, folder),
     ...(failure?.needsPermission === true
       ? [
           action(

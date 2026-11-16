@@ -28,6 +28,18 @@ describe("folderSearchEntries", () => {
     expect(titles).toStrictEqual(["Spec", "10/28 weekly sync", "Re: Quote"])
   })
 
+  it("finds the items a live folder's limit holds back, after those it shows", () => {
+    const folder = pinnedLiveFolder("inbox", {
+      limit: 5,
+      items: [liveItem("shown", { title: "Re: Quote" })],
+      hiddenItems: [liveItem("hidden", { title: "Lunch invite" })],
+    })
+
+    const titles = folderSearchEntries(folder, windowId).map((entry) => entry.title)
+
+    expect(titles).toStrictEqual(["Re: Quote", "Lunch invite"])
+  })
+
   it("opens a closed pin when chosen, and switches to the tab of an open pin", () => {
     const folder = pinnedFolder("docs", {
       children: [pinnedItem("closed"), pinnedItem("open", { openTab: openPinnedTab(tabView(7)) })],
