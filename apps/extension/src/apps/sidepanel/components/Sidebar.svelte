@@ -138,6 +138,9 @@
 
   let lastSwipeAt = Number.NEGATIVE_INFINITY
 
+  // Downloads belong to no Space, so their view takes the place of everything that shows one
+  const isSpaceCovered = $derived(bodyPanel.current === "Downloads")
+
   const displayedTheme = $derived(themeDraft.themeFor(activeSpace.id) ?? activeSpace.theme)
 
   $effect(() => {
@@ -155,7 +158,7 @@
   })
 
   const switchByWheel = (event: WheelEvent) => {
-    if (drag.source !== null || themePicker.current !== null) return
+    if (drag.source !== null || themePicker.current !== null || isSpaceCovered) return
     const direction = detectSwipe(event, event.timeStamp - lastSwipeAt)
     if (Option.isNone(direction)) return
     const destination = neighborSpaceId(view.spaces, activeSpace.id, direction.value)
@@ -212,15 +215,19 @@
     ondragleave={forgetDropTargetWhenLeaving}
     ondragstart={() => tooltip.hide()}
   >
-    <div class="top-bar">
-      <SpotlightButton />
-      <ClosePanelButton />
-    </div>
-    <FavoritesGrid favorites={view.favorites} />
+    {#if !isSpaceCovered}
+      <div class="top-bar">
+        <SpotlightButton />
+        <ClosePanelButton />
+      </div>
+      <FavoritesGrid favorites={view.favorites} />
+    {/if}
 
     {#key activeSpace.id}
       <div class="space">
-        <SpaceTitle space={activeSpace} />
+        {#if !isSpaceCovered}
+          <SpaceTitle space={activeSpace} />
+        {/if}
         <div class="space-body" data-space-body {@attach keepScrollPosition}>
           {#if bodyPanel.current === "Archive"}
             <ArchivePanel spaceId={activeSpace.id} />
@@ -250,7 +257,9 @@
           onDismiss={onDismissUpdate}
         />
       {/if}
-      <BottomBar spaces={view.spaces} activeSpaceId={activeSpace.id} />
+      {#if !isSpaceCovered}
+        <BottomBar spaces={view.spaces} activeSpaceId={activeSpace.id} />
+      {/if}
     </div>
   </main>
 

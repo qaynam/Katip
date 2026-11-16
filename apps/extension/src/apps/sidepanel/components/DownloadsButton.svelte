@@ -7,7 +7,6 @@
 
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
-  const isShown = $derived(ctx.bodyPanel.current === "Downloads")
 
   // Known before any click, as the click has to decide without waiting whether to ask
   let access = $state<DownloadsAccess | null>(null)
@@ -25,10 +24,9 @@
     else openDownloadsPage()
   }
 
-  const toggle = () => {
+  const showDownloads = () => {
     ctx.tooltip.hide()
-    if (isShown) ctx.bodyPanel.close()
-    else if (access === "Declined") openDownloadsPage()
+    if (access === "Declined") openDownloadsPage()
     else void askThenShow()
   }
 
@@ -55,11 +53,9 @@
 
 <button
   class="icon-button"
-  class:pressed={isShown}
   type="button"
   aria-label={t("sidepanel.downloads.title")}
-  aria-pressed={isShown}
-  onclick={toggle}
+  onclick={showDownloads}
   oncontextmenu={openMenu}
   onpointerenter={showName}
   onpointermove={(event) => ctx.tooltip.follow({ x: event.clientX, y: event.clientY })}
@@ -87,12 +83,6 @@
 
   .icon-button:hover {
     background: var(--surface-hover);
-    color: var(--text);
-  }
-
-  .icon-button.pressed {
-    background: var(--surface-active);
-    box-shadow: var(--shadow-active);
     color: var(--text);
   }
 </style>

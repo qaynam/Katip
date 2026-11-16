@@ -41,7 +41,7 @@
     place-items: center;
     width: 16px;
     height: 16px;
-    color: var(--text-muted);
+    color: var(--text);
   }
 
   .image {

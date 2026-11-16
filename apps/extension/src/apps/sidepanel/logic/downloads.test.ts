@@ -50,30 +50,42 @@ describe("progressDetails", () => {
   it("tells a running download's size so far out of the whole", () => {
     expect(
       progressDetails({ _tag: "InProgress", receivedBytes: 1024, totalBytes: 4096 }, en),
-    ).toStrictEqual(["1 KB of 4 KB"])
+    ).toStrictEqual([{ text: "1 KB of 4 KB", tone: "Plain" }])
   })
 
   it("tells only the size so far when the whole isn't known", () => {
     expect(
       progressDetails({ _tag: "InProgress", receivedBytes: 2048, totalBytes: null }, en),
-    ).toStrictEqual(["2 KB"])
+    ).toStrictEqual([{ text: "2 KB", tone: "Plain" }])
   })
 
-  it("says a paused download is paused, and how far it got", () => {
+  it("says a paused download is paused, as its state, and how far it got", () => {
     expect(
       progressDetails(
         { _tag: "Paused", receivedBytes: 1024, totalBytes: 4096, canResume: true },
         en,
       ),
-    ).toStrictEqual(["Paused", "1 KB of 4 KB"])
+    ).toStrictEqual([
+      { text: "Paused", tone: "State" },
+      { text: "1 KB of 4 KB", tone: "Plain" },
+    ])
   })
 
-  it("tells a finished file's size, or what became of a download that didn't finish", () => {
+  it("tells a finished file's size, or names the state of a download that didn't finish", () => {
     expect([
       progressDetails({ _tag: "Complete", bytes: 2048 }, en),
       progressDetails({ _tag: "Deleted" }, en),
       progressDetails({ _tag: "Canceled" }, en),
-      progressDetails({ _tag: "Failed", canResume: false }, en),
-    ]).toStrictEqual([["2 KB"], ["Deleted"], ["Canceled"], ["Failed"]])
+    ]).toStrictEqual([
+      [{ text: "2 KB", tone: "Plain" }],
+      [{ text: "Deleted", tone: "State" }],
+      [{ text: "Canceled", tone: "State" }],
+    ])
+  })
+
+  it("flags a failed download as an alert", () => {
+    expect(progressDetails({ _tag: "Failed", canResume: false }, en)).toStrictEqual([
+      { text: "Failed", tone: "Alert" },
+    ])
   })
 })

@@ -6,6 +6,7 @@ export {
   type SpotlightSearchMode,
   type SpotlightSearchOptions,
 } from "./spotlight-search"
+export { searchableTitle, searchableUrl, searchTerms, typoMatcherFor } from "./search-text"
 export { type UrlInput, urlFromInput } from "./url-input"
 export {
   DEFAULT_SPOTLIGHT_POSITION,

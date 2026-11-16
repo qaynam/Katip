@@ -28,6 +28,8 @@ export interface Download {
   readonly fileName: string
   /** Where the file was downloaded from. */
   readonly url: string
+  /** The MIME type the server gave the file. Empty when it gave none. */
+  readonly mime: string
   /** In milliseconds since the epoch. */
   readonly startedAt: number
   readonly progress: DownloadProgress
@@ -75,21 +77,34 @@ const receivedText = (receivedBytes: number, totalBytes: number | null, translat
       })
 }
 
+/**
+ * A piece of what is said about a download. A state is a word for where the download stands, such
+ * as Paused, and an alert one went wrong.
+ */
+export interface DownloadDetail {
+  readonly text: string
+  readonly tone: "Plain" | "State" | "Alert"
+}
+
+const plain = (text: string): DownloadDetail => ({ text, tone: "Plain" })
+const state = (text: string): DownloadDetail => ({ text, tone: "State" })
+const alert = (text: string): DownloadDetail => ({ text, tone: "Alert" })
+
 /** What to say about how far the download got, as separate pieces shown side by side. */
 export const progressDetails = (
   progress: DownloadProgress,
   translator: Translator,
-): ReadonlyArray<string> =>
+): ReadonlyArray<DownloadDetail> =>
   Match.valueTags(progress, {
     InProgress: ({ receivedBytes, totalBytes }) => [
-      receivedText(receivedBytes, totalBytes, translator),
+      plain(receivedText(receivedBytes, totalBytes, translator)),
     ],
     Paused: ({ receivedBytes, totalBytes }) => [
-      translator.t("sidepanel.downloads.paused"),
-      receivedText(receivedBytes, totalBytes, translator),
+      state(translator.t("sidepanel.downloads.paused")),
+      plain(receivedText(receivedBytes, totalBytes, translator)),
     ],
-    Complete: ({ bytes }) => [formatBytes(bytes, translator.languageTag)],
-    Deleted: () => [translator.t("sidepanel.downloads.deleted")],
-    Canceled: () => [translator.t("sidepanel.downloads.canceled")],
-    Failed: () => [translator.t("sidepanel.downloads.failed")],
+    Complete: ({ bytes }) => [plain(formatBytes(bytes, translator.languageTag))],
+    Deleted: () => [state(translator.t("sidepanel.downloads.deleted"))],
+    Canceled: () => [state(translator.t("sidepanel.downloads.canceled"))],
+    Failed: () => [alert(translator.t("sidepanel.downloads.failed"))],
   })

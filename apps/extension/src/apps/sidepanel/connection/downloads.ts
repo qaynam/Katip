@@ -78,6 +78,7 @@ export const downloadOf = (item: chrome.downloads.DownloadItem): Download => {
     // The name isn't known yet while Chrome is still deciding where to save the file
     fileName: fileNameOf(item.filename) || url,
     url,
+    mime: item.mime,
     startedAt: Date.parse(item.startTime),
     progress: progressOf(item),
   }
