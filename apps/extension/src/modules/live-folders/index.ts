@@ -7,7 +7,7 @@ export {
   type FailureExplanation,
 } from "./live-fetch-failure"
 export { mergeNewestFirst, sortLiveItems } from "./live-item-order"
-export { DEFAULT_LIVE_SORT } from "./live-sort-store"
+export { DEFAULT_LIVE_LIMIT, DEFAULT_LIVE_SORT } from "./live-display-store"
 export {
   isRefreshDue,
   isUnseen,
@@ -25,6 +25,7 @@ export {
   gmailMailboxUrl,
   LiveItem,
   LiveItemIcon,
+  LiveLimit,
   LiveSort,
   LiveSource,
   listsUnreadOnly,

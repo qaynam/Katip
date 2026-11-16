@@ -239,3 +239,18 @@ describe("sort order", () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 })
+
+describe("limit", () => {
+  it.effect("carries the chosen limit until the folder is forgotten", () =>
+    Effect.gen(function* () {
+      const folders = yield* LiveFolders
+
+      yield* folders.setLimit(FOLDER, 5)
+      const limited = (yield* snapshot).limits.get(FOLDER)
+      yield* folders.forget([FOLDER])
+      const forgotten = (yield* snapshot).limits.has(FOLDER)
+
+      assert.deepStrictEqual([limited, forgotten], [5, false])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+})

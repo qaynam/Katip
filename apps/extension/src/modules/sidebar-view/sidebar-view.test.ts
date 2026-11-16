@@ -86,7 +86,7 @@ const sources = (overrides: Partial<SidebarSources> = {}): SidebarSources => ({
   ]),
   folderExpansion: {},
   folderIcons: new Map(),
-  liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map() },
+  liveFolders: { records: new Map(), refreshing: new Set(), sorts: new Map(), limits: new Map() },
   translator: makeTranslator("en"),
   preferences: {
     newTabsOnTop: false,
@@ -598,6 +598,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -610,6 +611,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("2", 80), liveItem("1", 50)])]]),
         refreshing: new Set(),
         sorts: new Map([[LIVE, "oldest"]]),
+        limits: new Map(),
       },
     })
 
@@ -630,6 +632,7 @@ describe("live folders", () => {
         ]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -648,6 +651,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("1", 50), liveItem("2", 80)], { "2": 80 })]]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -663,6 +667,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("1", 50)], { "1": 50 })]]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -685,6 +690,7 @@ describe("live folders", () => {
               ]),
               refreshing: new Set(),
               sorts: new Map(),
+              limits: new Map(),
             },
           }),
         )[0] as PinnedLiveFolderView | undefined
@@ -699,6 +705,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([])]]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -715,6 +722,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
         refreshing: new Set([LIVE]),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -741,6 +749,7 @@ describe("live folders", () => {
         ]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
 
@@ -767,6 +776,7 @@ describe("live folders", () => {
         records: new Map([[LIVE, fetched([liveItem("1", 50)])]]),
         refreshing: new Set(),
         sorts: new Map(),
+        limits: new Map(),
       },
     })
     const node = pinnedNodesOf(view)[0] as PinnedFolderView
@@ -797,6 +807,7 @@ describe("live folder items open in tabs", () => {
     ]),
     refreshing: new Set(),
     sorts: new Map(),
+    limits: new Map(),
   })
   const openFor = (workspace: Workspace, tab: number, item: LiveItem) =>
     bindLiveItem(inHome(workspace, tab), tabId(tab), { folderId: LIVE, item })
@@ -984,6 +995,7 @@ describe("display language", () => {
           ]),
           refreshing: new Set(),
           sorts: new Map(),
+          limits: new Map(),
         },
         translator: makeTranslator("es"),
       }),

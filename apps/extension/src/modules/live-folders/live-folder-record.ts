@@ -1,7 +1,7 @@
 import { Array, Option, Record, Schema } from "effect"
 import type { BookmarkId } from "#platform/browser"
 import { LiveFetchFailure } from "./live-fetch-failure"
-import { LiveItem, type LiveSort } from "./live-source"
+import { LiveItem, type LiveLimit, type LiveSort } from "./live-source"
 
 export const LiveFolderAttempt = Schema.TaggedUnion({
   Fetched: { at: Schema.Number },
@@ -27,6 +27,8 @@ export interface LiveFolderSnapshot {
   readonly refreshing: ReadonlySet<BookmarkId>
   /** A folder missing from the map uses the default order (newest first). */
   readonly sorts: ReadonlyMap<BookmarkId, LiveSort>
+  /** A folder missing from the map shows the default number of items. */
+  readonly limits: ReadonlyMap<BookmarkId, LiveLimit>
 }
 
 /**

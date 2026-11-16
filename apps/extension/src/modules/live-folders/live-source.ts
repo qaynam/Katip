@@ -36,6 +36,13 @@ export type LiveSource = typeof LiveSource.Type
 export const LiveSort = Schema.Literals(["newest", "oldest", "title", "source"])
 export type LiveSort = typeof LiveSort.Type
 
+/**
+ * How many items a live folder shows at most, in the order of its sort. An item whose tab is open
+ * shows even past the limit.
+ */
+export const LiveLimit = Schema.Literals([5, 10, 20, "all"])
+export type LiveLimit = typeof LiveLimit.Type
+
 /** A picture standing for a live item, in place of its source's icon. */
 export const LiveItemIcon = Schema.TaggedUnion({
   /** The icon the browser saved for a site, such as the sender's. */
