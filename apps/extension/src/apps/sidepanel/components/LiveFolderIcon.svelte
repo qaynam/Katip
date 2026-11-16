@@ -34,6 +34,8 @@
     height: 16px;
   }
 
+  /* Not on the hover surface's color: translucent, it faded into the favicon under it on dark
+     themes. The text color and the page's own color stay opposite in any Space theme */
   .live-mark {
     position: absolute;
     right: -3px;
@@ -43,13 +45,15 @@
     width: 11px;
     height: 11px;
     border-radius: 50%;
-    background: var(--surface-active);
-    box-shadow: 0 0 0 1px var(--divider);
-    color: var(--text);
+    background: var(--text);
+    box-shadow: 0 0 0 1.5px Canvas;
+    color: Canvas;
   }
 
   .live-mark svg {
     display: block;
+    width: 6.5px;
+    height: 6.5px;
     overflow: visible;
   }
 
