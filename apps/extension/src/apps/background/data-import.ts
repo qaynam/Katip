@@ -7,7 +7,7 @@ import {
   type PlannedNode,
   type PlannedSpace,
 } from "#modules/import"
-import { DEFAULT_LIVE_SORT, LiveFolders } from "#modules/live-folders"
+import { DEFAULT_LIVE_LIMIT, DEFAULT_LIVE_SORT, LiveFolders } from "#modules/live-folders"
 import {
   FolderIconStore,
   PinnedBookmarks,
@@ -100,10 +100,12 @@ const createNode = (
         Effect.asVoid(
           pinned.createSplit({ parent }, { title: `${left.title} | ${right.title}`, left, right }),
         ),
-      LiveFolder: ({ title, source, sort }) =>
+      LiveFolder: ({ title, source, sort, limit }) =>
         Effect.gen(function* () {
           const folderId = yield* pinned.createLiveFolder({ parent }, { title, source })
-          if (sort !== DEFAULT_LIVE_SORT) yield* (yield* LiveFolders).setSort(folderId, sort)
+          const liveFolders = yield* LiveFolders
+          if (sort !== DEFAULT_LIVE_SORT) yield* liveFolders.setSort(folderId, sort)
+          if (limit !== DEFAULT_LIVE_LIMIT) yield* liveFolders.setLimit(folderId, limit)
         }),
       Folder: ({ title, icon, children }) =>
         Effect.gen(function* () {

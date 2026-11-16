@@ -1,6 +1,12 @@
 import { Array, Match, Option, Order, pipe, Result } from "effect"
 import type { FavoriteList } from "#modules/favorites"
-import { DEFAULT_LIVE_SORT, type LiveSort, type LiveSource } from "#modules/live-folders"
+import {
+  DEFAULT_LIVE_LIMIT,
+  DEFAULT_LIVE_SORT,
+  type LiveLimit,
+  type LiveSort,
+  type LiveSource,
+} from "#modules/live-folders"
 import {
   PinnedTreeUnavailable,
   type FolderIcon,
@@ -35,6 +41,8 @@ export interface ExportSources {
   readonly folderIcons: ReadonlyMap<BookmarkId, FolderIcon>
   /** A live folder missing here uses the default sort. */
   readonly liveSorts: ReadonlyMap<BookmarkId, LiveSort>
+  /** A live folder missing here uses the default limit. */
+  readonly liveLimits: ReadonlyMap<BookmarkId, LiveLimit>
   readonly workspace: Workspace
   /** Every Favorite, open or closed, in order. */
   readonly favorites: FavoriteList
@@ -101,6 +109,7 @@ const nodesOf = (tree: PinnedTree, sources: ExportSources): ReadonlyArray<Export
               title: live.title,
               source,
               sort: sources.liveSorts.get(live.id) ?? DEFAULT_LIVE_SORT,
+              limit: sources.liveLimits.get(live.id) ?? DEFAULT_LIVE_LIMIT,
             },
           ],
         }),

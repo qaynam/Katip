@@ -1,8 +1,9 @@
 import { Schema } from "effect"
 
-// Never rewritten, so that later versions of Katip keep reading files written in this version. A
-// change of shape gets a new version's file instead. Not built from the internal Schemas, so that
-// reworking the internals can't silently change the file's shape
+// Only ever added to with fields that may be left out, so that later versions of Katip keep reading
+// files written in this version. Any other change of shape gets a new version's file instead. Not
+// built from the internal Schemas, so that reworking the internals can't silently change the
+// file's shape
 
 const unitInterval = Schema.Finite.pipe(Schema.check(Schema.isBetween({ minimum: 0, maximum: 1 })))
 
@@ -57,6 +58,15 @@ export const LiveFolderV1 = Schema.Struct({
   title: Schema.String,
   source: LiveSourceV1,
   sort: Schema.Literals(["newest", "oldest", "title", "source"]),
+  /** How many items the folder shows at most. Files from versions of Katip without it leave it out. */
+  // Not a closed list of counts: every new count to choose from would then need a new version. A
+  // reader treats a count it doesn't offer as its default
+  limit: Schema.optionalKey(
+    Schema.Union([
+      Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1))),
+      Schema.Literal("all"),
+    ]),
+  ),
 })
 export type LiveFolderV1 = typeof LiveFolderV1.Type
 

@@ -94,12 +94,14 @@ describe("planSpace", () => {
           title: "Reviews",
           source: { _tag: "GitHub", query: "review-requested" },
           sort: "oldest",
+          limit: 10,
         },
         {
           _tag: "LiveFolder",
           title: "Mail",
           source: { _tag: "Gmail", accountIndex: 1, label: "Work" },
           sort: "newest",
+          limit: 10,
         },
       ],
       flattenedFolders: 0,
@@ -165,6 +167,28 @@ describe("planSpace", () => {
     expect(planSpace(space, twoLevels).pinned).toStrictEqual([
       { _tag: "Folder", title: "Odd", icon: null, children: [] },
     ])
+  })
+
+  it("keeps a live folder's limit from the file, and gives the default where the file has none or one Katip doesn't offer", () => {
+    const liveFolder = (limit: { readonly limit?: number | "all" }): FileNode => ({
+      type: "liveFolder",
+      title: "Mail",
+      source: { kind: "gmail", accountIndex: 0, label: null },
+      sort: "newest",
+      ...limit,
+    })
+    const space = spaceWith([
+      liveFolder({ limit: 20 }),
+      liveFolder({ limit: "all" }),
+      liveFolder({}),
+      liveFolder({ limit: 50 }),
+    ])
+
+    expect(
+      planSpace(space, twoLevels).pinned.map((node) =>
+        node._tag === "LiveFolder" ? node.limit : "not a live folder",
+      ),
+    ).toStrictEqual([20, "all", 10, 10])
   })
 
   it("counts the temporary tabs it leaves behind", () => {

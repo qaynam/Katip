@@ -99,6 +99,7 @@ describe("data export", () => {
           )
           yield* sidebar.run({ _tag: "RenamePinnedItem", bookmarkId: live, title: "Mentions" })
           yield* sidebar.run({ _tag: "SetLiveFolderSort", bookmarkId: live, sort: "oldest" })
+          yield* sidebar.run({ _tag: "SetLiveFolderLimit", bookmarkId: live, limit: 20 })
           yield* sidebar.run({ _tag: "RenameTab", tabId: tabIds[5], title: "Read later" })
           const theme = themeOf([{ hue: 145, chroma: 0.6 }])
           yield* sidebar.run({
@@ -138,6 +139,7 @@ describe("data export", () => {
                     title: "Mentions",
                     source: { kind: "github", query: "mentioned" },
                     sort: "oldest",
+                    limit: 20,
                   },
                 ],
                 tabs: [

@@ -174,6 +174,26 @@ describe("reading", () => {
     expect(decodeExportFile(withUnknownFields)).toStrictEqual(Result.succeed(exportV1Document))
   })
 
+  it("reads a live folder's limit as a count of items or all, though the v1 sample has none", () => {
+    const withLimits = withChanges((json) => ({
+      ...json,
+      spaces: (json["spaces"] as ReadonlyArray<Record<string, unknown>>).map((space, index) => ({
+        ...space,
+        pinned: (space["pinned"] as ReadonlyArray<Record<string, unknown>>).map((node) =>
+          node["type"] === "liveFolder" ? { ...node, limit: index === 0 ? 50 : "all" } : node,
+        ),
+      })),
+    }))
+
+    const limits = Result.map(decodeExportFile(withLimits), (document) =>
+      document.spaces.flatMap((space) =>
+        space.pinned.flatMap((node) => (node.type === "liveFolder" ? [node.limit] : [])),
+      ),
+    )
+
+    expect(limits).toStrictEqual(Result.succeed([50, "all"]))
+  })
+
   it("rejects a file of a newer version than this Katip with an error that asks for an update", () => {
     const fromFuture = withChanges((json) => ({ ...json, version: 2, spaces: "a changed shape" }))
 

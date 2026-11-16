@@ -12,6 +12,7 @@ import { KatipState } from "./katip-state"
 export const exportFileContent = Effect.gen(function* () {
   const state = yield* KatipState
   const extension = yield* ExtensionInfo
+  const liveFolders = yield* (yield* LiveFolders).snapshot
   const document = yield* Effect.fromResult(
     buildExport({
       exportedAt: yield* Clock.currentTimeMillis,
@@ -20,7 +21,8 @@ export const exportFileContent = Effect.gen(function* () {
       spaces: yield* state.spaces.get,
       pinnedTrees: yield* (yield* PinnedBookmarks).loadAllSpaceTrees,
       folderIcons: yield* (yield* FolderIconStore).load,
-      liveSorts: (yield* (yield* LiveFolders).snapshot).sorts,
+      liveSorts: liveFolders.sorts,
+      liveLimits: liveFolders.limits,
       workspace: yield* state.workspace.get,
       favorites: yield* state.favorites.get,
       tabs: yield* (yield* Tabs).query({}),

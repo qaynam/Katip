@@ -177,6 +177,7 @@ const nestedSpace = fileSpace("Work", [
     title: "Reviews",
     source: { kind: "github", query: "review-requested" },
     sort: "oldest",
+    limit: 5,
   },
 ])
 
@@ -277,6 +278,7 @@ describe("data import", () => {
                   title: "Reviews",
                   source: { kind: "github", query: "review-requested" },
                   sort: "oldest",
+                  limit: 5,
                 },
               ],
             },

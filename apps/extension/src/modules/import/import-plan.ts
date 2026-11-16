@@ -1,6 +1,11 @@
 import { Array, Match, Option, Schema } from "effect"
 import type { LatestExport } from "#modules/export"
-import type { LiveSort, LiveSource } from "#modules/live-folders"
+import {
+  DEFAULT_LIVE_LIMIT,
+  LiveLimit,
+  type LiveSort,
+  type LiveSource,
+} from "#modules/live-folders"
 import {
   canCreateFolderInside,
   FolderIcon,
@@ -34,6 +39,7 @@ export interface PlannedLiveFolder {
   readonly title: string
   readonly source: LiveSource
   readonly sort: LiveSort
+  readonly limit: LiveLimit
 }
 
 export interface PlannedFolder {
@@ -81,6 +87,7 @@ export const ImportSummary = Schema.Struct({
 export type ImportSummary = typeof ImportSummary.Type
 
 const decodeFolderIcon = Schema.decodeUnknownOption(FolderIcon)
+const decodeLiveLimit = Schema.decodeUnknownOption(LiveLimit)
 
 const liveSourceOf = (source: FileLiveSource): LiveSource =>
   Match.value(source).pipe(
@@ -123,6 +130,7 @@ const planNodes = (
               title: live.title,
               source: liveSourceOf(live.source),
               sort: live.sort,
+              limit: Option.getOrElse(decodeLiveLimit(live.limit), () => DEFAULT_LIVE_LIMIT),
             }),
           folder: (folder): PlannedNodes => {
             if (!canCreateFolderInside(parentDepth, rule)) {
@@ -152,7 +160,8 @@ const planNodes = (
  *
  * @remarks
  * Folders nested deeper than `rule` allows aren't made: their contents go, in order, into the
- * deepest folder that is allowed. Unknown folder icons are dropped.
+ * deepest folder that is allowed. Unknown folder icons are dropped, and a live folder's limit that
+ * isn't among the choices, or that the file leaves out, becomes the default.
  */
 export const planSpace = (space: FileSpace, rule: FolderNestingRule): PlannedSpace => {
   const pinned = planNodes(space.pinned, SPACE_ROOT_DEPTH, rule)

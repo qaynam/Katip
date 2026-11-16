@@ -68,6 +68,7 @@ const sourcesWith = (overrides: Partial<ExportSources> = {}): ExportSources => (
   pinnedTrees: new Map([[HOME, []]]),
   folderIcons: new Map(),
   liveSorts: new Map(),
+  liveLimits: new Map(),
   workspace: emptyWorkspace,
   favorites: [],
   tabs: [],
@@ -227,6 +228,7 @@ describe("pinned", () => {
         title: "Inbox",
         source: { kind: "gmail", accountIndex: 1, label: "Work" },
         sort: "newest",
+        limit: 10,
       },
     ])
   })
@@ -249,7 +251,7 @@ describe("pinned", () => {
     ).toStrictEqual(["star", null])
   })
 
-  it("writes a live folder's changed sort and its GitHub source", () => {
+  it("writes a live folder's changed sort and limit, and its GitHub source", () => {
     const tree: PinnedTree = [
       {
         _tag: "PinnedLiveFolder",
@@ -263,6 +265,7 @@ describe("pinned", () => {
       sourcesWith({
         pinnedTrees: new Map([[HOME, tree]]),
         liveSorts: new Map([[BookmarkId.make("1"), "source"]]),
+        liveLimits: new Map([[BookmarkId.make("1"), "all"]]),
       }),
     )
 
@@ -272,6 +275,7 @@ describe("pinned", () => {
         title: "Awaiting review",
         source: { kind: "github", query: "review-requested" },
         sort: "source",
+        limit: "all",
       },
     ])
   })
