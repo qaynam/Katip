@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Translator } from "#modules/i18n"
-  import { type LiveSource, originPatternOfKind } from "#modules/live-folders"
+  import { GMAIL_PRIMARY_LABEL, type LiveSource, originPatternOfKind } from "#modules/live-folders"
   import type { SpaceId } from "#modules/space"
   import type { CommandOutcome, SidebarCommand } from "#protocol"
   import type { OriginAccess } from "../../sidepanel/connection/origin-access"
@@ -35,13 +35,14 @@
     readonly source: LiveSource
   }
 
-  // The inbox of the first account signed in, which is what most people mean by their mail
+  // The Primary tab of the first account signed in, which is what most people mean by their mail.
+  // Not the whole inbox: newsletters would take most of the folder
   const CHOICES: ReadonlyArray<Choice> = [
     {
       key: "gmail",
       service: "Gmail",
       label: "onboarding.liveFolders.gmail",
-      source: { _tag: "Gmail", accountIndex: 0, label: null },
+      source: { _tag: "Gmail", accountIndex: 0, label: GMAIL_PRIMARY_LABEL },
     },
     {
       key: "review-requested",

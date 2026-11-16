@@ -6,8 +6,10 @@
   import type { BookmarkId } from "#platform/browser"
   import type { SidebarCommand } from "#protocol"
   import {
+    GMAIL_MAILBOXES,
     gitHubTokenFrom,
     gmailSourceFrom,
+    type GmailMailbox,
     type LiveFolderDraftError,
   } from "../logic/live-folder-drafts"
   import { GITHUB_TOKEN_PAGE_URL, liveSourceNames, sourceOrigins } from "../logic/live-folders"
@@ -27,6 +29,7 @@
 
   const draftErrorMessages = {
     InvalidAccountIndex: "sidepanel.liveFolderDialog.invalidAccountIndex",
+    LabelRequired: "sidepanel.liveFolderDialog.labelRequired",
     TokenRequired: "sidepanel.liveFolderDialog.tokenRequired",
     TokenHasWhitespace: "sidepanel.liveFolderDialog.tokenHasWhitespace",
   } as const satisfies Record<LiveFolderDraftError, MessageKey>
@@ -38,8 +41,14 @@
     mentioned: "sidepanel.liveFolder.github.mentioned",
   } as const satisfies Record<GitHubQuery, MessageKey>
 
-  // The request may change while the dialog is open, but the set of fields is fixed when it
-  // opens so that fields don't appear or disappear midway
+  const gmailMailboxMessages = {
+    Primary: "sidepanel.liveFolderDialog.mailbox.primary",
+    Inbox: "sidepanel.liveFolderDialog.mailbox.inbox",
+    Label: "sidepanel.liveFolderDialog.mailbox.label",
+  } as const satisfies Record<GmailMailbox, MessageKey>
+
+  // The request may change while the dialog is open, but which form it shows is fixed when it
+  // opens so that it doesn't turn into another form midway
   const initial = untrack(() => request)
   const kind = initial._tag === "Create" ? initial.kind : "GitHub"
   const titleMessage =
@@ -50,6 +59,8 @@
         : "sidepanel.liveFolderDialog.gitHubTitle"
 
   let accountIndex = $state("0")
+  // The whole inbox would fill the folder with newsletters, which Gmail keeps out of this tab
+  let mailbox = $state<GmailMailbox>("Primary")
   let label = $state("")
   let query = $state<GitHubQuery>("review-requested")
   let token = $state("")
@@ -64,7 +75,7 @@
 
   const sourceDraft = (): Result.Result<LiveSource, LiveFolderDraftError> =>
     kind === "Gmail"
-      ? gmailSourceFrom({ accountIndex, label })
+      ? gmailSourceFrom({ accountIndex, mailbox, label })
       : Result.succeed({ _tag: "GitHub", query })
 
   const succeeds = async (command: SidebarCommand) => (await ctx.run(command))._tag === "Succeeded"
@@ -140,6 +151,8 @@
   }
 
   const focusFirstField = (form: HTMLFormElement) => form.querySelector("input")?.focus()
+
+  const focusOnceShown = (input: HTMLInputElement) => input.focus()
 </script>
 
 <svelte:window onkeydown={closeOnEscape} />
@@ -172,23 +185,36 @@
             {t("sidepanel.liveFolderDialog.accountIndexHint")}
           </p>
         </div>
-        <div class="field">
-          <label class="label" for="{ids}-label">{t("sidepanel.liveFolderDialog.label")}</label>
-          <input
-            id="{ids}-label"
-            type="text"
-            placeholder={t("sidepanel.liveFolderDialog.labelPlaceholder")}
-            aria-describedby="{ids}-label-hint"
-            bind:value={label}
-          />
-          <p id="{ids}-label-hint" class="hint">{t("sidepanel.liveFolderDialog.labelHint")}</p>
-        </div>
+        <fieldset class="choices" aria-describedby="{ids}-mailbox-hint">
+          <legend class="label">{t("sidepanel.liveFolderDialog.mailboxLegend")}</legend>
+          {#each GMAIL_MAILBOXES as option (option)}
+            <label class="choice">
+              <input type="radio" name="{ids}-mailbox" value={option} bind:group={mailbox} />
+              <span>{t(gmailMailboxMessages[option])}</span>
+            </label>
+          {/each}
+          <p id="{ids}-mailbox-hint" class="hint">
+            {t("sidepanel.liveFolderDialog.mailboxHint")}
+          </p>
+        </fieldset>
+        {#if mailbox === "Label"}
+          <div class="field">
+            <label class="label" for="{ids}-label">{t("sidepanel.liveFolderDialog.label")}</label>
+            <input
+              id="{ids}-label"
+              type="text"
+              placeholder={t("sidepanel.liveFolderDialog.labelPlaceholder")}
+              bind:value={label}
+              {@attach focusOnceShown}
+            />
+          </div>
+        {/if}
       {:else if initial._tag === "Create"}
         <p class="description">{t("sidepanel.liveFolderDialog.gitHubDescription")}</p>
-        <fieldset class="queries">
+        <fieldset class="choices">
           <legend class="label">{t("sidepanel.liveFolderDialog.queryLegend")}</legend>
           {#each GitHubQuery.literals as option (option)}
-            <label class="query">
+            <label class="choice">
               <input type="radio" name="{ids}-query" value={option} bind:group={query} />
               <span>{t(gitHubQueryMessages[option])}</span>
             </label>
@@ -303,7 +329,7 @@
     line-height: 1.5;
   }
 
-  .queries {
+  .choices {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -312,12 +338,12 @@
     border: none;
   }
 
-  .queries legend {
+  .choices legend {
     margin-bottom: 4px;
     padding: 0;
   }
 
-  .query {
+  .choice {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -326,14 +352,18 @@
     border-radius: 7px;
   }
 
-  .query:hover,
-  .query:has(input:checked) {
+  .choice:hover,
+  .choice:has(input:checked) {
     background: var(--glass-hover);
   }
 
-  .query input {
+  .choice input {
     margin: 0;
     accent-color: currentColor;
+  }
+
+  .choices .hint {
+    margin-top: 4px;
   }
 
   .token-link {

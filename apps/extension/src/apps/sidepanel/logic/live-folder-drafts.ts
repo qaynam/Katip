@@ -1,18 +1,35 @@
 import { Result } from "effect"
-import type { LiveSource } from "#modules/live-folders"
+import { GMAIL_PRIMARY_LABEL, type LiveSource } from "#modules/live-folders"
 
-export type LiveFolderDraftError = "InvalidAccountIndex" | "TokenRequired" | "TokenHasWhitespace"
+export type LiveFolderDraftError =
+  "InvalidAccountIndex" | "LabelRequired" | "TokenRequired" | "TokenHasWhitespace"
+
+/** Which mail a Gmail live folder lists: the Primary tab, the whole inbox, or a label. */
+export const GMAIL_MAILBOXES = ["Primary", "Inbox", "Label"] as const
+export type GmailMailbox = (typeof GMAIL_MAILBOXES)[number]
 
 export interface GmailDraft {
   readonly accountIndex: string
+  readonly mailbox: GmailMailbox
+  /** The label's name, used only when `mailbox` is `Label`. */
   readonly label: string
 }
 
 const DIGITS = /^\d+$/
 
+const gmailLabelFrom = ({
+  mailbox,
+  label,
+}: GmailDraft): Result.Result<string | null, LiveFolderDraftError> => {
+  if (mailbox === "Primary") return Result.succeed(GMAIL_PRIMARY_LABEL)
+  if (mailbox === "Inbox") return Result.succeed(null)
+  const name = label.trim()
+  return name === "" ? Result.fail("LabelRequired") : Result.succeed(name)
+}
+
 /**
  * An empty account number means 0 (the first signed-in account). Full-width digits are
- * accepted. An empty label becomes null, which stands for the inbox.
+ * accepted.
  */
 export const gmailSourceFrom = (
   draft: GmailDraft,
@@ -22,8 +39,7 @@ export const gmailSourceFrom = (
   const isValidIndex =
     (indexText === "" || DIGITS.test(indexText)) && Number.isSafeInteger(accountIndex)
   if (!isValidIndex) return Result.fail("InvalidAccountIndex")
-  const label = draft.label.trim()
-  return Result.succeed({ _tag: "Gmail", accountIndex, label: label === "" ? null : label })
+  return Result.map(gmailLabelFrom(draft), (label) => ({ _tag: "Gmail", accountIndex, label }))
 }
 
 export const gitHubTokenFrom = (draft: string): Result.Result<string, LiveFolderDraftError> => {

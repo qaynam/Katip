@@ -1,10 +1,12 @@
 import { Result } from "effect"
 import { describe, expect, it } from "vitest"
+import { GMAIL_PRIMARY_LABEL } from "#modules/live-folders"
 import { gitHubTokenFrom, gmailSourceFrom, type GmailDraft } from "./live-folder-drafts"
 
 describe("gmailSourceFrom", () => {
   const draft = (overrides: Partial<GmailDraft> = {}): GmailDraft => ({
     accountIndex: "0",
+    mailbox: "Primary",
     label: "",
     ...overrides,
   })
@@ -13,18 +15,28 @@ describe("gmailSourceFrom", () => {
     return Result.isFailure(parsed) ? parsed.failure : null
   }
 
-  it("uses the given label of the given account as the source", () => {
-    expect(
-      Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2", label: "Work" }))),
-    ).toStrictEqual({ _tag: "Gmail", accountIndex: 2, label: "Work" })
+  it("lists the Primary tab of the given account through Gmail's label for it", () => {
+    expect(Result.getOrNull(gmailSourceFrom(draft({ accountIndex: "2" })))).toStrictEqual({
+      _tag: "Gmail",
+      accountIndex: 2,
+      label: GMAIL_PRIMARY_LABEL,
+    })
   })
 
-  it("uses the inbox as the source when the label is empty", () => {
-    expect(Result.getOrNull(gmailSourceFrom(draft({ label: "   " })))).toStrictEqual({
-      _tag: "Gmail",
-      accountIndex: 0,
-      label: null,
-    })
+  it("lists the whole inbox without a label, whatever was typed as one", () => {
+    expect(
+      Result.getOrNull(gmailSourceFrom(draft({ mailbox: "Inbox", label: "Work" }))),
+    ).toMatchObject({ label: null })
+  })
+
+  it("lists the given label, without the whitespace around it", () => {
+    expect(
+      Result.getOrNull(gmailSourceFrom(draft({ mailbox: "Label", label: " Work " }))),
+    ).toMatchObject({ label: "Work" })
+  })
+
+  it("asks for the label's name when a label is chosen without one", () => {
+    expect(failureOf(draft({ mailbox: "Label", label: "   " }))).toBe("LabelRequired")
   })
 
   it("treats an empty account number as the first signed-in account (0)", () => {

@@ -39,6 +39,7 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unreadable": "{site} の応答を読み取れませんでした",
   "background.liveFolder.noSubject": "（件名なし）",
   "background.liveFolder.title.gmailInbox": "Gmail の受信トレイ",
+  "background.liveFolder.title.gmailPrimary": "Gmail のメイン",
   "background.liveFolder.title.gmailLabel": "Gmail の {label}",
   "background.liveFolder.title.otherAccount": "{title}（u/{account}）",
   "background.liveFolder.title.reviewRequested": "GitHub のレビュー依頼",

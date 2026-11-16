@@ -39,6 +39,7 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unreadable": "No se pudo leer la respuesta de {site}",
   "background.liveFolder.noSubject": "(sin asunto)",
   "background.liveFolder.title.gmailInbox": "Recibidos de Gmail",
+  "background.liveFolder.title.gmailPrimary": "Principal de Gmail",
   "background.liveFolder.title.gmailLabel": "Gmail: {label}",
   "background.liveFolder.title.otherAccount": "{title} (u/{account})",
   "background.liveFolder.title.reviewRequested": "Revisiones solicitadas en GitHub",

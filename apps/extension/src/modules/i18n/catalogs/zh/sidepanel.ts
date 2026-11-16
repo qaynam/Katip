@@ -140,9 +140,14 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndex": "账号编号",
   "sidepanel.liveFolderDialog.accountIndexHint":
     "即 mail.google.com/mail/u/编号/ 中的编号。最先登录的账号为 0。",
-  "sidepanel.liveFolderDialog.label": "标签",
-  "sidepanel.liveFolderDialog.labelPlaceholder": "收件箱",
-  "sidepanel.liveFolderDialog.labelHint": "留空则显示收件箱。",
+  "sidepanel.liveFolderDialog.mailboxLegend": "显示邮件",
+  "sidepanel.liveFolderDialog.mailbox.primary": "“主要”标签页",
+  "sidepanel.liveFolderDialog.mailbox.inbox": "整个收件箱",
+  "sidepanel.liveFolderDialog.mailbox.label": "指定标签",
+  "sidepanel.liveFolderDialog.mailboxHint":
+    "“主要”标签页不含 Gmail 归入“推广”“社交”和“动态”的邮件。",
+  "sidepanel.liveFolderDialog.label": "标签名称",
+  "sidepanel.liveFolderDialog.labelPlaceholder": "工作",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub 实时文件夹",
   "sidepanel.liveFolderDialog.gitHubDescription": "只要在此浏览器中登录了 GitHub 即可使用。",
   "sidepanel.liveFolderDialog.queryLegend": "显示内容",
@@ -156,6 +161,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accessDenied":
     "未获准访问 {source}，因此未创建。再次点击会重新请求访问权限。",
   "sidepanel.liveFolderDialog.invalidAccountIndex": "账号编号请输入 0 或更大的整数",
+  "sidepanel.liveFolderDialog.labelRequired": "请输入标签名称",
   "sidepanel.liveFolderDialog.tokenRequired": "请输入令牌",
   "sidepanel.liveFolderDialog.tokenHasWhitespace": "令牌不能包含空格",
 

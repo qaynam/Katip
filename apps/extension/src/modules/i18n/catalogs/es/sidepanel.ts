@@ -151,9 +151,14 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndex": "Número de cuenta",
   "sidepanel.liveFolderDialog.accountIndexHint":
     "El número de mail.google.com/mail/u/número/. La primera cuenta con la que iniciaste sesión es la 0.",
-  "sidepanel.liveFolderDialog.label": "Etiqueta",
-  "sidepanel.liveFolderDialog.labelPlaceholder": "Recibidos",
-  "sidepanel.liveFolderDialog.labelHint": "Déjalo vacío para mostrar Recibidos.",
+  "sidepanel.liveFolderDialog.mailboxLegend": "Mostrar",
+  "sidepanel.liveFolderDialog.mailbox.primary": "Pestaña Principal",
+  "sidepanel.liveFolderDialog.mailbox.inbox": "Todo Recibidos",
+  "sidepanel.liveFolderDialog.mailbox.label": "Una etiqueta",
+  "sidepanel.liveFolderDialog.mailboxHint":
+    "La pestaña Principal deja fuera los correos que Gmail clasifica en Promociones, Social y Notificaciones.",
+  "sidepanel.liveFolderDialog.label": "Nombre de la etiqueta",
+  "sidepanel.liveFolderDialog.labelPlaceholder": "Trabajo",
   "sidepanel.liveFolderDialog.gitHubTitle": "Carpeta en vivo de GitHub",
   "sidepanel.liveFolderDialog.gitHubDescription":
     "Funciona si has iniciado sesión en GitHub en este navegador.",
@@ -169,6 +174,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     "No se creó la carpeta porque no se permitió el acceso a {source}. Vuelve a intentarlo para que se solicite el acceso de nuevo.",
   "sidepanel.liveFolderDialog.invalidAccountIndex":
     "Introduce un número entero igual o mayor que 0 como número de cuenta",
+  "sidepanel.liveFolderDialog.labelRequired": "Introduce el nombre de una etiqueta",
   "sidepanel.liveFolderDialog.tokenRequired": "Introduce un token",
   "sidepanel.liveFolderDialog.tokenHasWhitespace": "El token no puede contener espacios",
 

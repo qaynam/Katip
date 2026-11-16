@@ -38,6 +38,7 @@ export const background: CatalogSection<"background"> = {
   "background.liveFolder.unreadable": "无法读取 {site} 的响应",
   "background.liveFolder.noSubject": "（无主题）",
   "background.liveFolder.title.gmailInbox": "Gmail 收件箱",
+  "background.liveFolder.title.gmailPrimary": "Gmail 主要邮件",
   "background.liveFolder.title.gmailLabel": "Gmail：{label}",
   "background.liveFolder.title.otherAccount": "{title}（u/{account}）",
   "background.liveFolder.title.reviewRequested": "GitHub 审查请求",

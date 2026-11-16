@@ -1,5 +1,6 @@
 import { fireEvent, screen } from "@testing-library/svelte"
 import { describe, expect, it, vi } from "vitest"
+import { GMAIL_PRIMARY_LABEL } from "#modules/live-folders"
 import { BookmarkId } from "#platform/browser"
 import type { PinnedNodeView, SidebarCommand } from "#protocol"
 import type { CommandResponse } from "../connection/memory-connection"
@@ -39,7 +40,8 @@ describe("Creating a Gmail live folder", () => {
 
     await chooseFromSpaceMenu("Gmail")
     await fillIn("Account number", "1")
-    await fillIn("Label", "Work")
+    await fireEvent.click(screen.getByRole("radio", { name: "A label" }))
+    await fillIn("Label name", "Work")
     await fireEvent.click(screen.getByRole("button", { name: "Create" }))
 
     expect(originAccess.requestedOrigins).toStrictEqual([["https://mail.google.com/*"]])
@@ -56,7 +58,7 @@ describe("Creating a Gmail live folder", () => {
     await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
   })
 
-  it("uses the first account's inbox when created without changes", async () => {
+  it("lists the first account's Primary tab when created without changes", async () => {
     const { connection } = await renderSidebar(viewWithPins(), { respond: createdLiveFolder })
 
     await chooseFromSpaceMenu("Gmail")
@@ -64,9 +66,46 @@ describe("Creating a Gmail live folder", () => {
 
     await vi.waitFor(() =>
       expect(commandsOf(connection.sentCommands, "CreateLiveFolder")).toMatchObject([
-        { source: { _tag: "Gmail", accountIndex: 0, label: null } },
+        { source: { _tag: "Gmail", accountIndex: 0, label: GMAIL_PRIMARY_LABEL } },
       ]),
     )
+  })
+
+  it("lists the whole inbox, newsletters and all, when chosen", async () => {
+    const { connection } = await renderSidebar(viewWithPins(), { respond: createdLiveFolder })
+
+    await chooseFromSpaceMenu("Gmail")
+    await fireEvent.click(screen.getByRole("radio", { name: "Whole inbox" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    await vi.waitFor(() =>
+      expect(commandsOf(connection.sentCommands, "CreateLiveFolder")).toMatchObject([
+        { source: { label: null } },
+      ]),
+    )
+  })
+
+  it("asks for a label's name only once a label is chosen, and moves there to type it", async () => {
+    await renderSidebar(viewWithPins())
+
+    await chooseFromSpaceMenu("Gmail")
+    const fieldBefore = screen.queryByLabelText("Label name")
+    await fireEvent.click(screen.getByRole("radio", { name: "A label" }))
+
+    expect(fieldBefore).toBeNull()
+    expect(document.activeElement).toBe(screen.getByLabelText("Label name"))
+  })
+
+  it("explains that a label is needed when one is chosen without a name, without asking for access", async () => {
+    const { connection, originAccess } = await renderSidebar(viewWithPins())
+
+    await chooseFromSpaceMenu("Gmail")
+    await fireEvent.click(screen.getByRole("radio", { name: "A label" }))
+    await fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    expect(screen.getByRole("alert").textContent).toBe("Enter the name of a label")
+    expect(originAccess.requestedOrigins).toStrictEqual([])
+    expect(connection.sentCommands).toStrictEqual([])
   })
 
   it("keeps the dialog open and explains that access is needed when access is denied, without creating anything", async () => {
@@ -166,7 +205,7 @@ describe("Creating a live folder inside a folder", () => {
           _tag: "CreateLiveFolder",
           spaceId: "work",
           parentId: BookmarkId.make("docs"),
-          source: { _tag: "Gmail", accountIndex: 0, label: null },
+          source: { _tag: "Gmail", accountIndex: 0, label: GMAIL_PRIMARY_LABEL },
         },
         { _tag: "SetFolderExpanded", bookmarkId: BookmarkId.make("docs"), isExpanded: true },
       ]),

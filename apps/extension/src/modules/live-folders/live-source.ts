@@ -14,7 +14,8 @@ export type GitHubQuery = typeof GitHubQuery.Type
 export const LiveSource = Schema.TaggedUnion({
   /**
    * Unread Gmail. `accountIndex` is the position of the Google account signed in to the browser
-   * (mail.google.com/mail/u/<n>/). A null `label` means the inbox.
+   * (mail.google.com/mail/u/<n>/). A null `label` means the whole inbox, and
+   * {@link GMAIL_PRIMARY_LABEL} its Primary tab.
    */
   Gmail: { accountIndex: Schema.Int, label: Schema.NullOr(Schema.String) },
   GitHub: { query: GitHubQuery },
@@ -41,6 +42,14 @@ export const LiveItem = Schema.Struct({
 export type LiveItem = typeof LiveItem.Type
 
 export type GmailSource = Extract<LiveSource, { readonly _tag: "Gmail" }>
+
+/**
+ * The label of the mail in Gmail's Primary tab: the inbox without what Gmail sorts into
+ * Promotions, Social, Updates and Forums.
+ */
+// Gmail's own name for the category, which Google doesn't document; the unread feed takes it like
+// a label of the user's own. Not a search such as category:primary, as the feed takes no search
+export const GMAIL_PRIMARY_LABEL = "^sq_ig_i_personal"
 
 /**
  * Whether a URL may become an item. Item URLs are opened in a tab as they are, so only https is
@@ -81,14 +90,17 @@ const githubQueryTitles = {
   mentioned: "background.liveFolder.title.mentioned",
 } as const satisfies Readonly<Record<GitHubQuery, MessageKey>>
 
+const gmailMailboxTitle = (label: string | null, translator: Translator): string => {
+  if (label === null) return translator.t("background.liveFolder.title.gmailInbox")
+  if (label === GMAIL_PRIMARY_LABEL) return translator.t("background.liveFolder.title.gmailPrimary")
+  return translator.t("background.liveFolder.title.gmailLabel", { label })
+}
+
 /** The name a live folder gets when created, in `translator`'s language. */
 export const defaultLiveFolderTitle = (source: LiveSource, translator: Translator): string =>
   Match.valueTags(source, {
     Gmail: ({ accountIndex, label }) => {
-      const mailbox =
-        label === null
-          ? translator.t("background.liveFolder.title.gmailInbox")
-          : translator.t("background.liveFolder.title.gmailLabel", { label })
+      const mailbox = gmailMailboxTitle(label, translator)
       return accountIndex === 0
         ? mailbox
         : translator.t("background.liveFolder.title.otherAccount", {

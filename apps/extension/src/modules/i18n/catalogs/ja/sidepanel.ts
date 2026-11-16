@@ -145,9 +145,14 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.liveFolderDialog.accountIndex": "アカウント番号",
   "sidepanel.liveFolderDialog.accountIndexHint":
     "mail.google.com/mail/u/番号/ の番号です。最初にログインしたアカウントが 0 になります。",
-  "sidepanel.liveFolderDialog.label": "ラベル",
-  "sidepanel.liveFolderDialog.labelPlaceholder": "受信トレイ",
-  "sidepanel.liveFolderDialog.labelHint": "空のままなら受信トレイを並べます。",
+  "sidepanel.liveFolderDialog.mailboxLegend": "並べるメール",
+  "sidepanel.liveFolderDialog.mailbox.primary": "メインタブ",
+  "sidepanel.liveFolderDialog.mailbox.inbox": "受信トレイ全体",
+  "sidepanel.liveFolderDialog.mailbox.label": "ラベルを指定",
+  "sidepanel.liveFolderDialog.mailboxHint":
+    "メインタブなら、Gmail がプロモーション・ソーシャル・新着に振り分けたメールは並べません。",
+  "sidepanel.liveFolderDialog.label": "ラベル名",
+  "sidepanel.liveFolderDialog.labelPlaceholder": "仕事",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub のライブフォルダ",
   "sidepanel.liveFolderDialog.gitHubDescription":
     "ブラウザで GitHub にログインしていれば使えます。",
@@ -163,6 +168,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
     "{source} へのアクセスが許可されなかったため、作成しませんでした。もう一度押すと、改めて許可を求めます。",
   "sidepanel.liveFolderDialog.invalidAccountIndex":
     "アカウント番号は 0 以上の整数で入力してください",
+  "sidepanel.liveFolderDialog.labelRequired": "ラベル名を入力してください",
   "sidepanel.liveFolderDialog.tokenRequired": "トークンを入力してください",
   "sidepanel.liveFolderDialog.tokenHasWhitespace": "トークンに空白は含められません",
 

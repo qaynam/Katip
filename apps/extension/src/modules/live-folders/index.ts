@@ -19,6 +19,7 @@ export { LiveFolders } from "./live-folders"
 export {
   defaultLiveFolderTitle,
   GitHubQuery,
+  GMAIL_PRIMARY_LABEL,
   LiveItem,
   LiveSort,
   LiveSource,

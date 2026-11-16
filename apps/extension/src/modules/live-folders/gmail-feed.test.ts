@@ -2,7 +2,7 @@ import { Option, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { httpResponse, redirectResponse } from "#platform/http"
 import { gmailFeedRequest, gmailItemsFrom, parseGmailFeed } from "./gmail-feed"
-import type { GmailSource } from "./live-source"
+import { GMAIL_PRIMARY_LABEL, type GmailSource } from "./live-source"
 
 const inbox: GmailSource = { _tag: "Gmail", accountIndex: 0, label: null }
 
@@ -139,6 +139,12 @@ describe("requesting the unread feed", () => {
     expect(request.url).toBe(
       "https://mail.google.com/mail/u/1/feed/atom/%E4%BB%95%E4%BA%8B%2F%E9%87%8D%E8%A6%81",
     )
+  })
+
+  it("reads the Primary tab from the feed of Gmail's own label for it", () => {
+    const request = gmailFeedRequest({ _tag: "Gmail", accountIndex: 0, label: GMAIL_PRIMARY_LABEL })
+
+    expect(request.url).toBe("https://mail.google.com/mail/u/0/feed/atom/%5Esq_ig_i_personal")
   })
 })
 

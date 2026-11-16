@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { makeTranslator } from "#modules/i18n"
 import {
   defaultLiveFolderTitle,
+  GMAIL_PRIMARY_LABEL,
   originPatternOf,
   signInUrlOf,
   type LiveSource,
@@ -35,11 +36,12 @@ describe("page opened to sign in", () => {
 })
 
 describe("name given on creation", () => {
-  it("names a Gmail folder after the inbox or the label", () => {
+  it("names a Gmail folder after the inbox, its Primary tab or the label", () => {
     expect([
       defaultLiveFolderTitle(gmail(0, null), en),
+      defaultLiveFolderTitle(gmail(0, GMAIL_PRIMARY_LABEL), en),
       defaultLiveFolderTitle(gmail(0, "Invoices"), en),
-    ]).toStrictEqual(["Gmail Inbox", "Gmail: Invoices"])
+    ]).toStrictEqual(["Gmail Inbox", "Gmail Primary", "Gmail: Invoices"])
   })
 
   it("tells the second and later Google accounts apart by adding the account's index", () => {

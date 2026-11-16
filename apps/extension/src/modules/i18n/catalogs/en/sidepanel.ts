@@ -144,9 +144,14 @@ export const sidepanel = {
   "sidepanel.liveFolderDialog.accountIndex": "Account number",
   "sidepanel.liveFolderDialog.accountIndexHint":
     "The number in mail.google.com/mail/u/number/. The first account you signed in to is 0.",
-  "sidepanel.liveFolderDialog.label": "Label",
-  "sidepanel.liveFolderDialog.labelPlaceholder": "Inbox",
-  "sidepanel.liveFolderDialog.labelHint": "Leave empty to show your inbox.",
+  "sidepanel.liveFolderDialog.mailboxLegend": "Show",
+  "sidepanel.liveFolderDialog.mailbox.primary": "Primary tab",
+  "sidepanel.liveFolderDialog.mailbox.inbox": "Whole inbox",
+  "sidepanel.liveFolderDialog.mailbox.label": "A label",
+  "sidepanel.liveFolderDialog.mailboxHint":
+    "The Primary tab leaves out the mail Gmail sorts into Promotions, Social and Updates.",
+  "sidepanel.liveFolderDialog.label": "Label name",
+  "sidepanel.liveFolderDialog.labelPlaceholder": "Work",
   "sidepanel.liveFolderDialog.gitHubTitle": "GitHub Live Folder",
   "sidepanel.liveFolderDialog.gitHubDescription":
     "Works when you’re signed in to GitHub in this browser.",
@@ -162,6 +167,7 @@ export const sidepanel = {
     "The folder wasn’t created because access to {source} wasn’t allowed. Try again to be asked for access again.",
   "sidepanel.liveFolderDialog.invalidAccountIndex":
     "Enter a whole number of 0 or more for the account number",
+  "sidepanel.liveFolderDialog.labelRequired": "Enter the name of a label",
   "sidepanel.liveFolderDialog.tokenRequired": "Enter a token",
   "sidepanel.liveFolderDialog.tokenHasWhitespace": "Tokens can’t contain spaces",
 

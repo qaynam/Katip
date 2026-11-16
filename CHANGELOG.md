@@ -8,6 +8,24 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+### English
+
+Gmail live folders can list just the Primary tab, so newsletters no longer crowd out your mail.
+
+#### Improved
+
+- **Gmail’s Primary tab** — A new Gmail live folder lists the unread mail in the Primary tab, leaving out what Gmail sorts into Promotions, Social and Updates. You can still choose the whole inbox, or a label by its name. A folder made before keeps listing the whole inbox; make a new one to list the Primary tab.
+
+### 日本語
+
+Gmail のライブフォルダで「メイン」タブだけを並べられるようになり、メールマガジンに埋もれなくなりました。
+
+#### 改善
+
+- **Gmail のメインタブ** — 新しく作る Gmail のライブフォルダは、「メイン」タブの未読メールを並べます。Gmail がプロモーション・ソーシャル・新着に振り分けたメールは入りません。受信トレイ全体や、名前を指定したラベルも選べます。これまでに作ったフォルダは受信トレイ全体のままなので、メインタブにするには作り直してください。
+
 ## 1.8.0 — 2026-11-12
 
 ## English
