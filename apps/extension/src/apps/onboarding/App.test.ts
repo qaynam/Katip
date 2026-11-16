@@ -282,6 +282,28 @@ describe("the live folder step", () => {
     ])
   })
 
+  it("offers GitHub's notifications, asking for access to github.com as the other GitHub folders do", async () => {
+    const { connection, originAccess } = await renderOnboarding()
+    await goTo("Folders that keep themselves up to date")
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Add", description: "GitHub · Notifications" }),
+    )
+
+    expect(await screen.findByText("Added")).toBeTruthy()
+    expect([originAccess.requestedOrigins, connection.sentCommands]).toStrictEqual([
+      [["https://github.com/*"]],
+      [
+        {
+          _tag: "CreateLiveFolder",
+          spaceId: "Work",
+          parentId: null,
+          source: { _tag: "GitHub", query: "notifications" },
+        },
+      ],
+    ])
+  })
+
   it("says so when access to the site isn't allowed, adding nothing", async () => {
     const { connection } = await renderOnboarding({ grantsAccess: false })
     await goTo("Folders that keep themselves up to date")

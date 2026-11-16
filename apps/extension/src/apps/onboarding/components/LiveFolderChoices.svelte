@@ -32,6 +32,7 @@
       | "sidepanel.liveFolder.github.authoredPullRequests"
       | "sidepanel.liveFolder.github.assignedIssues"
       | "sidepanel.liveFolder.github.mentioned"
+      | "sidepanel.liveFolder.github.notifications"
     readonly source: LiveSource
   }
 
@@ -67,6 +68,12 @@
       service: "GitHub",
       label: "sidepanel.liveFolder.github.mentioned",
       source: { _tag: "GitHub", query: "mentioned" },
+    },
+    {
+      key: "notifications",
+      service: "GitHub",
+      label: "sidepanel.liveFolder.github.notifications",
+      source: { _tag: "GitHub", query: "notifications" },
     },
   ]
 

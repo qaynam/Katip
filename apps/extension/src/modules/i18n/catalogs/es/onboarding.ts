@@ -50,7 +50,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.liveFolders.added": "Añadida",
   "onboarding.liveFolders.failed": "No se pudo añadir la carpeta en vivo.",
   "onboarding.liveFolders.body":
-    "Elige Añadir carpeta en vivo en el menú del espacio para seguir tu correo sin leer de Gmail, o tus solicitudes de revisión, pull requests, issues y menciones de GitHub. Se actualizan solas.",
+    "Elige Añadir carpeta en vivo en el menú del espacio para seguir tu correo sin leer de Gmail, o tus solicitudes de revisión, pull requests, issues, menciones y notificaciones de GitHub. Se actualizan solas.",
 
   "onboarding.bangs.title": "Busca en cualquier sitio con un bang",
   "onboarding.bangs.body":

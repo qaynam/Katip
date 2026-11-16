@@ -49,7 +49,7 @@ export const onboarding = {
   "onboarding.liveFolders.added": "Added",
   "onboarding.liveFolders.failed": "Couldn’t add the live folder.",
   "onboarding.liveFolders.body":
-    "Choose Add Live Folder in the Space menu to follow your unread mail in Gmail, or your review requests, pull requests, issues and mentions on GitHub. They refresh on their own.",
+    "Choose Add Live Folder in the Space menu to follow your unread mail in Gmail, or your review requests, pull requests, issues, mentions and notifications on GitHub. They refresh on their own.",
 
   "onboarding.bangs.title": "Search any site with a bang",
   "onboarding.bangs.body":

@@ -16,7 +16,7 @@ Gmail live folders and GitHub notifications show only what’s still unread, and
 
 ### ✨ Improved
 
-- **GitHub notifications without a token** — A GitHub live folder of notifications reads them from github.com with the session you’re signed in with, as the folders of searches do, instead of asking for a personal access token. It asks for access to github.com rather than api.github.com. Opening a notification from the folder marks it read on GitHub, as opening it from GitHub’s inbox does. A notifications folder you already have switches on its next refresh; if it asks, allow access to github.com.
+- **GitHub notifications without a token** — A GitHub live folder of notifications reads them from github.com with the session you’re signed in with, as the folders of searches do, instead of asking for a personal access token. It asks for access to github.com rather than api.github.com. Opening a notification from the folder marks it read on GitHub, as opening it from GitHub’s inbox does, and the welcome tour offers a notifications folder alongside the others. A notifications folder you already have switches on its next refresh; if it asks, allow access to github.com.
 - **Only unread in Gmail and GitHub notifications** — A Gmail live folder, or a GitHub folder of notifications, lists only what you haven’t read: an item you open, or mark read with Mark All as Read, leaves the list once its tab is closed. Gmail itself still counts a mail marked read only in Katip as unread. Folders of GitHub searches keep their read items, as review requests and pull requests stay to be done.
 - **Folder icons that stand out** — A folder with an icon shows the icon itself, full size and in the text color, in place of the folder with a small icon inside. It tips forward a little while the folder is open.
 
@@ -26,7 +26,7 @@ Gmail のライブフォルダと GitHub の通知に未読のものだけが並
 
 ### ✨ 改善
 
-- **GitHub の通知をトークンなしで** — GitHub の通知のフォルダは、Personal access token の設定を求める代わりに、検索のフォルダと同じくログイン中のセッションで github.com から通知を読むようになりました。アクセスの許可も api.github.com ではなく github.com に求めます。フォルダから通知を開くと、GitHub の受信トレイから開いたときと同じく GitHub でも既読になります（※作成済みの通知のフォルダも次の更新から切り替わります。github.com へのアクセスを求められたら許可してください）。
+- **GitHub の通知をトークンなしで** — GitHub の通知のフォルダは、Personal access token の設定を求める代わりに、検索のフォルダと同じくログイン中のセッションで github.com から通知を読むようになりました。アクセスの許可も api.github.com ではなく github.com に求めます。フォルダから通知を開くと、GitHub の受信トレイから開いたときと同じく GitHub でも既読になります。ようこそツアーからも通知のフォルダを追加できます（※作成済みの通知のフォルダも次の更新から切り替わります。github.com へのアクセスを求められたら許可してください）。
 - **未読だけを表示** — Gmail のライブフォルダと GitHub の通知のフォルダには、まだ読んでいないものだけが並びます。開いた項目や「すべて既読にする」で既読にした項目は、タブを閉じると一覧から消えます（※Katip で既読にしただけのメールは、Gmail 上では未読のままです）。GitHub の検索のフォルダでは、レビュー依頼やプルリクエストは対応が済むまで残るため、既読のものも引き続き表示します。
 - **目立つフォルダのアイコン** — アイコンを設定したフォルダは、フォルダの中に小さくアイコンを描く代わりに、アイコンそのものを文字と同じ色で大きく表示します。フォルダを開いているあいだは、少し傾きます。
 

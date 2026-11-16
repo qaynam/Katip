@@ -48,7 +48,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.liveFolders.added": "已添加",
   "onboarding.liveFolders.failed": "无法添加实时文件夹。",
   "onboarding.liveFolders.body":
-    "在空间菜单中选择“添加实时文件夹”，即可关注 Gmail 中的未读邮件，或 GitHub 上的审查请求、拉取请求、议题和提及。它们会自动刷新。",
+    "在空间菜单中选择“添加实时文件夹”，即可关注 Gmail 中的未读邮件，或 GitHub 上的审查请求、拉取请求、议题、提及和通知。它们会自动刷新。",
 
   "onboarding.bangs.title": "用 bang 搜索任何网站",
   "onboarding.bangs.body":

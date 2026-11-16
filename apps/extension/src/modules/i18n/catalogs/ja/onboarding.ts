@@ -49,7 +49,7 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.liveFolders.added": "追加しました",
   "onboarding.liveFolders.failed": "ライブフォルダを追加できませんでした。",
   "onboarding.liveFolders.body":
-    "「Space のメニュー」の「ライブフォルダを追加」から、Gmail の未読メールや、GitHub のレビュー依頼、プルリクエスト、Issue、メンションを追えます。中身は自動で更新されます。",
+    "「Space のメニュー」の「ライブフォルダを追加」から、Gmail の未読メールや、GitHub のレビュー依頼、プルリクエスト、Issue、メンション、通知を追えます。中身は自動で更新されます。",
 
   "onboarding.bangs.title": "bangs でどのサイトも検索",
   "onboarding.bangs.body":
