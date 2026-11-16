@@ -28,3 +28,14 @@ export {
   FavoriteRestoreSnapshot,
   takeFavoriteSnapshot,
 } from "./favorite-restore"
+export {
+  carriedFavoriteId,
+  carrySharedFavorites,
+  findFavorite,
+  favoritesOf,
+  forgetSpaceFavorites,
+  type FoundFavorite,
+  resolveFavoriteId,
+  SpaceFavorites,
+  updateFavoritesOf,
+} from "./space-favorites"

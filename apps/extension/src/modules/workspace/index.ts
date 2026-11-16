@@ -15,6 +15,7 @@ export {
   releaseSpace,
   replaceTab,
   setTitleOverride,
+  shownSpaceOf,
   spaceOf,
   switchSpace,
   tabsBoundTo,

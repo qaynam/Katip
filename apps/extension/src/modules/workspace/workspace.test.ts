@@ -15,6 +15,7 @@ import {
   recordActivation,
   releaseSpace,
   replaceTab,
+  shownSpaceOf,
   spaceOf,
   switchSpace,
   tabsBoundToLiveItem,
@@ -251,6 +252,21 @@ describe("binding a tab to a live folder item", () => {
     )
 
     expect(bindingOf(workspace)).toStrictEqual(Option.some([null, null]))
+  })
+})
+
+describe("the Space a window shows", () => {
+  it("is the Space last switched to there", () => {
+    expect(shownSpaceOf(withActiveSpace("work"), spaces, WINDOW)).toStrictEqual(
+      Option.some(spaceId("work")),
+    )
+  })
+
+  it("is the first Space while none has been switched to there, or the one switched to is gone", () => {
+    expect([
+      shownSpaceOf(emptyWorkspace, spaces, WINDOW),
+      shownSpaceOf(withActiveSpace("gone"), spaces, WINDOW),
+    ]).toStrictEqual([Option.some(spaceId("home")), Option.some(spaceId("home"))])
   })
 })
 

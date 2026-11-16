@@ -90,6 +90,21 @@ export const activeSpaceOf = (workspace: Workspace, windowId: WindowId): Option.
     Option.map((window) => window.activeSpaceId),
   )
 
+/**
+ * The Space a window shows: the one last switched to there while it still exists, else the first
+ * Space. None only when there are no Spaces.
+ */
+export const shownSpaceOf = (
+  workspace: Workspace,
+  spaces: SpaceList,
+  windowId: WindowId,
+): Option.Option<SpaceId> =>
+  pipe(
+    activeSpaceOf(workspace, windowId),
+    Option.filter((id) => spaces.some((space) => space.id === id)),
+    Option.orElse(() => Option.map(Array.head(spaces), (space) => space.id)),
+  )
+
 export const switchSpace = (
   workspace: Workspace,
   windowId: WindowId,

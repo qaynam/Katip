@@ -78,6 +78,26 @@ describe("desiredGroupsFor", () => {
     expect(groups.map((g) => g.tabIds)).toStrictEqual([[1]])
   })
 
+  it("puts the tab of a Favorite, unpinned while its Space isn't shown, in that Space's collapsed group", () => {
+    const workspace = assignTab(
+      switchSpace(emptyWorkspace, WindowId.make(1), spaceId("home")),
+      TabId.make(1),
+      spaceId("work"),
+      0,
+    )
+
+    const groups = desiredGroupsFor(
+      spaces,
+      workspace,
+      [tab(1, 1, 0), tab(7, 1, 1)],
+      new Map([[TabId.make(7), spaceId("work")]]),
+    )
+
+    expect(groups.map((g) => [g.spaceId, g.collapsed, g.tabIds])).toStrictEqual([
+      ["work", true, [1, 7]],
+    ])
+  })
+
   it("puts tabs of the same Space in different windows into a separate group per window", () => {
     const workspace = assignTab(
       assignTab(emptyWorkspace, TabId.make(1), spaceId("home"), 0),
