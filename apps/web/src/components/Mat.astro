@@ -1,0 +1,75 @@
+---
+import type { Tone } from "../shots.ts"
+
+interface Props {
+  /**
+   * The colors the backdrop is mixed from. Pick a tone away from the sidebar's own colors in the
+   * picture, or the sidebar blends into the backdrop.
+   */
+  readonly tone: Tone
+}
+
+const { tone } = Astro.props
+---
+
+<figure class:list={["mat", tone]}>
+  <slot />
+</figure>
+
+<style>
+  /* Soft blends of a few colors around the window, the way a desktop's wallpaper shows around a
+     window on it */
+  .mat {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: clamp(0.75rem, 2.5vw, 2rem);
+    border-radius: 1.25rem;
+    background-color: var(--mat-base);
+    background-image:
+      radial-gradient(at 12% 18%, var(--mat-a) 0, transparent 55%),
+      radial-gradient(at 88% 12%, var(--mat-b) 0, transparent 50%),
+      radial-gradient(at 78% 92%, var(--mat-c) 0, transparent 55%),
+      radial-gradient(at 18% 88%, var(--mat-d) 0, transparent 50%);
+  }
+
+  .apricot {
+    --mat-base: #fbe2cf;
+    --mat-a: #ffc8a2;
+    --mat-b: #ffbcb0;
+    --mat-c: #ffdba0;
+    --mat-d: #f9cdb3;
+  }
+
+  .mint {
+    --mat-base: #d9efdc;
+    --mat-a: #bce5c3;
+    --mat-b: #d3edb2;
+    --mat-c: #c0e6d6;
+    --mat-d: #e4f2c6;
+  }
+
+  .lemon {
+    --mat-base: #fbf0cf;
+    --mat-a: #ffe39b;
+    --mat-b: #ffd6ad;
+    --mat-c: #f6ecb2;
+    --mat-d: #ffdfc0;
+  }
+
+  .sky {
+    --mat-base: #d8e7f8;
+    --mat-a: #b9d6fb;
+    --mat-b: #bfe6f2;
+    --mat-c: #a9cdf2;
+    --mat-d: #d2e9fa;
+  }
+
+  .rose {
+    --mat-base: #fbe0e4;
+    --mat-a: #ffc3cc;
+    --mat-b: #ffd0bd;
+    --mat-c: #f7c4d8;
+    --mat-d: #ffdcd0;
+  }
+</style>

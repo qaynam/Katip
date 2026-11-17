@@ -1,0 +1,455 @@
+---
+import icon from "@brand/icon.svg"
+import Envelope from "@phosphor-icons/core/assets/regular/envelope.svg"
+import GitHubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg"
+import GitPullRequest from "@phosphor-icons/core/assets/regular/git-pull-request.svg"
+import RssSimple from "@phosphor-icons/core/assets/bold/rss-simple-bold.svg"
+
+// Made-up senders and pull requests, each sender shown by a letter as Katip shows a site's icon
+const mail = [
+  { from: "M", hue: 214, title: "Design review moved to Thursday", important: true },
+  { from: "L", hue: 152, title: "Notes from the onboarding call", important: false },
+]
+---
+
+<div class="live" aria-hidden="true">
+  <div class="sidebar">
+    <p class="space">Work</p>
+    <div class="folder">
+      <span class="folder-icon">
+        <Envelope width={18} height={18} />
+        <span class="feed">
+          <RssSimple width={7} height={7} />
+        </span>
+      </span>
+      <span class="name">Important mail</span>
+      <span class="count">
+        <span class="before">2</span>
+        <span class="after">3</span>
+      </span>
+    </div>
+    <ul>
+      <li class="arrives mail-arrives">
+        <span class="avatar" style="--hue: 18">
+          A
+        </span>
+        <span class="title">Your flight to Lisbon is confirmed</span>
+        <span class="important"></span>
+      </li>
+      {mail.map(({ from, hue, title, important }) => (
+        <li>
+          <span class="avatar" style={`--hue: ${hue}`}>
+            {from}
+          </span>
+          <span class="title">{title}</span>
+          {important && <span class="important" />}
+        </li>
+      ))}
+    </ul>
+
+    <div class="folder">
+      <span class="folder-icon">
+        <GitHubLogo width={18} height={18} />
+        <span class="feed">
+          <RssSimple width={7} height={7} />
+        </span>
+      </span>
+      <span class="name">Review requests</span>
+      <span class="count">
+        <span class="before">1</span>
+        <span class="after github-after">2</span>
+      </span>
+    </div>
+    <ul>
+      <li class="arrives github-arrives">
+        <span class="pr">
+          <GitPullRequest width={16} height={16} />
+        </span>
+        <span class="title">Keep pinned tabs in order</span>
+        <span class="number">#482</span>
+      </li>
+      <li>
+        <span class="pr">
+          <GitPullRequest width={16} height={16} />
+        </span>
+        <span class="title">Faster Space switching</span>
+        <span class="number">#479</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="toast mail-toast">
+    <img src={icon.src} width="20" height="20" alt="" />
+    <span>
+      <strong>Important mail</strong>
+      Your flight to Lisbon is confirmed
+    </span>
+  </div>
+  <div class="toast github-toast">
+    <img src={icon.src} width="20" height="20" alt="" />
+    <span>
+      <strong>Review requested</strong>
+      #482 Keep pinned tabs in order
+    </span>
+  </div>
+</div>
+
+<style>
+  .live {
+    --cycle: 12s;
+    position: relative;
+    width: min(100%, 24rem);
+    margin-inline: auto;
+    color: var(--ink);
+    font-size: 0.875rem;
+  }
+
+  .sidebar {
+    padding: 1rem 0.75rem;
+    border-radius: 0.875rem;
+    background: #fff;
+    box-shadow: var(--shadow-window);
+  }
+
+  .space {
+    padding: 0 0.5rem 0.5rem;
+    color: var(--ink-faint);
+    font-size: 0.8125rem;
+  }
+
+  .folder {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.25rem;
+    padding-inline: 0.5rem;
+    font-weight: 500;
+  }
+
+  ul + .folder {
+    margin-top: 0.5rem;
+  }
+
+  .folder-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .feed {
+    position: absolute;
+    right: -0.3125rem;
+    bottom: -0.25rem;
+    display: grid;
+    place-items: center;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: #111827;
+    box-shadow: 0 0 0 1.5px #fff;
+    color: #fff;
+  }
+
+  .count,
+  .number {
+    margin-left: auto;
+    color: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .count {
+    display: grid;
+  }
+
+  .count > span {
+    grid-area: 1 / 1;
+  }
+
+  ul {
+    display: grid;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 1.125rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.25rem;
+    padding: 0 0.5rem 0 1.75rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 0.3125rem;
+    background: hsl(var(--hue) 55% 48%);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 600;
+  }
+
+  .pr {
+    display: grid;
+    place-items: center;
+    color: #1f7a3d;
+  }
+
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .important {
+    width: 0.5rem;
+    height: 0.625rem;
+    background: #d99a0b;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%);
+  }
+
+  /* A notification as the system shows it, near the top right of the screen */
+  .toast {
+    position: absolute;
+    top: -1.5rem;
+    right: -2.5rem;
+    display: flex;
+    gap: 0.625rem;
+    width: 16rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.875rem;
+    background: rgb(255 255 255 / 0.92);
+    box-shadow:
+      0 0 0 1px rgb(17 24 39 / 0.06),
+      0 16px 32px -12px rgb(17 24 39 / 0.25);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    opacity: 0;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .toast img {
+    flex: none;
+  }
+
+  .toast strong {
+    display: block;
+    font-weight: 600;
+  }
+
+  @media (max-width: 40rem) {
+    .toast {
+      right: 0;
+      width: 14rem;
+    }
+  }
+
+  /* Without motion, what has arrived simply shows */
+  @media (prefers-reduced-motion: reduce) {
+    .before {
+      opacity: 0;
+    }
+  }
+
+  /* New mail arrives, then a review request, and the folders fill themselves as they come.
+     The loop ends as it starts, so it can begin again without a jump */
+  @media (prefers-reduced-motion: no-preference) {
+    .mail-arrives {
+      animation: mail-row var(--cycle) var(--ease) infinite;
+    }
+
+    .github-arrives {
+      animation: github-row var(--cycle) var(--ease) infinite;
+    }
+
+    .count .before {
+      animation: count-before var(--cycle) linear infinite;
+    }
+
+    .count .after {
+      animation: count-after var(--cycle) linear infinite;
+    }
+
+    .count .before:has(+ .github-after) {
+      animation-name: github-count-before;
+    }
+
+    .count .github-after {
+      animation-name: github-count-after;
+    }
+
+    .mail-toast {
+      animation: mail-toast var(--cycle) var(--ease) infinite;
+    }
+
+    .github-toast {
+      animation: github-toast var(--cycle) var(--ease) infinite;
+    }
+  }
+
+  @keyframes mail-row {
+    0%,
+    10% {
+      height: 0;
+      opacity: 0;
+      background: transparent;
+    }
+
+    14% {
+      height: 2.25rem;
+      opacity: 1;
+      background: #eef3fd;
+    }
+
+    40%,
+    92% {
+      height: 2.25rem;
+      opacity: 1;
+      background: transparent;
+    }
+
+    100% {
+      height: 0;
+      opacity: 0;
+    }
+  }
+
+  @keyframes github-row {
+    0%,
+    44% {
+      height: 0;
+      opacity: 0;
+      background: transparent;
+    }
+
+    48% {
+      height: 2.25rem;
+      opacity: 1;
+      background: #eef8f0;
+    }
+
+    72%,
+    92% {
+      height: 2.25rem;
+      opacity: 1;
+      background: transparent;
+    }
+
+    100% {
+      height: 0;
+      opacity: 0;
+    }
+  }
+
+  @keyframes count-before {
+    0%,
+    12% {
+      opacity: 1;
+    }
+
+    12.01%,
+    96% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes count-after {
+    0%,
+    12% {
+      opacity: 0;
+    }
+
+    12.01%,
+    96% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes github-count-before {
+    0%,
+    46% {
+      opacity: 1;
+    }
+
+    46.01%,
+    96% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes github-count-after {
+    0%,
+    46% {
+      opacity: 0;
+    }
+
+    46.01%,
+    96% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mail-toast {
+    0%,
+    11% {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+
+    15%,
+    34% {
+      opacity: 1;
+      transform: none;
+    }
+
+    38%,
+    100% {
+      opacity: 0;
+      transform: none;
+    }
+  }
+
+  @keyframes github-toast {
+    0%,
+    45% {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+
+    49%,
+    68% {
+      opacity: 1;
+      transform: none;
+    }
+
+    72%,
+    100% {
+      opacity: 0;
+      transform: none;
+    }
+  }
+</style>

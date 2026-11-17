@@ -1,120 +1,135 @@
 ---
-import { COPY } from "../copy"
-import { LANGUAGE_NAMES, LANGUAGES, type Language } from "../languages.ts"
-import { pathOf, type Page } from "../routes.ts"
-import { GITHUB_URL, LICENSE_URL } from "../site.ts"
+import icon from "@brand/icon.svg"
+import { PATHS, PRIVACY_PATHS } from "../routes.ts"
+import { CHROME_WEB_STORE_URL, GITHUB_RELEASES_URL, GITHUB_URL, LICENSE_URL } from "../site.ts"
 
-interface Props {
-  readonly lang: Language
-  readonly page: Page
-}
-
-const { lang, page } = Astro.props
-const copy = COPY[lang]
+const columns = [
+  {
+    title: "Product",
+    links: [
+      { href: PATHS.features, label: "Features" },
+      { href: PATHS.whatsNew, label: "What’s New" },
+      { href: PATHS.arc, label: "Moving from Arc browser" },
+      CHROME_WEB_STORE_URL === null
+        ? { href: GITHUB_RELEASES_URL, label: "Releases" }
+        : { href: CHROME_WEB_STORE_URL, label: "Chrome Web Store" },
+    ],
+  },
+  {
+    title: "Privacy",
+    links: [
+      { href: PRIVACY_PATHS.en, label: "Privacy policy" },
+      { href: PRIVACY_PATHS.ja, label: "プライバシーポリシー", lang: "ja" },
+    ],
+  },
+  {
+    title: "Source",
+    links: [
+      { href: GITHUB_URL, label: "GitHub" },
+      { href: `${GITHUB_URL}/issues`, label: "Report an issue" },
+      { href: LICENSE_URL, label: "MIT License" },
+    ],
+  },
+]
 ---
 
 <footer class="site-footer">
   <div class="container">
-    <nav class="links" aria-label={copy.footer.links}>
-      <ul>
-        <li>
-          <a href={GITHUB_URL}>{copy.footer.github}</a>
-        </li>
-        <li>
-          <a href={pathOf(lang, "privacy")}>{copy.footer.privacy}</a>
-        </li>
-        <li>
-          <a href={LICENSE_URL}>{copy.footer.license}</a>
-        </li>
-      </ul>
-    </nav>
-    <nav class="languages" aria-label={copy.footer.language}>
-      <ul>
-        {LANGUAGES.map((language) => (
-          <li>
-            <a
-              href={pathOf(language, page)}
-              hreflang={language}
-              lang={language}
-              aria-current={language === lang ? "page" : undefined}
-            >
-              {LANGUAGE_NAMES[language]}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div class="columns">
+      <div class="brand">
+        <a href={PATHS.home}>
+          <img src={icon.src} width="28" height="28" alt="" loading="lazy" />
+          Katip
+        </a>
+        <p>Vertical tabs and Spaces in your browser’s side panel</p>
+      </div>
+      {columns.map(({ title, links }) => (
+        <nav aria-label={title}>
+          <h2>{title}</h2>
+          <ul>
+            {links.map((link) => (
+              <li>
+                <a href={link.href} lang={"lang" in link ? link.lang : undefined}>
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ))}
+    </div>
     <p class="fine-print">© 2026 qaynam</p>
   </div>
 </footer>
 
 <style>
   .site-footer {
-    border-top: 1px solid var(--hairline);
-    padding-block: 2.5rem 3rem;
-    color: var(--ink-secondary);
+    margin-top: var(--section-space);
+    padding-block: 3rem 2.5rem;
+    border-top: 1px solid var(--line);
     font-size: 0.875rem;
   }
 
-  .container {
+  .columns {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 1.25rem 2rem;
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+    gap: 2.5rem 2rem;
+  }
+
+  .brand a {
+    display: inline-flex;
     align-items: center;
+    gap: 0.625rem;
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .brand a:hover {
+    text-decoration: none;
+  }
+
+  .brand p {
+    max-width: 16rem;
+    margin-top: 0.75rem;
+    color: var(--ink-faint);
+  }
+
+  h2 {
+    color: var(--ink);
+    font-size: 0.875rem;
   }
 
   ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.75rem;
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
     padding: 0;
     list-style: none;
   }
 
-  a {
-    color: var(--ink-secondary);
+  ul a {
+    color: var(--ink-soft);
   }
 
-  a:hover {
+  ul a:hover {
     color: var(--ink);
-  }
-
-  .languages ul {
-    gap: 0.25rem;
-    padding: 0.1875rem;
-    border-radius: 999px;
-    background: var(--surface);
-    box-shadow: var(--card-shadow);
-  }
-
-  .languages a {
-    display: block;
-    padding: 0.25rem 0.875rem;
-    border-radius: 999px;
-    font-weight: 500;
-  }
-
-  .languages a:hover {
     text-decoration: none;
   }
 
-  .languages a[aria-current="page"] {
-    background: var(--accent-soft);
-    color: var(--ink);
-  }
-
   .fine-print {
-    grid-column: 1 / -1;
+    margin-top: 3rem;
+    color: var(--ink-faint);
     font-size: 0.8125rem;
   }
 
-  @media (max-width: 35.99rem) {
-    .container {
-      grid-template-columns: 1fr;
+  @media (max-width: 48rem) {
+    .columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .languages {
-      justify-self: start;
+    .brand {
+      grid-column: 1 / -1;
     }
   }
 </style>

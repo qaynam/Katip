@@ -1,0 +1,80 @@
+---
+import { getImage, Picture } from "astro:assets"
+import { recordingOf, screenshot } from "../screenshots.ts"
+import type { Clip, Shot, Tone } from "../shots.ts"
+import Mat from "./Mat.astro"
+import Recording from "./Recording.astro"
+
+interface Props {
+  readonly shot: Shot
+  /** The screen recording that plays here instead of the screenshot, once there is one. */
+  readonly clip: Clip
+  readonly alt: string
+  /** The backdrop's colors, away from those of the sidebar in the screenshot. */
+  readonly tone: Tone
+  /** How wide the window shows, as the `sizes` of its image on screens wider than a phone. */
+  readonly sizes: string
+  /** For the first screen: loaded first instead of lazily. */
+  readonly priority?: boolean
+}
+
+const { shot, clip, alt, tone, sizes, priority = false } = Astro.props
+const image = screenshot(shot)
+const poster =
+  recordingOf(clip) === undefined
+    ? undefined
+    : (await getImage({ src: image, format: "webp", width: 1632 })).src
+
+// A whole window shrinks too far on a phone to read, so there the shot keeps its left part, the
+// sidebar and the start of the page. The media query in the style below repeats the width, as a
+// media query can't read a custom property
+const PHONE_REM = 40
+const PHONE_ASPECT = 4 / 5
+const phoneZoom = (image.width / image.height / PHONE_ASPECT).toFixed(2)
+---
+
+<Mat tone={tone}>
+  <div class="window">
+    <Recording clip={clip} alt={alt} poster={poster} priority={priority}>
+      <Picture
+        src={image}
+        alt={alt}
+        widths={[544, 816, 1088, 1632, image.width]}
+        sizes={`(max-width: ${PHONE_REM}rem) calc((100vw - 4rem) * ${phoneZoom}), ${sizes}`}
+        formats={["avif", "webp"]}
+        quality={82}
+        priority={priority}
+      />
+    </Recording>
+  </div>
+</Mat>
+
+<style define:vars={{ phoneAspect: String(PHONE_ASPECT) }}>
+  .window {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 0.625rem;
+    box-shadow:
+      0 0 0 1px rgb(17 24 39 / 0.06),
+      0 24px 48px -16px rgb(17 24 39 / 0.22);
+  }
+
+  .window :global(img),
+  .window :global(video) {
+    width: 100%;
+  }
+
+  @media (max-width: 40rem) {
+    .window :global(picture) {
+      display: block;
+      aspect-ratio: var(--phoneAspect);
+    }
+
+    .window :global(img),
+    .window :global(video) {
+      height: 100%;
+      object-fit: cover;
+      object-position: 0 0;
+    }
+  }
+</style>

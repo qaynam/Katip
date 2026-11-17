@@ -1,49 +1,61 @@
 ---
-import icon from "@brand/icon.svg"
-import Document from "../layouts/Document.astro"
-import { pathOf } from "../routes.ts"
+import Page from "../layouts/Page.astro"
+import { PATHS } from "../routes.ts"
 ---
 
-<Document lang="en" title="Page not found – Katip">
-  <main class="not-found">
-    <img src={icon.src} width="96" height="96" alt="" />
-    <div lang="en">
-      <h1>Page not found</h1>
-      <p>
-        <a href={pathOf("en", "home")}>Go to the Katip home page</a>
-      </p>
-    </div>
-    <div lang="ja">
-      <h1>ページが見つかりません</h1>
-      <p>
-        <a href={pathOf("ja", "home")}>Katip のトップページへ</a>
-      </p>
-    </div>
-  </main>
-</Document>
+<Page
+  title="Page not found – Katip"
+  description="There is no page at this address."
+  path="/404/"
+  indexable={false}
+>
+  <div class="not-found container">
+    <p class="code mono">404</p>
+    <h1>This tab leads nowhere</h1>
+    <p class="text">The page you were looking for isn’t here, or has moved.</p>
+    <a class="home" href={PATHS.home}>
+      Go to the Katip home page
+    </a>
+  </div>
+</Page>
 
 <style>
   .not-found {
     display: grid;
-    place-content: center;
     justify-items: center;
-    gap: 1.75rem;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: var(--gutter);
+    padding-top: clamp(6rem, 4rem + 8vw, 10rem);
     text-align: center;
   }
 
+  .code {
+    color: var(--ink-faint);
+    font-size: 0.875rem;
+  }
+
   h1 {
-    font-size: 1.75rem;
-    letter-spacing: -0.02em;
+    margin-top: 1rem;
+    font-size: clamp(2.5rem, 1.75rem + 3vw, 3.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
   }
 
-  div[lang="ja"] h1 {
-    letter-spacing: 0;
+  .text {
+    margin-top: 1.25rem;
+    color: var(--ink-soft);
+    font-size: 1.125rem;
   }
 
-  p {
-    margin-top: 0.375rem;
+  .home {
+    margin-top: 2rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.625rem;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .home:hover {
+    background: var(--accent-hover);
+    text-decoration: none;
   }
 </style>

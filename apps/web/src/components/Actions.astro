@@ -1,0 +1,75 @@
+---
+import GitHubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg"
+import { CHROME_WEB_STORE_URL, GITHUB_URL } from "../site.ts"
+import GetKatip from "./GetKatip.astro"
+
+interface Props {
+  /** Shows, under the buttons, that Katip is free and where it can be installed from. */
+  readonly note?: boolean
+}
+
+const { note = true } = Astro.props
+---
+
+<div class="actions">
+  <div class="buttons">
+    <GetKatip size="regular" />
+    <a class="secondary" href={GITHUB_URL}>
+      <GitHubLogo width={18} height={18} aria-hidden="true" />
+      View on GitHub
+    </a>
+  </div>
+  {note && (
+    <p class="note">
+      {CHROME_WEB_STORE_URL === null
+        ? "Free and open source · Coming soon to the Chrome Web Store"
+        : "Free and open source · Chromium 120 or later"}
+    </p>
+  )}
+</div>
+
+<style>
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 3rem;
+    padding-inline: 1.25rem;
+    border-radius: 0.625rem;
+    background: var(--surface);
+    box-shadow:
+      0 0 0 1px var(--line-strong),
+      var(--shadow-small);
+    color: var(--ink);
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color 150ms var(--ease),
+      transform 150ms var(--ease);
+  }
+
+  .secondary:hover {
+    background: var(--raised);
+    text-decoration: none;
+  }
+
+  .secondary:active {
+    transform: scale(0.98);
+  }
+
+  .secondary :global(svg) {
+    color: var(--ink-soft);
+  }
+
+  .note {
+    margin-top: 1rem;
+    color: var(--ink-faint);
+    font-size: 0.8125rem;
+  }
+</style>

@@ -1,61 +1,65 @@
 ---
-import GitHubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg"
-import logoDark from "@brand/logo-horizontal-dark.svg"
-import logo from "@brand/logo-horizontal.svg"
-import { COPY } from "../copy"
-import { LANGUAGE_NAMES, type Language } from "../languages.ts"
-import { otherLanguages, pathOf, type Page } from "../routes.ts"
+import icon from "@brand/icon.svg"
+import List from "@phosphor-icons/core/assets/regular/list.svg"
+import { PATHS } from "../routes.ts"
 import { GITHUB_URL } from "../site.ts"
+import GetKatip from "./GetKatip.astro"
 
 interface Props {
-  readonly lang: Language
-  readonly page: Page
+  /** The path of the page it heads, so its own link can say so. */
+  readonly current: string
+  /**
+   * Keeps the header's download button out of sight while the page's first screen offers its own,
+   * so the two never show together.
+   */
+  readonly downloadInHero?: boolean
 }
 
-const { lang, page } = Astro.props
-const copy = COPY[lang]
-const home = pathOf(lang, "home")
-// On the home page the sections are right here; elsewhere the links lead back to them
-const sectionLink = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`)
-const LOGO_HEIGHT = 32
+const { current, downloadInHero = false } = Astro.props
+const links = [
+  { href: PATHS.features, label: "Features" },
+  { href: PATHS.whatsNew, label: "What’s New" },
+  { href: PATHS.privacy, label: "Privacy" },
+  { href: GITHUB_URL, label: "GitHub" },
+]
 ---
 
 <header class="site-header">
   <div class="bar container">
-    <a class="brand" href={home} aria-label={copy.header.home}>
-      <picture>
-        <source srcset={logoDark.src} media="(prefers-color-scheme: dark)" />
-        <img
-          src={logo.src}
-          alt="Katip"
-          width={Math.round((logo.width / logo.height) * LOGO_HEIGHT)}
-          height={LOGO_HEIGHT}
-        />
-      </picture>
+    <a class="brand" href={PATHS.home}>
+      <img src={icon.src} width="28" height="28" alt="" />
+      Katip
     </a>
-    <nav class="sections" aria-label={copy.header.sections}>
+    <nav class="links" aria-label="Site">
       <ul>
-        <li>
-          <a href={sectionLink("features")}>{copy.header.features}</a>
-        </li>
-        <li>
-          <a href={sectionLink("arc")}>{copy.header.arc}</a>
-        </li>
-        <li>
-          <a href={sectionLink("privacy")}>{copy.header.privacy}</a>
-        </li>
+        {links.map(({ href, label }) => (
+          <li>
+            <a href={href} aria-current={href === current ? "page" : undefined}>
+              {label}
+            </a>
+          </li>
+        ))}
       </ul>
     </nav>
-    <div class="tools">
-      {otherLanguages(lang).map((language) => (
-        <a class="language" href={pathOf(language, page)} hreflang={language} lang={language}>
-          {LANGUAGE_NAMES[language]}
-        </a>
-      ))}
-      <a class="github" href={GITHUB_URL} aria-label={copy.header.github}>
-        <GitHubLogo width={22} height={22} aria-hidden="true" />
-      </a>
+    <div class:list={["download", { "after-hero": downloadInHero }]}>
+      <GetKatip size="small" />
     </div>
+    <details class="menu">
+      <summary aria-label="Menu">
+        <List width={20} height={20} aria-hidden="true" />
+      </summary>
+      <nav aria-label="Site">
+        <ul>
+          {links.map(({ href, label }) => (
+            <li>
+              <a href={href} aria-current={href === current ? "page" : undefined}>
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </details>
   </div>
 </header>
 
@@ -64,72 +68,143 @@ const LOGO_HEIGHT = 32
     position: sticky;
     top: 0;
     z-index: 50;
-    border-bottom: 1px solid var(--hairline);
-    background: color-mix(in srgb, var(--backdrop) 78%, transparent);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--line);
+    background: var(--page);
   }
 
   .bar {
     display: flex;
     align-items: center;
     gap: 2rem;
-    height: 3.5rem;
+    height: 4rem;
   }
 
   .brand {
-    flex: none;
-    margin-left: -0.25rem;
-    border-radius: 0.5rem;
-  }
-
-  .sections {
-    margin-left: auto;
-  }
-
-  .sections ul {
     display: flex;
-    gap: 1.75rem;
+    align-items: center;
+    gap: 0.625rem;
+    margin-right: auto;
+    color: var(--ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  .brand:hover {
+    text-decoration: none;
+  }
+
+  ul {
+    display: flex;
+    gap: 0.25rem;
     padding: 0;
     list-style: none;
   }
 
-  .sections a,
-  .language {
-    color: var(--ink-secondary);
-    font-size: 0.875rem;
-    font-weight: 500;
+  .links a,
+  .menu nav a {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+    transition:
+      color 150ms var(--ease),
+      background-color 150ms var(--ease);
   }
 
-  .sections a:hover,
-  .language:hover,
-  .github:hover {
+  .links a:hover,
+  .menu nav a:hover {
+    background: var(--raised);
     color: var(--ink);
     text-decoration: none;
   }
 
-  .tools {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
+  .links a[aria-current="page"],
+  .menu nav a[aria-current="page"] {
+    color: var(--ink);
   }
 
-  .github {
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    margin-right: -0.375rem;
-    color: var(--ink-secondary);
+  .menu {
+    display: none;
+  }
+
+  /* Hidden where the scroll can't reveal it: the first screen and the end of the page both offer
+     the download already */
+  .after-hero {
+    display: none;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .after-hero {
+      display: block;
+      animation: reveal linear both;
+    }
+
+    /* A rule of its own: the minifier would otherwise fold the timeline into the animation
+       shorthand above, which can't hold one, and the whole declaration would be dropped */
+    .download.after-hero {
+      animation-timeline: scroll(root);
+      animation-range: 0 32rem;
+    }
+  }
+
+  @keyframes reveal {
+    0%,
+    80% {
+      visibility: hidden;
+      opacity: 0;
+    }
   }
 
   @media (max-width: 47.99rem) {
-    .sections {
+    .bar {
+      gap: 0.75rem;
+    }
+
+    .links {
       display: none;
     }
 
-    .tools {
-      margin-left: auto;
+    .menu {
+      position: relative;
+      display: block;
+    }
+
+    summary {
+      display: grid;
+      place-items: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.5rem;
+      color: var(--ink);
+      list-style: none;
+      cursor: pointer;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .menu[open] summary {
+      background: var(--raised);
+    }
+
+    .menu nav {
+      position: absolute;
+      top: calc(100% + 0.75rem);
+      right: 0;
+      width: 12rem;
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+      background: var(--surface);
+      box-shadow:
+        0 0 0 1px var(--line),
+        0 8px 24px rgb(17 24 39 / 0.08);
+    }
+
+    .menu ul {
+      flex-direction: column;
+      gap: 0.125rem;
     }
   }
 </style>

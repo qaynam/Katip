@@ -1,0 +1,280 @@
+---
+import CaretRight from "@phosphor-icons/core/assets/regular/caret-right.svg"
+import { getCollection } from "astro:content"
+import type { ChangeKind } from "../changelog.ts"
+import Page from "../layouts/Page.astro"
+import { PATHS } from "../routes.ts"
+import { GITHUB_RELEASES_URL } from "../site.ts"
+
+const releases = (await getCollection("releases"))
+  .map((entry) => entry.data)
+  .toSorted((a, b) => a.order - b.order)
+const [latest, ...earlier] = releases
+if (latest === undefined) throw new Error("CHANGELOG.md has no released version")
+
+const longDate = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" })
+const dayOf = (date: string) => new Date(`${date}T00:00:00Z`)
+const KIND_NAMES: Readonly<Record<ChangeKind, string>> = {
+  new: "New",
+  improved: "Improved",
+  fixed: "Fixed",
+}
+const anchorOf = (version: string) => `v${version}`
+---
+
+<Page
+  title="What’s New – Katip"
+  description="Every version of Katip, newest first: what each one brings, what it improves and what it fixes."
+  path={PATHS.whatsNew}
+>
+  <div class="notes container">
+    <header>
+      <h1>What’s new</h1>
+      <p class="lead">
+        Every version of Katip, newest first, in the same words as its{" "}
+        <a href={GITHUB_RELEASES_URL}>release on GitHub</a>.
+      </p>
+    </header>
+
+    <article
+      id={anchorOf(latest.version)}
+      class="latest"
+      aria-labelledby={`${anchorOf(latest.version)}-title`}
+    >
+      <p class="meta">
+        <time datetime={latest.date}>{longDate.format(dayOf(latest.date))}</time>
+        <span>Latest</span>
+      </p>
+      <h2 id={`${anchorOf(latest.version)}-title`}>Katip {latest.version}</h2>
+      <p class="summary" set:html={latest.summary} />
+      {latest.groups.map((group) => (
+        <section class="group" aria-label={KIND_NAMES[group.kind]}>
+          <h3>
+            {KIND_NAMES[group.kind]}
+            <span class="count">{group.changes.length}</span>
+          </h3>
+          <ul>
+            {group.changes.map((change) => (
+              <li>
+                <h4 set:html={change.name} />
+                <p set:html={change.description} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </article>
+
+    <section class="earlier" aria-labelledby="earlier-title">
+      <h2 id="earlier-title" class="earlier-title">
+        Earlier versions
+      </h2>
+      {earlier.map((release) => (
+        <details id={anchorOf(release.version)}>
+          <summary>
+            <span class="version">Katip {release.version}</span>
+            <time class="date" datetime={release.date}>
+              {longDate.format(dayOf(release.date))}
+            </time>
+            <span class="gist" set:html={release.summary} />
+            <CaretRight class="caret" width={16} height={16} aria-hidden="true" />
+          </summary>
+          <div class="body">
+            {release.groups.map((group) => (
+              <section class="group" aria-label={KIND_NAMES[group.kind]}>
+                <h3>
+                  {KIND_NAMES[group.kind]}
+                  <span class="count">{group.changes.length}</span>
+                </h3>
+                <ul>
+                  {group.changes.map((change) => (
+                    <li>
+                      <h4 set:html={change.name} />
+                      <p set:html={change.description} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </details>
+      ))}
+    </section>
+  </div>
+</Page>
+
+<style>
+  .notes {
+    max-width: 44rem;
+    padding-top: clamp(3rem, 1.5rem + 5vw, 6rem);
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 1.75rem + 3vw, 3.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+
+  header .lead {
+    margin-top: 1.25rem;
+  }
+
+  .latest {
+    margin-top: clamp(3rem, 2rem + 4vw, 5rem);
+    padding-top: 2rem;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--ink-faint);
+    font-size: 0.875rem;
+  }
+
+  .meta span {
+    padding: 0.0625rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--work-mat);
+    color: var(--work-ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .latest h2 {
+    margin-top: 0.5rem;
+    font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .summary {
+    margin-top: 1rem;
+    color: var(--ink-soft);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+
+  .group {
+    margin-top: 2.5rem;
+  }
+
+  .group h3 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9375rem;
+  }
+
+  .count {
+    color: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .group ul {
+    padding: 0;
+    list-style: none;
+  }
+
+  .group li {
+    padding-block: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  h4 {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .group li p {
+    margin-top: 0.375rem;
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+  }
+
+  .notes :global(code) {
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 0.25rem;
+    background: var(--raised);
+    color: var(--ink);
+  }
+
+  /* Earlier versions, folded to one line each until opened */
+
+  .earlier {
+    margin-top: clamp(4rem, 3rem + 4vw, 6rem);
+  }
+
+  .earlier-title {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line-strong);
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  details {
+    border-bottom: 1px solid var(--line);
+  }
+
+  summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.25rem 1rem;
+    padding-block: 1.25rem;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .version {
+    font-weight: 500;
+  }
+
+  .date {
+    color: var(--ink-faint);
+    font-size: 0.875rem;
+    text-align: right;
+  }
+
+  .gist {
+    grid-column: 1;
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+
+  summary :global(.caret) {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    margin-top: 0.25rem;
+    color: var(--ink-faint);
+    transition: transform 160ms var(--ease);
+  }
+
+  details[open] summary :global(.caret) {
+    transform: rotate(90deg);
+  }
+
+  summary:hover .version {
+    color: var(--accent);
+  }
+
+  .body {
+    padding-bottom: 2rem;
+  }
+
+  .body .group:first-child {
+    margin-top: 0.5rem;
+  }
+</style>

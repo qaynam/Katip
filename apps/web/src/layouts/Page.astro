@@ -4,64 +4,76 @@ import socialCardEn from "@store/social/en.png"
 import socialCardJa from "@store/social/ja.png"
 import Footer from "../components/Footer.astro"
 import Header from "../components/Header.astro"
-import { COPY } from "../copy"
-import { DEFAULT_LANGUAGE, LANGUAGES, OPEN_GRAPH_LOCALES, type Language } from "../languages.ts"
-import { absoluteUrl, otherLanguages, pathOf, type Page } from "../routes.ts"
+import { OPEN_GRAPH_LOCALES, type Language } from "../languages.ts"
+import { absoluteUrl } from "../routes.ts"
 import Document from "./Document.astro"
 
 interface Props {
-  readonly lang: Language
-  readonly page: Page
   readonly title: string
   readonly description: string
+  /** The page's own path, for its canonical URL and the header's current link. */
+  readonly path: string
+  readonly lang?: Language
+  /** The page's path in every language it is translated into, itself included. */
+  readonly translations?: Readonly<Partial<Record<Language, string>>>
+  /** False for a page search engines shouldn't list, which then has no canonical URL either. */
+  readonly indexable?: boolean
+  /** Whether the page's first screen offers the download itself, as the home page does. */
+  readonly downloadInHero?: boolean
 }
 
-const { lang, page, title, description } = Astro.props
-const copy = COPY[lang]
-const canonical = absoluteUrl(pathOf(lang, page))
-// The root picks a language for the visitor, which is what x-default means; it exists only for
-// the home page, so the other pages fall back to their English version
-const languageNeutral =
-  page === "home" ? absoluteUrl("/") : absoluteUrl(pathOf(DEFAULT_LANGUAGE, page))
+const {
+  title,
+  description,
+  path,
+  lang = "en",
+  translations = {},
+  indexable = true,
+  downloadInHero = false,
+} = Astro.props
+const canonical = absoluteUrl(path)
 const socialCards = { en: socialCardEn, ja: socialCardJa } satisfies Record<Language, ImageMetadata>
 const socialCard = socialCards[lang]
 const image = absoluteUrl(socialCard.src)
+const translated = Object.entries(translations) as ReadonlyArray<[Language, string]>
+const imageAlt =
+  "Katip: Not another browser. Beside the words, Katip’s sidebar shows a Work Space with pinned tabs in folders."
 ---
 
 <Document lang={lang} title={title} description={description}>
   <Fragment slot="head">
-    <link rel="canonical" href={canonical} />
-    {LANGUAGES.map((language) => (
-      <link rel="alternate" hreflang={language} href={absoluteUrl(pathOf(language, page))} />
+    {indexable ? (
+      <link rel="canonical" href={canonical} />
+    ) : (
+      <meta name="robots" content="noindex" />
+    )}
+    {translated.map(([language, translation]) => (
+      <link rel="alternate" hreflang={language} href={absoluteUrl(translation)} />
     ))}
-    <link rel="alternate" hreflang="x-default" href={languageNeutral} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Katip" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={OPEN_GRAPH_LOCALES[lang]} />
-    {otherLanguages(lang).map((language) => (
-      <meta property="og:locale:alternate" content={OPEN_GRAPH_LOCALES[language]} />
-    ))}
     <meta property="og:image" content={image} />
     <meta property="og:image:width" content={String(socialCard.width)} />
     <meta property="og:image:height" content={String(socialCard.height)} />
-    <meta property="og:image:alt" content={copy.meta.imageAlt} />
+    <meta property="og:image:alt" content={imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={image} />
-    <meta name="twitter:image:alt" content={copy.meta.imageAlt} />
+    <meta name="twitter:image:alt" content={imageAlt} />
   </Fragment>
   <a class="skip-link" href="#content">
-    {copy.skipToContent}
+    Skip to content
   </a>
-  <Header lang={lang} page={page} />
+  <Header current={path} downloadInHero={downloadInHero} />
   <main id="content" tabindex="-1">
     <slot />
   </main>
-  <Footer lang={lang} page={page} />
+  <Footer />
 </Document>
 
 <style>
@@ -73,19 +85,15 @@ const image = absoluteUrl(socialCard.src)
     padding: 0.625rem 1rem;
     border-radius: 0.75rem;
     background: var(--surface);
-    box-shadow: var(--card-shadow);
-    font-weight: 600;
+    box-shadow:
+      0 0 0 1px var(--line),
+      var(--shadow-small);
+    font-weight: 500;
     transform: translateY(-200%);
   }
 
   .skip-link:focus-visible {
     transform: none;
-  }
-
-  main {
-    /* The glows behind the screenshots reach past the gutters. Not hidden, which would also make
-       main a scroll container */
-    overflow-x: clip;
   }
 
   main:focus {

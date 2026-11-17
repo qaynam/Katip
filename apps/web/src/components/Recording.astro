@@ -1,0 +1,50 @@
+---
+import { recordingOf } from "../screenshots.ts"
+import type { Clip } from "../shots.ts"
+
+interface Props {
+  /** The screen recording to play, shown in place of what's inside once there is one. */
+  readonly clip: Clip
+  readonly alt: string
+  readonly poster?: string | undefined
+  /** For the first screen: loaded right away. */
+  readonly priority?: boolean
+}
+
+const { clip, alt, poster, priority = false } = Astro.props
+const recording = recordingOf(clip)
+---
+
+{recording === undefined ? (
+  <slot />
+) : (
+  <video
+    class="recording"
+    src={recording}
+    poster={poster}
+    aria-label={alt}
+    autoplay
+    muted
+    loop
+    playsinline
+    preload={priority ? "auto" : "metadata"}
+    data-recording
+  />
+)}
+
+<script>
+  // Moving pictures that can't be stopped get in the way of people who asked for less motion, and
+  // of anyone reading beside them, so each recording pauses on a click and starts paused for them
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)")
+  for (const video of document.querySelectorAll<HTMLVideoElement>("video[data-recording]")) {
+    if (reduceMotion.matches) video.pause()
+    video.addEventListener("click", () => (video.paused ? void video.play() : video.pause()))
+  }
+</script>
+
+<style>
+  .recording {
+    width: 100%;
+    cursor: pointer;
+  }
+</style>

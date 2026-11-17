@@ -1,0 +1,8 @@
+# Addresses from when every page had an English and a Japanese version, which links such as the
+# Chrome Web Store listing's privacy policy still point to. /ja/privacy/ is still a page
+/en /  301
+/en/ /  301
+/en/privacy /privacy/  301
+/en/privacy/ /privacy/  301
+/ja /  301
+/ja/ /  301
