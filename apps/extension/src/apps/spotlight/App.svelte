@@ -44,10 +44,23 @@
      * outcome is awaited.
      */
     openSidePanel: () => void
+    /**
+     * The theme of the Space in the window Spotlight was opened over, as known when it opened, so
+     * that it is drawn in those colors before the first results bring the theme again.
+     */
+    initialSpaceTheme?: SpaceTheme | null
   }
 
-  const { connection, faviconUrl, close, translator, size, setCollapsed, openSidePanel }: Props =
-    $props()
+  const {
+    connection,
+    faviconUrl,
+    close,
+    translator,
+    size,
+    setCollapsed,
+    openSidePanel,
+    initialSpaceTheme = null,
+  }: Props = $props()
   const t = $derived(translator.t)
 
   const RESULTS_ID = "spotlight-results"
@@ -61,7 +74,9 @@
   // The site a bang put Spotlight in: what is typed then searches that site
   let bangMode = $state.raw<BangMode | null>(null)
   let results = $state.raw<ReadonlyArray<SpotlightResult>>([])
-  let spaceTheme = $state.raw<SpaceTheme | null>(null)
+  // Only the theme it opened with: from the first results on, each response brings the theme
+  // svelte-ignore state_referenced_locally
+  let spaceTheme = $state.raw<SpaceTheme | null>(initialSpaceTheme)
   let respondedAt = $state(Date.now())
   let selectedIndex = $state(0)
   let hasLoaded = $state(false)
@@ -353,7 +368,7 @@
     {#if !isCollapsed}
       <div class="body">
         {#if !hasLoaded}
-          <p class="message" role="status">{t("spotlight.loading")}</p>
+          <p class="message loading" role="status">{t("spotlight.loading")}</p>
         {:else if !hasMatches}
           <p class="message" role="status">{emptyMessage}</p>
         {/if}
@@ -527,6 +542,18 @@
     margin: 0;
     padding: 12px 12px 8px;
     color: var(--text-muted);
+  }
+
+  /* Results usually arrive within a moment; a word that shows only for that moment reads as a
+     flicker, so it shows only once the wait is long enough to need saying */
+  .loading {
+    animation: show-after-wait 0s 400ms both;
+  }
+
+  @keyframes show-after-wait {
+    from {
+      visibility: hidden;
+    }
   }
 
   .notice {

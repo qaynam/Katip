@@ -5,9 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { type Locale, makeTranslator } from "#modules/i18n"
 import { SpaceName } from "#modules/space"
 import type { SpotlightSize } from "#modules/spotlight"
+import { themeOf } from "#modules/theme"
 import { TabId } from "#platform/browser"
 import type { SpotlightMode, SpotlightResult } from "#protocol"
 import App from "./App.svelte"
+import { spotlightAppearance } from "./logic/appearance"
+import { currentSystemScheme } from "./state/system-scheme"
 import { createFakeConnection, type FakeConnectionOptions } from "./testing/fake-connection"
 
 // jsdom has no layout and doesn't implement scrollIntoView
@@ -86,6 +89,29 @@ const settle = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   await tick()
 }
+
+describe("Spotlight's colors", () => {
+  it("are the Space's from the first frame, before the first results arrive", () => {
+    const theme = themeOf([{ hue: 20, chroma: 0.6 }])
+    render(App, {
+      props: {
+        connection: createFakeConnection(),
+        faviconUrl: () => null,
+        close: vi.fn(),
+        translator: makeTranslator("en"),
+        size: "Normal",
+        setCollapsed: vi.fn(),
+        openSidePanel: vi.fn(),
+        initialSpaceTheme: theme,
+      },
+    })
+
+    const spotlight = document.querySelector<HTMLElement>(".spotlight")
+    expect(spotlight?.style.getPropertyValue("--background")).toBe(
+      spotlightAppearance(theme, currentSystemScheme()).background,
+    )
+  })
+})
 
 describe("a compact Spotlight", () => {
   it("shows the search field alone until something is typed, then opens out to the results", async () => {

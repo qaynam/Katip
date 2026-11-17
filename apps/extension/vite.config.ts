@@ -71,6 +71,19 @@ const emitThirdPartyNotices = (): Plugin => ({
   },
 })
 
+// Vite writes each page's script tag anew and drops attributes it doesn't know, so the attribute
+// that holds Spotlight's first frame back until its script has run is added to the built page
+const holdSpotlightFirstFrame = (): Plugin => ({
+  name: "katip:hold-spotlight-first-frame",
+  transformIndexHtml: {
+    order: "post",
+    handler: (html, { path }) =>
+      path.endsWith("/spotlight/index.html")
+        ? html.replace('<script type="module"', '<script type="module" blocking="render"')
+        : html,
+  },
+})
+
 const stampDevBuild = (): Plugin => ({
   name: "katip:stamp-dev-build",
   closeBundle() {
@@ -106,6 +119,7 @@ export default defineConfig(({ mode }) => {
       svelte({ configFile: fromRoot("./svelte.config.js") }),
       emitManifest(buildMode),
       emitThirdPartyNotices(),
+      holdSpotlightFirstFrame(),
       ...(buildMode === "development" ? [stampDevBuild()] : []),
     ],
     build: {

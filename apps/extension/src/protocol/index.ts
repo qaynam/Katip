@@ -17,6 +17,8 @@ export {
   SPOTLIGHT_PORT_NAME,
   SpotlightClientMessage,
   SpotlightMode,
+  type SpotlightOpening,
+  spotlightOpeningOf,
   SpotlightOutcome,
   spotlightPageUrl,
   SpotlightResult,

@@ -4,6 +4,7 @@ import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT, spotlightBoundsOver } from 
 import { type BrowserTab, Tabs, type WindowBounds, type WindowId, Windows } from "#platform/browser"
 import { callerWindowOfSpotlight, SPOTLIGHT_PAGE_PATH, spotlightPageUrl } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
+import { activeSpaceTheme } from "./spotlight-results"
 import { urlOf } from "./tab-admission"
 
 // The title bar's height differs between systems, which only the page can measure. It sets the
@@ -39,7 +40,7 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowI
   }
   const caller = yield* windows.get(callerWindowId)
   if (!Option.contains(caller.type, "normal")) return
-  const { spotlightSize, spotlightPosition } = yield* (yield* SettingsRepository).get
+  const { spotlightSize, spotlightPosition, locale } = yield* (yield* SettingsRepository).get
   const boundsOver = (callerBounds: WindowBounds) => {
     const full = spotlightBoundsOver(callerBounds, spotlightSize, spotlightPosition)
     return SPOTLIGHT_LAYOUTS[spotlightSize].collapses
@@ -47,7 +48,12 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowI
       : full
   }
   yield* windows.create({
-    url: spotlightPageUrl(origin, callerWindowId),
+    url: spotlightPageUrl(origin, {
+      callerWindowId,
+      spaceTheme: yield* activeSpaceTheme(callerWindowId),
+      size: spotlightSize,
+      locale,
+    }),
     type: "popup",
     focused: true,
     ...Option.getOrElse(Option.map(caller.bounds, boundsOver), () => ({})),

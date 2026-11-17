@@ -4,10 +4,11 @@ import { SettingsRepository } from "#modules/settings"
 import { DEFAULT_SPOTLIGHT_POSITION, spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
-import { callerWindowOfSpotlight } from "#protocol"
+import { callerWindowOfSpotlight, spotlightOpeningOf } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { KeyboardCommand, runKeyboardCommand } from "./keyboard-commands"
 import { applicationLayer } from "./program"
+import { activeSpaceTheme } from "./spotlight-results"
 import { openSpotlight } from "./spotlight-window"
 import { backgroundTestLayer } from "./testing/background-harness"
 
@@ -111,6 +112,36 @@ describe("opening Spotlight", () => {
           )
         }),
       ),
+    )
+
+    it.effect(
+      "the opened page is given its Space's theme and the size and language from the settings",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+            yield* SettingsRepository.use((settings) =>
+              settings.update({ spotlightSize: "Large", locale: "ja" }),
+            )
+
+            yield* openSpotlight(windowId)
+
+            const [spotlight] = yield* spotlightTabs
+            const opening = Option.flatMap(
+              Option.flatMap(Option.fromNullishOr(spotlight), (tab) => tab.url),
+              spotlightOpeningOf,
+            )
+            expect(opening).toStrictEqual(
+              Option.some({
+                callerWindowId: windowId,
+                spaceTheme: yield* activeSpaceTheme(windowId),
+                size: "Large",
+                locale: "ja",
+              }),
+            )
+          }),
+        ),
     )
 
     it.effect("focus moves to the Spotlight window", () =>

@@ -4,7 +4,12 @@ import { makeTranslator, resolveLocale } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
 import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT } from "#modules/spotlight"
 import { Storage, WindowId } from "#platform/browser"
-import { callerWindowOfSpotlight, SPOTLIGHT_PORT_NAME } from "#protocol"
+import {
+  callerWindowOfSpotlight,
+  SPOTLIGHT_PORT_NAME,
+  type SpotlightOpening,
+  spotlightOpeningOf,
+} from "#protocol"
 import App from "./App.svelte"
 import { createSpotlightPortConnection, type SpotlightPort } from "./connection/port-connection"
 
@@ -29,28 +34,39 @@ const lastFocusedNormalWindow = async () => {
   return window.id === undefined ? null : WindowId.make(window.id)
 }
 
-// Falls back to the defaults, the browser's language among them, so that Spotlight still opens
-// when the settings can't be read
-const settings = Effect.runPromise(
-  SettingsRepository.use((repository) => repository.get).pipe(
-    Effect.orElseSucceed(() => defaultSettings),
-    Effect.provide(SettingsRepository.layer.pipe(Layer.provide(Storage.layer))),
-  ),
-)
+// For a URL without what Katip puts in it, such as one opened by hand. Falls back to the default
+// settings, the browser's language among them, so that Spotlight still opens when they can't be read
+const openingFromStorage = async (): Promise<SpotlightOpening | null> => {
+  const settings = Effect.runPromise(
+    SettingsRepository.use((repository) => repository.get).pipe(
+      Effect.orElseSucceed(() => defaultSettings),
+      Effect.provide(SettingsRepository.layer.pipe(Layer.provide(Storage.layer))),
+    ),
+  )
+  const callerWindowId = await Option.match(callerWindowOfSpotlight(location.href), {
+    onSome: (windowId) => Promise.resolve(windowId),
+    onNone: lastFocusedNormalWindow,
+  })
+  const { locale, spotlightSize } = await settings
+  return callerWindowId === null
+    ? null
+    : { callerWindowId, spaceTheme: null, size: spotlightSize, locale }
+}
 
-const callerWindowId = await Option.match(callerWindowOfSpotlight(location.href), {
-  onSome: (windowId) => Promise.resolve(windowId),
-  onNone: lastFocusedNormalWindow,
-})
-const { locale, spotlightSize } = await settings
-const spotlightWindow = await chrome.windows.getCurrent()
-const translator = makeTranslator(resolveLocale(locale, navigator.languages))
-document.documentElement.lang = translator.languageTag
-document.title = translator.t("spotlight.documentTitle")
+// Nothing is awaited on the way from the URL Katip opens to the mount, so the page's first frame,
+// which the built page holds back until this script has run (see vite.config.ts), is Spotlight
+// itself
+const opening = Option.getOrNull(spotlightOpeningOf(location.href)) ?? (await openingFromStorage())
+// Only needed once the window resizes, so its answer isn't waited for before the first frame
+const spotlightWindowId = chrome.windows.getCurrent().then((window) => window.id)
 
-if (callerWindowId === null) {
+if (opening === null) {
   window.close()
 } else {
+  const { callerWindowId, spaceTheme, size, locale } = opening
+  const translator = makeTranslator(resolveLocale(locale, navigator.languages))
+  document.documentElement.lang = translator.languageTag
+  document.title = translator.t("spotlight.documentTitle")
   mount(App, {
     target: document.body,
     props: {
@@ -59,15 +75,18 @@ if (callerWindowId === null) {
       close: () => window.close(),
       openSidePanel: () => void chrome.sidePanel.open({ windowId: callerWindowId }).catch(() => {}),
       translator,
-      size: spotlightSize,
+      size,
+      initialSpaceTheme: spaceTheme,
       setCollapsed: (collapsed: boolean) => {
-        if (spotlightWindow.id === undefined) return
         // What the window has beyond the page is its title bar, whose height differs by system
         const titleBar = window.outerHeight - window.innerHeight
-        void chrome.windows.update(spotlightWindow.id, {
-          height: collapsed
-            ? SPOTLIGHT_SEARCH_HEIGHT + titleBar
-            : SPOTLIGHT_LAYOUTS[spotlightSize].window.height,
+        void spotlightWindowId.then((windowId) => {
+          if (windowId === undefined) return
+          void chrome.windows.update(windowId, {
+            height: collapsed
+              ? SPOTLIGHT_SEARCH_HEIGHT + titleBar
+              : SPOTLIGHT_LAYOUTS[size].window.height,
+          })
         })
       },
     },

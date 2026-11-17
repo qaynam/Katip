@@ -1,28 +1,66 @@
 import { describe, expect, it } from "vitest"
 import { Option, Schema } from "effect"
+import { themeOf } from "#modules/theme"
 import { WindowId } from "#platform/browser"
 import { RequestId } from "./sidebar-port"
 import {
   callerWindowOfSpotlight,
   SPOTLIGHT_PAGE_PATH,
   SpotlightClientMessage,
+  type SpotlightOpening,
+  spotlightOpeningOf,
   spotlightPageUrl,
   SpotlightServerMessage,
 } from "./spotlight-port"
 
 const ORIGIN = "chrome-extension://katip-test/"
 
+const opening: SpotlightOpening = {
+  callerWindowId: WindowId.make(7),
+  spaceTheme: themeOf([{ hue: 250, chroma: 0.4 }]),
+  size: "Large",
+  locale: "ja",
+}
+
 describe("the Spotlight page's URL", () => {
   it("points to the extension's Spotlight page", () => {
-    const url = spotlightPageUrl(ORIGIN, WindowId.make(7))
+    const url = spotlightPageUrl(ORIGIN, opening)
 
     expect(url.startsWith(`${ORIGIN}${SPOTLIGHT_PAGE_PATH}?`)).toBe(true)
   })
 
   it("gives back the window that opened Spotlight", () => {
-    const url = spotlightPageUrl(ORIGIN, WindowId.make(7))
+    const url = spotlightPageUrl(ORIGIN, opening)
 
     expect(callerWindowOfSpotlight(url)).toStrictEqual(Option.some(WindowId.make(7)))
+  })
+
+  it("gives back everything the first frame is drawn with: the Space's theme, size and language", () => {
+    const url = spotlightPageUrl(ORIGIN, opening)
+
+    expect(spotlightOpeningOf(url)).toStrictEqual(Option.some(opening))
+  })
+
+  it("carries a window in no Space as having no theme", () => {
+    const url = spotlightPageUrl(ORIGIN, { ...opening, spaceTheme: null })
+
+    expect(Option.map(spotlightOpeningOf(url), (opened) => opened.spaceTheme)).toStrictEqual(
+      Option.some(null),
+    )
+  })
+
+  it.each([
+    [
+      "names the window alone, as one opened by hand does",
+      `${ORIGIN}${SPOTLIGHT_PAGE_PATH}?windowId=7`,
+    ],
+    [
+      "has a theme that can't be read",
+      `${ORIGIN}${SPOTLIGHT_PAGE_PATH}?windowId=7&theme=%7B&size=Large&locale=ja`,
+    ],
+    ["can't be parsed as a URL", "not a url"],
+  ])("gives back nothing to draw the first frame with when it %s", (_, url) => {
+    expect(spotlightOpeningOf(url)).toStrictEqual(Option.none())
   })
 
   it.each([

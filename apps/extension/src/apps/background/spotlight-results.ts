@@ -575,7 +575,8 @@ const historyModeResults = Effect.fnUntraced(function* (query: string, recent: R
   ).map(toResult)
 })
 
-const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+/** The theme of the Space shown in the `callerWindowId` window, or null for a window in no Space. */
+export const activeSpaceTheme = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const state = yield* KatipState
   const spaces = yield* state.spaces.get
   return pipe(

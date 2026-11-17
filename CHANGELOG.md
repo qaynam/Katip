@@ -8,6 +8,24 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+The Command Palette opens in your Space's colors straight away, without a flash of white or black first.
+
+### ✨ Improved
+
+- **A Command Palette that opens without a flash** — The Command Palette's first frame is already in the colors of the Space you're in, at its size and in its language, instead of showing plain white or black until your tabs and pins arrived. The word Loading shows only when the results take a while.
+
+## 日本語
+
+コマンドパレットが、白や黒の一瞬のちらつきなしに、最初から Space の色で開くようになりました。
+
+### ✨ 改善
+
+- **ちらつかずに開くコマンドパレット** — コマンドパレットを開いた瞬間から、表示中の Space の色・サイズ・言語で表示するようにしました。これまではタブやピンの読み込みが終わるまで、真っ白または真っ黒の画面が一瞬挟まっていました。「読み込み中」の表示も、結果の表示に時間がかかるときだけ出ます。
+
 ## 1.10.0 — 2026-11-17
 
 ## English
