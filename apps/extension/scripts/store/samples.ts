@@ -151,6 +151,8 @@ export interface LocaleSamples {
   readonly pages: Readonly<Record<PageKey, SamplePage>>
   /** Typed into Spotlight; matches a tab and the copy commands. */
   readonly spotlightQuery: string
+  /** What the image shown when a link to the website is shared says, as the home page does. */
+  readonly socialCard: { readonly headline: string; readonly subtitle: string }
 }
 
 const plain = (title: string): SamplePage => ({ kind: "plain", title })
@@ -199,6 +201,11 @@ const en: LocaleSamples = {
     inspiration: "Inspiration",
   },
   spotlightQuery: "copy",
+  socialCard: {
+    headline: "Not another browser",
+    subtitle:
+      "A private, open-source extension that gives your Chromium browser Spaces and vertical tabs.",
+  },
   pages: {
     roadmap: {
       kind: "doc",
@@ -364,6 +371,11 @@ const ja: LocaleSamples = {
     inspiration: "インスピレーション",
   },
   spotlightQuery: "コピー",
+  socialCard: {
+    headline: "新しいブラウザは、いらない",
+    subtitle:
+      "いつもの Chromium ブラウザに、Space と縦タブを。プライバシー重視のオープンソース拡張機能です。",
+  },
   pages: {
     roadmap: {
       kind: "doc",
@@ -512,8 +524,71 @@ export const ALL_URLS: ReadonlyArray<string> = [
   ...BANG_COMMANDS.map(bangSiteUrlOf),
 ]
 
-/** A Katip export file holding the sample Spaces and Favorites, in `samples`' language. */
-export const sampleExport = (samples: LocaleSamples): ExportV1 => {
+/**
+ * The live folder the website's screenshots show at the end of the Work Space, filled from a
+ * sample of Gmail's feed. In English only, as the website is.
+ */
+export const WEBSITE_LIVE_FOLDER = {
+  title: "Important mail",
+  // Gmail's label for the mail it marks important
+  label: "^io_im",
+  // At addresses of a free mail service, so each sender shows by an initial rather than an icon
+  // the browser has never seen
+  mails: [
+    {
+      subject: "Contract ready for your signature",
+      sender: "Sofia Rossi",
+      email: "sofia.rossi@gmail.com",
+      minutesAgo: 6,
+    },
+    {
+      subject: "Design review moved to Thursday",
+      sender: "Maya Chen",
+      email: "maya.chen@gmail.com",
+      minutesAgo: 41,
+    },
+    {
+      subject: "Notes from the onboarding call",
+      sender: "Leo Park",
+      email: "leo.park@gmail.com",
+      minutesAgo: 97,
+    },
+  ],
+} as const
+
+const escapeXml = (text: string) =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+
+/** Gmail's unread feed (Atom 0.3) holding {@link WEBSITE_LIVE_FOLDER}'s mail, as of `now`. */
+export const sampleGmailFeed = (now: number): string => {
+  const entries = WEBSITE_LIVE_FOLDER.mails.map((mail, index) => {
+    const at = new Date(now - mail.minutesAgo * 60_000).toISOString()
+    return `<entry>
+<title>${escapeXml(mail.subject)}</title>
+<link rel="alternate" href="https://mail.google.com/mail/u/0/#inbox/sample${index}" type="text/html"/>
+<modified>${at}</modified>
+<issued>${at}</issued>
+<id>tag:gmail.google.com,2004:sample${index}</id>
+<author><name>${escapeXml(mail.sender)}</name><email>${mail.email}</email></author>
+</entry>`
+  })
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed version="0.3" xmlns="http://purl.org/atom/ns#">
+<title>Gmail - Important</title>
+<fullcount>${WEBSITE_LIVE_FOLDER.mails.length}</fullcount>
+${entries.join("\n")}
+</feed>`
+}
+
+/**
+ * A Katip export file holding the sample Spaces and Favorites, in `samples`' language.
+ *
+ * @param options.liveFolder - Ends the Work Space with {@link WEBSITE_LIVE_FOLDER}.
+ */
+export const sampleExport = (
+  samples: LocaleSamples,
+  options: { readonly liveFolder?: boolean } = {},
+): ExportV1 => {
   const link = (key: PageKey) => ({ title: samples.pages[key].title, url: URLS[key] })
   const node = (sample: SampleNode): PinnedNodeV1 => {
     if ("pin" in sample) return { type: "pin", ...link(sample.pin) }
@@ -543,7 +618,23 @@ export const sampleExport = (samples: LocaleSamples): ExportV1 => {
       id: space.key,
       name: samples.spaceNames[space.key],
       theme: space.theme,
-      pinned: space.pinned.map(node),
+      pinned: [
+        ...space.pinned.map(node),
+        ...(options.liveFolder === true && space.key === "work"
+          ? [
+              {
+                type: "liveFolder" as const,
+                title: WEBSITE_LIVE_FOLDER.title,
+                source: {
+                  kind: "gmail" as const,
+                  accountIndex: 0,
+                  label: WEBSITE_LIVE_FOLDER.label,
+                },
+                sort: "newest" as const,
+              },
+            ]
+          : []),
+      ],
       tabs: [],
     })),
     favorites: FAVORITES.map(link),

@@ -28,28 +28,49 @@ export const SOCIAL_CARD = { width: 1200, height: 600 } as const
 /** The browser window under the caption. */
 export const STAGE: Box = { left: 96, top: 184, width: 1088, height: 576 }
 
-/** Where the side panel sits in the window, and where the page beside it does. */
-export const SIDEBAR_BOX: Box = { left: 0, top: 0, width: 300, height: STAGE.height }
-export const PAGE_BOX: Box = {
-  left: SIDEBAR_BOX.width + 1,
-  top: 0,
-  width: STAGE.width - SIDEBAR_BOX.width - 1,
-  height: STAGE.height,
+/** Where the parts of a browser window sit, each placed relative to the window's corner. */
+export interface WindowLayout {
+  readonly width: number
+  readonly height: number
+  readonly sidebar: Box
+  /** The page beside the side panel. */
+  readonly page: Box
+  /** The two halves of the page area in split view, left then right. */
+  readonly split: readonly [Box, Box]
 }
 
+const SIDEBAR_WIDTH = 300
 const SPLIT_GAP = 7
-// Whole pixels, so neither half is resampled
-const SPLIT_LEFT_WIDTH = Math.floor((PAGE_BOX.width - SPLIT_GAP) / 2)
 
-/** The two halves of the page area in split view, left then right. */
-export const SPLIT_BOXES: readonly [Box, Box] = [
-  { ...PAGE_BOX, width: SPLIT_LEFT_WIDTH },
-  {
-    ...PAGE_BOX,
-    left: PAGE_BOX.left + SPLIT_LEFT_WIDTH + SPLIT_GAP,
-    width: PAGE_BOX.width - SPLIT_LEFT_WIDTH - SPLIT_GAP,
-  },
-]
+export const windowLayoutOf = ({ width, height }: Pick<Box, "width" | "height">): WindowLayout => {
+  const sidebar = { left: 0, top: 0, width: SIDEBAR_WIDTH, height }
+  const page = { left: SIDEBAR_WIDTH + 1, top: 0, width: width - SIDEBAR_WIDTH - 1, height }
+  // Whole pixels, so neither half is resampled
+  const splitLeftWidth = Math.floor((page.width - SPLIT_GAP) / 2)
+  return {
+    width,
+    height,
+    sidebar,
+    page,
+    split: [
+      { ...page, width: splitLeftWidth },
+      {
+        ...page,
+        left: page.left + splitLeftWidth + SPLIT_GAP,
+        width: page.width - splitLeftWidth - SPLIT_GAP,
+      },
+    ],
+  }
+}
+
+/** The window of the store's screenshots, short enough to leave room for the caption above it. */
+export const STORE_WINDOW = windowLayoutOf(STAGE)
+
+/**
+ * The window of the website's screenshots: 16:10, as a laptop's screen and a Mac's windows are,
+ * instead of the store's wider one. The website shows it without a caption.
+ */
+export const WEBSITE_WINDOW = windowLayoutOf({ width: 1088, height: 680 })
 
 const SECONDARY_INK = "#6E6E73"
 const BACKDROP = "#F5F5F7"
@@ -103,15 +124,48 @@ export const windowFrame = (box: Box, content: string) =>
   `<div class="window" style="${px(box)}">${content}</div>`
 
 /** The thin line between the side panel and the page. */
-export const sidebarDivider = () =>
-  `<div class="divider" style="${px({ left: SIDEBAR_BOX.width, top: 0, width: 1, height: STAGE.height })}"></div>`
+export const sidebarDivider = (layout: WindowLayout) =>
+  `<div class="divider" style="${px({ left: layout.sidebar.width, top: 0, width: 1, height: layout.height })}"></div>`
+
+/**
+ * A wash over the part of a window at `box` that a website screenshot isn't about, so the part it
+ * is about stands out while the rest still shows where it is.
+ */
+export const veil = (box: Box) => `<div class="veil" style="${px(box)}"></div>`
 
 /** The bar between the two pages of a split view. */
-export const splitGap = () => {
-  const [left, right] = SPLIT_BOXES
+export const splitGap = (layout: WindowLayout) => {
+  const [left, right] = layout.split
   const start = left.left + left.width
-  return `<div class="gap" style="${px({ left: start, top: 0, width: right.left - start, height: STAGE.height })}"></div>`
+  return `<div class="gap" style="${px({ left: start, top: 0, width: right.left - start, height: layout.height })}"></div>`
 }
+
+const FLOATING_STYLE = `.floating { border-radius: 14px; box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 28px 70px rgb(0 0 0 / 0.28), 0 8px 20px rgb(0 0 0 / 0.1); }`
+
+/**
+ * A website screenshot: the browser window filling the page, with anything in `overlay` above
+ * it. Square cornered and without a shadow, as the website draws those itself.
+ */
+export const websiteScreenshotHtml = ({
+  lang,
+  window,
+  overlay = "",
+}: {
+  readonly lang: string
+  readonly window: string
+  readonly overlay?: string
+}) =>
+  page(
+    lang,
+    WEBSITE_WINDOW,
+    `
+.window { border-radius: 0; box-shadow: none; }
+.window > .veil { position: absolute; background: rgb(255 255 255 / 0.62); backdrop-filter: grayscale(0.8); }
+${FLOATING_STYLE}
+`,
+    `${window}
+${overlay}`,
+  )
 
 /**
  * A store screenshot: the caption centered at the top, the browser window under it, and anything
@@ -138,7 +192,7 @@ body { background: radial-gradient(90% 60% at 50% 0%, #FFFFFF 0%, ${BACKDROP} 70
 .eyebrow img { position: static; width: 24px; height: 24px; }
 h1 { margin: 10px 0 0; font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -0.022em; }
 p { margin: 10px 0 0; color: ${SECONDARY_INK}; font-size: 18px; line-height: 1.4; letter-spacing: -0.005em; }
-.floating { border-radius: 14px; box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 28px 70px rgb(0 0 0 / 0.28), 0 8px 20px rgb(0 0 0 / 0.1); }
+${FLOATING_STYLE}
 `,
     `<div class="caption">
   <div class="eyebrow"><img src="${ICON}" alt="">${escape(caption.eyebrow)}</div>
