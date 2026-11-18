@@ -6,6 +6,7 @@ import { isSplitViewAvailable } from "./sidebar-actions"
 const COMMAND_LABELS: Readonly<Record<string, string>> = {
   _execute_action: "Open the side panel",
   "open-spotlight": "Open the Command Palette",
+  "edit-current-url": "Edit the current tab’s address",
   "next-tab-in-space": "Next tab in the Space",
   "previous-tab-in-space": "Previous tab in the Space",
   "quick-pin-toggle": "Pin or unpin the tab",
