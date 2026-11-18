@@ -97,4 +97,16 @@ if (opening === null) {
       },
     },
   })
+  // The second animation frame comes once the first frame has been drawn. On macOS the window
+  // waits behind the calling one until then, so that it never shows black (see
+  // spotlight-window.ts); elsewhere it's in front and focused already, and this changes nothing
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      void spotlightWindowId.then((windowId) => {
+        if (windowId === undefined) return
+        // Rejected when the window has closed meanwhile, which leaves nothing to bring forward
+        chrome.windows.update(windowId, { focused: true }).catch(() => {})
+      })
+    }),
+  )
 }

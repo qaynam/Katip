@@ -4,6 +4,7 @@ import { SettingsRepository } from "#modules/settings"
 import { DEFAULT_SPOTLIGHT_POSITION, spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { callerWindowOfSpotlight, spotlightOpeningOf, targetOf } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { KeyboardCommand, runKeyboardCommand } from "./keyboard-commands"
@@ -165,6 +166,26 @@ describe("opening Spotlight", () => {
           expect(yield* focusedWindowId).toBe(spotlight?.windowId)
         }),
       ),
+    )
+
+    it.effect(
+      "on macOS, opens behind the calling window, which stays focused until the page has drawn its first frame and brings it forward",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+
+            yield* openSpotlight(windowId).pipe(
+              Effect.provide(KeyboardShortcuts.layerTest({ isMac: true })),
+            )
+
+            expect([(yield* spotlightTabs).length, yield* focusedWindowId]).toStrictEqual([
+              1,
+              windowId,
+            ])
+          }),
+        ),
     )
 
     it.effect("doesn't open from a popup window, which has no Spaces", () =>

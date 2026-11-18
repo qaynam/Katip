@@ -2,6 +2,7 @@ import { Array, Effect, Option } from "effect"
 import { SettingsRepository } from "#modules/settings"
 import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT, spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowBounds, type WindowId, Windows } from "#platform/browser"
+import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { callerWindowOfSpotlight, SPOTLIGHT_PAGE_PATH, spotlightPageUrl } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { activeSpaceTheme } from "./spotlight-results"
@@ -26,6 +27,8 @@ const isSpotlightPage = (extensionOrigin: string) => (tab: BrowserTab) =>
  * unless an address is to be edited, which needs one opened with it. One open for a different
  * window is closed, then opened again.
  * Never opens over a window without Spaces (popups and devtools).
+ * On macOS it opens behind the calling window, and the page brings it to the front once it has
+ * drawn its first frame.
  */
 export const openSpotlight = Effect.fn("openSpotlight")(function* (
   callerWindowId: WindowId,
@@ -54,6 +57,12 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (
       ? { ...full, height: SPOTLIGHT_SEARCH_HEIGHT + TITLE_BAR_ALLOWANCE }
       : full
   }
+  // Not opened in front on macOS: there a new window shows black until the page's first frame,
+  // which flashes over a light theme, while one opened unfocused goes behind the focused window
+  // and draws there unseen. Elsewhere an unfocused window still opens in front, black all the same
+  const opensBehind = yield* (yield* KeyboardShortcuts).isMac.pipe(
+    Effect.orElseSucceed(() => false),
+  )
   yield* windows.create({
     url: spotlightPageUrl(origin, {
       callerWindowId,
@@ -63,7 +72,7 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (
       address,
     }),
     type: "popup",
-    focused: true,
+    focused: !opensBehind,
     ...Option.getOrElse(Option.map(caller.bounds, boundsOver), () => ({})),
   })
 })

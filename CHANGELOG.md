@@ -12,7 +12,7 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 ## English
 
-Edit the current tab's address in the Command Palette, as the address bar lets you, and tell at a glance which live folder items are open in a tab.
+Edit the current tab's address in the Command Palette, as the address bar lets you, tell at a glance which live folder items are open in a tab, and open the Command Palette without a flash.
 
 ### 🚀 New
 
@@ -23,9 +23,13 @@ Edit the current tab's address in the Command Palette, as the address bar lets y
 - **Open live items stand out** — In a live folder, an item without a tab now looks as a closed pin does, its icon faded, so the items open in a tab stand out as open tabs do. The dot on an unread item takes your Space’s accent color.
 - **No unread in GitHub searches** — Folders of GitHub searches, such as review requests and your pull requests, no longer mark items unread, show no unread count and leave out Mark All as Read, as what they list is there to be done rather than read. Gmail folders and GitHub notifications show what’s unread as before.
 
+### 🐛 Fixed
+
+- **No flash as the Command Palette opens** — On macOS, the Command Palette’s window stays out of sight until its first frame is drawn, so it no longer shows black for an instant before appearing, which stood out over a light theme.
+
 ## 日本語
 
-アドレスバーのように、現在のタブのアドレスをコマンドパレットで編集できるようにしました。ライブフォルダでは、タブで開いている項目がひと目でわかります。
+アドレスバーのように、現在のタブのアドレスをコマンドパレットで編集できるようにしました。ライブフォルダでは、タブで開いている項目がひと目でわかります。コマンドパレットを開くときのちらつきもなくなりました。
 
 ### 🚀 新機能
 
@@ -35,6 +39,10 @@ Edit the current tab's address in the Command Palette, as the address bar lets y
 
 - **開いているライブアイテムが目立つように** — ライブフォルダで、タブを開いていない項目を閉じたピンと同じようにアイコンを薄く表示するようにしました。タブで開いている項目が、開いているタブと同じように目立ちます。未読の項目のドットは Space のアクセントカラーになりました。
 - **GitHub の検索フォルダは未読を出さない** — レビュー依頼や自分のプルリクエストなど、GitHub の検索のフォルダでは、未読の印と件数を表示せず、「すべて既読にする」も出さなくなりました。並ぶのは読むものではなく、対応するものだからです。Gmail のフォルダと GitHub の通知は、これまでどおり未読を表示します。
+
+### 🐛 修正
+
+- **コマンドパレットを開くときのちらつきを解消** — macOS では、コマンドパレットの窓を最初のフレームを描き終えるまで見えないところで待たせるようにしました。開く瞬間に一瞬黒く光ることがなくなり、ライトテーマでも気になりません。
 
 ## 1.10.1 — 2026-11-17
 
