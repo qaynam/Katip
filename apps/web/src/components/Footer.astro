@@ -10,9 +10,11 @@ const columns = [
       { href: PATHS.features, label: "Features" },
       { href: PATHS.whatsNew, label: "What’s New" },
       { href: PATHS.arc, label: "Moving from Arc browser" },
-      CHROME_WEB_STORE_URL === null
-        ? { href: GITHUB_RELEASES_URL, label: "Releases" }
-        : { href: CHROME_WEB_STORE_URL, label: "Chrome Web Store" },
+      ...(CHROME_WEB_STORE_URL === null
+        ? []
+        : [{ href: CHROME_WEB_STORE_URL, label: "Chrome Web Store" }]),
+      // Still offered beside the store, for a browser that can't install from it
+      { href: GITHUB_RELEASES_URL, label: "Releases" },
     ],
   },
   {

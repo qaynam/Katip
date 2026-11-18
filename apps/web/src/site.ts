@@ -5,10 +5,11 @@
 export const SITE_URL = "https://katip.qaynam.dev"
 
 /**
- * Katip's Chrome Web Store listing, or null until it is published. While it is null, the pages
+ * Katip's Chrome Web Store listing, or null while it isn't published. While it is null, the pages
  * offer the release on GitHub instead of adding Katip from the store.
  */
-export const CHROME_WEB_STORE_URL: string | null = null
+export const CHROME_WEB_STORE_URL: string | null =
+  "https://chromewebstore.google.com/detail/katip/khoieohhhleiegpcnppabdjmllajlmdp"
 
 export const GITHUB_URL = "https://github.com/qaynam/Katip"
 export const GITHUB_RELEASES_URL = `${GITHUB_URL}/releases`

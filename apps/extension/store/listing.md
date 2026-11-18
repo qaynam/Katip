@@ -195,12 +195,12 @@ The workflow signs in to Google as a service account through Workload Identity F
 3. In the Developer Dashboard, add the service account's email under **Account**. A publisher can have only one.
 4. In the repository's **Settings → Secrets and variables → Actions → Variables**, set these. None of them is a secret.
 
-| Variable                                      | Value                                                                                                             |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `CHROME_WEB_STORE_PUBLISHER_ID`               | The publisher ID                                                                                                  |
-| `CHROME_WEB_STORE_SERVICE_ACCOUNT`            | `katip-chrome-web-store@<project ID>.iam.gserviceaccount.com`                                                     |
-| `CHROME_WEB_STORE_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project number>/locations/global/workloadIdentityPools/github/providers/katip`                         |
-| `CHROME_WEB_STORE_ITEM_ID`                    | The item ID. Set it last: from then on, every `v*` tag uploads its version to the store and submits it for review |
+| Variable                                      | Value                                                                                                                                                           |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHROME_WEB_STORE_PUBLISHER_ID`               | The publisher ID                                                                                                                                                |
+| `CHROME_WEB_STORE_SERVICE_ACCOUNT`            | `katip-chrome-web-store@<project ID>.iam.gserviceaccount.com`                                                                                                   |
+| `CHROME_WEB_STORE_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project number>/locations/global/workloadIdentityPools/github/providers/katip`                                                                       |
+| `CHROME_WEB_STORE_ITEM_ID`                    | The item ID, `khoieohhhleiegpcnppabdjmllajlmdp` for Katip. Set it last: from then on, every `v*` tag uploads its version to the store and submits it for review |
 
 ### Later versions
 

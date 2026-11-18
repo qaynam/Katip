@@ -21,6 +21,7 @@ import Shot from "../components/Shot.astro"
 import Showcase from "../components/Showcase.astro"
 import Page from "../layouts/Page.astro"
 import { PATHS } from "../routes.ts"
+import { CHROME_WEB_STORE_URL } from "../site.ts"
 
 const HERO_SIZES = "(min-width: 76rem) 68rem, calc(100vw - 6rem)"
 const SHOWCASE_SIZES = "(min-width: 86rem) 48rem, (min-width: 64rem) 56vw, calc(100vw - 4rem)"
@@ -412,6 +413,13 @@ const ARC_FILE_HINT =
           Katip is free under the MIT License. The name and logo aren’t, so please give your version
           its own.
         </p>
+        {CHROME_WEB_STORE_URL !== null && (
+          <p class="moving">
+            Installed Katip from GitHub before? The store’s Katip is a separate extension. Export
+            your Spaces in Katip’s settings, remove the one from GitHub, then add Katip from the
+            store and import them.
+          </p>
+        )}
       </div>
       <Actions note={false} />
     </div>
@@ -779,6 +787,14 @@ const ARC_FILE_HINT =
 
   .closing .lead {
     margin-top: 1rem;
+  }
+
+  .moving {
+    max-width: var(--text-width);
+    margin-top: 1rem;
+    color: var(--ink-faint);
+    font-size: 0.9375rem;
+    line-height: 1.55;
   }
 
   @media (min-width: 64rem) {
