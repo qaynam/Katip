@@ -8,6 +8,34 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Edit the current tab's address in the Command Palette, as the address bar lets you, and tell at a glance which live folder items are open in a tab.
+
+### 🚀 New
+
+- **Edit the address in the Command Palette** — The new shortcut Edit the current tab’s address opens the Command Palette with the active tab’s URL typed and selected. Change it, or type something else, and the page or search opens in that tab instead of a new one, as the address bar does. On a new tab it opens empty, still opening in that tab. Chrome doesn’t let an extension take keys the browser uses as its defaults, so assign them yourself in Chrome’s shortcut settings, such as ⌘L to Edit the current tab’s address and ⌘T to Open the Command Palette. The shortcuts step of the welcome tour lists the new shortcut and suggests both keys until you assign them.
+
+### ✨ Improved
+
+- **Open live items stand out** — In a live folder, an item without a tab now looks as a closed pin does, its icon faded, so the items open in a tab stand out as open tabs do. The dot on an unread item takes your Space’s accent color.
+- **No unread in GitHub searches** — Folders of GitHub searches, such as review requests and your pull requests, no longer mark items unread, show no unread count and leave out Mark All as Read, as what they list is there to be done rather than read. Gmail folders and GitHub notifications show what’s unread as before.
+
+## 日本語
+
+アドレスバーのように、現在のタブのアドレスをコマンドパレットで編集できるようにしました。ライブフォルダでは、タブで開いている項目がひと目でわかります。
+
+### 🚀 新機能
+
+- **コマンドパレットでアドレスを編集** — 新しいショートカット「現在のタブのアドレスを編集」で、アクティブなタブの URL を入力して選択した状態でコマンドパレットが開きます。書き換えるか別の語を入力すると、ページや検索結果を新しいタブではなくそのタブで開きます。アドレスバーと同じ動きです。新しいタブでは空のまま開き、選んだものはそのタブで開きます。ブラウザが標準で使うキーは拡張機能からは割り当てられないため、Chrome のショートカット設定で、⌘L に「現在のタブのアドレスを編集」、⌘T に「コマンドパレットを開く」のように割り当ててください。ようこそツアーのショートカットのステップにも新しいショートカットが並び、割り当てるまで両方のキーを案内します。
+
+### ✨ 改善
+
+- **開いているライブアイテムが目立つように** — ライブフォルダで、タブを開いていない項目を閉じたピンと同じようにアイコンを薄く表示するようにしました。タブで開いている項目が、開いているタブと同じように目立ちます。未読の項目のドットは Space のアクセントカラーになりました。
+- **GitHub の検索フォルダは未読を出さない** — レビュー依頼や自分のプルリクエストなど、GitHub の検索のフォルダでは、未読の印と件数を表示せず、「すべて既読にする」も出さなくなりました。並ぶのは読むものではなく、対応するものだからです。Gmail のフォルダと GitHub の通知は、これまでどおり未読を表示します。
+
 ## 1.10.1 — 2026-11-17
 
 ## English
