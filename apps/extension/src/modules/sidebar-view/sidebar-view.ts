@@ -391,8 +391,8 @@ const pinnedLiveFolderView = (
       }
     },
   )
-  // Not kept greyed out like a search's items: the source still has a mail read only in Katip
-  // unread, and would list it until it's read there too
+  // Not kept, as a search's items are, once read without a tab open: the source still has a mail
+  // read only in Katip unread, and would list it until it's read there too
   const listedItems = listsUnreadOnly(live.source)
     ? items.filter((item) => item.isUnseen || item.openTab !== null)
     : items

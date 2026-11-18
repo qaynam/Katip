@@ -8,6 +8,7 @@ import type {
   PinnedNodeView,
   SidebarCommand,
 } from "#protocol"
+import { marksUnread } from "./live-folders"
 import { hostOf, pinnedItemDisplay } from "./view-queries"
 
 export type SearchableFolder = PinnedFolderView | PinnedLiveFolderView
@@ -55,7 +56,7 @@ const liveEntry = (
   pageUrl: item.url,
   favIconUrl: null,
   lastActivityAt: item.updatedAt,
-  isUnseen: item.isUnseen,
+  isUnseen: marksUnread(folder) && item.isUnseen,
   command: { _tag: "OpenLiveItem", windowId, bookmarkId: folder.bookmarkId, itemId: item.id },
 })
 

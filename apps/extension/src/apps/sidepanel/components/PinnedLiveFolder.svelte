@@ -4,7 +4,7 @@
   import type { PinnedLiveFolderView } from "#protocol"
   import { edgeAt, slotAt, type DragSource, type PinnedPosition } from "../logic/drag-drop"
   import { bookmarkTitleChange } from "../logic/drafts"
-  import { unseenBadgeText, unseenCount } from "../logic/live-folders"
+  import { marksUnread, unseenBadgeText, unseenCount } from "../logic/live-folders"
   import { pointRect } from "../logic/menu-position"
   import { selfAndDescendantFolderIds } from "../logic/view-queries"
   import { FolderExpansion } from "../state/folder-expansion.svelte"
@@ -189,7 +189,7 @@
       {#if folder.items.length > 0}
         <ul class="items">
           {#each folder.items as item (item.id)}
-            <LiveItemRow {item} folderId={folder.bookmarkId} />
+            <LiveItemRow {item} folderId={folder.bookmarkId} marksUnread={marksUnread(folder)} />
           {/each}
           {#if folder.hiddenItems.length > 0}
             <li class="more">
@@ -214,7 +214,7 @@
       out:disclose={{ duration: PEEK_EXIT_DURATION_MS }}
     >
       {#each folder.peekedItems as item (item.id)}
-        <LiveItemRow {item} folderId={folder.bookmarkId} />
+        <LiveItemRow {item} folderId={folder.bookmarkId} marksUnread={marksUnread(folder)} />
       {/each}
     </ul>
   {/if}

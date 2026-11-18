@@ -33,6 +33,24 @@ describe("unseenCount", () => {
 
     expect(unseenCount(folder)).toBe(6)
   })
+
+  it("counts nothing in a folder of GitHub searches, whose pull requests are to be done rather than read", () => {
+    const folder = pinnedLiveFolder("reviews", {
+      source: { _tag: "GitHub", query: "authored-pull-requests" },
+      items: [liveItem("a", { isUnseen: true }), liveItem("b", { isUnseen: true })],
+    })
+
+    expect(unseenCount(folder)).toBe(0)
+  })
+
+  it("counts the unread notifications of a folder of GitHub notifications", () => {
+    const folder = pinnedLiveFolder("notifications", {
+      source: { _tag: "GitHub", query: "notifications" },
+      items: [liveItem("a", { isUnseen: true }), liveItem("b", { isUnseen: false })],
+    })
+
+    expect(unseenCount(folder)).toBe(1)
+  })
 })
 
 describe("unseenBadgeText", () => {

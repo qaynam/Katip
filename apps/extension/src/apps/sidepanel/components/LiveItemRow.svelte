@@ -8,14 +8,17 @@
   interface Props {
     item: LiveItemView
     folderId: BookmarkId
+    /** Whether the folder shows which items are unread, as only folders of what's unread do. */
+    marksUnread: boolean
   }
 
-  const { item, folderId }: Props = $props()
+  const { item, folderId, marksUnread }: Props = $props()
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
 
   let row = $state<HTMLLIElement>()
   const openTab = $derived(item.openTab)
+  const isUnseen = $derived(marksUnread && item.isUnseen)
   const isActive = $derived(openTab?.isActive ?? false)
 
   // Through isActive, not openTab: reading the tab directly would rerun this on every update of
@@ -62,7 +65,7 @@
 <li
   bind:this={row}
   class="item"
-  class:unseen={item.isUnseen}
+  class:unseen={isUnseen}
   class:open={openTab !== null}
   class:active={isActive}
   onauxclick={closeOnMiddleClick}
@@ -78,7 +81,7 @@
     onpointerleave={() => ctx.tooltip.hide()}
     onpointerdown={() => ctx.tooltip.hide()}
   >
-    {#if item.isUnseen}
+    {#if isUnseen}
       <span class="unseen-dot" aria-hidden="true"></span>
       <span class="visually-hidden">{t("sidepanel.liveFolder.unseen")}</span>
     {/if}
@@ -177,8 +180,15 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--text);
+    background: var(--accent, var(--text));
     transform: translateY(-50%);
+  }
+
+  /* An item without a tab looks as a closed pin does, so the one open in a tab stands out as the
+     pinned tabs that are open do */
+  .item:not(.open) .favicon {
+    opacity: 0.6;
+    filter: saturate(0.4);
   }
 
   .favicon {

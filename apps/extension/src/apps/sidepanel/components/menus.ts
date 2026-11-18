@@ -11,6 +11,7 @@ import type {
 } from "#protocol"
 import {
   liveSourceNames,
+  marksUnread,
   sourceOrigins,
   unseenCount,
   type LiveSourceKind,
@@ -269,11 +270,15 @@ export const liveFolderMenu = (
       () => void ctx.run({ _tag: "RefreshLiveFolder", bookmarkId }),
       { disabled: status._tag === "Refreshing" },
     ),
-    action(
-      t("sidepanel.liveFolder.markAllSeen"),
-      () => void ctx.run({ _tag: "MarkLiveFolderSeen", bookmarkId }),
-      { disabled: unseenCount(folder) === 0 },
-    ),
+    ...(marksUnread(folder)
+      ? [
+          action(
+            t("sidepanel.liveFolder.markAllSeen"),
+            () => void ctx.run({ _tag: "MarkLiveFolderSeen", bookmarkId }),
+            { disabled: unseenCount(folder) === 0 },
+          ),
+        ]
+      : []),
     liveFolderSortMenu(ctx, folder),
     liveFolderLimitMenu(ctx, folder),
     ...(failure?.needsPermission === true

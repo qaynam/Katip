@@ -62,6 +62,23 @@ describe("Showing a live folder", () => {
     )
   })
 
+  it("marks nothing unread in a folder of GitHub searches and shows no count, as pull requests are to be done rather than read", async () => {
+    await renderSidebar(
+      viewWithPins(
+        pinnedLiveFolder("pulls", {
+          title: "My Pull Requests",
+          source: { _tag: "GitHub", query: "authored-pull-requests" },
+          items: [liveItem("fix", { title: "Fix tab order", isUnseen: true })],
+        }),
+      ),
+    )
+
+    expect([
+      screen.getByRole("button", { name: /Fix tab order/ }).textContent,
+      header("My Pull Requests").textContent,
+    ]).not.toContainEqual(expect.stringContaining("nread"))
+  })
+
   it("marks the items the source marked important", async () => {
     await renderSidebar(
       viewWithPins(
@@ -248,6 +265,22 @@ describe("Live folder actions", () => {
     expect(connection.sentCommands).toStrictEqual([
       { _tag: "MarkLiveFolderSeen", bookmarkId: BookmarkId.make("inbox") },
     ])
+  })
+
+  it("offers no Mark All as Read for a folder of GitHub searches, which has nothing to read", async () => {
+    await renderSidebar(
+      viewWithPins(
+        pinnedLiveFolder("pulls", {
+          title: "My Pull Requests",
+          source: { _tag: "GitHub", query: "authored-pull-requests" },
+          items: [liveItem("fix", { isUnseen: true })],
+        }),
+      ),
+    )
+
+    await openHeaderMenu("My Pull Requests")
+
+    expect(screen.queryByRole("menuitem", { name: "Mark All as Read" })).toBeNull()
   })
 
   it("disables Mark All as Read when nothing is unread", async () => {

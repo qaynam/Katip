@@ -1,4 +1,9 @@
-import { gmailMailboxUrl, originPatternOf, type LiveSource } from "#modules/live-folders"
+import {
+  gmailMailboxUrl,
+  listsUnreadOnly,
+  originPatternOf,
+  type LiveSource,
+} from "#modules/live-folders"
 import type { PinnedLiveFolderView } from "#protocol"
 
 export type LiveSourceKind = LiveSource["_tag"]
@@ -24,9 +29,18 @@ export const sourceOrigins = (source: LiveSource): ReadonlyArray<string> => [
   originPatternOf(source),
 ]
 
-/** Counts the items the folder's limit holds back too. */
+/**
+ * Whether the folder marks its items unread: one that lists what's unread, as an inbox does. Not
+ * a folder of GitHub searches, whose review requests and pull requests are there to be done
+ * rather than read.
+ */
+export const marksUnread = (folder: PinnedLiveFolderView): boolean => listsUnreadOnly(folder.source)
+
+/** Counts the items the folder's limit holds back too. None for a folder that marks none. */
 export const unseenCount = (folder: PinnedLiveFolderView): number =>
-  [...folder.items, ...folder.hiddenItems].filter((item) => item.isUnseen).length
+  marksUnread(folder)
+    ? [...folder.items, ...folder.hiddenItems].filter((item) => item.isUnseen).length
+    : 0
 
 const BADGE_LIMIT = 99
 
