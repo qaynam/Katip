@@ -115,6 +115,7 @@ export const options: CatalogSection<"options"> = {
     "复制快捷键关闭时，按下按键不会有任何反应。若要将该按键用于其他用途，请在 Chrome 的快捷键页面中移除它。",
   "options.commands.openSidePanel": "打开侧边栏",
   "options.commands.openSpotlight": "打开命令面板",
+  "options.commands.editCurrentUrl": "编辑当前标签页的地址",
   "options.commands.nextTabInSpace": "切换到空间中的下一个标签页",
   "options.commands.previousTabInSpace": "切换到空间中的上一个标签页",
   "options.commands.togglePin": "固定或取消固定标签页",

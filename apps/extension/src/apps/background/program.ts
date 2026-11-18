@@ -238,8 +238,8 @@ export const program = Effect.gen(function* () {
             )
           : port.name === SPOTLIGHT_PORT_NAME
             ? Effect.forkScoped(
-                spotlight.serve(port, (windowId, result) =>
-                  serialize(runSpotlightChoice(windowId, result)).pipe(
+                spotlight.serve(port, (windowId, result, target) =>
+                  serialize(runSpotlightChoice(windowId, result, target)).pipe(
                     Effect.catchTag("TimeoutError", () =>
                       Effect.andThen(
                         Effect.logError("A Spotlight choice didn't finish in time"),

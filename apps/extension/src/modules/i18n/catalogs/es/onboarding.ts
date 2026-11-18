@@ -24,6 +24,12 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.shortcuts.notSet": "Sin asignar",
   "onboarding.shortcuts.refused":
     "Chrome no le dio {key} a Katip, seguramente porque otra extensión la usa.",
+  "onboarding.shortcuts.addressBarKey":
+    "Asigna {key} en Chrome para editarla con la misma tecla que la barra de direcciones.",
+  "onboarding.shortcuts.newTabKey":
+    "Asigna {key} en Chrome para abrirla en lugar de una pestaña nueva en blanco.",
+  "onboarding.shortcuts.browserKeysNote":
+    "Katip no puede tomar las teclas que usa el propio navegador, como las de la barra de direcciones o las pestañas nuevas, así que asígnalas en Chrome.",
   "onboarding.shortcuts.copyNote":
     "Los atajos para copiar no hacen nada hasta que los activas aquí.",
   "onboarding.shortcuts.edit": "Editar en Chrome",

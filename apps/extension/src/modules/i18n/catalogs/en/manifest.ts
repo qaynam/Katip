@@ -5,6 +5,8 @@ export const manifest = {
   "manifest.description": "Organize your tabs into Spaces in the side panel",
   "manifest.command.openSidePanel": "Open the side panel",
   "manifest.command.openSpotlight": "Open the Command Palette to search tabs, pins, and Spaces",
+  "manifest.command.editCurrentUrl":
+    "Edit the active tab’s address in the Command Palette, opening what you choose in that tab",
   "manifest.command.copyUrl": "Copy the active tab’s URL (turn on in Katip’s settings)",
   "manifest.command.copyMarkdownLink":
     "Copy the active tab’s URL as a Markdown link (turn on in Katip’s settings)",

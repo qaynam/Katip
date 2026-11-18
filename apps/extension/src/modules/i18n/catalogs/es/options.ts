@@ -131,6 +131,7 @@ export const options: CatalogSection<"options"> = {
     "Un atajo de copia no hace nada mientras está desactivado. Para usar su tecla en otra cosa, quítala en la página de combinaciones de teclas de Chrome.",
   "options.commands.openSidePanel": "Abrir el panel lateral",
   "options.commands.openSpotlight": "Abrir la paleta de comandos",
+  "options.commands.editCurrentUrl": "Editar la dirección de la pestaña actual",
   "options.commands.nextTabInSpace": "Siguiente pestaña del espacio",
   "options.commands.previousTabInSpace": "Pestaña anterior del espacio",
   "options.commands.togglePin": "Fijar o dejar de fijar la pestaña",

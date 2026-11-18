@@ -4,6 +4,8 @@ export const manifest: CatalogSection<"manifest"> = {
   "manifest.description": "サイドパネルで Space ごとにタブを整理する",
   "manifest.command.openSidePanel": "サイドパネルを開く",
   "manifest.command.openSpotlight": "コマンドパレットを開いてタブ・ピン留め・Space を検索する",
+  "manifest.command.editCurrentUrl":
+    "アクティブなタブのアドレスをコマンドパレットで編集し、選んだものをそのタブで開く",
   "manifest.command.copyUrl":
     "アクティブなタブの URL をコピーする（Katip の設定でオンにしたときだけ）",
   "manifest.command.copyMarkdownLink":

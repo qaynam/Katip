@@ -2,7 +2,7 @@ import { launchWithExtension, onboardingPageOf } from "./browser-launch"
 import { EXTENSION_DIR } from "./extension-dir"
 import { expect, test } from "./fixtures"
 
-test("a fresh install opens the onboarding, which finds every key Katip suggests assigned to it", async () => {
+test("a fresh install opens the onboarding, which finds every key Katip suggests assigned to it and leaves editing the address for a key of the browser's own", async () => {
   const { context, close } = await launchWithExtension(EXTENSION_DIR)
   try {
     const onboarding = await onboardingPageOf(context)
@@ -13,9 +13,12 @@ test("a fresh install opens the onboarding, which finds every key Katip suggests
 
     await expect(onboarding.getByRole("heading", { name: "Check your shortcuts" })).toBeVisible()
     const shortcuts = onboarding.getByRole("listitem")
-    await expect(shortcuts).toHaveCount(4)
+    await expect(shortcuts).toHaveCount(5)
     await expect(shortcuts.locator("kbd.keys")).toHaveCount(4)
     await expect(onboarding.getByText(/Chrome didn’t give Katip/)).toHaveCount(0)
+    await expect(shortcuts.filter({ hasText: "Edit the current tab’s address" })).toContainText(
+      "Not set",
+    )
   } finally {
     await close()
   }

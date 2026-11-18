@@ -17,6 +17,14 @@ const CALLER_WINDOW_PARAM = "windowId"
 const SPACE_THEME_PARAM = "theme"
 const SIZE_PARAM = "size"
 const LOCALE_PARAM = "locale"
+const ADDRESS_PARAM = "address"
+
+/**
+ * Where Spotlight opens a page or a search chosen in it: in a new tab, or in place of the page in
+ * the active tab, for a Spotlight opened to edit that tab's address.
+ */
+export const SpotlightTarget = Schema.Literals(["NewTab", "CurrentTab"])
+export type SpotlightTarget = typeof SpotlightTarget.Type
 
 /**
  * What the Spotlight page draws its first frame with. The page gets it in its URL, so that the
@@ -29,7 +37,16 @@ export interface SpotlightOpening {
   readonly spaceTheme: SpaceTheme | null
   readonly size: SpotlightSize
   readonly locale: LocalePreference
+  /**
+   * The address of the active tab, when Spotlight opens to edit it: it starts with the address
+   * typed, and opens what's chosen in that tab. null for a Spotlight that opens it in a new tab.
+   */
+  readonly address: string | null
 }
+
+/** Where a Spotlight opened with `opening` opens what's chosen in it. */
+export const targetOf = (opening: SpotlightOpening): SpotlightTarget =>
+  opening.address === null ? "NewTab" : "CurrentTab"
 
 const SpaceThemeParam = Schema.fromJsonString(Schema.NullOr(SpaceTheme))
 const encodeSpaceThemeParam = Schema.encodeSync(SpaceThemeParam)
@@ -41,6 +58,7 @@ export const spotlightPageUrl = (extensionOrigin: string, opening: SpotlightOpen
   url.searchParams.set(SPACE_THEME_PARAM, encodeSpaceThemeParam(opening.spaceTheme))
   url.searchParams.set(SIZE_PARAM, opening.size)
   url.searchParams.set(LOCALE_PARAM, opening.locale)
+  if (opening.address !== null) url.searchParams.set(ADDRESS_PARAM, opening.address)
   return url.href
 }
 
@@ -54,6 +72,7 @@ const decodeOpeningParams = Schema.decodeUnknownOption(
     [SPACE_THEME_PARAM]: SpaceThemeParam,
     [SIZE_PARAM]: SpotlightSize,
     [LOCALE_PARAM]: LocalePreference,
+    [ADDRESS_PARAM]: Schema.optionalKey(Schema.String),
   }),
 )
 
@@ -77,6 +96,7 @@ export const spotlightOpeningOf = (pageUrl: string): Option.Option<SpotlightOpen
       spaceTheme: decoded[SPACE_THEME_PARAM],
       size: decoded[SIZE_PARAM],
       locale: decoded[LOCALE_PARAM],
+      address: decoded[ADDRESS_PARAM] ?? null,
     })),
   )
 
@@ -179,7 +199,12 @@ export const SpotlightClientMessage = Schema.TaggedUnion({
     query: Schema.String,
     mode: SpotlightMode,
   },
-  Choose: { requestId: RequestId, windowId: WindowId, result: SpotlightResult },
+  Choose: {
+    requestId: RequestId,
+    windowId: WindowId,
+    result: SpotlightResult,
+    target: SpotlightTarget,
+  },
 })
 export type SpotlightClientMessage = typeof SpotlightClientMessage.Type
 

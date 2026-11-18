@@ -170,6 +170,30 @@ test("open-spotlight opens the Command Palette in a separate popup window", asyn
     .toStrictEqual(["popup"])
 })
 
+test("edit-current-url opens the Command Palette with the address typed, and opens what's entered in that tab", async ({
+  site,
+  context,
+  sidebar,
+  background,
+}) => {
+  await openPages(background, [`${site}/a`, `${site}/b`])
+  await expect(temporaryTitles(sidebar)).toHaveText(["Page /b", "Page /a"])
+  const opened = context.waitForEvent("page", (page) => page.url().includes("/spotlight/"))
+
+  await pressShortcutOn(background, `${site}/a`, "edit-current-url")
+
+  const spotlight = await opened
+  await expect(spotlight.getByRole("combobox")).toHaveValue(`${site}/a`)
+  await spotlight.keyboard.press("End")
+  await spotlight.keyboard.type("/edited")
+  await expect(spotlight.getByRole("option").first()).toContainText("Open")
+  await spotlight.keyboard.press("Enter")
+
+  await expect
+    .poll(() => pagesInBrowser(background, site))
+    .toStrictEqual(["/a/edited active", "/b"])
+})
+
 test("copy-current-url, once turned on in the settings, copies the active tab's URL", async ({
   site,
   context,

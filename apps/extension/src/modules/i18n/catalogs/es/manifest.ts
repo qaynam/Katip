@@ -5,6 +5,8 @@ export const manifest: CatalogSection<"manifest"> = {
   "manifest.command.openSidePanel": "Abrir el panel lateral",
   "manifest.command.openSpotlight":
     "Abrir la paleta de comandos para buscar pestañas, elementos fijados y espacios",
+  "manifest.command.editCurrentUrl":
+    "Editar la dirección de la pestaña activa en la paleta de comandos y abrir lo elegido en esa pestaña",
   "manifest.command.copyUrl":
     "Copiar la URL de la pestaña activa (actívalo en los ajustes de Katip)",
   "manifest.command.copyMarkdownLink":

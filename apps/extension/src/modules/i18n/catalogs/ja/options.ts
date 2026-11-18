@@ -124,6 +124,7 @@ export const options: CatalogSection<"options"> = {
     "コピーのショートカットは、オフの間はキーを押しても何もしません。そのキーをほかの用途に使うときは、Chrome のショートカット設定でキーを外してください。",
   "options.commands.openSidePanel": "サイドパネルを開く",
   "options.commands.openSpotlight": "コマンドパレットを開く",
+  "options.commands.editCurrentUrl": "現在のタブのアドレスを編集",
   "options.commands.nextTabInSpace": "Space の次のタブへ移る",
   "options.commands.previousTabInSpace": "Space の前のタブへ移る",
   "options.commands.togglePin": "タブをピン留め／ピン留めを外す",

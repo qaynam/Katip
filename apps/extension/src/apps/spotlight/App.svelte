@@ -49,6 +49,11 @@
      * that it is drawn in those colors before the first results bring the theme again.
      */
     initialSpaceTheme?: SpaceTheme | null
+    /**
+     * What the field holds as Spotlight opens, selected so that typing replaces it: the address
+     * of the active tab, for a Spotlight opened to edit it. Empty otherwise.
+     */
+    initialQuery?: string
   }
 
   const {
@@ -60,6 +65,7 @@
     setCollapsed,
     openSidePanel,
     initialSpaceTheme = null,
+    initialQuery = "",
   }: Props = $props()
   const t = $derived(translator.t)
 
@@ -69,7 +75,9 @@
   // A site's mode is kept in bangMode, beside the usual search it is entered from
   type ListMode = Exclude<SpotlightMode, "Site">
 
-  let query = $state("")
+  // Only the query it opened with: from then on, what's typed
+  // svelte-ignore state_referenced_locally
+  let query = $state(initialQuery)
   let mode = $state<ListMode>("All")
   // The site a bang put Spotlight in: what is typed then searches that site
   let bangMode = $state.raw<BangMode | null>(null)
@@ -297,6 +305,7 @@
 
   onMount(() => {
     input?.focus()
+    input?.select()
     void search(query, mode)
   })
 </script>

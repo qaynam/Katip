@@ -11,6 +11,7 @@ import {
   spotlightOpeningOf,
   spotlightPageUrl,
   SpotlightServerMessage,
+  targetOf,
 } from "./spotlight-port"
 
 const ORIGIN = "chrome-extension://katip-test/"
@@ -20,6 +21,7 @@ const opening: SpotlightOpening = {
   spaceTheme: themeOf([{ hue: 250, chroma: 0.4 }]),
   size: "Large",
   locale: "ja",
+  address: null,
 }
 
 describe("the Spotlight page's URL", () => {
@@ -39,6 +41,20 @@ describe("the Spotlight page's URL", () => {
     const url = spotlightPageUrl(ORIGIN, opening)
 
     expect(spotlightOpeningOf(url)).toStrictEqual(Option.some(opening))
+  })
+
+  it("gives back the address to edit, for a Spotlight that opens what's chosen in the current tab", () => {
+    const url = spotlightPageUrl(ORIGIN, { ...opening, address: "https://example.com/a?b=1#c" })
+
+    expect(
+      Option.map(spotlightOpeningOf(url), (opened) => [opened.address, targetOf(opened)]),
+    ).toStrictEqual(Option.some(["https://example.com/a?b=1#c", "CurrentTab"]))
+  })
+
+  it("opens what's chosen in a new tab when there's no address to edit", () => {
+    const url = spotlightPageUrl(ORIGIN, opening)
+
+    expect(Option.map(spotlightOpeningOf(url), targetOf)).toStrictEqual(Option.some("NewTab"))
   })
 
   it("carries a window in no Space as having no theme", () => {

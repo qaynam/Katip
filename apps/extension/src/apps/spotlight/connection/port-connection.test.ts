@@ -53,6 +53,7 @@ describe("search", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     const pending = connection.search("katip", "All")
@@ -71,6 +72,7 @@ describe("search", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     void connection.search("", "Actions")
@@ -83,6 +85,7 @@ describe("search", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     const first = connection.search("a", "All")
@@ -103,6 +106,7 @@ describe("search", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     const pending = connection.search("katip", "All")
@@ -117,6 +121,7 @@ describe("search", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     const pending = connection.search("katip", "All")
@@ -127,7 +132,11 @@ describe("search", () => {
 
   it("reconnects to send a search made after the connection closed", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort(), fakePort()])
-    const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
+    const connection = createSpotlightPortConnection({
+      openPort,
+      callerWindowId: CALLER,
+      target: "NewTab",
+    })
     void connection.search("a", "All")
     opened[0]?.dropFromBackground()
 
@@ -141,7 +150,11 @@ describe("search", () => {
 
   it("also reconnects to send when posting fails on a connection not yet reported as closed", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort({ rejectsPosts: true }), fakePort()])
-    const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
+    const connection = createSpotlightPortConnection({
+      openPort,
+      callerWindowId: CALLER,
+      target: "NewTab",
+    })
 
     void connection.search("katip", "All")
 
@@ -150,7 +163,11 @@ describe("search", () => {
 
   it("a search sent again on a new connection after the old one failed still resolves with its response", async () => {
     const { openPort, opened } = portsOpenedBy([fakePort({ rejectsPosts: true }), fakePort()])
-    const connection = createSpotlightPortConnection({ openPort, callerWindowId: CALLER })
+    const connection = createSpotlightPortConnection({
+      openPort,
+      callerWindowId: CALLER,
+      target: "NewTab",
+    })
 
     const pending = connection.search("katip", "All")
     const [request] = opened[1]?.sent ?? []
@@ -173,6 +190,7 @@ describe("search", () => {
       const connection = createSpotlightPortConnection({
         openPort: () => port,
         callerWindowId: CALLER,
+        target: "NewTab",
         searchTimeoutMs: 1_000,
       })
 
@@ -188,6 +206,7 @@ describe("search", () => {
       const connection = createSpotlightPortConnection({
         openPort: () => port,
         callerWindowId: CALLER,
+        target: "NewTab",
         searchTimeoutMs: 1_000,
       })
       const pending = connection.search("katip", "All")
@@ -205,6 +224,7 @@ describe("search", () => {
         throw new Error("Extension context invalidated")
       },
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     expect(await connection.search("katip", "All")).toBeNull()
@@ -217,6 +237,7 @@ describe("choose", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
     const result = { _tag: "OpenUrl", url: "https://example.com/" } as const
 
@@ -237,6 +258,7 @@ describe("choose", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
 
     const pending = connection.choose({ _tag: "SearchWeb", query: "katip" })
@@ -252,6 +274,7 @@ describe("close", () => {
     const connection = createSpotlightPortConnection({
       openPort: () => port,
       callerWindowId: CALLER,
+      target: "NewTab",
     })
     const pending = connection.search("katip", "All")
 

@@ -28,6 +28,7 @@ const descriptionsTranslatedBy = (translator: Translator) => ({
   extension: translator.t("manifest.description"),
   commands: {
     "open-spotlight": translator.t("manifest.command.openSpotlight"),
+    "edit-current-url": translator.t("manifest.command.editCurrentUrl"),
     "copy-current-url": translator.t("manifest.command.copyUrl"),
     "copy-current-url-as-markdown": translator.t("manifest.command.copyMarkdownLink"),
     "quick-pin-toggle": translator.t("manifest.command.togglePin"),
@@ -48,6 +49,7 @@ test("a fresh install gets keys for the side panel, the Command Palette and both
       ? {
           _execute_action: "⌃⌘S",
           "open-spotlight": "⌥T",
+          "edit-current-url": "",
           "copy-current-url": "⌃⇧C",
           "copy-current-url-as-markdown": "⌃⇧M",
           "quick-pin-toggle": "",
@@ -57,6 +59,7 @@ test("a fresh install gets keys for the side panel, the Command Palette and both
       : {
           _execute_action: "Alt+S",
           "open-spotlight": "Alt+T",
+          "edit-current-url": "",
           "copy-current-url": "Alt+C",
           "copy-current-url-as-markdown": "Alt+M",
           "quick-pin-toggle": "",

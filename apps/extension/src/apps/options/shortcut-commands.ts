@@ -16,6 +16,7 @@ export interface ShortcutCommand {
 export const OPEN_AND_MOVE_COMMANDS: ReadonlyArray<ShortcutCommand> = [
   { name: "_execute_action", label: "options.commands.openSidePanel" },
   { name: "open-spotlight", label: "options.commands.openSpotlight" },
+  { name: "edit-current-url", label: "options.commands.editCurrentUrl" },
   { name: "next-tab-in-space", label: "options.commands.nextTabInSpace" },
   { name: "previous-tab-in-space", label: "options.commands.previousTabInSpace" },
 ]

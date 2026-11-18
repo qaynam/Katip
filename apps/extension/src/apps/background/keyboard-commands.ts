@@ -1,6 +1,6 @@
 import { Array, Effect, Match, Option, pipe } from "effect"
 import { SettingsRepository } from "#modules/settings"
-import { trackedTab } from "#modules/workspace"
+import { isNewTabPage, trackedTab } from "#modules/workspace"
 import { Tabs, Windows, type BrowserTab, type TabId } from "#platform/browser"
 import type { PinnedNodeView, SidebarView } from "#protocol"
 import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
@@ -8,6 +8,7 @@ import { KatipState } from "./katip-state"
 import { runSidebarCommand } from "./sidebar-commands"
 import { buildSidebarView } from "./sidebar-view-source"
 import { openSpotlight } from "./spotlight-window"
+import { urlOf } from "./tab-admission"
 import { KeyboardCommand } from "./keyboard-command"
 
 const openTabIdsIn = (nodes: ReadonlyArray<PinnedNodeView>): ReadonlyArray<TabId> =>
@@ -74,6 +75,17 @@ const openSpotlightFrom = (activeTab: Option.Option<BrowserTab>) =>
     openSpotlight,
   )
 
+// A new tab's page has no address worth editing, so there it starts empty, as the address bar
+// does. Over a window without tabs, such as devtools, it opens as Spotlight always does
+const editAddressOf = (activeTab: Option.Option<BrowserTab>) =>
+  Option.match(activeTab, {
+    onSome: (tab) => {
+      const url = urlOf(tab)
+      return openSpotlight(tab.windowId, isNewTabPage(url) ? "" : url)
+    },
+    onNone: () => openSpotlightFrom(activeTab),
+  })
+
 /**
  * Runs a keyboard shortcut. Works whether or not the side panel is open.
  *
@@ -87,6 +99,7 @@ export { KeyboardCommand }
 export const runKeyboardCommand = (command: string, activeTab: Option.Option<BrowserTab>) =>
   Match.value(command).pipe(
     Match.when(KeyboardCommand.openSpotlight, () => openSpotlightFrom(activeTab)),
+    Match.when(KeyboardCommand.editCurrentUrl, () => editAddressOf(activeTab)),
     Match.orElse(() =>
       Option.match(activeTab, {
         onNone: () => Effect.void,

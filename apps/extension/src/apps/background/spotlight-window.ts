@@ -18,12 +18,19 @@ const isSpotlightPage = (extensionOrigin: string) => (tab: BrowserTab) =>
  * Opens Spotlight over the `callerWindowId` window, at the size and in the place chosen in the
  * settings.
  *
+ * @param address - The active tab's address, to open Spotlight with it typed so as to edit it, as
+ *   the address bar does. What's chosen then opens in that tab rather than a new one.
+ *
  * @remarks
- * If Spotlight is already open for that window, brings it to the front instead of opening another.
- * One open for a different window is closed, then opened again.
+ * If Spotlight is already open for that window, brings it to the front instead of opening another,
+ * unless an address is to be edited, which needs one opened with it. One open for a different
+ * window is closed, then opened again.
  * Never opens over a window without Spaces (popups and devtools).
  */
-export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowId: WindowId) {
+export const openSpotlight = Effect.fn("openSpotlight")(function* (
+  callerWindowId: WindowId,
+  address: string | null = null,
+) {
   const windows = yield* Windows
   const { origin } = yield* ExtensionInfo
   const opened = Array.findFirst(yield* (yield* Tabs).query({}), isSpotlightPage(origin))
@@ -32,7 +39,7 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowI
     const servesCaller =
       spotlight.windowId === callerWindowId ||
       Option.contains(callerWindowOfSpotlight(urlOf(spotlight)), callerWindowId)
-    if (servesCaller) {
+    if (servesCaller && address === null) {
       yield* windows.update(spotlight.windowId, { focused: true })
       return
     }
@@ -53,6 +60,7 @@ export const openSpotlight = Effect.fn("openSpotlight")(function* (callerWindowI
       spaceTheme: yield* activeSpaceTheme(callerWindowId),
       size: spotlightSize,
       locale,
+      address,
     }),
     type: "popup",
     focused: true,

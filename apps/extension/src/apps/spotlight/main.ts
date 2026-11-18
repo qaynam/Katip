@@ -9,6 +9,7 @@ import {
   SPOTLIGHT_PORT_NAME,
   type SpotlightOpening,
   spotlightOpeningOf,
+  targetOf,
 } from "#protocol"
 import App from "./App.svelte"
 import { createSpotlightPortConnection, type SpotlightPort } from "./connection/port-connection"
@@ -50,7 +51,7 @@ const openingFromStorage = async (): Promise<SpotlightOpening | null> => {
   const { locale, spotlightSize } = await settings
   return callerWindowId === null
     ? null
-    : { callerWindowId, spaceTheme: null, size: spotlightSize, locale }
+    : { callerWindowId, spaceTheme: null, size: spotlightSize, locale, address: null }
 }
 
 // Nothing is awaited on the way from the URL Katip opens to the mount, so the page's first frame,
@@ -63,20 +64,25 @@ const spotlightWindowId = chrome.windows.getCurrent().then((window) => window.id
 if (opening === null) {
   window.close()
 } else {
-  const { callerWindowId, spaceTheme, size, locale } = opening
+  const { callerWindowId, spaceTheme, size, locale, address } = opening
   const translator = makeTranslator(resolveLocale(locale, navigator.languages))
   document.documentElement.lang = translator.languageTag
   document.title = translator.t("spotlight.documentTitle")
   mount(App, {
     target: document.body,
     props: {
-      connection: createSpotlightPortConnection({ openPort, callerWindowId }),
+      connection: createSpotlightPortConnection({
+        openPort,
+        callerWindowId,
+        target: targetOf(opening),
+      }),
       faviconUrl,
       close: () => window.close(),
       openSidePanel: () => void chrome.sidePanel.open({ windowId: callerWindowId }).catch(() => {}),
       translator,
       size,
       initialSpaceTheme: spaceTheme,
+      initialQuery: address ?? "",
       setCollapsed: (collapsed: boolean) => {
         // What the window has beyond the page is its title bar, whose height differs by system
         const titleBar = window.outerHeight - window.innerHeight

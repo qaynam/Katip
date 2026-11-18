@@ -123,6 +123,7 @@ export const options = {
     "A copy shortcut does nothing while it’s off. To use its key for something else, remove the key on Chrome’s shortcuts page.",
   "options.commands.openSidePanel": "Open the side panel",
   "options.commands.openSpotlight": "Open the Command Palette",
+  "options.commands.editCurrentUrl": "Edit the current tab’s address",
   "options.commands.nextTabInSpace": "Next tab in the Space",
   "options.commands.previousTabInSpace": "Previous tab in the Space",
   "options.commands.togglePin": "Pin or unpin the tab",

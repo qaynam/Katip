@@ -4,7 +4,7 @@ import { SettingsRepository } from "#modules/settings"
 import { DEFAULT_SPOTLIGHT_POSITION, spotlightBoundsOver } from "#modules/spotlight"
 import { type BrowserTab, Tabs, type WindowId, Windows } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
-import { callerWindowOfSpotlight, spotlightOpeningOf } from "#protocol"
+import { callerWindowOfSpotlight, spotlightOpeningOf, targetOf } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { KeyboardCommand, runKeyboardCommand } from "./keyboard-commands"
 import { applicationLayer } from "./program"
@@ -37,6 +37,14 @@ const focusedWindowId = Windows.use((windows) =>
 )
 
 const bounds = { left: 100, top: 50, width: 1440, height: 900 }
+
+const openingsOfSpotlights = Effect.map(spotlightTabs, (opened) =>
+  opened.map((tab) => Option.flatMap(tab.url, spotlightOpeningOf)),
+)
+
+const addressesOfSpotlights = Effect.map(openingsOfSpotlights, (openings) =>
+  openings.map((opening) => Option.map(opening, ({ address }) => address)),
+)
 
 describe("opening Spotlight", () => {
   describe("when it isn't open yet", () => {
@@ -138,6 +146,7 @@ describe("opening Spotlight", () => {
                 spaceTheme: yield* activeSpaceTheme(windowId),
                 size: "Large",
                 locale: "ja",
+                address: null,
               }),
             )
           }),
@@ -195,6 +204,22 @@ describe("opening Spotlight", () => {
         ),
     )
 
+    it.effect(
+      "opening it from the same window to edit the address replaces it with one that has the address typed",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            const fake = yield* FakeBrowser
+            const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+            yield* openSpotlight(windowId)
+
+            yield* openSpotlight(windowId, "https://a.example/")
+
+            expect(yield* addressesOfSpotlights).toStrictEqual([Option.some("https://a.example/")])
+          }),
+        ),
+    )
+
     it.effect("opening it again from inside Spotlight doesn't open another", () =>
       inBackground(
         Effect.gen(function* () {
@@ -246,6 +271,46 @@ describe("keyboard shortcut", () => {
         expect((yield* spotlightTabs).map(callerOf)).toStrictEqual([Option.some(pressed.windowId)])
       }),
     ),
+  )
+
+  it.effect(
+    "the shortcut to edit the address opens Spotlight with the active tab's address typed",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const { tabIds } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/page" }] })
+          const activeTab = yield* tabs.get(tabIds[0])
+
+          yield* runKeyboardCommand(KeyboardCommand.editCurrentUrl, Option.some(activeTab))
+
+          expect(yield* addressesOfSpotlights).toStrictEqual([
+            Option.some("https://a.example/page"),
+          ])
+        }),
+      ),
+  )
+
+  it.effect(
+    "on the New Tab page, the shortcut to edit the address opens it with nothing typed, still opening what's chosen in that tab",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const tabs = yield* Tabs
+          const { tabIds } = yield* fake.seedWindow({ tabs: [{}] })
+          const activeTab = yield* tabs.get(tabIds[0])
+
+          yield* runKeyboardCommand(KeyboardCommand.editCurrentUrl, Option.some(activeTab))
+
+          expect(
+            (yield* openingsOfSpotlights).map((opening) =>
+              Option.map(opening, (opened) => [opened.address, targetOf(opened)]),
+            ),
+          ).toStrictEqual([Option.some(["", "CurrentTab"])])
+        }),
+      ),
   )
 
   it.effect("without a known active tab, opens it from the last focused window", () =>

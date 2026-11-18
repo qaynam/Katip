@@ -34,6 +34,7 @@ import {
   type SpotlightMode,
   type SpotlightResult,
   SpotlightServerMessage,
+  type SpotlightTarget,
 } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
 import { initialize } from "./initialize"
@@ -108,9 +109,15 @@ const connectSpotlight = Effect.fnUntraced(function* (callerWindowId: WindowId) 
         reply._tag === "SearchResults" ? Effect.succeed(reply) : Effect.die("not a search answer"),
     )
 
-  const choose = (result: SpotlightResult) =>
+  const choose = (result: SpotlightResult, target: SpotlightTarget = "NewTab") =>
     Effect.flatMap(
-      ask((requestId) => ({ _tag: "Choose", requestId, windowId: callerWindowId, result })),
+      ask((requestId) => ({
+        _tag: "Choose",
+        requestId,
+        windowId: callerWindowId,
+        result,
+        target,
+      })),
       (reply) =>
         reply._tag === "ChoiceSettled"
           ? Effect.succeed(reply.outcome)
@@ -620,6 +627,47 @@ describe("choosing a Spotlight result", () => {
         expect(windowTabs.map(({ url, active }) => [url, active])).toStrictEqual([
           [Option.some("chrome://newtab/"), false],
           [Option.some(fakeSearchUrl("effect ts")), true],
+        ])
+      }),
+    ),
+  )
+
+  it.effect(
+    "a Spotlight opened to edit the address opens the URL chosen in the active tab instead of a new one",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({
+            tabs: [{ url: "https://a.example/" }, { url: "https://b.example/", active: true }],
+          })
+          yield* initialize
+          const spotlight = yield* connectSpotlight(windowId)
+
+          yield* spotlight.choose({ _tag: "OpenUrl", url: "https://c.example/" }, "CurrentTab")
+
+          const windowTabs = yield* (yield* Tabs).query({ windowId })
+          expect(windowTabs.map(({ url, active }) => [url, active])).toStrictEqual([
+            [Option.some("https://a.example/"), false],
+            [Option.some("https://c.example/"), true],
+          ])
+        }),
+      ),
+  )
+
+  it.effect("a Spotlight opened to edit the address searches the web in the active tab", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        yield* spotlight.choose({ _tag: "SearchWeb", query: "effect ts" }, "CurrentTab")
+
+        const windowTabs = yield* (yield* Tabs).query({ windowId })
+        expect(windowTabs.map(({ url }) => url)).toStrictEqual([
+          Option.some(fakeSearchUrl("effect ts")),
         ])
       }),
     ),

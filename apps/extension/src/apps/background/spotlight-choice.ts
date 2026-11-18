@@ -15,6 +15,7 @@ import {
   type SidebarPanel,
   type SpotlightOutcome,
   type SpotlightResult,
+  type SpotlightTarget,
 } from "#protocol"
 import { copyTabWithNotice, type CopyFormat } from "./copy-tab"
 import { ExtensionInfo } from "./extension-info"
@@ -68,14 +69,44 @@ const openTabInActiveSpace = Effect.fnUntraced(function* (
   return tab
 })
 
-const openUrl = Effect.fnUntraced(function* (callerWindowId: WindowId, url: string) {
-  yield* openTabInActiveSpace(callerWindowId, Option.some(url))
+const activeTabOf = (windowId: WindowId) =>
+  Tabs.use((tabs) =>
+    Effect.map(tabs.query({ windowId, active: true }), (active) => Option.fromNullishOr(active[0])),
+  )
+
+/**
+ * The tab a page or search chosen with `target` opens in: the active tab of the caller's window
+ * for `CurrentTab`, or a new tab in its active Space.
+ */
+const tabToOpenIn = Effect.fnUntraced(function* (
+  callerWindowId: WindowId,
+  target: SpotlightTarget,
+  url: Option.Option<string>,
+) {
+  const current = target === "CurrentTab" ? yield* activeTabOf(callerWindowId) : Option.none()
+  if (Option.isNone(current)) return yield* openTabInActiveSpace(callerWindowId, url)
+  if (Option.isSome(url)) {
+    yield* (yield* Tabs).update(current.value.id, { url: url.value })
+  }
+  return current.value
+})
+
+const openUrl = Effect.fnUntraced(function* (
+  callerWindowId: WindowId,
+  url: string,
+  target: SpotlightTarget,
+) {
+  yield* tabToOpenIn(callerWindowId, target, Option.some(url))
   yield* focusWindow(callerWindowId)
   return succeeded
 })
 
-const searchWeb = Effect.fnUntraced(function* (callerWindowId: WindowId, query: string) {
-  const tab = yield* openTabInActiveSpace(callerWindowId, Option.none())
+const searchWeb = Effect.fnUntraced(function* (
+  callerWindowId: WindowId,
+  query: string,
+  target: SpotlightTarget,
+) {
+  const tab = yield* tabToOpenIn(callerWindowId, target, Option.none())
   yield* (yield* WebSearch).query(query, tab.id)
   yield* focusWindow(callerWindowId)
   return succeeded
@@ -213,12 +244,17 @@ const runAction = (callerWindowId: WindowId, action: Action) =>
 /**
  * Opens the result chosen in Spotlight. `callerWindowId` is the window Spotlight was opened over:
  * pages open there, and that window is brought back to the front (for an open tab, the tab's own
- * window is). Commands act on the active tab of that window.
+ * window is). Commands act on the active tab of that window. A page or search, such as a typed
+ * address or a bookmark, opens where `target` says; the rest open as they always do.
  *
  * @remarks
  * Never fails. When the result can't be opened, returns the reason as `Failed`.
  */
-export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightResult) =>
+export const runSpotlightChoice = (
+  callerWindowId: WindowId,
+  result: SpotlightResult,
+  target: SpotlightTarget,
+) =>
   Match.valueTags(result, {
     OpenTab: ({ tabId }) => activateTab(tabId),
     Pin: ({ bookmarkId }) =>
@@ -239,18 +275,18 @@ export const runSpotlightChoice = (callerWindowId: WindowId, result: SpotlightRe
         windowId: callerWindowId,
         spaceId,
       }),
-    Bookmark: ({ url }) => openUrl(callerWindowId, url),
-    History: ({ url }) => openUrl(callerWindowId, url),
+    Bookmark: ({ url }) => openUrl(callerWindowId, url, target),
+    History: ({ url }) => openUrl(callerWindowId, url, target),
     Action: ({ action }) => runAction(callerWindowId, action),
     // Spotlight fills in the keyword of a command that searches instead of sending it; one sent
     // anyway has no query to search for, so it opens the site
     SiteCommand: ({ url, searches, iconPageUrl }) =>
-      openUrl(callerWindowId, searches ? iconPageUrl : url),
-    SiteSearch: ({ url }) => openUrl(callerWindowId, url),
-    BangSuggestion: ({ iconPageUrl }) => openUrl(callerWindowId, iconPageUrl),
+      openUrl(callerWindowId, searches ? iconPageUrl : url, target),
+    SiteSearch: ({ url }) => openUrl(callerWindowId, url, target),
+    BangSuggestion: ({ iconPageUrl }) => openUrl(callerWindowId, iconPageUrl, target),
     TurnOnHistorySearch: () => openHistorySearchSettings(callerWindowId),
-    OpenUrl: ({ url }) => openUrl(callerWindowId, url),
-    SearchWeb: ({ query }) => searchWeb(callerWindowId, query),
+    OpenUrl: ({ url }) => openUrl(callerWindowId, url, target),
+    SearchWeb: ({ query }) => searchWeb(callerWindowId, query, target),
   }).pipe(
     Effect.catch((error) =>
       Effect.andThen(

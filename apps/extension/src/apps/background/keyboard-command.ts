@@ -12,6 +12,7 @@ export const KeyboardCommand = {
   copyCurrentUrl: "copy-current-url",
   copyCurrentUrlAsMarkdown: "copy-current-url-as-markdown",
   openSpotlight: "open-spotlight",
+  editCurrentUrl: "edit-current-url",
   // Not a command of Katip's own: Chrome keeps the key for its toolbar button here, and that button
   // is what opens the side panel
   toggleSidePanel: "_execute_action",

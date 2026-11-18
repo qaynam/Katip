@@ -9,7 +9,11 @@
   import { KeyboardShortcuts, openChromeShortcutSettings } from "#platform/keyboard-shortcuts"
   import Keys from "./components/Keys.svelte"
   import Toggle from "./components/Toggle.svelte"
-  import { ONBOARDING_SHORTCUTS, OPEN_SIDE_PANEL_COMMAND } from "./logic/onboarding-shortcuts"
+  import {
+    browserKeyToSuggest,
+    ONBOARDING_SHORTCUTS,
+    OPEN_SIDE_PANEL_COMMAND,
+  } from "./logic/onboarding-shortcuts"
   import { shortcutStatusOf } from "./logic/shortcut-status"
   import {
     isOptional,
@@ -83,23 +87,35 @@
   let settings = $state.raw<Settings | null>(null)
   let assigned = $state.raw<ReadonlyMap<string, string>>(new Map())
   let suggested = $state.raw<ReadonlyMap<string, string>>(new Map())
+  let isMac = $state(false)
   let heading = $state<HTMLElement>()
 
   const sidePanelKey = $derived(
     assigned.get(OPEN_SIDE_PANEL_COMMAND) ?? suggested.get(OPEN_SIDE_PANEL_COMMAND) ?? null,
+  )
+  const suggestsBrowserKeys = $derived(
+    ONBOARDING_SHORTCUTS.some(
+      (shortcut) =>
+        browserKeyToSuggest(
+          shortcut,
+          shortcutStatusOf(shortcut.command, assigned, suggested),
+          isMac,
+        ) !== null,
+    ),
   )
   const position = $derived(ONBOARDING_STEPS.indexOf(step))
   const copy = $derived(step === "Welcome" ? null : COPY[step])
 
   const readShortcuts = async () => {
     const noKeys: ReadonlyMap<string, string> = new Map()
-    const [nowAssigned, nowSuggested] = await runtime.runPromise(
+    const [nowAssigned, nowSuggested, onMac] = await runtime.runPromise(
       KeyboardShortcuts.use((shortcuts) =>
-        Effect.all([shortcuts.assigned, shortcuts.suggested]),
-      ).pipe(Effect.orElseSucceed(() => [noKeys, noKeys] as const)),
+        Effect.all([shortcuts.assigned, shortcuts.suggested, shortcuts.isMac]),
+      ).pipe(Effect.orElseSucceed(() => [noKeys, noKeys, false] as const)),
     )
     assigned = nowAssigned
     suggested = nowSuggested
+    isMac = onMac
   }
 
   let view = $state.raw<SidebarView | null>(null)
@@ -243,6 +259,7 @@
               <ul class="shortcuts">
                 {#each ONBOARDING_SHORTCUTS as shortcut (shortcut.command)}
                   {@const status = shortcutStatusOf(shortcut.command, assigned, suggested)}
+                  {@const browserKey = browserKeyToSuggest(shortcut, status, isMac)}
                   {@const labelId = `shortcut-${shortcut.command}`}
                   <li>
                     <span class="name">
@@ -251,6 +268,9 @@
                         <span class="warning">
                           {t("onboarding.shortcuts.refused", { key: status.suggested })}
                         </span>
+                      {/if}
+                      {#if browserKey !== null}
+                        <span class="hint">{t(browserKey.hint, { key: browserKey.key })}</span>
                       {/if}
                     </span>
                     {#if status._tag === "Assigned"}
@@ -270,6 +290,9 @@
                 {/each}
               </ul>
               <div class="extras">
+                {#if suggestsBrowserKeys}
+                  <p class="note">{t("onboarding.shortcuts.browserKeysNote")}</p>
+                {/if}
                 <p class="note">{t("onboarding.shortcuts.copyNote")}</p>
                 <button
                   type="button"
@@ -639,6 +662,12 @@
 
   .warning {
     color: var(--warning);
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+
+  .hint {
+    color: var(--ink-secondary);
     font-size: 0.875rem;
     font-weight: 400;
   }

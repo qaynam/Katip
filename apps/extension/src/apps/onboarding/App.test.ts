@@ -195,6 +195,36 @@ describe("the shortcuts step", () => {
     })
   })
 
+  it("lists editing the address, unset, with the address bar's key to assign in Chrome, which Katip can't take", async () => {
+    await renderOnboarding()
+
+    await goTo("Check your shortcuts")
+
+    const row = (await screen.findByText("Edit the current tab’s address")).closest("li")
+    expect(row?.textContent).toContain("Not set")
+    expect(row?.textContent).toContain(
+      "Assign ⌘L in Chrome to edit the address with the address bar’s key.",
+    )
+  })
+
+  it("no longer suggests the browser's keys, nor says why, once ⌘T and ⌘L are assigned in Chrome", async () => {
+    const browserKeysNote = /Katip can’t take keys the browser uses itself/
+    const { reassignKeysInChrome } = await renderOnboarding()
+    await goTo("Check your shortcuts")
+    await screen.findByText(browserKeysNote)
+
+    reassignKeysInChrome({ ...SUGGESTED, "open-spotlight": "⌘T", "edit-current-url": "⌘L" })
+    window.dispatchEvent(new Event("focus"))
+
+    await waitFor(() => {
+      expect(
+        [/Assign ⌘T in Chrome/, /Assign ⌘L in Chrome/, browserKeysNote].map((text) =>
+          screen.queryByText(text),
+        ),
+      ).toStrictEqual([null, null, null])
+    })
+  })
+
   it("opens Chrome's shortcuts page in a new tab", async () => {
     const { openedUrls } = await renderOnboarding()
     await goTo("Check your shortcuts")

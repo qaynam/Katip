@@ -24,6 +24,12 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.shortcuts.notSet": "未設定",
   "onboarding.shortcuts.refused":
     "Chrome が Katip に {key} を割り当てませんでした。ほかの拡張機能が使っているのだと思われます。",
+  "onboarding.shortcuts.addressBarKey":
+    "Chrome で {key} を割り当てると、アドレスバーと同じキーで編集できます。",
+  "onboarding.shortcuts.newTabKey":
+    "Chrome で {key} を割り当てると、空の新しいタブの代わりに開きます。",
+  "onboarding.shortcuts.browserKeysNote":
+    "アドレスバーや新しいタブのようにブラウザ自身が使うキーは Katip からは設定できないため、Chrome で割り当ててください。",
   "onboarding.shortcuts.copyNote": "コピーのショートカットは、ここでオンにするまで何もしません。",
   "onboarding.shortcuts.edit": "Chrome で変更",
 

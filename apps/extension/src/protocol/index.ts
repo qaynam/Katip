@@ -19,6 +19,8 @@ export {
   SpotlightMode,
   type SpotlightOpening,
   spotlightOpeningOf,
+  SpotlightTarget,
+  targetOf,
   SpotlightOutcome,
   spotlightPageUrl,
   SpotlightResult,

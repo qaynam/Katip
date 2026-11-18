@@ -1,6 +1,11 @@
 import { Schema } from "effect"
 import type { WindowId } from "#platform/browser"
-import { RequestId, type SpotlightClientMessage, SpotlightServerMessage } from "#protocol"
+import {
+  RequestId,
+  type SpotlightClientMessage,
+  SpotlightServerMessage,
+  type SpotlightTarget,
+} from "#protocol"
 import type { SearchResponse, SpotlightConnection } from "./spotlight-connection"
 
 /** The part of chrome.runtime.Port the connection uses. */
@@ -16,6 +21,8 @@ export interface SpotlightPortConnectionOptions {
   readonly openPort: () => SpotlightPort
   /** The window that opened Spotlight. */
   readonly callerWindowId: WindowId
+  /** Where a page or search chosen in Spotlight opens. */
+  readonly target: SpotlightTarget
   /**
    * How long to wait for a search response before resolving to null as if it never arrived.
    * Defaults to 5 seconds.
@@ -145,6 +152,7 @@ export const createSpotlightPortConnection = (
           requestId,
           windowId: options.callerWindowId,
           result,
+          target: options.target,
         }),
         null,
       )

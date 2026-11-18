@@ -50,6 +50,10 @@ const commands = {
     suggested_key: { default: "Alt+T" },
     description: "manifest.command.openSpotlight",
   },
+  // No suggested key: not ⌘L, which Chrome leaves unassigned as it does any key the browser uses
+  // itself, ⌘T among them, and the 4 commands Chrome lets suggest keys have theirs already. People
+  // can still assign ⌘L to this and ⌘T to the Command Palette themselves
+  "edit-current-url": { description: "manifest.command.editCurrentUrl" },
   // Not ⌘⇧C, Ctrl+Shift+C or Alt+Shift+C: Chrome keeps them for itself and silently leaves a
   // suggested key it uses unassigned. Not ⌘⌃⇧C either: Chrome refuses to load a manifest that
   // suggests three modifiers. People who want ⌘⇧C can still assign it themselves

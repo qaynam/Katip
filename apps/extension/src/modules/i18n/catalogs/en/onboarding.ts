@@ -24,6 +24,12 @@ export const onboarding = {
   "onboarding.shortcuts.notSet": "Not set",
   "onboarding.shortcuts.refused":
     "Chrome didn’t give Katip {key}, most likely because another extension uses it.",
+  "onboarding.shortcuts.addressBarKey":
+    "Assign {key} in Chrome to edit the address with the address bar’s key.",
+  "onboarding.shortcuts.newTabKey":
+    "Assign {key} in Chrome to open it in place of a blank new tab.",
+  "onboarding.shortcuts.browserKeysNote":
+    "Katip can’t take keys the browser uses itself, such as those of the address bar and new tabs, so assign them in Chrome.",
   "onboarding.shortcuts.copyNote": "The copy shortcuts do nothing until you turn them on here.",
   "onboarding.shortcuts.edit": "Edit in Chrome",
 

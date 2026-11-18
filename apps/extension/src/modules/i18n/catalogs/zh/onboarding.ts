@@ -24,6 +24,10 @@ export const onboarding: CatalogSection<"onboarding"> = {
   "onboarding.shortcuts.notSet": "未设置",
   "onboarding.shortcuts.refused":
     "Chrome 没有把 {key} 分配给 Katip，很可能是另一个扩展程序在使用它。",
+  "onboarding.shortcuts.addressBarKey": "在 Chrome 中分配 {key}，即可用与地址栏相同的按键编辑。",
+  "onboarding.shortcuts.newTabKey": "在 Chrome 中分配 {key}，即可代替空白新标签页打开。",
+  "onboarding.shortcuts.browserKeysNote":
+    "地址栏、新标签页等浏览器自身使用的按键，Katip 无法自行设置，请在 Chrome 中分配。",
   "onboarding.shortcuts.copyNote": "复制相关的快捷键在这里打开之前不会起作用。",
   "onboarding.shortcuts.edit": "在 Chrome 中修改",
 

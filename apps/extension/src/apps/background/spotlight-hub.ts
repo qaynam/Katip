@@ -4,6 +4,7 @@ import {
   SpotlightClientMessage,
   type SpotlightOutcome,
   type SpotlightResult,
+  type SpotlightTarget,
   SpotlightServerMessage,
 } from "#protocol"
 import { findSpotlightResults, readRecentHistory } from "./spotlight-results"
@@ -34,6 +35,7 @@ export class SpotlightHub extends Context.Service<
       choose: (
         windowId: WindowId,
         result: SpotlightResult,
+        target: SpotlightTarget,
       ) => Effect.Effect<SpotlightOutcome, never, R>,
     ): Effect.Effect<void, never, R>
   }
@@ -50,6 +52,7 @@ export class SpotlightHub extends Context.Service<
         choose: (
           windowId: WindowId,
           result: SpotlightResult,
+          target: SpotlightTarget,
         ) => Effect.Effect<SpotlightOutcome, never, R>,
       ) =>
         // Read for each Spotlight opened rather than kept between them, which would leave out the
@@ -64,8 +67,8 @@ export class SpotlightHub extends Context.Service<
                     reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),
                   ),
                 ),
-              Choose: ({ requestId, windowId, result }) =>
-                Effect.flatMap(choose(windowId, result), (outcome) =>
+              Choose: ({ requestId, windowId, result, target }) =>
+                Effect.flatMap(choose(windowId, result, target), (outcome) =>
                   reply(port, { _tag: "ChoiceSettled", requestId, outcome }),
                 ),
             })

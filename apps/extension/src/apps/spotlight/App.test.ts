@@ -185,6 +185,33 @@ describe("on opening", () => {
 
     expect(document.activeElement).toBe(input)
   })
+
+  it("opened to edit an address, has it typed and selected so that typing replaces it, and searches for it", () => {
+    const connection = createFakeConnection()
+    render(App, {
+      props: {
+        connection,
+        faviconUrl: () => null,
+        close: vi.fn(),
+        translator: makeTranslator("en"),
+        size: "Normal",
+        setCollapsed: vi.fn(),
+        openSidePanel: vi.fn(),
+        initialQuery: "https://a.example/page",
+      },
+    })
+    const input = screen.getByRole<HTMLInputElement>("combobox")
+
+    expect([
+      input.value,
+      input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0),
+      connection.searches,
+    ]).toStrictEqual([
+      "https://a.example/page",
+      "https://a.example/page",
+      [{ query: "https://a.example/page", mode: "All" }],
+    ])
+  })
 })
 
 describe("typing", () => {
