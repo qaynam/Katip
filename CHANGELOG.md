@@ -8,6 +8,24 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+A web search from the Command Palette leaves you ready to read and scroll the results.
+
+### 🐛 Fixed
+
+- **Searches no longer leave the address bar focused** — A web search chosen in the Command Palette opened a blank new tab first, where Chrome put the focus in the address bar, and the focus stayed there once the results came in. The results now open with the page focused, so the keys you press next scroll and act on the page, as they do after opening a typed address.
+
+## 日本語
+
+コマンドパレットからウェブ検索したあと、そのまま結果を読んだりスクロールしたりできるようにしました。
+
+### 🐛 修正
+
+- **検索のあとにアドレスバーにフォーカスが残る問題を修正** — コマンドパレットでウェブ検索を選ぶと、いったん空の新しいタブが開き、Chrome がそこでアドレスバーにフォーカスを置いていました。そのフォーカスが、検索結果が出たあとも残っていました。今は検索結果のページにフォーカスが入った状態で開くので、入力した URL を開いたときと同じく、次に押したキーでページをスクロールしたり操作したりできます。
+
 ## 1.11.0 — 2026-11-18
 
 ## English

@@ -52,11 +52,12 @@ const runAsSidebarCommand = Effect.fnUntraced(function* (
 const openTabInActiveSpace = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   url: Option.Option<string>,
+  active = true,
 ) {
   const state = yield* KatipState
   const tab = yield* (yield* Tabs).create({
     windowId: callerWindowId,
-    active: true,
+    active,
     ...Option.match(url, { onNone: () => ({}), onSome: (value) => ({ url: value }) }),
   })
   const activeSpaceId = activeSpaceOf(yield* state.workspace.get, callerWindowId)
@@ -106,8 +107,15 @@ const searchWeb = Effect.fnUntraced(function* (
   query: string,
   target: SpotlightTarget,
 ) {
-  const tab = yield* tabToOpenIn(callerWindowId, target, Option.none())
+  const current = target === "CurrentTab" ? yield* activeTabOf(callerWindowId) : Option.none()
+  // A new tab is brought to the front only once the search is under way, not opened in front
+  // empty: Chrome puts the focus in the address bar of a new tab shown empty, and it stayed there
+  // once the results came in, so what was typed next went into the address bar, not the page
+  const tab = Option.isSome(current)
+    ? current.value
+    : yield* openTabInActiveSpace(callerWindowId, Option.none(), false)
   yield* (yield* WebSearch).query(query, tab.id)
+  if (Option.isNone(current)) yield* (yield* Tabs).update(tab.id, { active: true })
   yield* focusWindow(callerWindowId)
   return succeeded
 })
