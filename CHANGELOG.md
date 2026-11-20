@@ -8,6 +8,34 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Play a site on another speaker, such as YouTube on your external speaker while everything else stays on your Mac's, close the other tabs or those below in one go, and spot tabs playing sound, or muted, at a glance.
+
+### 🚀 New
+
+- **A speaker for each site** — Right-click a tab and choose Sound Settings… to play its site on another speaker. Keep the choice for the site, and every page of it plays there from its first sound, after a reload, in a new tab or after a restart; or keep it for that tab only. The first time, Chrome asks to let Katip access the site, then asks on the site's page to let it use the microphone, as Chrome tells a site the names of your speakers only then; Katip only reads the names and records nothing. A speaker that's disconnected leaves the site on the system's speaker until it's back. The speaker of a tab playing elsewhere is tinted, and says where it plays. The sites and their speakers are listed in the new Sound section of Katip's settings, where you can choose another speaker for a site or remove it. If you block a site's microphone by mistake, the panel offers the site's settings to allow it again.
+- **Close Other Tabs and Close Tabs Below** — Right-click a temporary tab, or a split view among them, to close every other temporary tab of the Space, or those listed below it. A split view's two tabs count as one row, so closing the others keeps both.
+
+### ✨ Improved
+
+- **Muted tabs stand out** — The speaker on a tab playing sound is larger and drawn in the text color, and a muted tab shows its crossed-out speaker in a red chip, so you can tell at a glance which tabs are muted rather than telling a slash from the sound waves.
+
+## 日本語
+
+YouTube は外部スピーカー、ほかは Mac のスピーカーのように、サイトごとに鳴らすスピーカーを選べるようにしました。ほかのタブや下のタブをまとめて閉じることもでき、音が出ているタブやミュートしたタブもひと目で見分けられます。
+
+### 🚀 新機能
+
+- **サイトごとのスピーカー** — タブを右クリックして「サウンド設定…」を選ぶと、そのサイトを別のスピーカーで鳴らせます。「サイトでいつも」にすると、そのサイトのページは再読み込みしても、新しいタブでも、再起動後も、最初の音から選んだスピーカーで鳴ります。「このタブだけ」も選べます。初回は、Katip にサイトへのアクセスを許可するかを Chrome が尋ね、続いてサイトのページの上で、マイクの使用を許可するかを尋ねます。Chrome はマイクを許可したサイトにだけスピーカーの名前を教えるためで、Katip は名前を読むだけで何も録音しません。スピーカーが外れている間はシステムのスピーカーで鳴り、つながり直すと戻ります。別のスピーカーで鳴っているタブはスピーカーに色が付き、鳴っている先を表示します。サイトとスピーカーの一覧は Katip の設定の新しい「サウンド」にあり、サイトのスピーカーを選び直したり削除したりできます。サイトのマイクを誤ってブロックしたときは、パネルからサイトの設定を開いて許可し直せます。
+- **他のタブを閉じる・下のタブを閉じる** — 一時タブ（または一時タブの中の分割表示）を右クリックすると、Space のほかの一時タブをまとめて閉じたり、その下に並ぶタブを閉じたりできます。分割表示の2つのタブは1行として扱うので、「他のタブを閉じる」でも2つとも残ります。
+
+### ✨ 改善
+
+- **ミュート中のタブがひと目でわかるように** — 音が出ているタブのスピーカーを大きくし、文字と同じ色で表示するようにしました。ミュートしたタブは、斜線入りのスピーカーを赤いチップで囲んで表示します。音の波と斜線を見比べなくても、どのタブがミュートされているかすぐにわかります。
+
 ## 1.11.1 — 2026-11-19
 
 ## English
