@@ -139,11 +139,14 @@ export default defineConfig(({ mode }) => {
           spotlight: fromRoot("./src/apps/spotlight/index.html"),
           onboarding: fromRoot("./src/apps/onboarding/index.html"),
           background: fromRoot("./src/apps/background/main.ts"),
+          "page-sound": fromRoot("./src/apps/page-sound/main.ts"),
         },
         output: {
-          // manifest.json refers to it by a fixed path, so only background gets no hash
+          // manifest.json and the background refer to these by fixed paths, so they get no hash
           entryFileNames: (chunk) =>
-            chunk.name === "background" ? "background.js" : "assets/[name]-[hash].js",
+            chunk.name === "background" || chunk.name === "page-sound"
+              ? `${chunk.name}.js`
+              : "assets/[name]-[hash].js",
         },
       },
     },

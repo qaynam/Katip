@@ -404,3 +404,54 @@ describe("Drag and drop", () => {
     expect(connection.sentCommands).toStrictEqual([])
   })
 })
+
+describe("closing several temporary tabs from a tab's menu", () => {
+  const top = tabView(1, { title: "Top" })
+  const left = tabView(2, { title: "Left" })
+  const right = tabView(3, { title: "Right" })
+  const bottom = tabView(4, { title: "Bottom" })
+  const rows = [temporaryTab(top), temporarySplit(9, left, right), temporaryTab(bottom)]
+
+  it("Close Other Tabs closes every other temporary tab, a split view's two included", async () => {
+    const { connection } = await renderSidebar(viewWithEntries(rows))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Bottom" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Close Other Tabs" }))
+
+    expect(commandsOf(connection.sentCommands, "CloseTabs")).toStrictEqual([
+      { _tag: "CloseTabs", tabIds: [TabId.make(1), TabId.make(2), TabId.make(3)] },
+    ])
+  })
+
+  it("Close Tabs Below closes the tabs of the rows under the tab", async () => {
+    const { connection } = await renderSidebar(viewWithEntries(rows))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Top" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Close Tabs Below" }))
+
+    expect(commandsOf(connection.sentCommands, "CloseTabs")).toStrictEqual([
+      { _tag: "CloseTabs", tabIds: [TabId.make(2), TabId.make(3), TabId.make(4)] },
+    ])
+  })
+
+  it("closes the others from a split view's menu, keeping both of its tabs", async () => {
+    const { connection } = await renderSidebar(viewWithEntries(rows))
+
+    await fireEvent.contextMenu(screen.getByRole("group", { name: "Left" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Close Other Tabs" }))
+
+    expect(commandsOf(connection.sentCommands, "CloseTabs")).toStrictEqual([
+      { _tag: "CloseTabs", tabIds: [TabId.make(1), TabId.make(4)] },
+    ])
+  })
+
+  it("can't close tabs below the bottom row, as there are none", async () => {
+    await renderSidebar(viewWithEntries(rows))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Bottom" }))
+
+    expect(
+      screen.getByRole<HTMLButtonElement>("menuitem", { name: "Close Tabs Below" }).disabled,
+    ).toBe(true)
+  })
+})

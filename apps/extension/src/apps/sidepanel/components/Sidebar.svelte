@@ -7,6 +7,7 @@
   import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
   import type { Downloads } from "../connection/downloads"
   import type { OriginAccess } from "../connection/origin-access"
+  import type { PageOutputAccess } from "../connection/page-outputs"
   import type { ScrollPositions } from "../connection/scroll-positions"
   import type { SidePanel } from "../connection/side-panel"
   import type { FaviconResolver } from "../logic/favicon"
@@ -27,6 +28,7 @@
   import { FolderIconPickerController } from "../state/folder-icon-picker.svelte"
   import { FolderSearchController } from "../state/folder-search.svelte"
   import { LiveFolderDialogController } from "../state/live-folder-dialog.svelte"
+  import { SoundDialogController } from "../state/sound-dialog.svelte"
   import { MenuController } from "../state/menu-controller.svelte"
   import { PendingRename } from "../state/pending-rename.svelte"
   import { setSidebarContext } from "../state/sidebar-context"
@@ -47,6 +49,7 @@
   import FolderIconPicker from "./FolderIconPicker.svelte"
   import FolderSearch from "./FolderSearch.svelte"
   import LiveFolderDialog from "./LiveFolderDialog.svelte"
+  import SoundDialog from "./SoundDialog.svelte"
   import NewSpacePage from "./NewSpacePage.svelte"
   import PinnedSection from "./PinnedSection.svelte"
   import { nudgeToward, slideAcross } from "./slide-across"
@@ -67,6 +70,7 @@
     bodyPanel: BodyPanelController
     translator: Translator
     originAccess: OriginAccess
+    pageOutputs: PageOutputAccess
     downloads: Downloads
     faviconUrl: FaviconResolver
     scrollPositions: ScrollPositions
@@ -85,6 +89,7 @@
     bodyPanel,
     translator,
     originAccess,
+    pageOutputs,
     downloads,
     faviconUrl,
     scrollPositions,
@@ -106,6 +111,7 @@
   )
   const tooltip = new TooltipController()
   const liveFolderDialog = new LiveFolderDialogController()
+  const soundDialog = new SoundDialogController()
   const folderSearch = new FolderSearchController()
   const folderIconPicker = new FolderIconPickerController()
   const spaceDraft = new SpaceDraftController()
@@ -141,6 +147,9 @@
     get originAccess() {
       return originAccess
     },
+    get pageOutputs() {
+      return pageOutputs
+    },
     get downloads() {
       return downloads
     },
@@ -148,6 +157,7 @@
       return sidePanel
     },
     liveFolderDialog,
+    soundDialog,
     folderSearch,
     folderIconPicker,
   })
@@ -264,7 +274,9 @@
   <main
     bind:this={sidebar}
     class="sidebar"
-    inert={dialog.current !== null || liveFolderDialog.current !== null}
+    inert={dialog.current !== null ||
+      liveFolderDialog.current !== null ||
+      soundDialog.current !== null}
     onwheel={switchByWheel}
     ondragover={() => drag.reject()}
     ondrop={dropAccepted}
@@ -357,6 +369,7 @@
   <FolderSearch />
   <FolderIconPicker />
   <LiveFolderDialog />
+  <SoundDialog />
   <ConfirmDialog />
   <Tooltip />
 </ThemedSurface>

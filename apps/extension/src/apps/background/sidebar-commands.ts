@@ -93,6 +93,7 @@ import {
   scheduleLiveFolderRefresh,
 } from "./live-folder-refresh"
 import { urlOf } from "./tab-admission"
+import { TabSounds } from "./tab-sounds"
 import { byIndex, moveAmongTemporary } from "./temporary-order"
 import { pageSideOfDrop, type PageSide } from "./page-drop"
 import {
@@ -561,10 +562,31 @@ const tabCommands = {
   ActivateTab: ({ tabId }: { tabId: TabId }) =>
     Tabs.use((tabs) => tabs.update(tabId, { active: true })),
 
+  // Only those still open: the side panel's view may be behind a tab closed meanwhile, and Chrome
+  // closes none of the tabs when one of them is gone
+  CloseTabs: Effect.fnUntraced(function* ({ tabIds }: { tabIds: ReadonlyArray<TabId> }) {
+    const tabs = yield* Tabs
+    const open = new Set((yield* tabs.query({})).map((tab) => tab.id))
+    const closing = tabIds.filter((tabId) => open.has(tabId))
+    if (closing.length > 0) yield* tabs.remove(closing)
+  }),
+
   CloseTab: ({ tabId }: { tabId: TabId }) => Tabs.use((tabs) => tabs.remove([tabId])),
 
   SetTabMuted: ({ tabId, muted }: { tabId: TabId; muted: boolean }) =>
     Tabs.use((tabs) => tabs.update(tabId, { muted })),
+
+  SetTabSoundOutput: ({
+    tabId,
+    output,
+    scope,
+  }: {
+    tabId: TabId
+    output: string | null
+    scope: "Site" | "Tab"
+  }) => TabSounds.use((sounds) => sounds.choose(tabId, output, scope)),
+
+  ResetTabSound: ({ tabId }: { tabId: TabId }) => TabSounds.use((sounds) => sounds.reset(tabId)),
 
   // Not an override for a pinned tab: a pin's name is its bookmark's title, so the bookmark is
   // renamed. An empty name goes back to the page's title, as removing an override does

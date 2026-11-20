@@ -55,6 +55,14 @@ export const options: CatalogSection<"options"> = {
     "Al activarlo, se solicita permiso para mostrar notificaciones. Al desactivarlo, se retira ese permiso.",
   "options.liveFolderNotifications.denied": "No se permitió mostrar notificaciones.",
 
+  "options.sound.heading": "Sonido",
+  "options.sound.sites.heading": "Sitios que suenan en otro altavoz",
+  "options.sound.empty": "Todavía no hay sitios que suenen en otro altavoz.",
+  "options.sound.intro":
+    "Para elegir un altavoz para un sitio, haz clic derecho en una de sus pestañas en la barra lateral y elige «Configuración de sonido…». Los altavoces elegidos para una sola pestaña no aparecen aquí; duran hasta que se cierra la pestaña.",
+  "options.sound.defaultOutput": "Predeterminado del sistema",
+  "options.sound.remove": "Quitar",
+  "options.sound.removeLabel": "Quitar el altavoz de {site}",
   "options.autoArchive.heading": "Archivo",
   "options.autoArchive.label": "Archivar automáticamente las pestañas inactivas",
   "options.autoArchive.idleTime.label": "Archivar tras",

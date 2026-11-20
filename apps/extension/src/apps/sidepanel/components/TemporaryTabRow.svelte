@@ -34,13 +34,15 @@
   isLoading={tab.isLoading}
   isAudible={tab.isAudible}
   isMuted={tab.isMuted}
+  sound={tab.sound}
   isDiscarded={tab.isDiscarded}
   renameInitial={tab.title}
   onRename={rename}
   onActivate={() => void ctx.run({ _tag: "ActivateTab", tabId: tab.tabId })}
   onClose={() => void ctx.run({ _tag: "CloseTab", tabId: tab.tabId })}
   menuLabel={t("sidepanel.tab.menu")}
-  menuEntries={(startRename) => openTabMenu(ctx, tab.tabId, { isPinned: false, startRename })}
+  menuEntries={(startRename) =>
+    openTabMenu(ctx, tab.tabId, { isPinned: false, startRename, pageUrl: tab.url })}
   {dragSource}
   dropTargetAt={(edge) => ({
     _tag: "Temporary",

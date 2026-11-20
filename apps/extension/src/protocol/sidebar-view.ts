@@ -8,6 +8,27 @@ import { SpaceId, SpaceName } from "#modules/space"
 import { SpaceTheme } from "#modules/theme"
 import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
 
+/**
+ * Where Katip sends a tab's sound, and whether it got there. Missing from a tab whose sound Katip
+ * leaves alone.
+ */
+export const TabSoundView = Schema.Struct({
+  /** The output's name; null for the system's default output. */
+  output: Schema.NullOr(Schema.String),
+  /** Whether the output is kept for the tab's site or only for this tab. */
+  scope: Schema.Literals(["Site", "Tab"]),
+  /**
+   * - `Pending`: told to the page, which hasn't said yet where its sound went.
+   * - `Applied`: playing on the output.
+   * - `OutputMissing`: the output isn't connected, so the tab plays on the default output.
+   * - `NeedsMicrophone`: the site may not use the microphone, without which Chrome doesn't tell it
+   *   the names of the outputs.
+   * - `NeedsAccess`: Katip may not access the site.
+   */
+  state: Schema.Literals(["Pending", "Applied", "OutputMissing", "NeedsMicrophone", "NeedsAccess"]),
+})
+export type TabSoundView = typeof TabSoundView.Type
+
 export const TabView = Schema.Struct({
   tabId: TabId,
   title: Schema.String,
@@ -20,6 +41,7 @@ export const TabView = Schema.Struct({
   isDiscarded: Schema.Boolean,
   // Set only while Chrome shows the tab beside another one in a split view
   splitViewId: Schema.NullOr(SplitViewId),
+  sound: Schema.optionalKey(TabSoundView),
 })
 export type TabView = typeof TabView.Type
 

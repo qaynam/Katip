@@ -52,6 +52,39 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.tab.backToPinnedUrl": "ピンした URL に戻る",
   "sidepanel.tab.muted": "ミュート中",
   "sidepanel.tab.playingAudio": "音声を再生中",
+  "sidepanel.tab.closeOthers": "他のタブを閉じる",
+  "sidepanel.tab.closeBelow": "下のタブを閉じる",
+  "sidepanel.tab.sound": "サウンド設定…",
+  "sidepanel.sound.title": "サウンド設定",
+  "sidepanel.sound.accessDenied":
+    "Katip が {site} へのアクセスを許可されなかったため、このサイトのスピーカーを選べません。",
+  "sidepanel.sound.askingMicrophone":
+    "{site} のページの上で Chrome が尋ねたら「許可」を選んでください。",
+  "sidepanel.sound.microphoneNote":
+    "Chrome は、マイクの使用を許可したサイトにだけスピーカーの名前を教えます。Katip は名前を読むだけで何も録音しませんが、サイトの設定でオフにするまで、サイトもマイクを使えるようになります。",
+  "sidepanel.sound.askAgain": "もう一度求める",
+  "sidepanel.sound.microphoneBlocked":
+    "{site} のマイクはブロックされていると Chrome が覚えているため、もう尋ねられません。サイトの設定を開いて「マイク」を「許可」にしてから、「もう一度求める」を押してください。",
+  "sidepanel.sound.openSiteSettings": "サイトの設定を開く",
+  "sidepanel.sound.checking": "スピーカーを探しています…",
+  "sidepanel.sound.allowAccess": "アクセスを許可",
+  "sidepanel.sound.microphoneRefused":
+    "{site} はマイクを許可されなかったため、スピーカーの名前がわかりません。",
+  "sidepanel.sound.unreachable":
+    "このページは別のスピーカーで鳴らせません。鳴らせるのは https の安全なページだけです。",
+  "sidepanel.sound.outputLegend": "再生先",
+  "sidepanel.sound.defaultOutput": "システムの既定",
+  "sidepanel.sound.disconnected": "{output}（未接続）",
+  "sidepanel.sound.scopeLegend": "保存",
+  "sidepanel.sound.scopeSite": "{site} でいつも",
+  "sidepanel.sound.scopeTab": "このタブだけ",
+  "sidepanel.sound.apply": "適用",
+  "sidepanel.sound.reset": "リセット",
+  "sidepanel.sound.playingOn": "{output} で再生中",
+  "sidepanel.sound.outputMissing":
+    "{output} が接続されていないため、システムの既定のスピーカーで再生しています",
+  "sidepanel.sound.needsPermission":
+    "サイトを許可するまで {output} では鳴らせません。タブを右クリックして「サウンド設定…」を選んでください",
   "sidepanel.tab.addToFavorites": "Favorites に追加",
   "sidepanel.tab.pin": "ピン留め",
   "sidepanel.tab.unpin": "ピン留めを外す",

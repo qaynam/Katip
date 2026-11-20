@@ -51,6 +51,14 @@ export const options: CatalogSection<"options"> = {
     "オンにすると、通知を表示する許可を求めます。オフにすると、その許可を外します。",
   "options.liveFolderNotifications.denied": "通知の表示が許可されませんでした",
 
+  "options.sound.heading": "サウンド",
+  "options.sound.sites.heading": "別のスピーカーで鳴らすサイト",
+  "options.sound.empty": "別のスピーカーで鳴らすサイトはまだありません。",
+  "options.sound.intro":
+    "サイトのスピーカーを選ぶには、サイドバーでそのサイトのタブを右クリックして「サウンド設定…」を選びます。1つのタブだけに選んだスピーカーはここには並ばず、タブを閉じるまで有効です。",
+  "options.sound.defaultOutput": "システムの既定",
+  "options.sound.remove": "削除",
+  "options.sound.removeLabel": "{site} のスピーカーの設定を削除",
   "options.autoArchive.heading": "アーカイブ",
   "options.autoArchive.label": "使っていないタブを自動でアーカイブ",
   "options.autoArchive.idleTime.label": "アーカイブするまでの時間",

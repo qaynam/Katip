@@ -12,6 +12,10 @@ import {
 } from "../connection/memory-connection"
 import { createMemoryLocalePreferences } from "../connection/locale-preferences"
 import { createMemoryDownloads, type MemoryDownloadsOptions } from "../connection/memory-downloads"
+import {
+  createMemoryPageOutputs,
+  type MemoryPageOutputsOptions,
+} from "../connection/memory-page-outputs"
 import { createMemoryOriginAccess } from "../connection/memory-origin-access"
 import { createMemoryScrollPositions } from "../connection/memory-scroll-positions"
 import { createMemorySidePanel } from "../connection/memory-side-panel"
@@ -50,6 +54,8 @@ export const renderSidebar = async (
     readonly updateNotice?: Release | null
     /** The browser's downloads, and how asking to read them goes. Granted when asked by default. */
     readonly downloads?: MemoryDownloadsOptions
+    /** What tabs' pages know of the outputs. No access to any site by default. */
+    readonly pageOutputs?: MemoryPageOutputsOptions
   } = {},
 ) => {
   const {
@@ -59,6 +65,7 @@ export const renderSidebar = async (
     scrollPositions = createMemoryScrollPositions(),
     updateNotice = null,
     downloads: downloadsOptions = {},
+    pageOutputs: pageOutputsOptions = {},
     ...connectionOptions
   } = options
   const connection = createMemoryConnection({
@@ -67,6 +74,7 @@ export const renderSidebar = async (
   })
   const originAccess = createMemoryOriginAccess({ decide: () => grantsAccess })
   const downloads = createMemoryDownloads(downloadsOptions)
+  const pageOutputs = createMemoryPageOutputs(pageOutputsOptions)
   const localePreferences = createMemoryLocalePreferences(locale)
   const updateNotices = createMemoryUpdateNotices(updateNotice)
   const sidePanel = createMemorySidePanel()
@@ -75,6 +83,7 @@ export const renderSidebar = async (
     props: {
       connection,
       originAccess,
+      pageOutputs,
       downloads,
       localePreferences,
       browserLanguages,
@@ -89,6 +98,7 @@ export const renderSidebar = async (
     ...result,
     connection,
     originAccess,
+    pageOutputs,
     downloads,
     updateNotices,
     sidePanel,

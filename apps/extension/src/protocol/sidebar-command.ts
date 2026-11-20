@@ -43,9 +43,21 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("OpenNewTab", { windowId: WindowId }),
   Schema.TaggedStruct("ActivateTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTab", { tabId: TabId }),
+  // The tabs the side panel showed as the ones to close, such as for Close Other Tabs
+  Schema.TaggedStruct("CloseTabs", { tabIds: Schema.Array(TabId) }),
   // The state to set rather than a toggle, so a press made on a view that is behind does what it
   // showed
   Schema.TaggedStruct("SetTabMuted", { tabId: TabId, muted: Schema.Boolean }),
+  // The tab's site must give Katip access first, which only the side panel can ask for
+  Schema.TaggedStruct("SetTabSoundOutput", {
+    tabId: TabId,
+    // The output's name; null for the system's default output
+    output: Schema.NullOr(Schema.String),
+    // Whether to keep it for the tab's site or only for this tab
+    scope: Schema.Literals(["Site", "Tab"]),
+  }),
+  // Forgets the output chosen for the tab, and for its site
+  Schema.TaggedStruct("ResetTabSound", { tabId: TabId }),
   // An empty title clears the tab's custom name
   Schema.TaggedStruct("RenameTab", { tabId: TabId, title: Schema.String }),
   Schema.TaggedStruct("MoveTabToSpace", { tabId: TabId, spaceId: SpaceId }),

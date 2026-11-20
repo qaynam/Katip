@@ -3,6 +3,7 @@ import type { Translator } from "#modules/i18n"
 import type { CommandOutcome, SidebarCommand, SidebarView, SpaceView } from "#protocol"
 import type { Downloads } from "../connection/downloads"
 import type { OriginAccess } from "../connection/origin-access"
+import type { PageOutputAccess } from "../connection/page-outputs"
 import type { SidePanel } from "../connection/side-panel"
 import type { FaviconResolver } from "../logic/favicon"
 import type { BodyPanelController } from "./body-panel.svelte"
@@ -11,6 +12,7 @@ import type { DragSession } from "./drag-session.svelte"
 import type { FolderIconPickerController } from "./folder-icon-picker.svelte"
 import type { FolderSearchController } from "./folder-search.svelte"
 import type { LiveFolderDialogController } from "./live-folder-dialog.svelte"
+import type { SoundDialogController } from "./sound-dialog.svelte"
 import type { MenuController } from "./menu-controller.svelte"
 import type { PendingRename } from "./pending-rename.svelte"
 import type { SpaceDraftController } from "./space-draft.svelte"
@@ -43,9 +45,11 @@ export interface SidebarContext {
    */
   readonly translator: Translator
   readonly originAccess: OriginAccess
+  readonly pageOutputs: PageOutputAccess
   readonly downloads: Downloads
   readonly sidePanel: SidePanel
   readonly liveFolderDialog: LiveFolderDialogController
+  readonly soundDialog: SoundDialogController
   readonly folderSearch: FolderSearchController
   readonly folderIconPicker: FolderIconPickerController
 }

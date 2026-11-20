@@ -17,6 +17,7 @@ import { LiveFolders, originPatternOf } from "#modules/live-folders"
 import { PinnedBookmarks, SpaceFolders } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
 import { SiteCommands } from "#modules/site-commands"
+import { SoundSettings } from "#modules/sound"
 import { desiredGroupsFor, TabGroupSync } from "#modules/tab-group-sync"
 import { takeSnapshot } from "#modules/workspace"
 import { Array, Order } from "effect"
@@ -48,11 +49,13 @@ import {
 import { runKeyboardCommand } from "./keyboard-commands"
 import { notifyArrival, openNotifiedItem } from "./live-item-notifications"
 import { openOnboarding } from "./onboarding"
+import { PageSound } from "./page-sound"
 import { runSidebarCommand } from "./sidebar-commands"
 import { SidebarHub } from "./sidebar-hub"
 import { runSpotlightChoice } from "./spotlight-choice"
 import { SpotlightHub } from "./spotlight-hub"
 import { urlOf } from "./tab-admission"
+import { TabSounds } from "./tab-sounds"
 import { numberedSpaceName, translate } from "./translation"
 
 const byWindowThenIndex = Order.combine(
@@ -178,6 +181,34 @@ export const program = Effect.gen(function* () {
     Effect.forkScoped,
   )
 
+  const tabSounds = yield* TabSounds
+  yield* tabSounds.changes.pipe(
+    Stream.runForEach(() => publishViews),
+    Effect.forkScoped,
+  )
+  // Before connections are accepted, like the refreshes above: a page that woke the service
+  // worker by starting is waiting for its answer
+  yield* (yield* PageSound).reports.pipe(Stream.runForEach(tabSounds.handle), Effect.forkScoped)
+  const syncSounds = logFailure("Couldn't send the tabs' sound to their outputs")(tabSounds.sync)
+  yield* (yield* SoundSettings).changes.pipe(
+    Stream.runForEach(() => syncSounds),
+    logFailure("Stopped following the sound settings"),
+    Effect.forkScoped,
+  )
+  // A site gained or lost access: its pages get the page script, or stop getting it
+  yield* (yield* Permissions).originChanges.pipe(
+    Stream.runForEach(() => syncSounds),
+    Effect.forkScoped,
+  )
+  const followTabSounds = (event: BrowserEvent) =>
+    Match.value(event).pipe(
+      Match.tag("TabRemoved", ({ tabId }) => tabSounds.forget(tabId)),
+      Match.tag("TabUpdated", ({ changes, tab }) =>
+        changes.url === undefined ? Effect.void : tabSounds.followNavigation(tab),
+      ),
+      Match.orElse(() => Effect.void),
+    )
+
   const handleEvent = (event: BrowserEvent) =>
     Match.value(event).pipe(
       Match.tag("TabRemoved", (removed) =>
@@ -281,7 +312,10 @@ export const program = Effect.gen(function* () {
   // records having been loaded
   yield* events.events.pipe(
     Stream.runForEach((event) =>
-      Effect.andThen(logFailure(`Couldn't handle ${event._tag}`)(handleEvent(event)), afterChange),
+      Effect.andThen(
+        logFailure(`Couldn't handle ${event._tag}`)(handleEvent(event)),
+        Effect.andThen(followTabSounds(event), afterChange),
+      ),
     ),
     Effect.forkScoped(),
   )
@@ -315,6 +349,7 @@ export const applicationLayer = SpotlightHub.layer.pipe(
       ArchiveRepository.layer,
       TabGroupSync.layer,
       LiveFolders.layer,
+      TabSounds.layer.pipe(Layer.provideMerge(SoundSettings.layer)),
     ),
   ),
 )

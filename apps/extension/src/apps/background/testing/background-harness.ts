@@ -19,6 +19,7 @@ import {
   type SpaceView,
 } from "#protocol"
 import { ExtensionInfo } from "../extension-info"
+import { FakePageSound } from "./fake-page-sound"
 import { applicationLayer, program } from "../program"
 import { BrowserLanguages } from "../translation"
 
@@ -33,6 +34,7 @@ export const backgroundTestLayerWith = (browser: typeof FakeBrowser.layer) =>
     FakeScripting.layer,
     FakeNotifications.layer,
     KeyboardShortcuts.layerTest({}),
+    FakePageSound.layer,
     // Fixed, so the expected notices and names don't depend on the language of the machine
     // running the tests
     Layer.succeed(BrowserLanguages, ["en"]),

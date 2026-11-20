@@ -2,6 +2,12 @@ export { EXPORT_PORT_NAME, ExportClientMessage, ExportServerMessage } from "./ex
 export { IMPORT_PORT_NAME, ImportClientMessage, ImportServerMessage } from "./import-port"
 export { ONBOARDING_PAGE_PATH, onboardingPageUrl } from "./onboarding-page"
 export { historySearchSettingsUrl, SETTINGS_PAGE_PATH } from "./settings-page"
+export {
+  PAGE_SOUND_SCRIPT_PATH,
+  PageSoundOrder,
+  PageSoundReport,
+  PageSoundStatus,
+} from "./page-sound"
 export { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "./sidebar-command"
 export {
   ClientMessage,
@@ -38,6 +44,7 @@ export {
   PinnedSplitView,
   SidebarView,
   SpaceView,
+  TabSoundView,
   TabView,
   TemporaryEntry,
 } from "./sidebar-view"

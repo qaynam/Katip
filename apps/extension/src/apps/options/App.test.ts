@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { BangCatalog, DEFAULT_BANG_FORMAT } from "#modules/bangs"
 import { IdleMinutes, SettingsRepository, type SettingsPatch } from "#modules/settings"
 import { SiteCommands } from "#modules/site-commands"
+import { type SoundRules, SoundSettings, SoundSite } from "#modules/sound"
 import { LATEST_RELEASE_API_URL, Updates } from "#modules/updates"
 import { BrowserApiError, BrowserEvents, Storage, type StorageArea } from "#platform/browser"
 import { FakeBrowser } from "#platform/browser-testing"
@@ -135,6 +136,7 @@ const makeRuntime = (
     Layer.mergeAll(
       SettingsRepository.layer.pipe(Layer.provide(storage)),
       SiteCommands.layer.pipe(Layer.provide(storage)),
+      SoundSettings.layer.pipe(Layer.provide(storage)),
       BangCatalog.layerTest(BUNDLED_BANGS),
       browser,
       FakeOptionalPermissions.layer,
@@ -177,6 +179,11 @@ const renderOptions = async ({
   return {
     readSaved: () => runtime.runPromise(SettingsRepository.use((repository) => repository.get)),
     readCommands: () => runtime.runPromise(SiteCommands.use((commands) => commands.get)),
+    readSoundRules: () => runtime.runPromise(SoundSettings.use((settings) => settings.get)),
+    saveSoundRules: (rules: SoundRules) =>
+      runtime.runPromise(SoundSettings.use((settings) => settings.update(() => rules))),
+    noteSoundOutputs: (names: ReadonlyArray<string>) =>
+      runtime.runPromise(SoundSettings.use((settings) => settings.noteOutputs(names))),
     saveElsewhere: update,
     browser: <A>(use: (browser: FakeBrowser["Service"]) => Effect.Effect<A, unknown>) =>
       runtime.runPromise(FakeBrowser.use(use)),
@@ -280,6 +287,7 @@ describe("categories", () => {
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.trim())).toStrictEqual([
       "General",
       "Tabs",
+      "Sound",
       "Archive",
       "Command Palette",
       "Shortcuts",
@@ -337,7 +345,7 @@ describe("categories", () => {
     await renderLoaded()
 
     expect(screen.getAllByRole("tab").map((tab) => tab.tabIndex)).toStrictEqual([
-      0, -1, -1, -1, -1, -1,
+      0, -1, -1, -1, -1, -1, -1,
     ])
   })
 
@@ -1455,5 +1463,85 @@ describe("data import", () => {
         "Couldn’t finish the import. Any Spaces added before it stopped are kept.",
       ),
     ).toBeTruthy()
+  })
+})
+
+describe("sound", () => {
+  const youtube = SoundSite.make("https://www.youtube.com")
+  const music = SoundSite.make("https://music.example")
+  const rules: SoundRules = [
+    { site: youtube, output: "External Speaker", volume: 1, method: "InPage" },
+    { site: music, output: null, volume: 1, method: "InPage" },
+  ]
+
+  it("says right under its title how to choose a speaker for a site", async () => {
+    await renderLoaded()
+
+    await openCategory("Sound")
+
+    expect(
+      await screen.findByText(
+        /To choose a speaker for a site, right-click one of its tabs in the sidebar/,
+      ),
+    ).toBeTruthy()
+  })
+
+  it("lists the sites that play on another speaker, each with its speaker chosen", async () => {
+    const { saveSoundRules } = await renderLoaded()
+    await saveSoundRules(rules)
+
+    await openCategory("Sound")
+
+    const speakers = [
+      await screen.findByRole<HTMLSelectElement>("combobox", { name: "www.youtube.com" }),
+      screen.getByRole<HTMLSelectElement>("combobox", { name: "music.example" }),
+    ]
+    expect(speakers.map((speaker) => speaker.selectedOptions[0]?.textContent)).toStrictEqual([
+      "External Speaker",
+      "System default",
+    ])
+  })
+
+  it("changes a site's speaker to one of those pages have seen", async () => {
+    const { saveSoundRules, noteSoundOutputs, readSoundRules } = await renderLoaded()
+    await saveSoundRules(rules)
+    await noteSoundOutputs(["MacBook Pro Speakers", "External Speaker"])
+    await openCategory("Sound")
+    const speaker = await screen.findByRole<HTMLSelectElement>("combobox", {
+      name: "www.youtube.com",
+    })
+
+    const offered = [...speaker.options].map((option) => option.textContent)
+    await fireEvent.change(speaker, { target: { value: "MacBook Pro Speakers" } })
+
+    expect(offered).toStrictEqual(["System default", "MacBook Pro Speakers", "External Speaker"])
+    await waitFor(async () =>
+      expect((await readSoundRules()).map((rule) => rule.output)).toStrictEqual([
+        "MacBook Pro Speakers",
+        null,
+      ]),
+    )
+  })
+
+  it("forgets a site's speaker with its Remove button", async () => {
+    const { saveSoundRules, readSoundRules } = await renderLoaded()
+    await saveSoundRules(rules)
+    await openCategory("Sound")
+
+    await fireEvent.click(
+      await screen.findByRole("button", { name: "Remove the speaker of www.youtube.com" }),
+    )
+
+    await waitFor(async () =>
+      expect((await readSoundRules()).map((rule) => rule.site)).toStrictEqual([music]),
+    )
+  })
+
+  it("says so while no site has a speaker", async () => {
+    await renderLoaded()
+
+    await openCategory("Sound")
+
+    expect(await screen.findByText("No site plays on another speaker yet.")).toBeTruthy()
   })
 })

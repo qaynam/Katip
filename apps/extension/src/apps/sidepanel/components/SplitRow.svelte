@@ -172,22 +172,24 @@
           {#if half.tabId === null}
             <span
               class="audio"
+              class:muted={half.isMuted}
               role="img"
               aria-label={t(half.isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
             >
-              <Icon name={half.isMuted ? "speakerMuted" : "speaker"} size={13} />
+              <Icon name={half.isMuted ? "speakerMuted" : "speaker"} size={15} />
             </span>
           {:else}
             {@const tabId = half.tabId}
             {@const label = t(half.isMuted ? "actions.unmuteTab" : "actions.muteTab")}
             <button
               class="audio"
+              class:muted={half.isMuted}
               type="button"
               aria-label={label}
               title={label}
               onclick={() => void ctx.run({ _tag: "SetTabMuted", tabId, muted: !half.isMuted })}
             >
-              <Icon name={half.isMuted ? "speakerMuted" : "speaker"} size={13} />
+              <Icon name={half.isMuted ? "speakerMuted" : "speaker"} size={15} />
             </button>
           {/if}
         {/if}
@@ -355,18 +357,27 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 18px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     border: none;
     border-radius: 5px;
     background: none;
-    color: var(--text-muted);
+    color: var(--text);
   }
 
   button.audio:hover {
     background: var(--surface-hover);
-    color: var(--text);
+  }
+
+  /* As in TabRow: muting spelled out in a colored chip, not a slash alone */
+  .audio.muted {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger);
+  }
+
+  button.audio.muted:hover {
+    background: color-mix(in srgb, var(--danger) 26%, transparent);
   }
 
   .close {

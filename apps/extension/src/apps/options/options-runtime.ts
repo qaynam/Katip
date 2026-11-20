@@ -2,6 +2,7 @@ import { Layer, ManagedRuntime } from "effect"
 import { BangCatalog } from "#modules/bangs"
 import { SettingsRepository } from "#modules/settings"
 import { SiteCommands } from "#modules/site-commands"
+import { SoundSettings } from "#modules/sound"
 import { Updates } from "#modules/updates"
 import { Ports, Storage, Tabs } from "#platform/browser"
 import { Http } from "#platform/http"
@@ -13,6 +14,7 @@ import { OptionalPermissions } from "./optional-permissions"
 export type OptionsRuntime = ManagedRuntime.ManagedRuntime<
   | SettingsRepository
   | SiteCommands
+  | SoundSettings
   | BangCatalog
   | Tabs
   | Ports
@@ -30,6 +32,7 @@ export const makeOptionsRuntime = (installedVersion: string): OptionsRuntime =>
     Layer.mergeAll(
       SettingsRepository.layer.pipe(Layer.provide(Storage.layer)),
       SiteCommands.layer.pipe(Layer.provide(Storage.layer)),
+      SoundSettings.layer.pipe(Layer.provide(Storage.layer)),
       BangCatalog.layer.pipe(Layer.provide(Http.layer)),
       Updates.layer(installedVersion).pipe(
         Layer.provide(Layer.mergeAll(Http.layer, Storage.layer)),

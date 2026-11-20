@@ -1,7 +1,7 @@
 import { Array, Option, Order, pipe } from "effect"
 import type { ArchiveEntry } from "#modules/archive"
 import type { SpaceId } from "#modules/space"
-import type { BookmarkId, SplitViewId } from "#platform/browser"
+import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type {
   PinnedFolderView,
   PinnedItemView,
@@ -10,6 +10,7 @@ import type {
   PinnedSplitView,
   SidebarView,
   SpaceView,
+  TabView,
 } from "#protocol"
 import type { PinnedPosition } from "./drag-drop"
 
@@ -118,3 +119,30 @@ export const selfAndDescendantFolderIds = (
             : [],
         ),
       ]
+
+const tabsOfNode = (node: PinnedNodeView): ReadonlyArray<TabView> => {
+  switch (node._tag) {
+    case "PinnedItem":
+      return node.openTab === null ? [] : [node.openTab.tab]
+    case "PinnedSplit":
+      return node.items.flatMap(tabsOfNode)
+    case "PinnedFolder":
+      return node.children.flatMap(tabsOfNode)
+    case "PinnedLiveFolder":
+      return [...node.items, ...node.hiddenItems].flatMap((item) =>
+        item.openTab === null ? [] : [item.openTab],
+      )
+  }
+}
+
+/** The open tab shown anywhere in the view: among a Space's pins, its live folders or its tabs. */
+export const findTabView = (view: SidebarView, tabId: TabId): Option.Option<TabView> =>
+  Array.findFirst(
+    view.spaces.flatMap((space) => [
+      ...(space.pinned._tag === "Available" ? space.pinned.nodes.flatMap(tabsOfNode) : []),
+      ...space.temporaryEntries.flatMap((entry) =>
+        entry._tag === "TemporaryTab" ? [entry.tab] : [...entry.tabs],
+      ),
+    ]),
+    (tab) => tab.tabId === tabId,
+  )

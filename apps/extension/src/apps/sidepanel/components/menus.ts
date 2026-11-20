@@ -1,6 +1,7 @@
 import { Option } from "effect"
 import type { MessageKey } from "#modules/i18n"
 import { LiveLimit, LiveSort } from "#modules/live-folders"
+import { originPatternOfSite, soundSiteOf } from "#modules/sound"
 import type { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type {
   FavoriteView,
@@ -17,6 +18,7 @@ import {
   type LiveSourceKind,
 } from "../logic/live-folders"
 import { themeSwatch } from "../logic/space-themes"
+import { otherTemporaryTabs, temporaryTabsBelow } from "../logic/temporary-closing"
 import { openSplitViewOf, otherSpaces } from "../logic/view-queries"
 import { action, separator, submenu, type MenuEntry } from "../state/menu-controller.svelte"
 import type { SidebarContext } from "../state/sidebar-context"
@@ -25,7 +27,12 @@ import type { SpaceSetupSteps } from "../state/space-setup.svelte"
 export const openTabMenu = (
   ctx: SidebarContext,
   tabId: TabId,
-  options: { readonly isPinned: boolean; readonly startRename: () => void },
+  options: {
+    readonly isPinned: boolean
+    readonly startRename: () => void
+    /** The page open in the tab. Only a page on the web offers to choose where its sound goes. */
+    readonly pageUrl: string
+  },
 ): ReadonlyArray<MenuEntry> => {
   const { t } = ctx.translator
   const run = (command: SidebarCommand) => () => void ctx.run(command)
@@ -46,10 +53,44 @@ export const openTabMenu = (
       ? [action(t("sidepanel.tab.replacePinnedUrl"), run({ _tag: "ReplacePinnedUrl", tabId }))]
       : []),
     action(t("common.rename"), options.startRename),
+    ...Option.match(soundSiteOf(options.pageUrl), {
+      onNone: () => [],
+      onSome: (site) => [
+        action(t("sidepanel.tab.sound"), () =>
+          ctx.soundDialog.open({
+            tabId,
+            // Asked right in the click, before the panel opens: Chrome asks only while handling
+            // one, and answers at once without asking when access is granted already
+            access: ctx.originAccess.request([originPatternOfSite(site)]),
+          }),
+        ),
+      ],
+    }),
     separator,
     ...(destinations.length > 0 ? [submenu(t("sidepanel.tab.moveToSpace"), destinations)] : []),
     action(t("sidepanel.tab.archive"), run({ _tag: "ArchiveTab", tabId })),
     action(t("common.close"), run({ _tag: "CloseTab", tabId })),
+    ...(options.isPinned ? [] : closingMenuEntries(ctx, tabId)),
+  ]
+}
+
+/** Close Other Tabs and Close Tabs Below, among the temporary tabs of the Space shown. */
+const closingMenuEntries = (ctx: SidebarContext, tabId: TabId): ReadonlyArray<MenuEntry> => {
+  const { t } = ctx.translator
+  const entries = ctx.activeSpace.temporaryEntries
+  const others = otherTemporaryTabs(entries, tabId)
+  const below = temporaryTabsBelow(entries, tabId)
+  return [
+    action(
+      t("sidepanel.tab.closeOthers"),
+      () => void ctx.run({ _tag: "CloseTabs", tabIds: others }),
+      { disabled: others.length === 0 },
+    ),
+    action(
+      t("sidepanel.tab.closeBelow"),
+      () => void ctx.run({ _tag: "CloseTabs", tabIds: below }),
+      { disabled: below.length === 0 },
+    ),
   ]
 }
 
@@ -82,6 +123,8 @@ export const favoriteMenu = (
 export const temporarySplitMenu = (
   ctx: SidebarContext,
   splitViewId: SplitViewId,
+  /** One of the split view's tabs, to tell which row it is among the temporary tabs. */
+  tabId: TabId,
 ): ReadonlyArray<MenuEntry> => {
   const { t } = ctx.translator
   const { pinned, id: spaceId } = ctx.activeSpace
@@ -106,6 +149,8 @@ export const temporarySplitMenu = (
     action(t("sidepanel.tab.pin"), () => void ctx.run(pinAtEnd), {
       disabled: pinned._tag !== "Available",
     }),
+    separator,
+    ...closingMenuEntries(ctx, tabId),
   ]
 }
 

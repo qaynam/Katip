@@ -48,6 +48,14 @@ export const options: CatalogSection<"options"> = {
   "options.liveFolderNotifications.footnote": "开启时会请求显示通知的权限。关闭时会移除该权限。",
   "options.liveFolderNotifications.denied": "未获得显示通知的权限。",
 
+  "options.sound.heading": "声音",
+  "options.sound.sites.heading": "在其他扬声器上播放的网站",
+  "options.sound.empty": "还没有在其他扬声器上播放的网站。",
+  "options.sound.intro":
+    "要为网站选择扬声器，请在侧边栏中右键点击该网站的一个标签页，然后选择“声音设置…”。仅为单个标签页选择的扬声器不会列在这里，它们在标签页关闭前有效。",
+  "options.sound.defaultOutput": "系统默认",
+  "options.sound.remove": "移除",
+  "options.sound.removeLabel": "移除 {site} 的扬声器设置",
   "options.autoArchive.heading": "归档",
   "options.autoArchive.label": "自动归档闲置的标签页",
   "options.autoArchive.idleTime.label": "闲置多久后归档",

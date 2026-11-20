@@ -158,12 +158,14 @@ const manifestOf = (mode: BuildMode, version: string): chrome.runtime.ManifestV3
   // first clicked. Chrome warns about reading downloads, so requiring it would disable installed
   // copies on update until the warning is accepted
   optional_permissions: ["history", "notifications", "downloads", "downloads.open"],
-  // Live folder sources. Asked for only when a live folder needs one, so people who don't use
-  // live folders are never asked
+  // Live folder sources, and any site whose sound is sent to another output. Each is asked for
+  // only for the source or site it's needed for, so people who use neither are never asked
   optional_host_permissions: [
     "https://mail.google.com/*",
     "https://github.com/*",
     "https://api.github.com/*",
+    "https://*/*",
+    "http://*/*",
   ],
   icons: EXTENSION_ICONS,
   side_panel: { default_path: "sidepanel/index.html" },

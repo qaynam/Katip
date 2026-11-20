@@ -50,7 +50,7 @@
   rowKey="temporary-split:{splitViewId}"
   {halves}
   menuLabel={t("sidepanel.split.menu")}
-  menuEntries={() => temporarySplitMenu(ctx, splitViewId)}
+  menuEntries={() => temporarySplitMenu(ctx, splitViewId, tabs[0].tabId)}
   {dragSource}
   dropTargetAt={(edge) => ({
     _tag: "Temporary",

@@ -8,6 +8,7 @@ import { Tabs, type WindowId } from "#platform/browser"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { KeyboardCommand } from "./keyboard-command"
 import { KatipState } from "./katip-state"
+import { TabSounds } from "./tab-sounds"
 import { currentTranslator } from "./translation"
 
 /** Builds one window's view from the current state and the browser. */
@@ -40,5 +41,6 @@ export const buildSidebarView = Effect.fnUntraced(function* (windowId: WindowId)
     archive: yield* (yield* ArchiveRepository).list,
     canSplit: (yield* Tabs).supportsSplitView,
     spotlightShortcut: assignedKeys.get(KeyboardCommand.openSpotlight) ?? null,
+    tabSounds: yield* (yield* TabSounds).views,
   })
 })

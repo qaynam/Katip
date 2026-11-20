@@ -42,6 +42,7 @@
   import SettingRow from "./SettingRow.svelte"
   import SettingsSection from "./SettingsSection.svelte"
   import SiteCommandsSection from "./SiteCommandsSection.svelte"
+  import SoundSection from "./SoundSection.svelte"
   import SpotlightPositionSetting from "./SpotlightPositionSetting.svelte"
   import SpotlightSizePicker from "./SpotlightSizePicker.svelte"
   import { CURRENT_TAB_COMMANDS, OPEN_AND_MOVE_COMMANDS } from "./shortcut-commands"
@@ -572,6 +573,14 @@
               </SettingRow>
             </SettingsSection>
           {/if}
+        {:else if selected === "Sound"}
+          <p class="lede">{t("options.sound.intro")}</p>
+          <SoundSection
+            {runtime}
+            {translator}
+            {faviconUrl}
+            onsave={(saved) => announce(saved ? "Saved" : "SaveFailed")}
+          />
         {:else if selected === "Archive"}
           <SettingsSection footnote={t("options.autoArchive.footnote")}>
             <SettingRow label={t("options.autoArchive.label")}>

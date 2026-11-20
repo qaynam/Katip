@@ -51,6 +51,38 @@ export const sidepanel = {
   "sidepanel.tab.backToPinnedUrl": "Go back to the pinned URL",
   "sidepanel.tab.muted": "Muted",
   "sidepanel.tab.playingAudio": "Playing audio",
+  "sidepanel.tab.closeOthers": "Close Other Tabs",
+  "sidepanel.tab.closeBelow": "Close Tabs Below",
+  "sidepanel.tab.sound": "Sound Settings…",
+  "sidepanel.sound.title": "Sound Settings",
+  "sidepanel.sound.accessDenied":
+    "Katip wasn’t allowed to access {site}, so it can’t choose the speaker the site plays on.",
+  "sidepanel.sound.askingMicrophone": "Choose Allow when Chrome asks on {site}’s page.",
+  "sidepanel.sound.microphoneNote":
+    "Chrome tells a site the names of your speakers only once it may use the microphone. Katip only reads the names and records nothing, but the site may use the microphone too until you turn it off in its site settings.",
+  "sidepanel.sound.askAgain": "Ask Again",
+  "sidepanel.sound.microphoneBlocked":
+    "Chrome remembers {site}’s microphone as blocked, so it won’t ask again. Open the site’s settings, set Microphone to Allow, then choose Ask Again.",
+  "sidepanel.sound.openSiteSettings": "Open Site Settings",
+  "sidepanel.sound.checking": "Looking for speakers…",
+  "sidepanel.sound.allowAccess": "Allow Access",
+  "sidepanel.sound.microphoneRefused":
+    "{site} wasn’t allowed the microphone, so it can’t name your speakers.",
+  "sidepanel.sound.unreachable":
+    "This page can’t play on another speaker. Only secure pages, on https, can.",
+  "sidepanel.sound.outputLegend": "Play on",
+  "sidepanel.sound.defaultOutput": "System default",
+  "sidepanel.sound.disconnected": "{output} (not connected)",
+  "sidepanel.sound.scopeLegend": "Keep",
+  "sidepanel.sound.scopeSite": "Always on {site}",
+  "sidepanel.sound.scopeTab": "For this tab only",
+  "sidepanel.sound.apply": "Apply",
+  "sidepanel.sound.reset": "Reset",
+  "sidepanel.sound.playingOn": "Playing on {output}",
+  "sidepanel.sound.outputMissing":
+    "{output} isn’t connected, so this tab plays on the system default",
+  "sidepanel.sound.needsPermission":
+    "Can’t play on {output} until the site is allowed. Right-click the tab and choose Sound Settings…",
   "sidepanel.tab.addToFavorites": "Add to Favorites",
   "sidepanel.tab.pin": "Pin",
   "sidepanel.tab.unpin": "Unpin",

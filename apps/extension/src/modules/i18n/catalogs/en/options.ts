@@ -51,6 +51,14 @@ export const options = {
     "Turning this on asks for permission to show notifications. Turning it off removes the permission.",
   "options.liveFolderNotifications.denied": "Permission to show notifications wasn’t allowed.",
 
+  "options.sound.heading": "Sound",
+  "options.sound.sites.heading": "Sites that play on another speaker",
+  "options.sound.empty": "No site plays on another speaker yet.",
+  "options.sound.intro":
+    "To choose a speaker for a site, right-click one of its tabs in the sidebar and choose “Sound Settings…”. Speakers chosen for a single tab aren’t listed here; they last until the tab closes.",
+  "options.sound.defaultOutput": "System default",
+  "options.sound.remove": "Remove",
+  "options.sound.removeLabel": "Remove the speaker of {site}",
   "options.autoArchive.heading": "Archive",
   "options.autoArchive.label": "Archive inactive tabs automatically",
   "options.autoArchive.idleTime.label": "Archive after",

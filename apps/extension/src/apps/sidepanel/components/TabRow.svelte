@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { TabId } from "#platform/browser"
+  import type { TabSoundView } from "#protocol"
   import { rowZoneAt, type DragSource, type DropTarget, type Edge } from "../logic/drag-drop"
   import { pointRect } from "../logic/menu-position"
+  import { soundNoteOf as noteOf } from "../logic/tab-sound"
   import type { MenuEntry } from "../state/menu-controller.svelte"
   import { getSidebarContext } from "../state/sidebar-context"
   import Favicon from "./Favicon.svelte"
@@ -19,6 +21,8 @@
     isLoading?: boolean
     isAudible?: boolean
     isMuted?: boolean
+    /** Where Katip sends the tab's sound; undefined when Katip leaves it alone. */
+    sound?: TabSoundView | undefined
     isDiscarded?: boolean
     /**
      * When given, the favicon becomes a button that goes back to the pinned URL, and the title
@@ -54,6 +58,7 @@
     isLoading = false,
     isAudible = false,
     isMuted = false,
+    sound,
     isDiscarded = false,
     onReturnToPinnedUrl,
     tooltipTitle,
@@ -70,6 +75,7 @@
 
   const ctx = getSidebarContext()
   const t = $derived(ctx.translator.t)
+  const soundNoteOf = (tabSound: TabSoundView | undefined) => noteOf(tabSound, t)
   let row = $state<HTMLLIElement>()
   let isEditing = $state(false)
   const dropZone = $derived(ctx.drag.zoneFor(rowKey))
@@ -205,24 +211,32 @@
   {/if}
 
   {#if isAudible || isMuted}
+    {@const soundNote = soundNoteOf(sound)}
     {#if tabId === null}
       <span
         class="audio"
+        class:muted={isMuted}
+        class:routed={!isMuted && soundNote?.tone === "Routed"}
+        class:warning={!isMuted && soundNote?.tone === "Warning"}
         role="img"
         aria-label={t(isMuted ? "sidepanel.tab.muted" : "sidepanel.tab.playingAudio")}
+        title={soundNote?.text}
       >
-        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
+        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={16} />
       </span>
     {:else}
       {@const label = t(isMuted ? "actions.unmuteTab" : "actions.muteTab")}
       <button
         class="audio"
+        class:muted={isMuted}
+        class:routed={!isMuted && soundNote?.tone === "Routed"}
+        class:warning={!isMuted && soundNote?.tone === "Warning"}
         type="button"
-        aria-label={label}
-        title={label}
+        aria-label={soundNote === null ? label : `${label}, ${soundNote.text}`}
+        title={soundNote === null ? label : `${label} · ${soundNote.text}`}
         onclick={() => void ctx.run({ _tag: "SetTabMuted", tabId, muted: !isMuted })}
       >
-        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={14} />
+        <Icon name={isMuted ? "speakerMuted" : "speaker"} size={16} />
       </button>
     {/if}
   {/if}
@@ -368,18 +382,47 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: none;
     border-radius: 6px;
     background: none;
-    color: var(--text-muted);
+    color: var(--text);
   }
 
   button.audio:hover {
     background: var(--surface-hover);
-    color: var(--text);
+  }
+
+  /* Not the speaker's usual color with a slash alone: at a glance a muted tab looked like one
+     playing, so muting is spelled out in a colored chip */
+  .audio.muted {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger);
+  }
+
+  button.audio.muted:hover {
+    background: color-mix(in srgb, var(--danger) 26%, transparent);
+  }
+
+  /* Playing on an output Katip chose for it, not the one the system plays everything else on */
+  .audio.routed {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  button.audio.routed:hover {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+
+  /* Meant for another output it can't reach yet, so it plays on the system's for now */
+  .audio.warning {
+    background: color-mix(in srgb, var(--warning) 18%, transparent);
+    color: var(--warning);
+  }
+
+  button.audio.warning:hover {
+    background: color-mix(in srgb, var(--warning) 28%, transparent);
   }
 
   .close {

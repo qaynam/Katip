@@ -54,6 +54,39 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
   "sidepanel.tab.backToPinnedUrl": "Volver a la URL fijada",
   "sidepanel.tab.muted": "Silenciada",
   "sidepanel.tab.playingAudio": "Reproduciendo audio",
+  "sidepanel.tab.closeOthers": "Cerrar las demás pestañas",
+  "sidepanel.tab.closeBelow": "Cerrar las pestañas de abajo",
+  "sidepanel.tab.sound": "Configuración de sonido…",
+  "sidepanel.sound.title": "Configuración de sonido",
+  "sidepanel.sound.accessDenied":
+    "Katip no recibió permiso para acceder a {site}, así que no puede elegir el altavoz en el que suena el sitio.",
+  "sidepanel.sound.askingMicrophone":
+    "Elige Permitir cuando Chrome lo pregunte en la página de {site}.",
+  "sidepanel.sound.microphoneNote":
+    "Chrome solo le dice a un sitio los nombres de tus altavoces cuando puede usar el micrófono. Katip solo lee los nombres y no graba nada, pero el sitio también podrá usar el micrófono hasta que lo desactives en su configuración.",
+  "sidepanel.sound.askAgain": "Volver a pedir",
+  "sidepanel.sound.microphoneBlocked":
+    "Chrome recuerda que el micrófono de {site} está bloqueado, así que no volverá a preguntar. Abre la configuración del sitio, pon Micrófono en Permitir y luego elige Volver a pedir.",
+  "sidepanel.sound.openSiteSettings": "Abrir configuración del sitio",
+  "sidepanel.sound.checking": "Buscando altavoces…",
+  "sidepanel.sound.allowAccess": "Permitir acceso",
+  "sidepanel.sound.microphoneRefused":
+    "{site} no recibió permiso para el micrófono, así que no puede nombrar tus altavoces.",
+  "sidepanel.sound.unreachable":
+    "Esta página no puede sonar en otro altavoz. Solo pueden las páginas seguras, con https.",
+  "sidepanel.sound.outputLegend": "Reproducir en",
+  "sidepanel.sound.defaultOutput": "Predeterminado del sistema",
+  "sidepanel.sound.disconnected": "{output} (no conectado)",
+  "sidepanel.sound.scopeLegend": "Guardar",
+  "sidepanel.sound.scopeSite": "Siempre en {site}",
+  "sidepanel.sound.scopeTab": "Solo para esta pestaña",
+  "sidepanel.sound.apply": "Aplicar",
+  "sidepanel.sound.reset": "Restablecer",
+  "sidepanel.sound.playingOn": "Reproduciendo en {output}",
+  "sidepanel.sound.outputMissing":
+    "{output} no está conectado, así que esta pestaña suena en el predeterminado del sistema",
+  "sidepanel.sound.needsPermission":
+    "No puede sonar en {output} hasta que se permita el sitio. Haz clic derecho en la pestaña y elige Configuración de sonido…",
   "sidepanel.tab.addToFavorites": "Añadir a Favoritos",
   "sidepanel.tab.pin": "Fijar",
   "sidepanel.tab.unpin": "Dejar de fijar",

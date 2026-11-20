@@ -5,6 +5,7 @@ import App from "./App.svelte"
 import { makeChromeDownloads } from "./connection/downloads"
 import { makeStoredLocalePreferences } from "./connection/locale-preferences"
 import { chromeOriginAccess } from "./connection/origin-access"
+import { chromePageOutputs } from "./connection/page-outputs"
 import { createPortConnection, type SidebarPort } from "./connection/port-connection"
 import { makeSessionScrollPositions } from "./connection/scroll-positions"
 import { chromeSidePanel } from "./connection/side-panel"
@@ -35,6 +36,7 @@ mount(App, {
       windowId: currentWindow.id === undefined ? null : WindowId.make(currentWindow.id),
     }),
     originAccess: chromeOriginAccess,
+    pageOutputs: chromePageOutputs,
     downloads: makeChromeDownloads({
       fileManager: navigator.platform.startsWith("Mac") ? "Finder" : "Folder",
     }),

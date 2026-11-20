@@ -16,6 +16,7 @@
   import type { Downloads } from "./connection/downloads"
   import type { LocalePreferences } from "./connection/locale-preferences"
   import type { OriginAccess } from "./connection/origin-access"
+  import { noPageOutputs, type PageOutputAccess } from "./connection/page-outputs"
   import type { ScrollPositions } from "./connection/scroll-positions"
   import type { SidePanel } from "./connection/side-panel"
   import type { SidebarConnection, Undelivered } from "./connection/sidebar-connection"
@@ -29,6 +30,8 @@
   interface Props {
     connection: SidebarConnection
     originAccess: OriginAccess
+    /** What tabs' pages know of the outputs. None reachable when not given. */
+    pageOutputs?: PageOutputAccess
     downloads: Downloads
     localePreferences: LocalePreferences
     /**
@@ -46,6 +49,7 @@
   const {
     connection,
     originAccess,
+    pageOutputs = noPageOutputs,
     downloads,
     localePreferences,
     browserLanguages,
@@ -123,6 +127,7 @@
     {bodyPanel}
     {translator}
     {originAccess}
+    {pageOutputs}
     {downloads}
     {faviconUrl}
     {scrollPositions}

@@ -12,6 +12,7 @@ import { exposeLogsForDevelopment } from "./dev-log"
 import { reloadOnRebuild } from "./dev-reload"
 import { ExtensionInfo } from "./extension-info"
 import { AcceptsExternalConnection, isLocalDevelopmentPage } from "./external-connection"
+import { capturePageReports, PageSound } from "./page-sound"
 import { applicationLayer, program } from "./program"
 
 if (import.meta.env.MODE === "development") exposeLogsForDevelopment()
@@ -19,6 +20,7 @@ if (import.meta.env.MODE === "development") exposeLogsForDevelopment()
 // Subscribed synchronously before anything else, so the event that woke the service worker isn't
 // missed
 const captured = captureBrowserEvents(chrome)
+const pageReports = capturePageReports(chrome.runtime.onMessage)
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
 
@@ -34,6 +36,7 @@ const layer = applicationLayer.pipe(
       KeyboardShortcuts.layer,
       Scripting.layer,
       Notifications.layer,
+      PageSound.layer(pageReports),
     ),
   ),
 )

@@ -3,7 +3,15 @@ import type { GlyphName } from "./Glyph.svelte"
 import type { PlainMessageKey } from "./plain-message-key"
 
 /** The groups of settings, in the order the page lists them. The first opens by default. */
-export const CATEGORIES = ["General", "Tabs", "Archive", "Spotlight", "Shortcuts", "Data"] as const
+export const CATEGORIES = [
+  "General",
+  "Tabs",
+  "Sound",
+  "Archive",
+  "Spotlight",
+  "Shortcuts",
+  "Data",
+] as const
 export type Category = (typeof CATEGORIES)[number]
 
 export interface CategoryLook {
@@ -38,6 +46,11 @@ export const categoryLooks: Readonly<Record<Category, CategoryLook>> = {
     heading: "options.tabs.heading",
     slug: "tabs",
     icon: "tabs",
+  },
+  Sound: {
+    heading: "options.sound.heading",
+    slug: "sound",
+    icon: "speaker",
   },
   Archive: {
     heading: "options.autoArchive.heading",

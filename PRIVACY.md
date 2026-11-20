@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: November 16, 2026_
+_Last updated: November 19, 2026_
 
 Katip is a browser extension that organizes your tabs into Spaces in the side panel. This policy explains what data Katip handles and where it goes. In short: Katip has no server, collects nothing, and sends nothing to its developer or to anyone else.
 
@@ -10,6 +10,7 @@ Everything Katip keeps stays in your browser:
 
 - **Pinned tabs and folders** are saved as bookmarks in a "Katip" folder of your browser's bookmarks.
 - **Spaces, their colors, folder icons, live folder settings, the archive of closed tabs, and which tab belongs to which Space** are saved in the extension's local storage (`chrome.storage.local` and `chrome.storage.session`).
+- **The speaker chosen for each site**, by the speaker's name, is saved in the extension's local storage.
 - **Settings** are saved in `chrome.storage.sync`.
 
 If you have turned on sync in your browser (for example Chrome Sync), your browser may sync your bookmarks and `chrome.storage.sync` to your other devices through your browser vendor's account. That is your browser's feature, governed by its own privacy policy; Katip itself sends nothing.
@@ -34,6 +35,8 @@ These requests go directly from your browser to Gmail or GitHub. What they retur
 - **Gmail and GitHub access**: asked for only when you create a live folder for that site.
 - **Notifications**: if you turn on notifications about new items in live folders, Katip asks for permission to show notifications, and shows them through your system from what the live folders have already fetched. Showing them makes no network request.
 - **Downloads**: the first time you click the Downloads button at the bottom of the sidebar, Katip asks for permission to read and open your downloads. It lists the recent ones in the sidebar and opens a file or shows it in its folder only when you click it. Your downloads are read and shown only on your device; this makes no network request.
+- **Access to a site whose sound you send to another speaker**: asked for only when you choose a speaker for that site. Katip then runs a small script in the site's pages that points their audio and video at that speaker. The script reads nothing of the page and sends nothing anywhere.
+- **The microphone, for that site**: Chrome tells a site the names of your speakers only once the site may use the microphone, so Katip asks Chrome to ask you on the site's page. This permission belongs to the site, not to Katip. Katip uses it only to read the speakers' names and lets go of the microphone at once, without recording. The site may use the microphone too while the permission lasts; you can turn it off in the site's settings in your browser.
 
 You can revoke these at any time from Katip's settings or from your browser's extension settings.
 
@@ -58,7 +61,7 @@ If this policy changes, the new version will be published at this address with a
 
 # プライバシーポリシー（日本語）
 
-_最終更新: 2026 年 11 月 16 日_
+_最終更新: 2026 年 11 月 19 日_
 
 Katip は、サイドパネルでタブを Space ごとに整理するブラウザの拡張機能です。Katip はサーバーを持たず、データを集めず、開発者を含む誰にも何も送りません。
 
@@ -68,6 +71,7 @@ Katip が保存するものは、すべてお使いのブラウザの中にあ�
 
 - **ピンとフォルダ**: ブラウザのブックマークの「Katip」フォルダに保存します。
 - **Space とその色、フォルダのアイコン、ライブフォルダの設定、閉じたタブのアーカイブ、タブと Space の対応**: 拡張機能のローカルストレージ（`chrome.storage.local`、`chrome.storage.session`）に保存します。
+- **サイトごとに選んだスピーカー**: スピーカーの名前を、拡張機能のローカルストレージに保存します。
 - **設定**: `chrome.storage.sync` に保存します。
 
 ブラウザの同期（Chrome Sync など）を有効にしている場合、ブラウザがブックマークと `chrome.storage.sync` をほかの端末へ同期することがあります。これはブラウザの機能で、ブラウザ提供元のプライバシーポリシーに従います。Katip 自身は何も送りません。
@@ -92,6 +96,8 @@ Katip が通信するのは、アップデートの確認とライブフォル�
 - **Gmail と GitHub へのアクセス**: そのサイトのライブフォルダを作るときにだけ許可を求めます。
 - **通知**: ライブフォルダの新着の通知を有効にしたときにだけ許可を求め、ライブフォルダが取得済みの内容をシステムの通知で表示します。通知の表示のための通信はしません。
 - **ダウンロード**: サイドバー下部のダウンロードのボタンを初めて押したときに、ダウンロードを読み取って開く許可を求めます。最近のダウンロードをサイドバーに一覧し、ファイルを開いたりフォルダで表示したりするのはクリックしたときだけです。ダウンロードの情報は端末の中で読んで表示するだけで、そのための通信はしません。
+- **音を別のスピーカーで鳴らすサイトへのアクセス**: そのサイトのスピーカーを選ぶときにだけ許可を求めます。許可すると、Katip はそのサイトのページで小さなスクリプトを動かし、ページの音声や動画をそのスピーカーに向けます。このスクリプトはページの内容を読まず、どこにも何も送りません。
+- **そのサイトのマイク**: Chrome は、マイクの使用を許可したサイトにだけスピーカーの名前を教えます。そのため Katip は、サイトのページで Chrome から許可を尋ねてもらいます。この許可は Katip ではなくサイトに与えられます。Katip はスピーカーの名前を読むためだけに使い、録音せずにすぐマイクを手放します。許可が続く間はサイトもマイクを使えるので、不要になったらブラウザのサイトの設定でオフにできます。
 
 これらの許可は、Katip の設定画面やブラウザの拡張機能の設定から、いつでも取り消せます。
 

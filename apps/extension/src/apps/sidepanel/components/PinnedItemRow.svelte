@@ -58,7 +58,7 @@
           action(t("common.rename"), startRename),
           action(t("sidepanel.pin.delete"), () => void confirmRemoval(), { tone: "danger" }),
         ]
-      : openTabMenu(ctx, openTab.tabId, { isPinned: true, startRename })
+      : openTabMenu(ctx, openTab.tabId, { isPinned: true, startRename, pageUrl: openTab.url })
 </script>
 
 <TabRow
@@ -72,6 +72,7 @@
   isLoading={openTab?.isLoading ?? false}
   isAudible={openTab?.isAudible ?? false}
   isMuted={openTab?.isMuted ?? false}
+  sound={openTab?.sound}
   isDiscarded={openTab?.isDiscarded ?? false}
   onReturnToPinnedUrl={display._tag === "NavigatedAway" && openTab !== null
     ? () => void ctx.run({ _tag: "ResetPinnedTab", tabId: openTab.tabId })

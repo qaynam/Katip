@@ -45,7 +45,7 @@ import {
   type TrackedTab,
   type Workspace,
 } from "#modules/workspace"
-import type { BookmarkId, BrowserTab, WindowId } from "#platform/browser"
+import type { BookmarkId, BrowserTab, TabId, WindowId } from "#platform/browser"
 import type {
   FavoriteView,
   LiveFolderStatus,
@@ -56,6 +56,7 @@ import type {
   PinnedSplitView,
   SidebarView,
   SpaceView,
+  TabSoundView,
   TabView,
   TemporaryEntry,
 } from "#protocol"
@@ -90,6 +91,8 @@ export interface SidebarSources {
   readonly canSplit: boolean
   /** The key the browser assigned to open Spotlight, written as the browser shows it; null if none. */
   readonly spotlightShortcut: string | null
+  /** Where Katip sends the sound of the tabs it sends somewhere. Missing sends none anywhere. */
+  readonly tabSounds?: ReadonlyMap<TabId, TabSoundView>
 }
 
 const byIndex = Order.mapInput(Order.Number, (tab: BrowserTab) => tab.index)
@@ -109,7 +112,11 @@ const pageTitleOf = (tab: BrowserTab, untitled: string) =>
     Option.getOrElse(() => untitled),
   )
 
-const tabView = (tab: BrowserTab, title: string): TabView => ({
+const tabView = (
+  tab: BrowserTab,
+  title: string,
+  tabSounds: ReadonlyMap<TabId, TabSoundView>,
+): TabView => ({
   tabId: tab.id,
   title,
   url: urlOf(tab),
@@ -120,6 +127,10 @@ const tabView = (tab: BrowserTab, title: string): TabView => ({
   isMuted: tab.muted,
   isDiscarded: tab.discarded,
   splitViewId: Option.getOrNull(tab.splitViewId),
+  ...Option.match(Option.fromNullishOr(tabSounds.get(tab.id)), {
+    onNone: () => ({}),
+    onSome: (sound) => ({ sound }),
+  }),
 })
 
 /** `fallbackTitle` names the tab while it has no title of its own, such as while it loads. */
@@ -250,6 +261,7 @@ interface PinnedProjection {
   readonly liveFolders: LiveFolderSnapshot
   readonly translator: Translator
   readonly untitledTab: string
+  readonly tabSounds: ReadonlyMap<TabId, TabSoundView>
   readonly rule: FolderNestingRule
   readonly showAllOpenTabsInCollapsedFolders: boolean
 }
@@ -273,7 +285,7 @@ const pinnedItemView = (
       title: bookmark.title,
       url: bookmark.url,
       openTab: {
-        tab: tabView(tab, pageTitleOf(tab, projection.untitledTab)),
+        tab: tabView(tab, pageTitleOf(tab, projection.untitledTab), projection.tabSounds),
         hasNavigatedAway: hasNavigatedAway(tracked.pinned?.pinnedUrl ?? bookmark.url, urlOf(tab)),
       },
     }),
@@ -387,7 +399,11 @@ const pinnedLiveFolderView = (
         openTab:
           open === undefined
             ? null
-            : tabView(open.tab, pageTitleOf(open.tab, projection.untitledTab)),
+            : tabView(
+                open.tab,
+                pageTitleOf(open.tab, projection.untitledTab),
+                projection.tabSounds,
+              ),
       }
     },
   )
@@ -462,6 +478,7 @@ const spaceView = (
     liveFolders: sources.liveFolders,
     translator: sources.translator,
     untitledTab: sources.translator.t("common.newTab"),
+    tabSounds: sources.tabSounds ?? new Map(),
     rule,
     showAllOpenTabsInCollapsedFolders: sources.preferences.showAllOpenTabsInCollapsedFolders,
   }
@@ -481,7 +498,11 @@ const spaceView = (
     temporaryEntries: displayOrder(
       temporaryEntriesOf(
         temporary.map(({ tab, tracked }) =>
-          tabView(tab, tracked.titleOverride ?? pageTitleOf(tab, projection.untitledTab)),
+          tabView(
+            tab,
+            tracked.titleOverride ?? pageTitleOf(tab, projection.untitledTab),
+            projection.tabSounds,
+          ),
         ),
       ),
       { newestOnTop: sources.preferences.newTabsOnTop },
