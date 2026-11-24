@@ -8,6 +8,32 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Split a tab onto either side of another, and a web search from the Command Palette now leaves the results page focused in Brave too.
+
+### ✨ Improved
+
+- **Split on either side** — Drag a temporary tab over another and move it sideways to split the two, with the dragged tab on the side you moved toward. It used to go only on the right. Dragging straight up or down still reorders.
+
+### 🐛 Fixed
+
+- **Searches no longer leave the address bar focused in Brave** — In Brave, a web search from the Command Palette could still leave the focus in the address bar, so the keys you pressed next went there instead of the page. The results tab now comes to the front once the results start to show, with the page focused.
+
+## 日本語
+
+タブを左右どちらにでも分割できるようにしました。また Brave でも、コマンドパレットからのウェブ検索後に、検索結果のページへ正しくフォーカスが移るようにしました。
+
+### ✨ 改善
+
+- **左右どちらにも分割** — 一時タブを別のタブの上へドラッグし、左右に動かすと分割できます。ドラッグしたタブは動かした側に入ります。これまでは右側にしか分割できませんでした。真上や真下へドラッグした場合は、これまでどおりタブの並べ替えになります。
+
+### 🐛 修正
+
+- **Brave で検索したあとにアドレスバーへフォーカスが残る問題を修正** — Brave では、コマンドパレットからウェブ検索したあと、アドレスバーにフォーカスが残ってしまうことがあり、次に押したキーがページではなくアドレスバーに入力されていました。検索結果が表示され始めてからタブを前面に出すようにしたため、今後はページに正しくフォーカスが入ります。
+
 ## 1.12.0 — 2026-11-20
 
 ## English
