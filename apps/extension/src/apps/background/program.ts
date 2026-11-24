@@ -247,45 +247,56 @@ export const program = Effect.gen(function* () {
 
   const acceptsExternal = yield* AcceptsExternalConnection
   yield* events.connections.pipe(
+    // Not one conditional expression: TypeScript then takes the services one branch needs as those
+    // of all, and fails once another branch needs one that branch doesn't
     Stream.runForEach((port) =>
-      Option.exists(port.sender, (sender) => sender.external && !acceptsExternal(sender))
-        ? port.disconnect
-        : port.name === SIDEBAR_PORT_NAME
-          ? Effect.andThen(
-              Effect.forkScoped(refreshLiveFoldersOnOpen),
-              Effect.forkScoped(
-                hub.serve(port, (command) =>
-                  serialize(runSidebarCommand(command)).pipe(
-                    Effect.catchTag("TimeoutError", () =>
-                      Effect.andThen(
-                        Effect.logError("A command didn't finish in time", command),
-                        timedOut,
-                      ),
-                    ),
-                    Effect.tap(() => afterChange),
+      Effect.gen(function* () {
+        if (Option.exists(port.sender, (sender) => sender.external && !acceptsExternal(sender))) {
+          return yield* port.disconnect
+        }
+        if (port.name === SIDEBAR_PORT_NAME) {
+          yield* Effect.forkScoped(refreshLiveFoldersOnOpen)
+          yield* Effect.forkScoped(
+            hub.serve(port, (command) =>
+              serialize(runSidebarCommand(command)).pipe(
+                Effect.catchTag("TimeoutError", () =>
+                  Effect.andThen(
+                    Effect.logError("A command didn't finish in time", command),
+                    timedOut,
                   ),
                 ),
+                Effect.tap(() => afterChange),
               ),
-            )
-          : port.name === SPOTLIGHT_PORT_NAME
-            ? Effect.forkScoped(
-                spotlight.serve(port, (windowId, result, target) =>
-                  serialize(runSpotlightChoice(windowId, result, target)).pipe(
-                    Effect.catchTag("TimeoutError", () =>
-                      Effect.andThen(
-                        Effect.logError("A Spotlight choice didn't finish in time"),
-                        timedOut,
-                      ),
-                    ),
-                    Effect.tap(() => afterChange),
+            ),
+          )
+          return
+        }
+        if (port.name === SPOTLIGHT_PORT_NAME) {
+          yield* Effect.forkScoped(
+            spotlight.serve(port, (windowId, result, target) =>
+              serialize(runSpotlightChoice(windowId, result, target)).pipe(
+                Effect.catchTag("TimeoutError", () =>
+                  Effect.andThen(
+                    Effect.logError("A Spotlight choice didn't finish in time"),
+                    timedOut,
                   ),
                 ),
-              )
-            : port.name === EXPORT_PORT_NAME
-              ? Effect.forkScoped(serveDataExport(port, serialize(exportFileContent)))
-              : port.name === IMPORT_PORT_NAME
-                ? Effect.forkScoped(serveDataImport(port, serialize, afterChange))
-                : port.disconnect,
+                Effect.tap(() => afterChange),
+              ),
+            ),
+          )
+          return
+        }
+        if (port.name === EXPORT_PORT_NAME) {
+          yield* Effect.forkScoped(serveDataExport(port, serialize(exportFileContent)))
+          return
+        }
+        if (port.name === IMPORT_PORT_NAME) {
+          yield* Effect.forkScoped(serveDataImport(port, serialize, afterChange))
+          return
+        }
+        yield* port.disconnect
+      }),
     ),
     Effect.forkScoped(),
   )
