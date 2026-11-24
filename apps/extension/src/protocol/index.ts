@@ -8,7 +8,7 @@ export {
   PageSoundReport,
   PageSoundStatus,
 } from "./page-sound"
-export { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "./sidebar-command"
+export { PinnedPlacement, SidebarCommand, SplitSide, TemporaryPlacement } from "./sidebar-command"
 export {
   ClientMessage,
   CommandOutcome,

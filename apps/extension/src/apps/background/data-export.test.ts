@@ -77,7 +77,12 @@ describe("data export", () => {
           const home = (yield* sidebar.viewWhere((v) => v.spaces.length === 1)).activeSpaceId
           const atRoot = (index: number) => ({ spaceId: home, parentId: null, index })
           yield* sidebar.run({ _tag: "PlaceTabInPinned", tabId: tabIds[1], placement: atRoot(0) })
-          yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[3], withTabId: tabIds[2] })
+          yield* sidebar.run({
+            _tag: "SplitTabs",
+            tabId: tabIds[3],
+            withTabId: tabIds[2],
+            side: "Right",
+          })
           const splitViewId = yield* sidebar.viewWhere((v) => Option.isSome(splitViewIdIn(v)))
           yield* sidebar.run({
             _tag: "PlaceSplitInPinned",

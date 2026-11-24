@@ -72,11 +72,16 @@ export const temporaryTitles = (sidebar: Page) =>
 export const isSplitViewAvailable = (background: Worker) =>
   background.evaluate(() => typeof chrome.tabs.createSplit === "function")
 
-/** `ratio` is the drop height within the target: near the top inserts before, near the bottom after, and the middle of a folder drops into it. */
-export const dragOnto = async (source: Locator, target: Locator, ratio: number) => {
+/**
+ * `ratio` is the drop height within the target: near the top inserts before, near the bottom
+ * after, and the middle of a folder drops into it. The drag starts at the middle of the source,
+ * and `across` is where it ends across the target: by default right of where it started, which
+ * over the middle of a temporary tab splits with it on the right.
+ */
+export const dragOnto = async (source: Locator, target: Locator, ratio: number, across = 0.75) => {
   const box = await target.boundingBox()
   if (box === null) throw new Error("the drop target is not visible")
-  await source.dragTo(target, { targetPosition: { x: box.width * 0.75, y: box.height * ratio } })
+  await source.dragTo(target, { targetPosition: { x: box.width * across, y: box.height * ratio } })
 }
 
 export const renameRow = async (sidebar: Page, row: Locator, title: string) => {

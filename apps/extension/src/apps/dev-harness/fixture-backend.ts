@@ -21,6 +21,7 @@ import type {
   SidebarCommand,
   SidebarView,
   SpaceView,
+  SplitSide,
   TabView,
   TemporaryEntry,
   TemporaryPlacement,
@@ -374,7 +375,12 @@ const pinnedSplitShowing = (
       node.items.every((item) => item.openTab?.tab.splitViewId === splitViewId),
   )
 
-const splitTabs = (view: SidebarView, tabId: TabId, withTabId: TabId): CommandResponse | null => {
+const splitTabs = (
+  view: SidebarView,
+  tabId: TabId,
+  withTabId: TabId,
+  side: SplitSide,
+): CommandResponse | null => {
   const moving = findTemporaryEntry(view, containsTab(tabId))
   const staying = findTemporaryEntry(view, containsTab(withTabId))
   if (
@@ -386,7 +392,10 @@ const splitTabs = (view: SidebarView, tabId: TabId, withTabId: TabId): CommandRe
     return null
   }
   const spaceId = Option.getOrElse(spaceOwningTab(view, withTabId), () => view.activeSpaceId)
-  const merged = splitEntry(nextSplitViewId(view), staying.value.tab, moving.value.tab)
+  const merged =
+    side === "Left"
+      ? splitEntry(nextSplitViewId(view), moving.value.tab, staying.value.tab)
+      : splitEntry(nextSplitViewId(view), staying.value.tab, moving.value.tab)
   const withoutMoving = removeFromTemporary(view, containsTab(tabId))
   return succeeded(
     activateTab(
@@ -866,7 +875,8 @@ const respondWithoutPeeks = (
     .pipe(
       Match.tag(
         "SplitTabs",
-        ({ tabId, withTabId }) => splitTabs(view, tabId, withTabId) ?? notReproduced(view, command),
+        ({ tabId, withTabId, side }) =>
+          splitTabs(view, tabId, withTabId, side) ?? notReproduced(view, command),
       ),
       Match.tag("Unsplit", ({ splitViewId }) => succeeded(unsplit(view, splitViewId))),
       Match.tag(

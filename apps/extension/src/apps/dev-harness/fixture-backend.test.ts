@@ -71,11 +71,27 @@ describe("the fixture's naive responses", () => {
     expect(temporaryTabIds(next)).not.toContain(32)
   })
 
-  it("splitting two temporary tabs puts the dropped tab to the right of the row it was dropped on", () => {
-    const next = viewAfter({ _tag: "SplitTabs", tabId: TabId.make(33), withTabId: TabId.make(32) })
+  it("splitting two temporary tabs puts the dropped tab to the right when dropped on the right", () => {
+    const next = viewAfter({
+      _tag: "SplitTabs",
+      tabId: TabId.make(33),
+      withTabId: TabId.make(32),
+      side: "Right",
+    })
 
     expect(temporaryShape(next)).toContainEqual([32, 33])
     expect(temporaryShape(next)).not.toContain(33)
+  })
+
+  it("splitting two temporary tabs puts the dropped tab to the left when dropped on the left", () => {
+    const next = viewAfter({
+      _tag: "SplitTabs",
+      tabId: TabId.make(33),
+      withTabId: TabId.make(32),
+      side: "Left",
+    })
+
+    expect(temporaryShape(next)).toContainEqual([33, 32])
   })
 
   it("separating a split view turns it back into two temporary tabs", () => {

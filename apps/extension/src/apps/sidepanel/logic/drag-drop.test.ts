@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { FavoriteId } from "#modules/favorites"
 import { SpaceId } from "#modules/space"
 import { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
+import type { SplitSide } from "#protocol"
 import {
   commandForDrop,
   commandForPageDrop,
@@ -91,7 +92,11 @@ const aboveTab = (id: number): DropTarget => ({
   _tag: "Temporary",
   placement: { _tag: "Above", tabId: tabId(id) },
 })
-const splitWith = (id: number): DropTarget => ({ _tag: "SplitWith", tabId: tabId(id) })
+const splitWith = (id: number, side: SplitSide = "Right"): DropTarget => ({
+  _tag: "SplitWith",
+  tabId: tabId(id),
+  side,
+})
 
 const drop = (
   source: DragSource,
@@ -318,11 +323,18 @@ describe("Dragging a Favorite", () => {
 })
 
 describe("Dropping a tab on the middle of a temporary tab row", () => {
-  it("creates a split view with the dropped tab to the right of the target tab", () => {
-    expect(drop(temporaryTab(1), splitWith(2))).toStrictEqual({
+  it("creates a split view with the dropped tab on the side it was moved toward", () => {
+    expect(drop(temporaryTab(1), splitWith(2, "Right"))).toStrictEqual({
       _tag: "SplitTabs",
       tabId: tabId(1),
       withTabId: tabId(2),
+      side: "Right",
+    })
+    expect(drop(temporaryTab(1), splitWith(2, "Left"))).toStrictEqual({
+      _tag: "SplitTabs",
+      tabId: tabId(1),
+      withTabId: tabId(2),
+      side: "Left",
     })
   })
 
@@ -331,11 +343,13 @@ describe("Dropping a tab on the middle of a temporary tab row", () => {
       _tag: "SplitTabs",
       tabId: tabId(7),
       withTabId: tabId(2),
+      side: "Right",
     })
     expect(drop(favorite(5, 0), splitWith(2))).toStrictEqual({
       _tag: "SplitTabs",
       tabId: tabId(5),
       withTabId: tabId(2),
+      side: "Right",
     })
   })
 
@@ -490,27 +504,33 @@ describe("edgeAt", () => {
 })
 
 describe("Hovering over a temporary tab row", () => {
-  const row = { width: 200, height: 40 }
+  const hover = (offsetY: number, shiftX: number) => ({ offsetY, height: 40, shiftX })
 
-  it("splits when over the vertical middle toward the right of a row that can be split", () => {
-    expect(rowZoneAt({ x: 190, y: 20 }, row, true)).toBe("split")
-    expect(rowZoneAt({ x: 70, y: 8 }, row, true)).toBe("split")
-    expect(rowZoneAt({ x: 70, y: 32 }, row, true)).toBe("split")
+  it("splits on the right when moved right of where the drag began, over the vertical middle", () => {
+    expect(rowZoneAt(hover(20, 24), true)).toBe("Right")
+    expect(rowZoneAt(hover(8, 120), true)).toBe("Right")
+    expect(rowZoneAt(hover(32, 120), true)).toBe("Right")
   })
 
-  it("reorders by the top or bottom half when over the left part, even on a row that can be split", () => {
-    expect(rowZoneAt({ x: 69, y: 19 }, row, true)).toBe("before")
-    expect(rowZoneAt({ x: 69, y: 21 }, row, true)).toBe("after")
+  it("splits on the left when moved left of where the drag began, over the vertical middle", () => {
+    expect(rowZoneAt(hover(20, -24), true)).toBe("Left")
+    expect(rowZoneAt(hover(8, -120), true)).toBe("Left")
+    expect(rowZoneAt(hover(32, -120), true)).toBe("Left")
   })
 
-  it("reorders before or after when over the top or bottom edge, even on a row that can be split", () => {
-    expect(rowZoneAt({ x: 190, y: 7.9 }, row, true)).toBe("before")
-    expect(rowZoneAt({ x: 190, y: 32.1 }, row, true)).toBe("after")
+  it("reorders by the top or bottom half when moved straight up or down, even on a row that can be split", () => {
+    expect(rowZoneAt(hover(19, 23.9), true)).toBe("before")
+    expect(rowZoneAt(hover(21, -23.9), true)).toBe("after")
+  })
+
+  it("reorders before or after when over the top or bottom edge, even when moved sideways", () => {
+    expect(rowZoneAt(hover(7.9, 120), true)).toBe("before")
+    expect(rowZoneAt(hover(32.1, -120), true)).toBe("after")
   })
 
   it("reorders before in the top half and after in the bottom half of a row that can't be split", () => {
-    expect(rowZoneAt({ x: 190, y: 19.9 }, row, false)).toBe("before")
-    expect(rowZoneAt({ x: 190, y: 20 }, row, false)).toBe("after")
+    expect(rowZoneAt(hover(19.9, 120), false)).toBe("before")
+    expect(rowZoneAt(hover(20, -120), false)).toBe("after")
   })
 })
 

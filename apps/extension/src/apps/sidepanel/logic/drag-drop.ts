@@ -2,7 +2,7 @@ import { Match, Option } from "effect"
 import type { FavoriteId } from "#modules/favorites"
 import type { SpaceId } from "#modules/space"
 import type { BookmarkId, SplitViewId, TabId, WindowId } from "#platform/browser"
-import type { PinnedPlacement, SidebarCommand, TemporaryPlacement } from "#protocol"
+import type { PinnedPlacement, SidebarCommand, SplitSide, TemporaryPlacement } from "#protocol"
 import type { Point, Size } from "./menu-position"
 
 export interface PinnedPosition {
@@ -55,7 +55,7 @@ export type DragSource =
 // Only commandForDrop converts it into the final destination index
 export type DropTarget =
   | { readonly _tag: "Temporary"; readonly placement: TemporaryPlacement }
-  | { readonly _tag: "SplitWith"; readonly tabId: TabId }
+  | { readonly _tag: "SplitWith"; readonly tabId: TabId; readonly side: SplitSide }
   | { readonly _tag: "Pinned"; readonly parentId: BookmarkId | null; readonly slot: number }
   | { readonly _tag: "Favorites"; readonly slot: number }
   | { readonly _tag: "SpaceBar"; readonly slot: number }
@@ -76,20 +76,34 @@ export const slotAt = (index: number, edge: Edge): number => (edge === "before" 
 export const temporaryPlacementAt = (tabId: TabId, edge: Edge): TemporaryPlacement =>
   edge === "before" ? { _tag: "Above", tabId } : { _tag: "Below", tabId }
 
-export type RowZone = Edge | "split"
+export type RowZone = Edge | SplitSide
 
-// On rows that can be split, the vertical middle band minus its left part (the right side of
-// the row) creates a split view. The dropped tab goes on the right, so moving right is what
-// splits. The left part and the top and bottom edges stay for reordering, so dragging straight
-// up or down from where the row was grabbed never turns into a split. Rows that can't be
-// split don't reserve the band, which would only shrink their reorder hit area
-export const rowZoneAt = (offset: Point, size: Size, canSplit: boolean): RowZone => {
-  const vertical = edgeAt(offset.y, size.height)
+export const isSplitZone = (zone: RowZone | FolderZone): zone is SplitSide =>
+  zone === "Left" || zone === "Right"
+
+export interface RowHover {
+  /** From the row's top edge. */
+  readonly offsetY: number
+  readonly height: number
+  /** How far the pointer has gone sideways since the drag began, negative to the left. */
+  readonly shiftX: number
+}
+
+// Far enough that a hand dragging straight up or down doesn't drift into it
+const SPLIT_SHIFT_PX = 24
+
+// Over the vertical middle band of a row that can be split, moving sideways from where the drag
+// began splits, with the dropped tab on the side it moved toward. Not by where the pointer is on
+// the row: wherever the row was grabbed, dragging straight up or down then stays a reorder. The
+// top and bottom edges always reorder. Rows that can't be split don't reserve the band, which
+// would only shrink their reorder hit area
+export const rowZoneAt = (hover: RowHover, canSplit: boolean): RowZone => {
+  const vertical = edgeAt(hover.offsetY, hover.height)
   if (!canSplit) return vertical
-  const verticalRatio = offset.y / size.height
+  const verticalRatio = hover.offsetY / hover.height
   const isInMiddleBand = verticalRatio >= 0.2 && verticalRatio <= 0.8
-  const isTowardRight = offset.x >= size.width * 0.35
-  return isInMiddleBand && isTowardRight ? "split" : vertical
+  if (!isInMiddleBand || Math.abs(hover.shiftX) < SPLIT_SHIFT_PX) return vertical
+  return hover.shiftX < 0 ? "Left" : "Right"
 }
 
 export type FolderZone = "before" | "into" | "after" | "firstChild"
@@ -200,12 +214,17 @@ const dropOnTemporary = (
 
 const dropOnSplit = (
   source: DragSource,
-  withTabId: TabId,
+  target: { readonly tabId: TabId; readonly side: SplitSide },
   canSplit: boolean,
 ): Option.Option<SidebarCommand> =>
   singleTabOf(source).pipe(
-    Option.filter((tabId) => canSplit && tabId !== withTabId),
-    Option.map((tabId) => ({ _tag: "SplitTabs", tabId, withTabId })),
+    Option.filter((tabId) => canSplit && tabId !== target.tabId),
+    Option.map((tabId) => ({
+      _tag: "SplitTabs",
+      tabId,
+      withTabId: target.tabId,
+      side: target.side,
+    })),
   )
 
 const dropOnPinned = (
@@ -288,7 +307,7 @@ export const commandForDrop = (
 ): Option.Option<SidebarCommand> =>
   Match.valueTags(target, {
     Temporary: ({ placement }) => dropOnTemporary(source, placement, context.spaceId),
-    SplitWith: ({ tabId }) => dropOnSplit(source, tabId, context.canSplit),
+    SplitWith: (split) => dropOnSplit(source, split, context.canSplit),
     Pinned: (pinned) => dropOnPinned(source, pinned, context.spaceId),
     Favorites: ({ slot }) => dropOnFavorites(source, slot, context.spaceId),
     SpaceBar: ({ slot }) => dropOnSpaceBar(source, slot),
@@ -311,7 +330,7 @@ export const dropOutcome = (
     Option.orElse(() =>
       target._tag === "SplitWith" &&
       !context.canSplit &&
-      Option.isSome(dropOnSplit(source, target.tabId, true))
+      Option.isSome(dropOnSplit(source, target, true))
         ? Option.some<DropOutcome>({ _tag: "SplitUnsupported" })
         : Option.none(),
     ),

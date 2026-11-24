@@ -207,6 +207,7 @@ const splitWithNewTab = Effect.fnUntraced(function* (callerWindowId: WindowId, t
     _tag: "SplitTabs",
     tabId: created.id,
     withTabId: tab.id,
+    side: "Right",
   })
   // Opened only to be split, it would otherwise be left behind among the tabs
   if (outcome._tag === "Failed") yield* tabs.remove([created.id])

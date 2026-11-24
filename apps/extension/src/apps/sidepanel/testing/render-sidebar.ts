@@ -134,6 +134,26 @@ export const shownAppearance = (container: HTMLElement) => {
   }
 }
 
+// Shared by every element, so where a drag starts and where it hovers are on one horizontal scale
+const rowBounds = new DOMRect(0, 100, 240, 36)
+
+/**
+ * Simulates starting to drag the element at a horizontal position given as a ratio (0 to 1) of
+ * its width.
+ *
+ * jsdom has no DragEvent, so this dispatches a mouse event with coordinates.
+ */
+export const dragStartAt = async (element: HTMLElement, horizontalRatio: number) => {
+  await fireEvent(
+    element,
+    new MouseEvent("dragstart", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rowBounds.left + rowBounds.width * horizontalRatio,
+    }),
+  )
+}
+
 /**
  * Simulates dragging over the element at a position given as ratios (0 to 1) of its size.
  * Horizontally it defaults to the right side.
@@ -146,7 +166,7 @@ export const dragOverAt = async (
   verticalRatio: number,
   horizontalRatio = 0.75,
 ) => {
-  const bounds = new DOMRect(0, 100, 240, 36)
+  const bounds = rowBounds
   vi.spyOn(element, "getBoundingClientRect").mockReturnValue(bounds)
   await fireEvent(
     element,

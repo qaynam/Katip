@@ -34,6 +34,7 @@ export class DragSession {
   #outcome: DropOutcome | null = null
   #hover: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null
   #panel: PanelBounds | null = null
+  #grabX: number | null = null
   readonly #context: () => DropContext
   readonly #pageDrop: PageDropHandler
 
@@ -50,6 +51,7 @@ export class DragSession {
     }
     this.source = source
     this.sourceKey = key
+    this.#grabX = event.clientX
     // Taken while the pointer is still over the panel: the drag's end may be anywhere on screen
     this.#panel = {
       origin: { x: event.screenX - event.clientX, y: event.screenY - event.clientY },
@@ -97,6 +99,11 @@ export class DragSession {
     }
   }
 
+  /** How far the pointer has gone sideways since the drag began, negative to the left. */
+  shiftFromGrab(event: DragEvent): number {
+    return this.#grabX === null ? 0 : event.clientX - this.#grabX
+  }
+
   accepts(target: DropTarget): boolean {
     return Option.isSome(this.#outcomeFor(target))
   }
@@ -134,6 +141,7 @@ export class DragSession {
     this.cancelHover()
     this.#outcome = null
     this.#panel = null
+    this.#grabX = null
     this.indicator = null
     this.source = null
     this.sourceKey = null

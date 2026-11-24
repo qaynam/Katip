@@ -48,5 +48,5 @@
     _tag: "Temporary",
     placement: temporaryPlacementAt(tab.tabId, edge),
   })}
-  splitTarget={{ _tag: "SplitWith", tabId: tab.tabId }}
+  splitTargetAt={(side) => ({ _tag: "SplitWith", tabId: tab.tabId, side })}
 />

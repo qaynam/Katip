@@ -63,6 +63,27 @@ test.describe("on Chrome with the split view API", () => {
       .toStrictEqual(["/a split", "/b split active"])
   })
 
+  test("dropping a temporary tab onto another after moving it left puts it on the left of the split", async ({
+    site,
+    sidebar,
+    background,
+  }) => {
+    await openPages(background, [`${site}/a`, `${site}/b`])
+    const temporary = sidebar.getByRole("region", { name: "Temporary tabs" })
+    await expect(temporary.getByRole("button", { name: "Page /b" })).toBeVisible()
+
+    await dragOnto(
+      temporary.getByRole("button", { name: "Page /b" }),
+      temporary.getByRole("button", { name: "Page /a" }),
+      0.5,
+      0.25,
+    )
+
+    await expect
+      .poll(() => pagesInBrowser(background, site))
+      .toStrictEqual(["/b split active", "/a split"])
+  })
+
   test("a split view row shows both tabs in one row", async ({ site, sidebar, background }) => {
     await openSplit(background, site, ["/a", "/b"])
 

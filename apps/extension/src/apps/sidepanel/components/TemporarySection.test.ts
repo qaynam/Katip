@@ -3,7 +3,7 @@ import { tick } from "svelte"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { TemporaryEntry } from "#protocol"
-import { commandsOf, dragOverAt, renderSidebar } from "../testing/render-sidebar"
+import { commandsOf, dragOverAt, dragStartAt, renderSidebar } from "../testing/render-sidebar"
 import {
   pinnedFolder,
   pinnedItem,
@@ -313,15 +313,44 @@ describe("Drag and drop", () => {
     ])
   })
 
-  it("creates a split view with the dropped tab on the right when dropped on the middle of another temporary tab", async () => {
+  it("creates a split view with the dropped tab on the right when moved right over the middle of another temporary tab", async () => {
     const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
 
-    await fireEvent.dragStart(rowOf("Tab 2"))
-    await dragOverAt(rowOf("Tab 1"), 0.5)
+    await dragStartAt(rowOf("Tab 2"), 0.25)
+    await dragOverAt(rowOf("Tab 1"), 0.5, 0.75)
     await fireEvent.drop(rowOf("Tab 1"))
 
     expect(connection.sentCommands).toStrictEqual([
-      { _tag: "SplitTabs", tabId: TabId.make(2), withTabId: TabId.make(1) },
+      { _tag: "SplitTabs", tabId: TabId.make(2), withTabId: TabId.make(1), side: "Right" },
+    ])
+  })
+
+  it("creates a split view with the dropped tab on the left when moved left over the middle of another temporary tab", async () => {
+    const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
+
+    await dragStartAt(rowOf("Tab 2"), 0.75)
+    await dragOverAt(rowOf("Tab 1"), 0.5, 0.25)
+    await fireEvent.drop(rowOf("Tab 1"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "SplitTabs", tabId: TabId.make(2), withTabId: TabId.make(1), side: "Left" },
+    ])
+  })
+
+  it("reorders instead of splitting when moved straight up over the middle of another temporary tab", async () => {
+    const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
+
+    await dragStartAt(rowOf("Tab 2"), 0.5)
+    await dragOverAt(rowOf("Tab 1"), 0.4, 0.5)
+    await fireEvent.drop(rowOf("Tab 1"))
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PlaceTabInTemporary",
+        tabId: TabId.make(2),
+        spaceId: "work",
+        placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
     ])
   })
 
@@ -330,8 +359,8 @@ describe("Drag and drop", () => {
       viewWithEntries([temporaryTab(tabView(1)), temporaryTab(tabView(2))], { canSplit: false }),
     )
 
-    await fireEvent.dragStart(rowOf("Tab 2"))
-    await dragOverAt(rowOf("Tab 1"), 0.5)
+    await dragStartAt(rowOf("Tab 2"), 0.25)
+    await dragOverAt(rowOf("Tab 1"), 0.5, 0.75)
     await fireEvent.drop(rowOf("Tab 1"))
 
     expect(connection.sentCommands).toStrictEqual([])

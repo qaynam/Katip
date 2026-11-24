@@ -986,6 +986,7 @@ describe("split view", () => {
             _tag: "SplitTabs",
             tabId: tabIds[2],
             withTabId: tabIds[0],
+            side: "Right",
           })
           const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
 
@@ -993,6 +994,27 @@ describe("split view", () => {
           expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["A", "C"]]])
         }),
       ),
+  )
+
+  it.live("a tab dropped on the left of another goes on the left of the split view", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const { windowId, tabIds } = yield* seedThreeTabs
+        yield* startBackground
+        const sidebar = yield* openSidebar(windowId)
+        yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+
+        const outcome = yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[2],
+          withTabId: tabIds[0],
+          side: "Left",
+        })
+        const view = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+        expect([outcome._tag, entriesShape(view)]).toStrictEqual(["Succeeded", ["B", ["C", "A"]]])
+      }),
+    ),
   )
 
   describe("letting a tab go over the page", () => {
@@ -1095,7 +1117,12 @@ describe("split view", () => {
           const sidebar = yield* openSidebar(windowId)
           yield* sidebar.viewWhere((v) => v.spaces.length === 1)
 
-          yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[2], withTabId: tabIds[0] })
+          yield* sidebar.run({
+            _tag: "SplitTabs",
+            tabId: tabIds[2],
+            withTabId: tabIds[0],
+            side: "Right",
+          })
           const dragged = yield* (yield* Tabs).get(tabIds[2])
 
           expect([dragged.active, Option.isSome(dragged.splitViewId)]).toStrictEqual([true, true])
@@ -1110,7 +1137,12 @@ describe("split view", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[1],
+          withTabId: tabIds[0],
+          side: "Right",
+        })
         const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
 
         yield* sidebar.run({
@@ -1131,7 +1163,12 @@ describe("split view", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         const initial = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[1],
+          withTabId: tabIds[0],
+          side: "Right",
+        })
         const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
 
         yield* sidebar.run({
@@ -1162,7 +1199,12 @@ describe("split view", () => {
           yield* startBackground
           const sidebar = yield* openSidebar(windowId)
           yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-          yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+          yield* sidebar.run({
+            _tag: "SplitTabs",
+            tabId: tabIds[1],
+            withTabId: tabIds[0],
+            side: "Right",
+          })
           yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
 
           yield* sidebar.run({ _tag: "PinTab", tabId: tabIds[0] })
@@ -1183,7 +1225,12 @@ describe("split view", () => {
         yield* startBackground
         const sidebar = yield* openSidebar(windowId)
         const initial = yield* sidebar.viewWhere((v) => v.spaces.length === 1)
-        yield* sidebar.run({ _tag: "SplitTabs", tabId: tabIds[1], withTabId: tabIds[0] })
+        yield* sidebar.run({
+          _tag: "SplitTabs",
+          tabId: tabIds[1],
+          withTabId: tabIds[0],
+          side: "Right",
+        })
         const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
         yield* sidebar.run({
           _tag: "PlaceSplitInPinned",
@@ -1454,6 +1501,7 @@ describe("when a Chrome API doesn't respond", () => {
           _tag: "SplitTabs",
           tabId: tabIds[1],
           withTabId: tabIds[0],
+          side: "Right",
         })
         const activate = yield* sidebar.run({ _tag: "ActivateTab", tabId: tabIds[1] })
 
@@ -1481,6 +1529,7 @@ describe("Chrome without the split view API", () => {
         _tag: "SplitTabs",
         tabId: tabIds[1],
         withTabId: tabIds[0],
+        side: "Right",
       })
 
       expect([view.canSplit, outcome]).toStrictEqual([

@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { TabId } from "#platform/browser"
-  import type { TabSoundView } from "#protocol"
-  import { rowZoneAt, type DragSource, type DropTarget, type Edge } from "../logic/drag-drop"
+  import type { SplitSide, TabSoundView } from "#protocol"
+  import {
+    edgeAt,
+    isSplitZone,
+    rowZoneAt,
+    type DragSource,
+    type DropTarget,
+    type Edge,
+  } from "../logic/drag-drop"
   import { pointRect } from "../logic/menu-position"
   import { soundNoteOf as noteOf } from "../logic/tab-sound"
   import type { MenuEntry } from "../state/menu-controller.svelte"
@@ -41,10 +48,10 @@
     dragSource: DragSource
     dropTargetAt: (edge: Edge) => DropTarget | null
     /**
-     * The drop target for the middle of the row. For drags it doesn't accept, the middle
-     * reorders like the edges.
+     * The drop target for a drag moved sideways over the middle of the row. For drags it doesn't
+     * accept, the middle reorders like the edges.
      */
-    splitTarget?: DropTarget | null
+    splitTargetAt?: ((side: SplitSide) => DropTarget) | null
   }
 
   const {
@@ -70,7 +77,7 @@
     menuEntries,
     dragSource,
     dropTargetAt,
-    splitTarget = null,
+    splitTargetAt = null,
   }: Props = $props()
 
   const ctx = getSidebarContext()
@@ -79,6 +86,7 @@
   let row = $state<HTMLLIElement>()
   let isEditing = $state(false)
   const dropZone = $derived(ctx.drag.zoneFor(rowKey))
+  const splitSide = $derived(dropZone !== null && isSplitZone(dropZone) ? dropZone : null)
   const isDragged = $derived(ctx.drag.sourceKey === rowKey)
 
   // Scrolls only when the tab becomes active, not on changes such as the loading state. Reading
@@ -127,13 +135,19 @@
 
   const onDragOver = (event: DragEvent & { currentTarget: HTMLLIElement }) => {
     const bounds = event.currentTarget.getBoundingClientRect()
-    const canSplitInCenter = splitTarget !== null && ctx.drag.accepts(splitTarget)
-    const zone = rowZoneAt(
-      { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
-      bounds,
-      canSplitInCenter,
-    )
-    ctx.drag.offer(event, rowKey, zone, zone === "split" ? splitTarget : dropTargetAt(zone))
+    const hover = {
+      offsetY: event.clientY - bounds.top,
+      height: bounds.height,
+      shiftX: ctx.drag.shiftFromGrab(event),
+    }
+    const zone = rowZoneAt(hover, splitTargetAt !== null)
+    const split = isSplitZone(zone) ? splitTargetAt?.(zone) : undefined
+    if (split !== undefined && ctx.drag.accepts(split)) {
+      ctx.drag.offer(event, rowKey, zone, split)
+      return
+    }
+    const edge = edgeAt(hover.offsetY, hover.height)
+    ctx.drag.offer(event, rowKey, edge, dropTargetAt(edge))
   }
 
   const scheduleTooltip = (event: PointerEvent) => {
@@ -154,8 +168,9 @@
   class:dragged={isDragged}
   class:drop-before={dropZone === "before"}
   class:drop-after={dropZone === "after"}
-  class:drop-split={dropZone === "split" && ctx.view.canSplit}
-  class:drop-split-unsupported={dropZone === "split" && !ctx.view.canSplit}
+  class:drop-split={splitSide !== null && ctx.view.canSplit}
+  class:drop-split-left={splitSide === "Left" && ctx.view.canSplit}
+  class:drop-split-unsupported={splitSide !== null && !ctx.view.canSplit}
   data-tab-id={tabId}
   draggable={!isEditing}
   ondragstart={(event) => ctx.drag.begin(event, rowKey, dragSource)}
@@ -487,6 +502,16 @@
     background: var(--surface-hover);
     content: "";
     pointer-events: none;
+  }
+
+  .row.drop-split-left {
+    padding-right: 6px;
+    padding-left: calc(50% + 2px);
+  }
+
+  .row.drop-split-left::after {
+    right: auto;
+    left: 4px;
   }
 
   .row.drop-split .close,

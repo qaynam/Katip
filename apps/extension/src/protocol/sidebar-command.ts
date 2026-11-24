@@ -28,6 +28,9 @@ export const PinnedPlacement = Schema.Struct({
 })
 export type PinnedPlacement = typeof PinnedPlacement.Type
 
+export const SplitSide = Schema.Literals(["Left", "Right"])
+export type SplitSide = typeof SplitSide.Type
+
 export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("SwitchSpace", { windowId: WindowId, spaceId: SpaceId }),
   Schema.TaggedStruct("CreateSpace", {
@@ -70,8 +73,8 @@ export const SidebarCommand = Schema.Union([
   Schema.TaggedStruct("PinTab", { tabId: TabId }),
   Schema.TaggedStruct("UnpinTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTemporaryTabs", { windowId: WindowId, spaceId: SpaceId }),
-  // Puts tabId to the right of withTabId in a split view
-  Schema.TaggedStruct("SplitTabs", { tabId: TabId, withTabId: TabId }),
+  // Puts tabId on the given side of withTabId in a split view
+  Schema.TaggedStruct("SplitTabs", { tabId: TabId, withTabId: TabId, side: SplitSide }),
   // A tab let go over the page, outside the side panel. In screen coordinates, with the side
   // panel's left and right edges
   Schema.TaggedStruct("SplitWithShownTab", {

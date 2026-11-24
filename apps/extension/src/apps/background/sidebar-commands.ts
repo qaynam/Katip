@@ -520,8 +520,8 @@ const splitTabs = Effect.fnUntraced(function* (tabId: TabId, withTabId: TabId, s
 })
 
 const splitCommands = {
-  SplitTabs: ({ tabId, withTabId }: { tabId: TabId; withTabId: TabId }) =>
-    splitTabs(tabId, withTabId, "Right"),
+  SplitTabs: ({ tabId, withTabId, side }: Extract<SidebarCommand, { _tag: "SplitTabs" }>) =>
+    splitTabs(tabId, withTabId, side),
 
   SplitWithShownTab: Effect.fnUntraced(function* (
     command: Extract<SidebarCommand, { _tag: "SplitWithShownTab" }>,
