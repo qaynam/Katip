@@ -1,4 +1,4 @@
-import { Clock, Effect, Match, Option } from "effect"
+import { Clock, Effect, Match, Option, Schedule } from "effect"
 import type { Action } from "#modules/actions"
 import { activeSpaceOf, assignTab, trackedTab } from "#modules/workspace"
 import {
@@ -102,21 +102,40 @@ const openUrl = Effect.fnUntraced(function* (
   return succeeded
 })
 
+// Past this, a search's tab is brought to the front even with its results yet to come
+const RESULTS_WAIT = "2 seconds"
+
+const showsWebPage = (tab: BrowserTab) => Option.exists(tab.url, (url) => /^https?:/.test(url))
+
+// A tab's URL is the last one committed, so it turns to the results' once they start to show
+const untilResultsShow = (tabId: TabId) =>
+  Tabs.use((tabs) => tabs.get(tabId)).pipe(
+    Effect.repeat({ schedule: Schedule.spaced("50 millis"), until: showsWebPage }),
+    Effect.timeout(RESULTS_WAIT),
+    Effect.ignore,
+  )
+
 const searchWeb = Effect.fnUntraced(function* (
   callerWindowId: WindowId,
   query: string,
   target: SpotlightTarget,
 ) {
   const current = target === "CurrentTab" ? yield* activeTabOf(callerWindowId) : Option.none()
-  // A new tab is brought to the front only once the search is under way, not opened in front
-  // empty: Chrome puts the focus in the address bar of a new tab shown empty, and it stayed there
-  // once the results came in, so what was typed next went into the address bar, not the page
-  const tab = Option.isSome(current)
-    ? current.value
-    : yield* openTabInActiveSpace(callerWindowId, Option.none(), false)
+  if (Option.isSome(current)) {
+    yield* (yield* WebSearch).query(query, current.value.id)
+    yield* focusWindow(callerWindowId)
+    return succeeded
+  }
+  // A new tab comes to the front only once its results have started to show, into a window
+  // already in front: brought forward with nothing shown yet, Brave puts the focus in its address
+  // bar, and it stayed there once the results came in, so what was typed next went into the
+  // address bar, not the page. A tab that shows a page gets the page focused, as any tab opened in
+  // the background does when switched to
+  const tab = yield* openTabInActiveSpace(callerWindowId, Option.none(), false)
   yield* (yield* WebSearch).query(query, tab.id)
-  if (Option.isNone(current)) yield* (yield* Tabs).update(tab.id, { active: true })
+  yield* untilResultsShow(tab.id)
   yield* focusWindow(callerWindowId)
+  yield* (yield* Tabs).update(tab.id, { active: true })
   return succeeded
 })
 

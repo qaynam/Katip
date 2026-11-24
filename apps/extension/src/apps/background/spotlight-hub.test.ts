@@ -1,5 +1,18 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Array, Effect, Layer, Option, Queue, Ref, Schema, type Scope, Stream } from "effect"
+import {
+  Array,
+  Deferred,
+  Effect,
+  Fiber,
+  Layer,
+  Option,
+  Queue,
+  Ref,
+  Schema,
+  type Scope,
+  Stream,
+} from "effect"
+import { TestClock } from "effect/testing"
 import type { Action } from "#modules/actions"
 import { makeTranslator } from "#modules/i18n"
 import { SettingsRepository } from "#modules/settings"
@@ -15,7 +28,15 @@ import {
 } from "#modules/site-commands"
 import { SpaceName } from "#modules/space"
 import { themeOf } from "#modules/theme"
-import { BookmarkId, type PortSender, TabId, Tabs, type WindowId, Windows } from "#platform/browser"
+import {
+  BookmarkId,
+  type PortSender,
+  TabId,
+  Tabs,
+  WebSearch,
+  type WindowId,
+  Windows,
+} from "#platform/browser"
 import { fakeSearchUrl, FakeBrowser, makePortPair } from "#platform/browser-testing"
 import { ClipboardRecorder } from "#platform/clipboard"
 import { FakeHistory } from "#platform/history"
@@ -628,6 +649,68 @@ describe("choosing a Spotlight result", () => {
           [Option.some("chrome://newtab/"), false],
           [Option.some(fakeSearchUrl("effect ts")), true],
         ])
+      }),
+    ),
+  )
+
+  // The search goes on until the test lets its results show, as a real one does over the network
+  const searchingUntilShown = Effect.fnUntraced(function* (callerWindowId: WindowId) {
+    const searched = yield* Deferred.make<TabId>()
+    const choosing = yield* Effect.gen(function* () {
+      const spotlight = yield* connectSpotlight(callerWindowId)
+      yield* spotlight.choose({ _tag: "SearchWeb", query: "effect ts" })
+    }).pipe(
+      Effect.provideService(
+        WebSearch,
+        WebSearch.of({ query: (_text, tabId) => Deferred.succeed(searched, tabId) }),
+      ),
+      Effect.forkScoped,
+    )
+    return { tabId: yield* Deferred.await(searched), choosing }
+  })
+
+  it.effect(
+    "a web search's new tab comes to the front only once its results show, after its window",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+          const other = yield* fake.seedWindow({ tabs: [{}] })
+          yield* initialize
+          yield* (yield* Windows).update(other.windowId, { focused: true })
+          const { tabId, choosing } = yield* searchingUntilShown(windowId)
+
+          yield* TestClock.adjust("1 second")
+          expect((yield* (yield* Tabs).get(tabId)).active).toBe(false)
+
+          yield* fake.takeEmittedEvents
+          yield* fake.updatePage(tabId, { url: fakeSearchUrl("effect ts"), status: "loading" })
+          yield* TestClock.adjust("50 millis")
+          yield* Fiber.join(choosing)
+          expect((yield* (yield* Tabs).get(tabId)).active).toBe(true)
+          const order = (yield* fake.takeEmittedEvents).flatMap((event) =>
+            event._tag === "WindowFocusChanged" || event._tag === "TabActivated"
+              ? [event._tag]
+              : [],
+          )
+          expect(order).toStrictEqual(["WindowFocusChanged", "TabActivated"])
+        }),
+      ),
+  )
+
+  it.effect("a web search's new tab comes to the front anyway when its results take long", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({ tabs: [{}] })
+        yield* initialize
+        const { tabId, choosing } = yield* searchingUntilShown(windowId)
+
+        yield* TestClock.adjust("2 seconds")
+        yield* Fiber.join(choosing)
+
+        expect((yield* (yield* Tabs).get(tabId)).active).toBe(true)
       }),
     ),
   )
