@@ -203,6 +203,18 @@ describe("TabGroupSync", () => {
       }).pipe(Effect.provide(testBrowser)),
   )
 
+  it.effect(
+    "does nothing while the browser has no window, as Chrome then refuses to list the groups",
+    () =>
+      Effect.gen(function* () {
+        yield* (yield* FakeBrowser).failNext("tabGroups.query", new Error("No current window"))
+
+        const synced = yield* Effect.exit(sync([]))
+
+        expect(synced._tag).toBe("Success")
+      }).pipe(Effect.provide(testBrowser)),
+  )
+
   it.effect("syncing again right after a sync makes no change in Chrome", () =>
     Effect.gen(function* () {
       const { windowId, tab } = yield* seedWindowOf("mail", "docs", "recipe")

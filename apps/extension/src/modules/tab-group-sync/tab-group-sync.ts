@@ -65,7 +65,11 @@ export class TabGroupSync extends Context.Service<
         desired: ReadonlyArray<DesiredGroup>,
       ) {
         const projection = yield* loadProjection
-        const [actualTabs, actualGroups] = yield* Effect.all([tabs.query({}), tabGroups.query({})])
+        const actualTabs = yield* tabs.query({})
+        // With no window, as while the browser starts, there is nothing to group, and Chrome
+        // refuses to list the groups for want of a current window
+        if (actualTabs.length === 0) return projection
+        const actualGroups = yield* tabGroups.query({})
         const plan = planTabGroupSync(desired, actualTabs, actualGroups, projection)
 
         // A created group stays in the projection even when styling it fails. Otherwise the next
