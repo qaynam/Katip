@@ -176,6 +176,7 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.splits": { other: "{count} 个分屏视图" },
   "options.data.import.preview.liveFolders": { other: "{count} 个实时文件夹" },
   "options.data.import.preview.favorites": { other: "{count} 个收藏" },
+  "options.data.import.preview.siteCommands": { other: "{count} 个命令" },
   "options.data.import.preview.flattenedFolders": {
     other: "{count} 个文件夹的嵌套层级超过 Katip 允许的深度，其中的内容将放入上一级文件夹。",
   },
@@ -185,6 +186,9 @@ export const options: CatalogSection<"options"> = {
   },
   "options.data.import.preview.temporaryTabs": {
     other: "{count} 个未固定的标签页（未固定的标签页是临时的）",
+  },
+  "options.data.import.preview.siteCommandsAlreadyThere": {
+    other: "{count} 个已经存在、或关键词已被其他命令使用的命令",
   },
   "options.data.import.preview.nonWebLinks": {
     other: "{count} 个不是网页的标签页（只导入 http 和 https 地址）",

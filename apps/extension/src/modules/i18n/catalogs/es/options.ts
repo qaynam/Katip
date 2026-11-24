@@ -205,6 +205,7 @@ export const options: CatalogSection<"options"> = {
     other: "{count} carpetas en vivo",
   },
   "options.data.import.preview.favorites": { one: "{count} Favorito", other: "{count} Favoritos" },
+  "options.data.import.preview.siteCommands": { one: "{count} comando", other: "{count} comandos" },
   "options.data.import.preview.flattenedFolders": {
     one: "{count} carpeta está anidada a más profundidad de la que permite Katip, así que su contenido pasa a la carpeta superior.",
     other:
@@ -218,6 +219,10 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.temporaryTabs": {
     one: "{count} pestaña sin fijar, porque las pestañas sin fijar son temporales",
     other: "{count} pestañas sin fijar, porque las pestañas sin fijar son temporales",
+  },
+  "options.data.import.preview.siteCommandsAlreadyThere": {
+    one: "{count} comando que ya está aquí, o cuya palabra clave ya tiene otro comando",
+    other: "{count} comandos que ya están aquí, o cuya palabra clave ya tiene otro comando",
   },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} pestaña que no es una página web, porque solo se importan direcciones http y https",

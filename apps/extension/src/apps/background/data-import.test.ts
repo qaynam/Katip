@@ -66,6 +66,7 @@ const fileWith = (
   spaces: ReadonlyArray<FileSpace>,
   favorites: LatestExport["favorites"] = [],
   settings: LatestExport["settings"] = exportedSettingsOf(defaultSettings),
+  siteCommands?: LatestExport["siteCommands"],
 ) =>
   Result.getOrThrow(
     encodeExportFile({
@@ -76,6 +77,7 @@ const fileWith = (
       spaces,
       favorites,
       settings,
+      ...(siteCommands !== undefined && { siteCommands }),
     }),
   )
 
@@ -219,6 +221,8 @@ describe("data import", () => {
             favorites: 4,
             flattenedFolders: 1,
             temporaryTabs: 1,
+            siteCommands: 0,
+            siteCommandsAlreadyThere: 0,
           },
         })
         expect([(yield* exported).spaces.length, (yield* fake.snapshot).tabs]).toStrictEqual([
@@ -413,6 +417,72 @@ describe("data import", () => {
             })
           }),
         ),
+    )
+  })
+
+  describe("commands", () => {
+    const wiki = { title: "Team Wiki", url: "https://wiki.example/search?q=%s", keyword: "wiki" }
+    const dashboard = { title: "Dashboard", url: "https://dashboard.example/", keyword: null }
+    const tracker = { title: "Tracker", url: "https://tracker.example/?q=%s", keyword: "t" }
+    const savedTracker = {
+      added: [{ id: "saved", ...tracker, url: "https://saved-tracker.example/?q=%s" }],
+      removedDefaults: [],
+    }
+
+    it.live(
+      "previewing counts the file's commands to add and those left out, and changes nothing",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            yield* (yield* FakeBrowser).seedStorage("local", {
+              "katip/site-commands": savedTracker,
+            })
+            yield* startWithHomePin
+
+            const answer = yield* preview(fileWith([], [], undefined, [wiki, dashboard, tracker]))
+
+            expect([
+              answer._tag === "Previewed" && answer.summary.siteCommands,
+              answer._tag === "Previewed" && answer.summary.siteCommandsAlreadyThere,
+              (yield* exported).siteCommands,
+            ]).toStrictEqual([2, 1, [{ ...tracker, url: "https://saved-tracker.example/?q=%s" }]])
+          }),
+        ),
+    )
+
+    it.live(
+      "importing adds the file's commands after those already here, except one whose keyword is taken",
+      () =>
+        inBackground(
+          Effect.gen(function* () {
+            yield* (yield* FakeBrowser).seedStorage("local", {
+              "katip/site-commands": savedTracker,
+            })
+            yield* startWithHomePin
+
+            yield* apply(fileWith([], [], undefined, [wiki, dashboard, tracker]))
+
+            expect((yield* exported).siteCommands).toStrictEqual([
+              { ...tracker, url: "https://saved-tracker.example/?q=%s" },
+              wiki,
+              dashboard,
+            ])
+          }),
+        ),
+    )
+
+    it.live("importing the same file twice adds its commands once", () =>
+      inBackground(
+        Effect.gen(function* () {
+          yield* startWithHomePin
+          const content = fileWith([], [], undefined, [wiki, dashboard])
+
+          yield* apply(content)
+          yield* apply(content)
+
+          expect((yield* exported).siteCommands).toStrictEqual([wiki, dashboard])
+        }),
+      ),
     )
   })
 

@@ -1,7 +1,13 @@
 import { Array, type Cause, Effect, Match, Option, Schema, Stream } from "effect"
 import { decodeExportFile, type LatestExport } from "#modules/export"
 import { updateFavoritesOf } from "#modules/favorites"
-import { planImport, planSpace, type PlannedNode, type PlannedSpace } from "#modules/import"
+import {
+  planImport,
+  planSiteCommands,
+  planSpace,
+  type PlannedNode,
+  type PlannedSpace,
+} from "#modules/import"
 import { DEFAULT_LIVE_LIMIT, DEFAULT_LIVE_SORT, LiveFolders } from "#modules/live-folders"
 import {
   FolderIconStore,
@@ -13,6 +19,7 @@ import {
   type PinnedNodeNotFound,
 } from "#modules/pinned"
 import type { SettingsRepository } from "#modules/settings"
+import { SiteCommandId, SiteCommands, withCommandAdded } from "#modules/site-commands"
 import { addSpace, nextSpaceName, SpaceName, unusedSpaceName, type Space } from "#modules/space"
 import { settleTheme } from "#modules/theme"
 import { type BrowserApiError, type BrowserPort } from "#platform/browser"
@@ -40,7 +47,10 @@ const readDocument = (content: string) =>
 /** What importing the content would add and leave out. Changes nothing. */
 export const previewImport = Effect.fnUntraced(function* (content: string) {
   const document = yield* readDocument(content)
-  return planImport(document, { rule: yield* currentNestingRule }).summary
+  return planImport(document, {
+    rule: yield* currentNestingRule,
+    siteCommands: yield* (yield* SiteCommands).get,
+  }).summary
 })
 
 const decodeSpaceName = Schema.decodeUnknownOption(SpaceName)
@@ -145,6 +155,22 @@ const addFileSpace = Effect.fnUntraced(function* (
   return planned
 })
 
+const newSiteCommandId = Effect.sync(() => SiteCommandId.make(crypto.randomUUID()))
+
+// Planned against the commands saved at the time rather than at the preview: the settings page may
+// have added one with the same keyword since
+const addFileSiteCommands = Effect.fnUntraced(function* (
+  fileCommands: NonNullable<LatestExport["siteCommands"]>,
+) {
+  const ids = yield* Effect.forEach(fileCommands, () => newSiteCommandId)
+  yield* (yield* SiteCommands).update((list) =>
+    Array.zip(planSiteCommands(fileCommands, list).toAdd, ids).reduce(
+      (updated, [command, id]) => withCommandAdded(updated, { ...command, id }),
+      list,
+    ),
+  )
+})
+
 const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
   nodes.some(
     (node) =>
@@ -152,14 +178,16 @@ const hasLiveFolder = (nodes: ReadonlyArray<PlannedNode>): boolean =>
   )
 
 /**
- * Adds the content's Spaces, each with its Favorites when asked.
+ * Adds the content's Spaces, each with its Favorites when asked, and its commands.
  *
  * @remarks
- * Only adds: each Space in the content becomes a new Space after the existing ones, and no
- * existing Space, pin or setting changes. A name the import suggested gets a number when a Space
- * already has it; a name from the file is kept as it is. Favorites are added closed. A file from
- * the time every Space shared the Favorites gives them to each of its Spaces. Temporary tabs and
- * settings in the content aren't imported. When a step fails, the Spaces added before it are kept.
+ * Only adds: each Space in the content becomes a new Space after the existing ones, the commands
+ * come after those already there, and no existing Space, pin, command or setting changes. A name
+ * the import suggested gets a number when a Space already has it; a name from the file is kept as
+ * it is. Favorites are added closed. A file from the time every Space shared the Favorites gives
+ * them to each of its Spaces. A command already there, or one whose keyword another already has,
+ * is left out (see `planSiteCommands`). Temporary tabs and settings in the content aren't imported.
+ * When a step fails, what was added before it is kept.
  */
 export const applyImport = Effect.fnUntraced(function* (
   request: Extract<ImportClientMessage, { readonly _tag: "Apply" }>,
@@ -180,6 +208,9 @@ export const applyImport = Effect.fnUntraced(function* (
       serialize,
     ),
   )
+  if (document.siteCommands !== undefined && document.siteCommands.length > 0) {
+    yield* serialize(addFileSiteCommands(document.siteCommands))
+  }
   if (added.some((space) => hasLiveFolder(space.pinned))) {
     yield* serialize(Effect.andThen(scheduleLiveFolderRefresh, refreshDueLiveFolders))
   }

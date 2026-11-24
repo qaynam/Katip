@@ -191,6 +191,7 @@ export const options = {
     other: "{count} live folders",
   },
   "options.data.import.preview.favorites": { one: "{count} Favorite", other: "{count} Favorites" },
+  "options.data.import.preview.siteCommands": { one: "{count} command", other: "{count} commands" },
   "options.data.import.preview.flattenedFolders": {
     one: "{count} folder is nested deeper than Katip allows, so its contents go into the folder above it.",
     other:
@@ -204,6 +205,10 @@ export const options = {
   "options.data.import.preview.temporaryTabs": {
     one: "{count} unpinned tab, as unpinned tabs are temporary",
     other: "{count} unpinned tabs, as unpinned tabs are temporary",
+  },
+  "options.data.import.preview.siteCommandsAlreadyThere": {
+    one: "{count} command that is already here, or whose keyword another command has",
+    other: "{count} commands that are already here, or whose keyword another command has",
   },
   "options.data.import.preview.nonWebLinks": {
     one: "{count} tab that isn’t a web page, as only http and https addresses are imported",

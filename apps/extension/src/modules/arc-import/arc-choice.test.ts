@@ -1,6 +1,7 @@
 import { Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { planImport } from "#modules/import"
+import { emptySiteCommandList } from "#modules/site-commands"
 import {
   arcImportOf,
   COMBINED_SPACE_NAME,
@@ -26,7 +27,7 @@ const twoLevels = { isTabGroupSyncEnabled: false }
 const oneLevel = { isTabGroupSyncEnabled: true }
 
 const summaryOf = (document: ReturnType<typeof choose>["document"], rule = twoLevels) =>
-  planImport(document, { rule }).summary
+  planImport(document, { rule, siteCommands: emptySiteCommandList }).summary
 
 describe("wholeSidebar", () => {
   it("chooses every Arc Space, each as a Space of its own", () => {

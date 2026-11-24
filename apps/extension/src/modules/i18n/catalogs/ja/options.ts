@@ -187,6 +187,7 @@ export const options: CatalogSection<"options"> = {
   "options.data.import.preview.splits": { other: "{count} 個の分割ビュー" },
   "options.data.import.preview.liveFolders": { other: "{count} 個のライブフォルダ" },
   "options.data.import.preview.favorites": { other: "{count} 個の Favorites" },
+  "options.data.import.preview.siteCommands": { other: "{count} 個のコマンド" },
   "options.data.import.preview.flattenedFolders": {
     other:
       "{count} 個のフォルダは Katip で作れる深さを超えているため、中身を 1 つ上のフォルダに入れます。",
@@ -197,6 +198,9 @@ export const options: CatalogSection<"options"> = {
   },
   "options.data.import.preview.temporaryTabs": {
     other: "ピン留めしていない {count} 個のタブ（一時的なタブのため）",
+  },
+  "options.data.import.preview.siteCommandsAlreadyThere": {
+    other: "すでにあるか、キーワードがほかのコマンドと重なる {count} 個のコマンド",
   },
   "options.data.import.preview.nonWebLinks": {
     other: "Web ページではない {count} 個のタブ（http と https のアドレスだけを読み込むため）",

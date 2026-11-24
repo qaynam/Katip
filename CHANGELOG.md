@@ -8,6 +8,24 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Export files now hold the commands you added, so they come along when you move Katip.
+
+### 🐛 Fixed
+
+- **Commands in export files** — The commands you added in the settings were left out of export files, so moving to the Chrome Web Store version through an export lost them. Export files now hold them, and importing one adds its commands after yours, leaving out any that are already there or whose keyword another command has.
+
+## 日本語
+
+設定で追加したコマンドも、エクスポートしたファイルに含まれるようにしました。
+
+### 🐛 修正
+
+- **追加したコマンドがエクスポートされない問題** — 設定で追加したコマンドがエクスポートしたファイルに含まれず、エクスポートを使って Chrome ウェブストア版に移ると消えてしまっていました。今回の修正でファイルに含まれるようになり、インポートすると今あるコマンドのあとに追加されます。なお、すでにあるコマンドや、キーワードがほかのコマンドと重なるものは追加されません。
+
 ## 1.12.1 — 2026-11-25
 
 ## English

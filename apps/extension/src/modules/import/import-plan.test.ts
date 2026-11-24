@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { exportedSettingsOf, type LatestExport } from "#modules/export"
 import { defaultSettings } from "#modules/settings"
+import {
+  CommandKeyword,
+  CommandTitle,
+  CommandUrl,
+  emptySiteCommandList,
+  type SiteCommandList,
+  SiteCommandId,
+} from "#modules/site-commands"
 import { themeOf } from "#modules/theme"
-import { planImport, planSpace } from "./import-plan"
+import { planImport, planSiteCommands, planSpace } from "./import-plan"
 
 type FileSpace = LatestExport["spaces"][number]
 type FileNode = FileSpace["pinned"][number]
@@ -268,7 +276,10 @@ describe("planImport", () => {
       ],
     )
 
-    const { summary } = planImport(document, { rule: twoLevels })
+    const { summary } = planImport(document, {
+      rule: twoLevels,
+      siteCommands: emptySiteCommandList,
+    })
 
     expect(summary).toStrictEqual({
       spaces: 2,
@@ -279,6 +290,74 @@ describe("planImport", () => {
       favorites: 4,
       flattenedFolders: 1,
       temporaryTabs: 1,
+      siteCommands: 0,
+      siteCommandsAlreadyThere: 0,
     })
+  })
+})
+
+describe("planSiteCommands", () => {
+  const wiki = { title: "Team Wiki", url: "https://wiki.example/search?q=%s", keyword: "wiki" }
+  const dashboard = { title: "Dashboard", url: "https://dashboard.example/", keyword: null }
+
+  const saved = (
+    ...commands: ReadonlyArray<{ title: string; url: string; keyword: string | null }>
+  ): SiteCommandList => ({
+    added: commands.map(({ title, url, keyword }, index) => ({
+      id: SiteCommandId.make(`saved-${index}`),
+      title: CommandTitle.make(title),
+      url: CommandUrl.make(url),
+      keyword: keyword === null ? null : CommandKeyword.make(keyword),
+    })),
+    removedDefaults: [],
+  })
+
+  it("adds the file's commands in its order", () => {
+    expect(planSiteCommands([wiki, dashboard], emptySiteCommandList)).toStrictEqual({
+      toAdd: [wiki, dashboard],
+      alreadyThere: 0,
+    })
+  })
+
+  it("leaves out a command whose keyword another command already has", () => {
+    const otherWiki = { ...wiki, url: "https://other-wiki.example/?q=%s" }
+
+    expect(planSiteCommands([otherWiki, dashboard], saved(wiki))).toStrictEqual({
+      toAdd: [dashboard],
+      alreadyThere: 1,
+    })
+  })
+
+  it("leaves out a command without a keyword that is already here, so a second import adds nothing", () => {
+    expect(planSiteCommands([wiki, dashboard], saved(wiki, dashboard))).toStrictEqual({
+      toAdd: [],
+      alreadyThere: 2,
+    })
+  })
+
+  it("adds only the first of the file's commands that share a keyword", () => {
+    const otherWiki = { ...wiki, title: "Other Wiki" }
+
+    expect(planSiteCommands([wiki, otherWiki], emptySiteCommandList)).toStrictEqual({
+      toAdd: [wiki],
+      alreadyThere: 1,
+    })
+  })
+
+  it("drops a command the settings wouldn't accept, such as one running a script", () => {
+    const script = { title: "Script", url: "javascript:alert(1)", keyword: "run" }
+
+    expect(planSiteCommands([script, dashboard], emptySiteCommandList)).toStrictEqual({
+      toAdd: [dashboard],
+      alreadyThere: 0,
+    })
+  })
+
+  it("counts in the import's summary what it adds and what it leaves out", () => {
+    const document = { ...documentWith([], []), siteCommands: [wiki, dashboard] }
+
+    const { summary } = planImport(document, { rule: twoLevels, siteCommands: saved(wiki) })
+
+    expect([summary.siteCommands, summary.siteCommandsAlreadyThere]).toStrictEqual([1, 1])
   })
 })

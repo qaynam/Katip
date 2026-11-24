@@ -1,6 +1,7 @@
 import { Context, Effect, Layer, Option, Ref, Result, Schema, Stream } from "effect"
 import { decodeExportFile } from "#modules/export"
 import { planImport } from "#modules/import"
+import { emptySiteCommandList } from "#modules/site-commands"
 import { BrowserEvents } from "#platform/browser"
 import { IMPORT_PORT_NAME, ImportClientMessage, ImportServerMessage } from "#protocol"
 
@@ -19,7 +20,10 @@ const previewOf = (content: string): ImportServerMessage =>
     onFailure: (): ImportServerMessage => ({ _tag: "Unreadable" }),
     onSuccess: (document): ImportServerMessage => ({
       _tag: "Previewed",
-      summary: planImport(document, { rule: { isTabGroupSyncEnabled: false } }).summary,
+      summary: planImport(document, {
+        rule: { isTabGroupSyncEnabled: false },
+        siteCommands: emptySiteCommandList,
+      }).summary,
     }),
   })
 

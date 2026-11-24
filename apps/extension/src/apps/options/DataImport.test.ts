@@ -32,7 +32,7 @@ afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()))
 })
 
-const katipFile = (spaces: LatestExport["spaces"]) =>
+const katipFile = (spaces: LatestExport["spaces"], siteCommands?: LatestExport["siteCommands"]) =>
   Result.getOrThrow(
     encodeExportFile({
       format: "katip.export",
@@ -42,6 +42,7 @@ const katipFile = (spaces: LatestExport["spaces"]) =>
       spaces,
       favorites: [],
       settings: exportedSettingsOf(defaultSettings),
+      ...(siteCommands !== undefined && { siteCommands }),
     }),
   )
 
@@ -623,6 +624,26 @@ describe("previewing a Katip file", () => {
       within(ready).getByText("There’s nothing in this file to import.") !== null,
       importButton().disabled,
     ]).toStrictEqual([true, true])
+  })
+
+  it("a file with only commands lists them to be added and can be imported", async () => {
+    renderImport()
+
+    await chooseKatipFile(
+      katipFile(
+        [],
+        [
+          { title: "Team Wiki", url: "https://wiki.example/search?q=%s", keyword: "wiki" },
+          { title: "Dashboard", url: "https://dashboard.example/", keyword: null },
+        ],
+      ),
+    )
+    const ready = await preview("Ready to import a Katip file")
+
+    expect([listedUnder(ready, "To be added"), importButton().disabled]).toStrictEqual([
+      ["2 commands"],
+      false,
+    ])
   })
 })
 

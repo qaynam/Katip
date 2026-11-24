@@ -1,6 +1,7 @@
 export {
   ImportSummary,
   planImport,
+  planSiteCommands,
   planSpace,
   summarize,
   type ImportContext,
@@ -9,6 +10,8 @@ export {
   type PlannedLiveFolder,
   type PlannedNode,
   type PlannedPin,
+  type PlannedSiteCommand,
+  type PlannedSiteCommands,
   type PlannedSpace,
   type PlannedSplit,
 } from "./import-plan"

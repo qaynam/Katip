@@ -14,6 +14,7 @@ import {
   type PinnedTree,
 } from "#modules/pinned"
 import type { Settings } from "#modules/settings"
+import type { SiteCommandList } from "#modules/site-commands"
 import type { Space, SpaceId, SpaceList } from "#modules/space"
 import { displayOrder } from "#modules/tab-order"
 import type { SpaceTheme } from "#modules/theme"
@@ -49,6 +50,7 @@ export interface ExportSources {
   /** The tabs of every window, in any order. */
   readonly tabs: ReadonlyArray<BrowserTab>
   readonly settings: Settings
+  readonly siteCommands: SiteCommandList
 }
 
 const byWindowThenIndex = Order.combine(
@@ -195,7 +197,8 @@ export const exportedSettingsOf = (settings: Settings): LatestExport["settings"]
  * for restoring tabs aren't exported. Neither are tabs in incognito windows, tabs showing Katip's
  * own pages, or blank new tabs. Settings, themes and live folders added after version 1, such as
  * whether to check for updates, a theme's texture and GitHub notifications folders, have no place
- * in its files and are left out too.
+ * in its files and are left out too. Of the commands, only those added in the settings are
+ * exported, not which of Katip's own were removed.
  *
  * @returns {@link PinnedTreeUnavailable} when any Space's pinned tree couldn't be read, so that no
  *   file is left with some Spaces' pins missing without anyone noticing.
@@ -246,6 +249,11 @@ export const buildExport = (
         (a, b) => a.url === b.url,
       ),
       settings: exportedSettingsOf(sources.settings),
+      siteCommands: sources.siteCommands.added.map(({ title, url, keyword }) => ({
+        title,
+        url,
+        keyword,
+      })),
     }),
   )
 }

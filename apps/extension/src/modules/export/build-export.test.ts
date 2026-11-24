@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest"
 import { FavoriteId } from "#modules/favorites"
 import { type PinnedNode, PinnedTreeUnavailable, type PinnedTree } from "#modules/pinned"
 import { defaultSettings, IdleMinutes } from "#modules/settings"
+import {
+  CommandKeyword,
+  CommandTitle,
+  CommandUrl,
+  emptySiteCommandList,
+  SiteCommandId,
+} from "#modules/site-commands"
 import { SpaceId, SpaceName, type Space } from "#modules/space"
 import { neutralTheme, themeOf } from "#modules/theme"
 import { assignTab, bindPinned, emptyWorkspace, setTitleOverride } from "#modules/workspace"
@@ -73,6 +80,7 @@ const sourcesWith = (overrides: Partial<ExportSources> = {}): ExportSources => (
   spaceFavorites: {},
   tabs: [],
   settings: defaultSettings,
+  siteCommands: emptySiteCommandList,
   ...overrides,
 })
 
@@ -540,5 +548,32 @@ describe("settings", () => {
       locale: "zh",
       pageShortcuts: { copyUrl: true, copyMarkdownLink: false },
     })
+  })
+})
+
+describe("commands", () => {
+  it("are those added in the settings, in their order, without their IDs", () => {
+    const siteCommands = {
+      added: [
+        {
+          id: SiteCommandId.make("first"),
+          title: CommandTitle.make("Team Wiki"),
+          url: CommandUrl.make("https://wiki.example/search?q=%s"),
+          keyword: CommandKeyword.make("wiki"),
+        },
+        {
+          id: SiteCommandId.make("second"),
+          title: CommandTitle.make("Dashboard"),
+          url: CommandUrl.make("https://dashboard.example/"),
+          keyword: null,
+        },
+      ],
+      removedDefaults: ["figma-file" as const],
+    }
+
+    expect(exported(sourcesWith({ siteCommands })).siteCommands).toStrictEqual([
+      { title: "Team Wiki", url: "https://wiki.example/search?q=%s", keyword: "wiki" },
+      { title: "Dashboard", url: "https://dashboard.example/", keyword: null },
+    ])
   })
 })

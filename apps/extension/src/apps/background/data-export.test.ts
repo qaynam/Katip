@@ -55,6 +55,28 @@ const splitViewIdIn = (view: SidebarView) =>
   )
 
 describe("data export", () => {
+  it.live("the file holds the commands added in the settings", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const wiki = {
+          title: "Team Wiki",
+          url: "https://wiki.example/search?q=%s",
+          keyword: "wiki",
+        }
+        yield* fake.seedStorage("local", {
+          "katip/site-commands": { added: [{ id: "wiki", ...wiki }], removedDefaults: [] },
+        })
+        yield* fake.seedWindow({ tabs: [{ url: "https://a.example/" }] })
+        yield* startBackground
+
+        const file = Result.getOrThrow(decodeExportFile(yield* exportedContent))
+
+        expect(file.siteCommands).toStrictEqual([wiki])
+      }),
+    ),
+  )
+
   it.live(
     "asked by the settings page, returns a file with the Spaces, pinned tabs, temporary tabs, Favorites, and settings",
     () =>

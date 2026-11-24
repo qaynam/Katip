@@ -128,6 +128,15 @@ export const SettingsV1 = Schema.Struct({
 })
 export type SettingsV1 = typeof SettingsV1.Type
 
+export const SiteCommandV1 = Schema.Struct({
+  title: Schema.String,
+  /** With `%s` where what is typed after the keyword goes. */
+  url: Schema.String,
+  /** What is typed after `!` to use the command. null for a command without one. */
+  keyword: Schema.NullOr(Schema.String),
+})
+export type SiteCommandV1 = typeof SiteCommandV1.Type
+
 /** An export file of version 1. */
 export const ExportV1 = Schema.Struct({
   format: Schema.Literal("katip.export"),
@@ -143,5 +152,10 @@ export const ExportV1 = Schema.Struct({
    */
   favorites: Schema.Array(Link),
   settings: SettingsV1,
+  /**
+   * The commands added in the settings, in the order shown. Files from versions of Katip that
+   * didn't export them leave it out.
+   */
+  siteCommands: Schema.optionalKey(Schema.Array(SiteCommandV1)),
 })
 export type ExportV1 = typeof ExportV1.Type

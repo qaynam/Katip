@@ -12,12 +12,20 @@ import {
   SPACE_ROOT_DEPTH,
   type FolderNestingRule,
 } from "#modules/pinned"
+import {
+  CommandKeyword,
+  CommandTitle,
+  CommandUrl,
+  type SiteCommand,
+  type SiteCommandList,
+} from "#modules/site-commands"
 import { DEFAULT_TEXTURE, type SpaceTheme } from "#modules/theme"
 
 type FileSpace = LatestExport["spaces"][number]
 type FileNode = FileSpace["pinned"][number]
 type FileLink = FileSpace["tabs"][number]
 type FileLiveSource = Extract<FileNode, { readonly type: "liveFolder" }>["source"]
+type FileSiteCommand = NonNullable<LatestExport["siteCommands"]>[number]
 
 export interface PlannedLink {
   readonly title: string
@@ -83,6 +91,10 @@ export const ImportSummary = Schema.Struct({
   flattenedFolders: Schema.Int,
   /** Temporary tabs, left out as they're temporary by nature. */
   temporaryTabs: Schema.Int,
+  /** Commands added in the settings of the Katip the file is from. */
+  siteCommands: Schema.Int,
+  /** The file's commands left out, as the same command or one with its keyword is already there. */
+  siteCommandsAlreadyThere: Schema.Int,
 })
 export type ImportSummary = typeof ImportSummary.Type
 
@@ -215,26 +227,84 @@ const countNodes = (nodes: ReadonlyArray<PlannedNode>): NodeCounts =>
     )
     .reduce(addCounts, noNodes)
 
-export const summarize = (spaces: ReadonlyArray<PlannedSpace>): ImportSummary => ({
+/** A command from the file, to add with an ID of its own. */
+export type PlannedSiteCommand = Omit<SiteCommand, "id">
+
+export interface PlannedSiteCommands {
+  /** In the file's order. */
+  readonly toAdd: ReadonlyArray<PlannedSiteCommand>
+  readonly alreadyThere: number
+}
+
+const decodeTitle = Schema.decodeUnknownOption(CommandTitle)
+const decodeUrl = Schema.decodeUnknownOption(CommandUrl)
+const decodeKeyword = Schema.decodeUnknownOption(CommandKeyword)
+
+const siteCommandOf = (command: FileSiteCommand): Option.Option<PlannedSiteCommand> =>
+  Option.all({
+    title: decodeTitle(command.title),
+    url: decodeUrl(command.url),
+    keyword: command.keyword === null ? Option.some(null) : decodeKeyword(command.keyword),
+  })
+
+// A keyword can only start one command. Without one, a command is told apart by what it opens
+const isAmong = (commands: ReadonlyArray<PlannedSiteCommand>, command: PlannedSiteCommand) =>
+  commands.some((other) =>
+    command.keyword === null
+      ? other.keyword === null && other.title === command.title && other.url === command.url
+      : other.keyword === command.keyword,
+  )
+
+/**
+ * Plans adding a file's commands after `current`'s.
+ *
+ * @remarks
+ * A command whose keyword another command already has isn't added, and neither is a command without
+ * a keyword that is already there with the same title and URL, so that importing a file twice adds
+ * its commands once. A command the settings wouldn't accept, such as one opening a script rather
+ * than a page, is dropped.
+ */
+export const planSiteCommands = (
+  fileCommands: ReadonlyArray<FileSiteCommand>,
+  current: SiteCommandList,
+): PlannedSiteCommands =>
+  Array.getSomes(fileCommands.map(siteCommandOf)).reduce<PlannedSiteCommands>(
+    (plan, command) =>
+      isAmong([...current.added, ...plan.toAdd], command)
+        ? { ...plan, alreadyThere: plan.alreadyThere + 1 }
+        : { ...plan, toAdd: [...plan.toAdd, command] },
+    { toAdd: [], alreadyThere: 0 },
+  )
+
+export const summarize = (
+  spaces: ReadonlyArray<PlannedSpace>,
+  siteCommands: PlannedSiteCommands,
+): ImportSummary => ({
   spaces: spaces.length,
   ...spaces.map((space) => countNodes(space.pinned)).reduce(addCounts, noNodes),
   favorites: spaces.reduce((sum, space) => sum + space.favorites.length, 0),
   flattenedFolders: spaces.reduce((sum, space) => sum + space.flattenedFolders, 0),
   temporaryTabs: spaces.reduce((sum, space) => sum + space.temporaryTabs, 0),
+  siteCommands: siteCommands.toAdd.length,
+  siteCommandsAlreadyThere: siteCommands.alreadyThere,
 })
 
 export interface ImportContext {
   readonly rule: FolderNestingRule
+  /** The commands saved now, which the file's are added after. */
+  readonly siteCommands: SiteCommandList
 }
 
 /**
- * Plans adding a Katip export document's Spaces, each with its Favorites.
+ * Plans adding a Katip export document's Spaces, each with its Favorites, and its commands.
  *
  * @remarks
- * The plan only adds: each Space in the file becomes a new Space, and nothing already there is
- * changed. The file's temporary tabs and settings aren't imported.
+ * The plan only adds: each Space in the file becomes a new Space, the file's commands come after
+ * those already there, and nothing already there is changed. The file's temporary tabs and
+ * settings aren't imported.
  */
 export const planImport = (document: LatestExport, context: ImportContext) => {
   const spaces = document.spaces.map((space) => planSpace(space, context.rule, document.favorites))
-  return { spaces, summary: summarize(spaces) }
+  const siteCommands = planSiteCommands(document.siteCommands ?? [], context.siteCommands)
+  return { spaces, siteCommands, summary: summarize(spaces, siteCommands) }
 }

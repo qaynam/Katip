@@ -192,7 +192,8 @@
 {#if candidate !== null}
   {@const current = candidate}
   {@const lines = previewLinesOf(current, addsFavorites)}
-  {@const hasContent = current.summary.spaces > 0 || current.summary.favorites > 0}
+  {@const hasContent =
+    current.summary.spaces > 0 || current.summary.favorites > 0 || current.summary.siteCommands > 0}
   {@const choosing = current.source === "Arc" ? arc : null}
   {@const arcSpaces = choosing?.file.conversion.spaces ?? []}
   {@const noneChosen = arcSpaces.length > 0 && choosing?.choice.spaceIds.size === 0}

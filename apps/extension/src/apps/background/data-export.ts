@@ -3,6 +3,7 @@ import { buildExport, encodeExportFile } from "#modules/export"
 import { LiveFolders } from "#modules/live-folders"
 import { FolderIconStore, PinnedBookmarks } from "#modules/pinned"
 import { SettingsRepository } from "#modules/settings"
+import { SiteCommands } from "#modules/site-commands"
 import { type BrowserPort, Tabs } from "#platform/browser"
 import { ExportClientMessage, ExportServerMessage } from "#protocol"
 import { ExtensionInfo } from "./extension-info"
@@ -27,6 +28,7 @@ export const exportFileContent = Effect.gen(function* () {
       spaceFavorites: yield* state.spaceFavorites.get,
       tabs: yield* (yield* Tabs).query({}),
       settings: yield* (yield* SettingsRepository).get,
+      siteCommands: yield* (yield* SiteCommands).get,
     }),
   )
   return yield* Effect.fromResult(encodeExportFile(document))

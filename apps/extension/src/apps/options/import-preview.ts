@@ -18,9 +18,11 @@ type CountedMessageKey =
   | "options.data.import.preview.splits"
   | "options.data.import.preview.liveFolders"
   | "options.data.import.preview.favorites"
+  | "options.data.import.preview.siteCommands"
   | "options.data.import.preview.flattenedFolders"
   | "options.data.import.preview.widerSplits"
   | "options.data.import.preview.temporaryTabs"
+  | "options.data.import.preview.siteCommandsAlreadyThere"
   | "options.data.import.preview.nonWebLinks"
   | "options.data.import.preview.unsupportedItems"
 
@@ -55,6 +57,7 @@ export const previewLinesOf = (
         key: "options.data.import.preview.favorites",
         count: addsFavorites ? summary.favorites : 0,
       },
+      { key: "options.data.import.preview.siteCommands", count: summary.siteCommands },
     ]),
     adjusted: present([
       { key: "options.data.import.preview.flattenedFolders", count: summary.flattenedFolders },
@@ -62,6 +65,10 @@ export const previewLinesOf = (
     ]),
     leftOut: present([
       { key: "options.data.import.preview.temporaryTabs", count: summary.temporaryTabs },
+      {
+        key: "options.data.import.preview.siteCommandsAlreadyThere",
+        count: summary.siteCommandsAlreadyThere,
+      },
       { key: "options.data.import.preview.nonWebLinks", count: report?.nonWebLinks ?? 0 },
       {
         key: "options.data.import.preview.unsupportedItems",
