@@ -32,4 +32,5 @@ export const actions: CatalogSection<"actions"> = {
   "actions.copied.url": "URL をコピーしました",
   "actions.copied.markdownLink": "Markdown のリンクをコピーしました",
   "actions.copyFailed": "コピーできませんでした",
+  "actions.share": "共有",
 }

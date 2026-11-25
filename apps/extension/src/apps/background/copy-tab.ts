@@ -12,7 +12,7 @@ export type CopyFormat = "Url" | "MarkdownLink"
 
 /**
  * Copies the tab's URL to the clipboard in `format`, and returns what to tell of it: a title saying
- * what was copied, in the display language, and the copied text as the detail.
+ * what was copied, in the display language.
  *
  * @remarks
  * Fails without copying anything for a tab with no URL, such as a new tab that hasn't started
@@ -34,7 +34,6 @@ export const copyTab = Effect.fnUntraced(function* (tab: BrowserTab, format: Cop
   const translator = yield* currentTranslator
   return {
     title: translator.t(format === "Url" ? "actions.copied.url" : "actions.copied.markdownLink"),
-    detail: text,
   }
 })
 
@@ -51,15 +50,25 @@ const showNotice = Effect.fnUntraced(function* (tab: BrowserTab, notice: PageNot
 })
 
 /**
- * Copies with {@link copyTab}, and shows on the copied tab's page that it copied (or that it
- * couldn't). Tells the side panel instead when the page can't show it.
+ * Copies with {@link copyTab}, and shows on the copied tab's page that it copied, with a button to
+ * share the page, or that it couldn't. Tells the side panel instead when the page can't show it.
  *
  * @returns Whether it copied.
  */
 export const copyTabWithNotice = Effect.fnUntraced(function* (tab: BrowserTab, format: CopyFormat) {
   const copied = yield* Effect.result(copyTab(tab, format))
   const notice = yield* Result.match(copied, {
-    onSuccess: (told) => Effect.succeed<PageNotice>({ tone: "Done", ...told }),
+    onSuccess: (told) =>
+      Effect.map(currentTranslator, (translator): PageNotice => ({
+        tone: "Done",
+        ...told,
+        action: {
+          _tag: "Share",
+          label: translator.t("actions.share"),
+          title: Option.getOrElse(tab.title, () => ""),
+          url: urlOf(tab),
+        },
+      })),
     onFailure: (error) =>
       Effect.andThen(
         Effect.logWarning("Couldn't copy the tab's URL", error),

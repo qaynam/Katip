@@ -1726,7 +1726,18 @@ describe("copy shortcuts", () => {
 
           expect([yield* (yield* ClipboardRecorder).written, notices]).toStrictEqual([
             ["https://copy.example/page?q=1"],
-            [{ tone: "Done", title: "Copied URL", detail: "https://copy.example/page?q=1" }],
+            [
+              {
+                tone: "Done",
+                title: "Copied URL",
+                action: {
+                  _tag: "Share",
+                  label: "Share",
+                  title: "",
+                  url: "https://copy.example/page?q=1",
+                },
+              },
+            ],
           ])
         }),
       ),
@@ -1750,7 +1761,12 @@ describe("copy shortcuts", () => {
             {
               tone: "Done",
               title: "Copied Markdown link",
-              detail: "[Release notes](https://copy.example/page)",
+              action: {
+                _tag: "Share",
+                label: "Share",
+                title: "Release notes",
+                url: "https://copy.example/page",
+              },
             },
           ],
         ])

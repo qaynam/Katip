@@ -32,4 +32,5 @@ export const actions: CatalogSection<"actions"> = {
   "actions.copied.url": "已复制网址",
   "actions.copied.markdownLink": "已复制 Markdown 链接",
   "actions.copyFailed": "无法复制",
+  "actions.share": "共享",
 }

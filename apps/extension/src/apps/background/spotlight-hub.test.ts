@@ -1016,7 +1016,18 @@ describe("choosing a Spotlight command", () => {
             {
               tabId: tabIds[0],
               name: "showPageToast",
-              args: [{ tone: "Done", title: "Copied URL", detail: "https://docs.example/guide" }],
+              args: [
+                {
+                  tone: "Done",
+                  title: "Copied URL",
+                  action: {
+                    _tag: "Share",
+                    label: "Share",
+                    title: "Guide [draft]",
+                    url: "https://docs.example/guide",
+                  },
+                },
+              ],
             },
           ],
         })

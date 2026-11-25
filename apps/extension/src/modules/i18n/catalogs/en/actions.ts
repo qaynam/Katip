@@ -32,4 +32,5 @@ export const actions = {
   "actions.copied.url": "Copied URL",
   "actions.copied.markdownLink": "Copied Markdown link",
   "actions.copyFailed": "Couldn’t copy",
+  "actions.share": "Share",
 } as const satisfies Readonly<Record<`actions.${string}`, Message>>

@@ -32,4 +32,5 @@ export const actions: CatalogSection<"actions"> = {
   "actions.copied.url": "URL copiada",
   "actions.copied.markdownLink": "Enlace Markdown copiado",
   "actions.copyFailed": "No se pudo copiar",
+  "actions.share": "Compartir",
 }
