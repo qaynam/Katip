@@ -99,6 +99,8 @@ export const SidebarCommand = Schema.Union([
     panelRight: Schema.Number,
   }),
   Schema.TaggedStruct("Unsplit", { splitViewId: SplitViewId }),
+  // Swaps the two tabs of a split view, left for right
+  Schema.TaggedStruct("ReverseSplit", { splitViewId: SplitViewId }),
   Schema.TaggedStruct("PlaceSplitInTemporary", {
     splitViewId: SplitViewId,
     spaceId: SpaceId,

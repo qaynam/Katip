@@ -1130,6 +1130,41 @@ describe("split view", () => {
       ),
   )
 
+  it.live(
+    "reversing a split view swaps its tabs, which stay split, with the one in front still in front",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const { windowId, tabIds } = yield* seedThreeTabs
+          yield* startBackground
+          const sidebar = yield* openSidebar(windowId)
+          yield* sidebar.viewWhere((v) => v.spaces.length === 1)
+          yield* sidebar.run({
+            _tag: "SplitTabs",
+            tabId: tabIds[2],
+            withTabId: tabIds[0],
+            side: "Right",
+          })
+          const split = yield* sidebar.viewWhere((v) => entriesShape(v).length === 2)
+
+          const outcome = yield* sidebar.run({
+            _tag: "ReverseSplit",
+            splitViewId: splitIdIn(split),
+          })
+          const view = yield* sidebar.viewWhere((v) =>
+            entriesShape(v).some((entry) => typeof entry !== "string" && entry[0] === "C"),
+          )
+          const shown = yield* (yield* Tabs).get(tabIds[2])
+
+          expect([outcome._tag, entriesShape(view), shown.active]).toStrictEqual([
+            "Succeeded",
+            ["B", ["C", "A"]],
+            true,
+          ])
+        }),
+      ),
+  )
+
   it.live("separating a split view turns it back into two single rows", () =>
     inBackground(
       Effect.gen(function* () {

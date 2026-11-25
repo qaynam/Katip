@@ -163,6 +163,17 @@ describe("Temporary split view rows", () => {
     ])
   })
 
+  it("swaps the two tabs, left for right, with Reverse Tabs in the context menu", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Reddit" }))
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Reverse Tabs" }))
+
+    expect(connection.sentCommands).toStrictEqual([
+      { _tag: "ReverseSplit", splitViewId: SplitViewId.make(9) },
+    ])
+  })
+
   it("adds the split view as is to the end of pinned tabs with Pin in the context menu", async () => {
     const { connection } = await renderSidebar(viewWithEntries([redditAndGoogle]))
 
@@ -178,12 +189,15 @@ describe("Temporary split view rows", () => {
     ])
   })
 
-  it("hides Separate Tabs where split views aren't available", async () => {
+  it("hides Reverse Tabs and Separate Tabs where split views aren't available", async () => {
     await renderSidebar(viewWithEntries([redditAndGoogle], { canSplit: false }))
 
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Reddit" }))
 
-    expect(screen.queryByRole("menuitem", { name: "Separate Tabs" })).toBeNull()
+    expect([
+      screen.queryByRole("menuitem", { name: "Reverse Tabs" }),
+      screen.queryByRole("menuitem", { name: "Separate Tabs" }),
+    ]).toStrictEqual([null, null])
   })
 })
 

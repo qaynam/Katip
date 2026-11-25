@@ -141,6 +141,10 @@ export const temporarySplitMenu = (
     ...(ctx.view.canSplit
       ? [
           action(
+            t("sidepanel.split.reverse"),
+            () => void ctx.run({ _tag: "ReverseSplit", splitViewId }),
+          ),
+          action(
             t("sidepanel.split.separate"),
             () => void ctx.run({ _tag: "Unsplit", splitViewId }),
           ),

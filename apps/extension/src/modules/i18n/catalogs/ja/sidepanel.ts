@@ -99,6 +99,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.split.menu": "分割ビューのメニュー",
   "sidepanel.split.pinnedMenu": "分割ビューのピンのメニュー",
+  "sidepanel.split.reverse": "左右を入れ替え",
   "sidepanel.split.separate": "分割を解除",
   "sidepanel.split.deleteMessage":
     "「{left}」と「{right}」を並べたピンのブックマークを削除します。開いているタブは閉じません。",

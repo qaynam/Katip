@@ -93,6 +93,28 @@ test.describe("on Chrome with the split view API", () => {
     ])
   })
 
+  test("Reverse Tabs in the split row menu swaps the two tabs, which stay split", async ({
+    site,
+    sidebar,
+    background,
+  }) => {
+    await openSplit(background, site, ["/a", "/b"])
+
+    await chooseFromMenu(
+      sidebar,
+      splitRowOf(sidebar, "Page /a").getByRole("group", { name: "Page /a" }),
+      "Reverse Tabs",
+    )
+
+    await expect
+      .poll(() => pagesInBrowser(background, site))
+      .toStrictEqual(["/b split", "/a split"])
+    await expect(splitRowOf(sidebar, "Page /b").getByRole("group")).toHaveText([
+      "Page /b",
+      "Page /a",
+    ])
+  })
+
   test("Separate Tabs in the split row menu turns it back into two single tabs", async ({
     site,
     sidebar,

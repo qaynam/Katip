@@ -97,6 +97,7 @@ export const sidepanel = {
 
   "sidepanel.split.menu": "Split view menu",
   "sidepanel.split.pinnedMenu": "Pinned split view menu",
+  "sidepanel.split.reverse": "Reverse Tabs",
   "sidepanel.split.separate": "Separate Tabs",
   "sidepanel.split.deleteMessage":
     "The bookmarks for the pinned split view of “{left}” and “{right}” will be deleted. Open tabs stay open.",

@@ -101,6 +101,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.split.menu": "Menú de la vista dividida",
   "sidepanel.split.pinnedMenu": "Menú de la vista dividida fijada",
+  "sidepanel.split.reverse": "Invertir pestañas",
   "sidepanel.split.separate": "Separar pestañas",
   "sidepanel.split.deleteMessage":
     "Se eliminarán los marcadores de la vista dividida fijada de «{left}» y «{right}». Las pestañas abiertas no se cerrarán.",

@@ -537,6 +537,20 @@ const splitCommands = {
   Unsplit: ({ splitViewId }: { splitViewId: SplitViewId }) =>
     Tabs.use((tabs) => tabs.unsplit(splitViewId)),
 
+  // Chrome has no call to swap the sides, and moving a tab of a split view takes the split apart, so
+  // it's taken apart first, the right tab moved before the left, and the two split again. The one
+  // that was in front is put back in front, as taking the split apart may show the other
+  ReverseSplit: Effect.fnUntraced(function* ({ splitViewId }: { splitViewId: SplitViewId }) {
+    yield* requireSplitSupport
+    const tabs = yield* Tabs
+    const [left, right] = yield* splitPairOf(splitViewId)
+    yield* tabs.unsplit(splitViewId)
+    yield* tabs.move([right.id], { index: left.index })
+    yield* tabs.createSplit([right.id, left.id])
+    const shown = [left, right].find((tab) => tab.active)
+    if (shown !== undefined) yield* tabs.update(shown.id, { active: true })
+  }),
+
   PlaceSplitInTemporary: Effect.fnUntraced(function* (
     command: Extract<SidebarCommand, { _tag: "PlaceSplitInTemporary" }>,
   ) {

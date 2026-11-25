@@ -91,6 +91,7 @@ export const sidepanel: CatalogSection<"sidepanel"> = {
 
   "sidepanel.split.menu": "分屏视图菜单",
   "sidepanel.split.pinnedMenu": "固定的分屏视图菜单",
+  "sidepanel.split.reverse": "交换左右标签页",
   "sidepanel.split.separate": "拆分标签页",
   "sidepanel.split.deleteMessage":
     "将删除并排显示“{left}”和“{right}”的固定分屏视图的书签。打开的标签页不会关闭。",
