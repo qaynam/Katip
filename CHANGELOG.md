@@ -8,6 +8,26 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Drag a link from a page into the sidebar to open it there or keep it as a pin, and swap the two sides of a split view.
+
+### 🚀 New
+
+- **Drop links into the sidebar** — Drag a link from a page onto the temporary tabs to open it in a new tab where you drop it, or onto the pinned area or a folder to keep it as a pin without opening it. The pin is named after the link’s text.
+- **Reverse Tabs** — Right-click a split view among the temporary tabs and choose “Reverse Tabs” to swap its left and right tabs.
+
+## 日本語
+
+ページ内のリンクをサイドバーにドラッグして、開いたりピン留めしたりできるようにしました。分割表示の左右も入れ替えられます。
+
+### 🚀 新機能
+
+- **リンクをサイドバーにドラッグ** — ページ内のリンクを一時タブの並びにドラッグすると、ドロップした位置に新しいタブが開きます。ピン留めの場所やフォルダにドラッグすれば、ページを開かずにピンとして残せます。ピンの名前にはリンクのテキストが使われます。
+- **左右を入れ替え** — 一時タブの中の分割表示を右クリックして「左右を入れ替え」を選ぶと、左右のタブを入れ替えられます。
+
 ## 1.13.0 — 2026-11-25
 
 ## English
