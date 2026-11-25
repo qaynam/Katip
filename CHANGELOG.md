@@ -8,6 +8,32 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+Get a notice you can click when a link opens a tab in the background, and share a page right from the notice after copying its URL.
+
+### 🚀 New
+
+- **Notices for tabs opened in the background** — Turn on “Tell of tabs opened in the background” under Tabs in the settings. When a link opens a tab behind the page you’re on, as with ⌘-click, a notice shows at the top right of the page. Click it to switch to the tab. Turning it on asks for access to all sites, which the notice needs to show on any page.
+
+### ✨ Improved
+
+- **Share from the copy notice** — The notice after copying a tab’s URL no longer repeats the URL under its title, and has a button that shares the page through the system’s share menu.
+
+## 日本語
+
+リンクから裏でタブが開いたときに、クリックしてそのタブに切り替えられる知らせを出せるようにしました。URL をコピーしたときの知らせから、そのページを共有することもできます。
+
+### 🚀 新機能
+
+- **裏で開いたタブの知らせ** — 設定の「タブ」で「裏で開いたタブを知らせる」をオンにすると、⌘ を押しながらリンクをクリックしたときなど、開いているページの裏で新しいタブが開いたときに、ページの右上に知らせが出ます。知らせをクリックすると、そのタブに切り替わります。オンにするときにすべてのサイトへのアクセスを求められますが、これはどのページにも知らせを出すために必要なためです。
+
+### ✨ 改善
+
+- **コピーの知らせから共有** — タブの URL をコピーしたときの知らせで、コピーした URL を表示しないようにしました。かわりに共有ボタンが付き、システムの共有メニューからそのページを共有できます。
+
 ## 1.12.2 — 2026-11-25
 
 ## English
