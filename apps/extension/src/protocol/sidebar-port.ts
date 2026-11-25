@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { BookmarkId, WindowId } from "#platform/browser"
+import { BookmarkId, TabId, WindowId } from "#platform/browser"
 import { SidebarCommand } from "./sidebar-command"
 import { SidebarView } from "./sidebar-view"
 
@@ -32,7 +32,11 @@ export type SidebarPanel = typeof SidebarPanel.Type
 export const ServerMessage = Schema.Union([
   Schema.TaggedStruct("ViewUpdated", { view: SidebarView }),
   Schema.TaggedStruct("CommandSettled", { requestId: RequestId, outcome: CommandOutcome }),
-  Schema.TaggedStruct("Notice", { message: Schema.String }),
+  Schema.TaggedStruct("Notice", {
+    message: Schema.String,
+    /** Clicking the notice brings this tab to the front. */
+    switchToTabId: Schema.optionalKey(TabId),
+  }),
   Schema.TaggedStruct("ShowPanel", { panel: SidebarPanel }),
   Schema.TaggedStruct("CloseSidePanel", {}),
 ])

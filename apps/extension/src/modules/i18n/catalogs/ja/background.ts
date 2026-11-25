@@ -6,6 +6,7 @@ export const background: CatalogSection<"background"> = {
   "background.tab.notInSpace": "このタブはどの Space にも属していません",
   "background.tab.notPinned": "このタブはピン留めされていません",
   "background.tab.noTarget": "対象のタブがありません",
+  "background.backgroundTab.opened": "新しいタブで開きました",
   "background.split.unsupported": "この Chrome では分割ビューを使えません",
   "background.split.notFound": "分割ビューが見つかりません",
   "background.split.withFavorite": "Favorites のタブとは分割できません",

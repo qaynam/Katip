@@ -852,6 +852,66 @@ describe("browsing history search", () => {
   })
 })
 
+describe("telling of tabs opened in the background", () => {
+  const noticeSwitch = () => switchNamed("Tell of tabs opened in the background")
+  const renderTabs = async () => {
+    const rendered = await renderLoaded()
+    await openCategory("Tabs")
+    await screen.findByRole("switch", { name: "Tell of tabs opened in the background" })
+    return rendered
+  }
+
+  it("is off at first", async () => {
+    await renderTabs()
+
+    expect(noticeSwitch().checked).toBe(false)
+  })
+
+  it("turning it on asks for access to all sites, and is saved on once allowed", async () => {
+    const { permissions, readSaved } = await renderTabs()
+
+    await fireEvent.click(noticeSwitch())
+
+    await waitFor(async () => {
+      expect((await readSaved()).backgroundTabNotices).toBe(true)
+    })
+    expect([noticeSwitch().checked, await permissions((fake) => fake.requested)]).toStrictEqual([
+      true,
+      ["AllSites"],
+    ])
+  })
+
+  it("when access to all sites isn't allowed, turns back off, saves nothing, and says so", async () => {
+    const { permissions, readSaved } = await renderTabs()
+    await permissions((fake) => fake.answerRequestsWith("Deny"))
+
+    await fireEvent.click(noticeSwitch())
+
+    expect(
+      await screen.findByText("Access to all sites wasn’t allowed, so this stays off."),
+    ).toBeTruthy()
+    expect([noticeSwitch().checked, (await readSaved()).backgroundTabNotices]).toStrictEqual([
+      false,
+      false,
+    ])
+  })
+
+  it("turning it off keeps the access to all sites", async () => {
+    const { permissions, readSaved } = await renderTabs()
+    await fireEvent.click(noticeSwitch())
+    await waitFor(async () => {
+      expect((await readSaved()).backgroundTabNotices).toBe(true)
+    })
+
+    await fireEvent.click(noticeSwitch())
+
+    await waitFor(async () => {
+      expect((await readSaved()).backgroundTabNotices).toBe(false)
+    })
+    expect(await permissions((fake) => fake.removed)).toStrictEqual([])
+  })
+})
+
 describe("notifications about new items in live folders", () => {
   const notificationSwitch = () => switchNamed("Notify about new items in live folders")
   const renderTabs = async () => {

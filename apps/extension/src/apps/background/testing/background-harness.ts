@@ -81,7 +81,7 @@ export const openSidebar = (windowId: WindowId) =>
       ReadonlyMap<number, { readonly outcome: CommandOutcome; readonly viewsBefore: number }>
     >(new Map())
     const nextRequestId = yield* Ref.make(1)
-    const notices = yield* Ref.make<ReadonlyArray<string>>([])
+    const notices = yield* Ref.make<ReadonlyArray<SidebarNotice>>([])
     const firstFreshView = yield* Ref.make(0)
 
     yield* port.messages.pipe(
@@ -100,7 +100,7 @@ export const openSidebar = (windowId: WindowId) =>
               ),
             )
           case "Notice":
-            return Ref.update(notices, (all) => [...all, message.message])
+            return Ref.update(notices, (all) => [...all, message])
           case "ShowPanel":
           case "CloseSidePanel":
             return Effect.void
@@ -133,10 +133,23 @@ export const openSidebar = (windowId: WindowId) =>
       })
 
     const noticeWhere = (predicate: (notice: string) => boolean) =>
+      eventually(
+        Effect.map(Ref.get(notices), (all) =>
+          Array.findLast(
+            all.map(({ message }) => message),
+            predicate,
+          ),
+        ),
+      )
+
+    /** The latest notice the predicate holds for, with the tab it switches to, if any. */
+    const fullNoticeWhere = (predicate: (notice: SidebarNotice) => boolean) =>
       eventually(Effect.map(Ref.get(notices), (all) => Array.findLast(all, predicate)))
 
-    return { viewWhere, run, noticeWhere, receivedViews: Ref.get(views) }
+    return { viewWhere, run, noticeWhere, fullNoticeWhere, receivedViews: Ref.get(views) }
   })
+
+type SidebarNotice = Extract<ServerMessage, { readonly _tag: "Notice" }>
 
 export const spaceNamed = (view: SidebarView, name: string): Option.Option<SpaceView> =>
   Array.findFirst(view.spaces, (space) => space.name === name)

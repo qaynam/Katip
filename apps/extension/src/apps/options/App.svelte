@@ -79,6 +79,7 @@
     | "ShortcutsUnavailable"
     | "HistoryDenied"
     | "NotificationsDenied"
+    | "AllSitesDenied"
     | "Exported"
     | "ExportFailed"
     | "Imported"
@@ -90,6 +91,7 @@
     ShortcutsUnavailable: { message: "options.shortcuts.openFailed", tone: "Alert" },
     HistoryDenied: { message: "options.spotlight.history.denied", tone: "Info" },
     NotificationsDenied: { message: "options.liveFolderNotifications.denied", tone: "Info" },
+    AllSitesDenied: { message: "options.backgroundTabNotices.denied", tone: "Info" },
     Exported: { message: "options.data.exported", tone: "Done" },
     ExportFailed: { message: "options.data.exportFailed", tone: "Alert" },
     Imported: { message: "options.data.imported", tone: "Done" },
@@ -112,6 +114,7 @@
   const deniedOutcomes = {
     History: "HistoryDenied",
     Notifications: "NotificationsDenied",
+    AllSites: "AllSitesDenied",
   } as const satisfies Record<OptionalAccess, Outcome>
   /** Each switch shows whether its permission is granted. Missing until that's known. */
   let allowedAccess = $state<Partial<Record<OptionalAccess, boolean>>>({})
@@ -342,6 +345,24 @@
     else announce(enabled ? deniedOutcomes[access] : "SaveFailed")
   }
 
+  // Turned on only once every site is allowed: the notice goes into the page the tab was opened
+  // from, which can be any site. Turning it off leaves the access alone, as the speakers chosen
+  // for sites may rely on it
+  const setBackgroundTabNotices = async (enabled: boolean) => {
+    if (settings === null) return
+    const beforeSave = settings
+    if (!enabled) return saveOver(beforeSave, { backgroundTabNotices: false })
+    settings = applySettingsPatch(beforeSave, { backgroundTabNotices: true })
+    const allowed = await runtime.runPromiseExit(
+      OptionalPermissions.use((permissions) => permissions.request("AllSites")),
+    )
+    if (Exit.isSuccess(allowed) && allowed.value) {
+      return saveOver(beforeSave, { backgroundTabNotices: true })
+    }
+    settings = beforeSave
+    announce(Exit.isSuccess(allowed) ? "AllSitesDenied" : "SaveFailed")
+  }
+
   const openShortcutSettings = async () => {
     const opened = await runtime.runPromiseExit(openChromeShortcutSettings)
     if (Exit.isFailure(opened)) announce("ShortcutsUnavailable")
@@ -542,6 +563,18 @@
                   {...control}
                   checked={current.syncTabGroups}
                   onchange={(checked) => save({ syncTabGroups: checked })}
+                />
+              {/snippet}
+            </SettingRow>
+            <SettingRow
+              label={t("options.backgroundTabNotices.label")}
+              description={t("options.backgroundTabNotices.description")}
+            >
+              {#snippet children(control)}
+                <Switch
+                  {...control}
+                  checked={current.backgroundTabNotices}
+                  onchange={(checked) => setBackgroundTabNotices(checked)}
                 />
               {/snippet}
             </SettingRow>

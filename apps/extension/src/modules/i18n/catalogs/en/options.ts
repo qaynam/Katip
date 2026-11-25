@@ -41,6 +41,10 @@ export const options = {
   "options.syncTabGroups.label": "Sync Spaces with Chrome tab groups",
   "options.syncTabGroups.description":
     "Shows each Space as a tab group in every window. Renaming or recoloring a group doesn’t change the Space and is undone at the next sync. While syncing, folders can’t contain other folders.",
+  "options.backgroundTabNotices.label": "Tell of tabs opened in the background",
+  "options.backgroundTabNotices.description":
+    "When a link opens a tab behind the page you’re on, as with ⌘-click, a notice shows at the top right of the page. Click it to switch to the tab. Turning this on asks for access to all sites, which the notice needs to show on any page.",
+  "options.backgroundTabNotices.denied": "Access to all sites wasn’t allowed, so this stays off.",
   "options.splitView.label": "Split view",
   "options.splitView.available": "Available",
   "options.splitView.unavailable": "Not available in this browser (requires Chrome 155 or later)",

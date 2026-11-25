@@ -69,6 +69,11 @@ export const Settings = withDefaultsOfAllFields(
     bangs: withDefault(Schema.Boolean, true),
     spotlightSize: withDefault(SpotlightSize, "Normal"),
     spotlightPosition: withDefault(SpotlightPosition, DEFAULT_SPOTLIGHT_POSITION),
+    /**
+     * Whether a page that opens a tab in the background shows a notice of it, which brings the tab
+     * to the front when clicked. Takes access to every site, asked for when it's turned on.
+     */
+    backgroundTabNotices: withDefault(Schema.Boolean, false),
   }),
 )
 export type Settings = typeof Settings.Type

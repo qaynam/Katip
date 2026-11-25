@@ -44,6 +44,11 @@ export const options: CatalogSection<"options"> = {
   "options.syncTabGroups.label": "Sincronizar los espacios con los grupos de pestañas de Chrome",
   "options.syncTabGroups.description":
     "Muestra cada espacio como un grupo de pestañas en cada ventana. Si cambias el nombre o el color de un grupo, el espacio no cambia y el grupo se restablece en la siguiente sincronización. Mientras se sincroniza, no se pueden crear carpetas dentro de otras carpetas.",
+  "options.backgroundTabNotices.label": "Avisar de las pestañas abiertas en segundo plano",
+  "options.backgroundTabNotices.description":
+    "Cuando un enlace abre una pestaña detrás de la página en la que estás, como con ⌘ + clic, aparece un aviso arriba a la derecha de la página. Haz clic en él para cambiar a esa pestaña. Al activarlo se pide acceso a todos los sitios, que el aviso necesita para aparecer en cualquier página.",
+  "options.backgroundTabNotices.denied":
+    "No se permitió el acceso a todos los sitios, así que sigue desactivado.",
   "options.splitView.label": "Vista dividida",
   "options.splitView.available": "Disponible",
   "options.splitView.unavailable":

@@ -38,6 +38,19 @@ describe("The sidebar", () => {
     expect(screen.getByRole("status").textContent).toContain("Archived the tab")
   })
 
+  it("brings the tab of a notice to the front when the notice is clicked", async () => {
+    const { connection } = await renderSidebar(sidebarView())
+
+    connection.pushNotice("Opened in a new tab", TabId.make(7))
+    await tick()
+    await fireEvent.click(screen.getByRole("button", { name: "Opened in a new tab" }))
+
+    expect([connection.sentCommands, screen.queryByText("Opened in a new tab")]).toStrictEqual([
+      [{ _tag: "ActivateTab", tabId: 7 }],
+      null,
+    ])
+  })
+
   it("shows the reason in a toast when a command fails", async () => {
     await renderSidebar(
       sidebarView({ spaces: [spaceView("work", { temporaryTabs: [tabView(1)] })] }),

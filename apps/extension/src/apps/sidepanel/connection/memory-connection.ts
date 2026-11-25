@@ -1,3 +1,4 @@
+import type { TabId } from "#platform/browser"
 import type { CommandOutcome, SidebarCommand, SidebarPanel, SidebarView } from "#protocol"
 import type { SidebarConnection, SidebarEvent } from "./sidebar-connection"
 
@@ -17,7 +18,8 @@ export interface MemoryConnectionOptions {
 export interface MemoryConnection extends SidebarConnection {
   readonly sentCommands: ReadonlyArray<SidebarCommand>
   readonly pushView: (view: SidebarView) => void
-  readonly pushNotice: (message: string) => void
+  /** With `switchToTabId`, the notice brings that tab to the front when clicked. */
+  readonly pushNotice: (message: string, switchToTabId?: TabId) => void
   /** Simulates the Command Palette asking for a panel. */
   readonly pushShowPanel: (panel: SidebarPanel) => void
   /** Simulates the Command Palette asking the side panel to close. */
@@ -41,7 +43,8 @@ export const createMemoryConnection = (options: MemoryConnectionOptions = {}): M
     latestView = view
     emit({ _tag: "ViewUpdated", view })
   }
-  const pushNotice = (message: string) => emit({ _tag: "Notice", message })
+  const pushNotice = (message: string, switchToTabId?: TabId) =>
+    emit({ _tag: "Notice", message, ...(switchToTabId !== undefined && { switchToTabId }) })
 
   return {
     sentCommands,

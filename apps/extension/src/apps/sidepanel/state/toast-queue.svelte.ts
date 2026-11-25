@@ -2,6 +2,8 @@ export interface Toast {
   readonly id: number
   readonly message: string
   readonly tone: "info" | "error"
+  /** When given, the message is a button that runs this and dismisses the toast. */
+  readonly onActivate?: () => void
 }
 
 const MAX_VISIBLE = 3
@@ -15,9 +17,10 @@ export class ToastQueue {
     this.#durationMs = durationMs
   }
 
-  show(message: string, tone: Toast["tone"] = "info") {
+  show(message: string, tone: Toast["tone"] = "info", onActivate?: () => void) {
     const id = this.#nextId++
-    this.items = [...this.items, { id, message, tone }].slice(-MAX_VISIBLE)
+    const toast: Toast = { id, message, tone, ...(onActivate !== undefined && { onActivate }) }
+    this.items = [...this.items, toast].slice(-MAX_VISIBLE)
     setTimeout(() => this.dismiss(id), this.#durationMs)
   }
 

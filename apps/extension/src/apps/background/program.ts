@@ -26,10 +26,12 @@ import { Permissions } from "#platform/permissions"
 import {
   EXPORT_PORT_NAME,
   IMPORT_PORT_NAME,
+  PAGE_NOTICE_PORT_NAME,
   SIDEBAR_PORT_NAME,
   SPOTLIGHT_PORT_NAME,
 } from "#protocol"
 import { AUTO_ARCHIVE_ALARM, runAutoArchive, scheduleAutoArchive } from "./auto-archive"
+import { noticeBackgroundTab, servePageNotice } from "./background-tab-notice"
 import { pruneStaleBindings } from "./bindings"
 import { handleBrowserEvent, isBookmarkEvent } from "./browser-event-handler"
 import { exportFileContent, serveDataExport } from "./data-export"
@@ -219,6 +221,16 @@ export const program = Effect.gen(function* () {
           serialize(handleBrowserEvent(removed)),
         ),
       ),
+      // After the tab has joined its Space rather than in turn with the changes: nothing waits on
+      // the page showing the notice
+      Match.tag("TabCreated", (created) =>
+        Effect.andThen(
+          serialize(handleBrowserEvent(created)),
+          logFailure("Couldn't tell of a tab opened in the background")(
+            noticeBackgroundTab(created.tab),
+          ),
+        ),
+      ),
       Match.tag("AlarmFired", ({ alarm }) =>
         Match.value(alarm.name).pipe(
           Match.when(AUTO_ARCHIVE_ALARM, () => serialize(runAutoArchive)),
@@ -293,6 +305,10 @@ export const program = Effect.gen(function* () {
         }
         if (port.name === IMPORT_PORT_NAME) {
           yield* Effect.forkScoped(serveDataImport(port, serialize, afterChange))
+          return
+        }
+        if (port.name === PAGE_NOTICE_PORT_NAME) {
+          yield* Effect.forkScoped(servePageNotice(port))
           return
         }
         yield* port.disconnect

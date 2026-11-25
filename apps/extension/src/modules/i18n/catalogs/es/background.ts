@@ -6,6 +6,7 @@ export const background: CatalogSection<"background"> = {
   "background.tab.notInSpace": "Esta pestaña no pertenece a ningún espacio",
   "background.tab.notPinned": "Esta pestaña no está fijada",
   "background.tab.noTarget": "No hay ninguna pestaña sobre la que actuar",
+  "background.backgroundTab.opened": "Se abrió en una pestaña nueva",
   "background.split.unsupported": "La vista dividida no está disponible en esta versión de Chrome",
   "background.split.notFound": "No se encontró la vista dividida",
   "background.split.withFavorite": "Las pestañas de Favoritos no se pueden dividir",

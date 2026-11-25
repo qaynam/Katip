@@ -41,6 +41,11 @@ export const options: CatalogSection<"options"> = {
   "options.syncTabGroups.label": "Space を Chrome のタブグループと同期",
   "options.syncTabGroups.description":
     "ウィンドウごとに Space をタブグループとして表示します。グループ側で名前や色を変えても Space には反映されず、次の同期で元に戻ります。同期中はフォルダの中にフォルダを作れません。",
+  "options.backgroundTabNotices.label": "裏で開いたタブを知らせる",
+  "options.backgroundTabNotices.description":
+    "⌘ を押しながらクリックしたときなど、リンクから今のページの裏に新しいタブが開いたときに、ページの右上に知らせを出します。知らせをクリックすると、そのタブに切り替わります。オンにするときに、すべてのサイトへのアクセスを求めます。どのページにも知らせを出すために必要です。",
+  "options.backgroundTabNotices.denied":
+    "すべてのサイトへのアクセスが許可されなかったため、オフのままです",
   "options.splitView.label": "分割ビュー",
   "options.splitView.available": "使えます",
   "options.splitView.unavailable": "このブラウザでは使えません（Chrome 155 以降が必要）",

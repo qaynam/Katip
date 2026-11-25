@@ -39,6 +39,10 @@ export const options: CatalogSection<"options"> = {
   "options.syncTabGroups.label": "将空间与 Chrome 标签页分组同步",
   "options.syncTabGroups.description":
     "在每个窗口中，将每个空间显示为一个标签页分组。在分组上更改名称或颜色不会影响空间，并会在下次同步时还原。同步期间，无法在文件夹中再创建文件夹。",
+  "options.backgroundTabNotices.label": "提示在后台打开的标签页",
+  "options.backgroundTabNotices.description":
+    "当链接在当前页面后面打开标签页时（例如按住 ⌘ 点击），页面右上角会显示提示。点击提示即可切换到该标签页。开启时会请求访问所有网站的权限，提示需要它才能显示在任何页面上。",
+  "options.backgroundTabNotices.denied": "未获得访问所有网站的权限，因此保持关闭。",
   "options.splitView.label": "分屏视图",
   "options.splitView.available": "可以使用",
   "options.splitView.unavailable": "此浏览器无法使用（需要 Chrome 155 或更高版本）",

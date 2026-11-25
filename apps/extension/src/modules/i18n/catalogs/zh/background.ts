@@ -6,6 +6,7 @@ export const background: CatalogSection<"background"> = {
   "background.tab.notInSpace": "此标签页不属于任何空间",
   "background.tab.notPinned": "此标签页未固定",
   "background.tab.noTarget": "没有可操作的标签页",
+  "background.backgroundTab.opened": "已在新标签页中打开",
   "background.split.unsupported": "此版本的 Chrome 不支持分屏视图",
   "background.split.notFound": "找不到该分屏视图",
   "background.split.withFavorite": "收藏中的标签页无法分屏",

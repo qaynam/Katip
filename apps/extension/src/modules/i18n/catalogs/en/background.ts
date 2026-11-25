@@ -6,6 +6,7 @@ export const background = {
   "background.tab.notInSpace": "This tab doesn't belong to any Space",
   "background.tab.notPinned": "This tab isn't pinned",
   "background.tab.noTarget": "There's no tab to act on",
+  "background.backgroundTab.opened": "Opened in a new tab",
   "background.split.unsupported": "Split view isn't available in this version of Chrome",
   "background.split.notFound": "Split view not found",
   "background.split.withFavorite": "Favorites tabs can't be split",

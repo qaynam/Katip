@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Match, Option, Ref, Schema, Stream } from "effect"
-import { Windows, type BrowserPort, type WindowId } from "#platform/browser"
+import { Windows, type BrowserPort, type TabId, type WindowId } from "#platform/browser"
 import {
   ClientMessage,
   ServerMessage,
@@ -8,6 +8,13 @@ import {
   type SidebarPanel,
 } from "#protocol"
 import { buildSidebarView } from "./sidebar-view-source"
+
+export interface NoticeOptions {
+  /** Shows the notice only in the side panels of this window. */
+  readonly windowId?: WindowId
+  /** Clicking the notice brings this tab to the front. */
+  readonly switchToTabId?: TabId
+}
 
 interface Subscriber {
   readonly id: number
@@ -50,7 +57,8 @@ export class SidebarHub extends Context.Service<
     ): Effect.Effect<void, never, R>
     /** Sends every subscribed side panel its view, if it changed since the last one sent. */
     readonly publish: Effect.Effect<void>
-    notify(message: string): Effect.Effect<void>
+    /** Shows `message` in every side panel, unless `options` narrows it down to a window. */
+    notify(message: string, options?: NoticeOptions): Effect.Effect<void>
     /**
      * Has the side panel of `windowId` show `panel`. When none is open there, the next one to
      * subscribe to that window shows it.
@@ -195,11 +203,22 @@ export class SidebarHub extends Context.Service<
       const isSidePanelOpenIn = (windowId: WindowId) =>
         Effect.map(sidePanelsOf(windowId), (open) => open.length > 0)
 
-      const notify = (message: string) =>
-        Effect.flatMap(Ref.get(subscribers), (all) =>
-          Effect.forEach(all, (subscriber) => post(subscriber.port, { _tag: "Notice", message }), {
-            discard: true,
-          }),
+      const notify = (message: string, options: NoticeOptions = {}) =>
+        Effect.flatMap(
+          options.windowId === undefined ? Ref.get(subscribers) : sidePanelsOf(options.windowId),
+          (receivers) =>
+            Effect.forEach(
+              receivers,
+              (subscriber) =>
+                post(subscriber.port, {
+                  _tag: "Notice",
+                  message,
+                  ...(options.switchToTabId !== undefined && {
+                    switchToTabId: options.switchToTabId,
+                  }),
+                }),
+              { discard: true },
+            ),
         )
 
       return SidebarHub.of({

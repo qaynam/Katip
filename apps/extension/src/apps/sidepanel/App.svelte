@@ -92,8 +92,14 @@
       if (event._tag === "ViewUpdated") {
         receivedView = event.view
         pendingActivation.settleWith(event.view)
-      } else if (event._tag === "Notice") toasts.show(event.message)
-      else if (event._tag === "ShowPanel") bodyPanel.show(event.panel)
+      } else if (event._tag === "Notice") {
+        const tabId = event.switchToTabId
+        toasts.show(
+          event.message,
+          "info",
+          tabId === undefined ? undefined : () => void run({ _tag: "ActivateTab", tabId }),
+        )
+      } else if (event._tag === "ShowPanel") bodyPanel.show(event.panel)
       else if (receivedView !== null) sidePanel.close(receivedView.windowId)
     }),
   )

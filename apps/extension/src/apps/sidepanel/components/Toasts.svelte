@@ -14,7 +14,22 @@
 <div class="toasts" role="status" aria-live="polite">
   {#each toasts.items as toast (toast.id)}
     <div class="toast glass" class:error={toast.tone === "error"}>
-      <span class="message">{toast.message}</span>
+      {#if toast.onActivate === undefined}
+        <span class="message">{toast.message}</span>
+      {:else}
+        {@const activate = toast.onActivate}
+        <button
+          class="message action"
+          type="button"
+          onclick={() => {
+            activate()
+            toasts.dismiss(toast.id)
+          }}
+        >
+          {toast.message}
+          <Icon name="chevronRight" size={12} />
+        </button>
+      {/if}
       <button
         class="dismiss"
         type="button"
@@ -59,6 +74,24 @@
 
   .message {
     flex: 1;
+  }
+
+  .action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .action:hover {
+    text-decoration: underline;
   }
 
   .dismiss {

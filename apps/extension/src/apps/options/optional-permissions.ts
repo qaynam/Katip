@@ -2,13 +2,14 @@ import { Context, Effect, Layer, Queue, Stream } from "effect"
 import { BrowserApiError } from "#platform/browser"
 
 /** Permissions the manifest marks optional, which the settings page asks for and removes. */
-export type OptionalAccess = "History" | "Notifications"
+export type OptionalAccess = "History" | "Notifications" | "AllSites"
 
 export type PermissionChange = "Added" | "Removed"
 
 const permissionsOf: Readonly<Record<OptionalAccess, chrome.permissions.Permissions>> = {
   History: { permissions: ["history"] },
   Notifications: { permissions: ["notifications"] },
+  AllSites: { origins: ["https://*/*", "http://*/*"] },
 }
 
 const callPermissions = (api: string, call: () => Promise<boolean>) =>

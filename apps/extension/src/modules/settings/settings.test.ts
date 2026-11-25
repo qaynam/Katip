@@ -20,6 +20,7 @@ describe("defaults", () => {
       bangs: true,
       spotlightSize: "Normal",
       spotlightPosition: { x: 0.5, y: 0.3 },
+      backgroundTabNotices: false,
     })
   })
 })
@@ -38,6 +39,7 @@ describe("reading stored settings", () => {
       bangs: false,
       spotlightSize: "Compact",
       spotlightPosition: { x: 0.2, y: 0.6 },
+      backgroundTabNotices: true,
     }
 
     expect(decodeStored(encodeForStorage(saved))).toStrictEqual(saved)

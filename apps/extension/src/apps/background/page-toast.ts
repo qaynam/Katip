@@ -1,11 +1,21 @@
 /** What a notice on a page says. */
 export interface PageNotice {
-  /** `Done` marks it with a check, `Alert` with an exclamation mark. */
-  readonly tone: "Done" | "Alert"
+  /** `Done` marks it with a check, `Alert` with an exclamation mark, `Opened` with an arrow out. */
+  readonly tone: "Done" | "Alert" | "Opened"
+  /** Cut short with an ellipsis when too long for one line. */
   readonly title: string
-  /** Shown muted on one line under the title, cut short with an ellipsis when too long. */
-  readonly detail?: string
+  /** What a click does. A notice with something to click stays longer, to leave time to reach it. */
+  readonly action?: PageNoticeAction
 }
+
+export type PageNoticeAction =
+  /** The notice is a button, which posts `message` on a port of `portName` to the extension. */
+  | { readonly _tag: "Post"; readonly portName: string; readonly message: unknown }
+  /**
+   * The notice has a button named `label` that shares the page at `url` through the system's share
+   * menu. Left out on a page where the browser can't share.
+   */
+  | { readonly _tag: "Share"; readonly label: string; readonly title: string; readonly url: string }
 
 /**
  * Shows a notice that slides in at the top right of the page for a moment, replacing any notice
@@ -19,8 +29,15 @@ export interface PageNotice {
  * Drawn inside a Shadow DOM so that the page's CSS and the notice's CSS cannot affect each other.
  */
 export const showPageToast = (notice: PageNotice): void => {
+  const { action } = notice
+  // Not on a page that isn't served securely, nor in a browser without the share menu
+  const canShare =
+    action?._tag === "Share" &&
+    typeof navigator.share === "function" &&
+    (navigator.canShare?.({ title: action.title, url: action.url }) ?? true)
+  const hasButton = action?._tag === "Post" || canShare
   const enterMs = 340
-  const stayMs = 2_400
+  const stayMs = hasButton ? 5_000 : 2_400
   const leaveMs = 260
   const style = `
 :host {
@@ -94,6 +111,71 @@ export const showPageToast = (notice: PageNotice): void => {
   color: rgb(255 255 255);
 }
 
+button.notice {
+  margin: 0;
+  text-align: start;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+button.notice:hover {
+  --background: rgb(250 250 252 / 0.9);
+}
+
+button.notice:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  button.notice:hover {
+    --background: rgb(44 44 52 / 0.86);
+  }
+}
+
+.go {
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
+.share {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px -4px auto;
+  padding: 0;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.share svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5;
+}
+
+.share:hover {
+  background: rgb(0 0 0 / 0.06);
+}
+
+.share:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .share:hover {
+    background: rgb(255 255 255 / 0.1);
+  }
+}
+
 svg {
   width: 14px;
   height: 14px;
@@ -104,27 +186,12 @@ svg {
   stroke-linejoin: round;
 }
 
-.text {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.title,
-.detail {
+.title {
   overflow: hidden;
+  min-width: 0;
+  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.title {
-  font-weight: 600;
-}
-
-.detail {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
 }
 
 @keyframes katip-notice-in {
@@ -164,11 +231,16 @@ svg {
 
   const svgNamespace = "http://www.w3.org/2000/svg"
   const isAlert = notice.tone === "Alert"
-  const textElement = (className: string, text: string) => {
-    const element = document.createElement("span")
-    element.className = className
-    element.textContent = text
-    return element
+  const iconOf = (strokes: ReadonlyArray<string>) => {
+    const icon = document.createElementNS(svgNamespace, "svg")
+    icon.setAttribute("viewBox", "0 0 16 16")
+    icon.setAttribute("aria-hidden", "true")
+    strokes.forEach((d) => {
+      const stroke = document.createElementNS(svgNamespace, "path")
+      stroke.setAttribute("d", d)
+      icon.append(stroke)
+    })
+    return icon
   }
 
   // Each injection is a fresh copy of this function with no reference to the previous notice,
@@ -181,28 +253,50 @@ svg {
   styleElement.textContent = style
 
   // Not markup through innerHTML: pages that enforce Trusted Types refuse it
-  const icon = document.createElementNS(svgNamespace, "svg")
-  icon.setAttribute("viewBox", "0 0 16 16")
-  icon.setAttribute("aria-hidden", "true")
-  const strokes = isAlert ? ["M8 4.25v4.5", "M8 11.5v.25"] : ["M4.25 8.4l2.5 2.5 5-5.4"]
-  strokes.forEach((d) => {
-    const stroke = document.createElementNS(svgNamespace, "path")
-    stroke.setAttribute("d", d)
-    icon.append(stroke)
-  })
+  const badgeStrokes = {
+    Done: ["M4.25 8.4l2.5 2.5 5-5.4"],
+    Alert: ["M8 4.25v4.5", "M8 11.5v.25"],
+    Opened: ["M5.25 10.75l5.5-5.5", "M6.25 5.25h4.5v4.5"],
+  }[notice.tone]
   const badge = document.createElement("span")
   badge.className = "badge"
-  badge.append(icon)
+  badge.append(iconOf(badgeStrokes))
 
-  const text = document.createElement("span")
-  text.className = "text"
-  text.append(textElement("title", notice.title))
-  if (notice.detail !== undefined) text.append(textElement("detail", notice.detail))
+  const title = document.createElement("span")
+  title.className = "title"
+  title.textContent = notice.title
 
-  const card = document.createElement("div")
+  const card = document.createElement(action?._tag === "Post" ? "button" : "div")
   card.className = isAlert ? "notice alert" : "notice"
-  card.setAttribute("role", isAlert ? "alert" : "status")
-  card.append(badge, text)
+  card.append(badge, title)
+  if (action?._tag === "Post") {
+    card.setAttribute("type", "button")
+    const go = iconOf(["M6.5 4.5 10 8l-3.5 3.5"])
+    go.setAttribute("class", "go")
+    card.append(go)
+    card.addEventListener("click", () => {
+      chrome.runtime.connect({ name: action.portName }).postMessage(action.message)
+      host.remove()
+    })
+  } else {
+    card.setAttribute("role", isAlert ? "alert" : "status")
+  }
+  if (action?._tag === "Share" && canShare) {
+    const share = document.createElement("button")
+    share.className = "share"
+    share.type = "button"
+    share.setAttribute("aria-label", action.label)
+    share.title = action.label
+    share.append(
+      iconOf(["M8 1.75v8", "M5.25 4.5 8 1.75l2.75 2.75", "M5.75 6.75h-2v7.5h8.5v-7.5h-2"]),
+    )
+    share.addEventListener("click", () => {
+      // Closing the share menu without choosing anything rejects, which is nothing to report
+      navigator.share({ title: action.title, url: action.url }).catch(() => undefined)
+      host.remove()
+    })
+    card.append(share)
+  }
   root.append(styleElement, card)
   // Not under body: a transform on body would make the fixed position relative to body
   document.documentElement.append(host)
