@@ -101,10 +101,13 @@
 
   const menu = new MenuController()
   const dialog = new DialogController()
-  const drag = new DragSession(() => ({ spaceId: activeSpace.id, canSplit: view.canSplit }), {
-    windowId: () => view.windowId,
-    run: (command) => void run(command),
-  })
+  const drag = new DragSession(
+    () => ({ windowId: view.windowId, spaceId: activeSpace.id, canSplit: view.canSplit }),
+    {
+      windowId: () => view.windowId,
+      run: (command) => void run(command),
+    },
+  )
   const themePicker = new ThemePickerController()
   const themeDraft = new ThemeDraft((draft) =>
     run({ _tag: "SetSpaceTheme", spaceId: draft.spaceId, theme: draft.theme }),
@@ -231,7 +234,7 @@
 
   const dropAccepted = (event: DragEvent) => {
     event.preventDefault()
-    const outcome = drag.takeOutcome()
+    const outcome = drag.takeOutcome(event)
     if (outcome?._tag === "Run") void run(outcome.command)
     else if (outcome?._tag === "SplitUnsupported")
       toasts.show(translator.t("sidepanel.split.unsupported"))

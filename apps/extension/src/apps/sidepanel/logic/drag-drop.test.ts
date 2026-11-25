@@ -18,6 +18,7 @@ import {
 } from "./drag-drop"
 
 const spaceId = SpaceId.make("work")
+const sidePanelWindowId = WindowId.make(3)
 const tabId = (value: number) => TabId.make(value)
 const bookmarkId = (value: string) => BookmarkId.make(value)
 
@@ -103,7 +104,13 @@ const drop = (
   target: DropTarget,
   options: { readonly canSplit?: boolean } = {},
 ) =>
-  Option.getOrNull(commandForDrop(source, target, { spaceId, canSplit: options.canSplit ?? true }))
+  Option.getOrNull(
+    commandForDrop(source, target, {
+      windowId: sidePanelWindowId,
+      spaceId,
+      canSplit: options.canSplit ?? true,
+    }),
+  )
 
 describe("Dragging a temporary tab", () => {
   it("reorders it to where it is dropped among the temporary tabs", () => {
@@ -371,9 +378,42 @@ describe("Dropping a tab on the middle of a temporary tab row", () => {
   })
 })
 
+describe("Dropping a link from a page", () => {
+  const link: DragSource = { _tag: "Link", url: "https://linked.example/", title: "Linked" }
+
+  it("opens it in a new tab of the side panel's window, where it is dropped among the temporary tabs", () => {
+    expect(drop(link, belowTab(2))).toStrictEqual({
+      _tag: "OpenLinkInTemporary",
+      windowId: sidePanelWindowId,
+      url: "https://linked.example/",
+      spaceId,
+      placement: { _tag: "Below", tabId: tabId(2) },
+    })
+  })
+
+  it("keeps it as a pin, named after the link, where it is dropped among the pins", () => {
+    expect(drop(link, { _tag: "Pinned", parentId: bookmarkId("folder"), slot: 1 })).toStrictEqual({
+      _tag: "PinLink",
+      url: "https://linked.example/",
+      title: "Linked",
+      placement: { spaceId, parentId: bookmarkId("folder"), index: 1 },
+    })
+  })
+
+  it("can't be dropped on Favorites, on a row to split it, or on the Spaces", () => {
+    expect([
+      drop(link, { _tag: "Favorites", slot: 0 }),
+      drop(link, splitWith(2)),
+      drop(link, { _tag: "SpaceBar", slot: 0 }),
+    ]).toStrictEqual([null, null, null])
+  })
+})
+
 describe("Dropping on the split zone where split views aren't available", () => {
   const outcomeOf = (source: DragSource, target: DropTarget) =>
-    Option.getOrNull(dropOutcome(source, target, { spaceId, canSplit: false }))
+    Option.getOrNull(
+      dropOutcome(source, target, { windowId: sidePanelWindowId, spaceId, canSplit: false }),
+    )
 
   it("reports the lack of support instead of reordering when the tab could have been split", () => {
     expect(outcomeOf(temporaryTab(1), splitWith(2))).toStrictEqual({ _tag: "SplitUnsupported" })

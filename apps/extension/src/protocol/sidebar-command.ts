@@ -70,6 +70,19 @@ export const SidebarCommand = Schema.Union([
     placement: TemporaryPlacement,
   }),
   Schema.TaggedStruct("PlaceTabInPinned", { tabId: TabId, placement: PinnedPlacement }),
+  // A link dragged in from a page: opened in a new tab of the window, in front, at the placement
+  Schema.TaggedStruct("OpenLinkInTemporary", {
+    windowId: WindowId,
+    url: Schema.String,
+    spaceId: SpaceId,
+    placement: TemporaryPlacement,
+  }),
+  // A link dragged in from a page, kept as a pin without opening it
+  Schema.TaggedStruct("PinLink", {
+    url: Schema.String,
+    title: Schema.String,
+    placement: PinnedPlacement,
+  }),
   Schema.TaggedStruct("PinTab", { tabId: TabId }),
   Schema.TaggedStruct("UnpinTab", { tabId: TabId }),
   Schema.TaggedStruct("CloseTemporaryTabs", { windowId: WindowId, spaceId: SpaceId }),

@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures"
 import {
   dragOnto,
+  dropLink,
   openPages,
   pagesInBrowser,
   pinnedBookmarks,
@@ -189,6 +190,37 @@ test.describe("dragging a Favorite", () => {
     await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual(["/a"])
     await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page /a"])
     await expect(favorites.getByRole("button")).toHaveCount(0)
+  })
+})
+
+test.describe("dropping a link from a page", () => {
+  test("on the temporary tabs opens it in front, where it was dropped", async ({
+    site,
+    sidebar,
+    background,
+  }) => {
+    await openPages(background, [`${site}/a`])
+    const temporary = sidebar.getByRole("region", { name: "Temporary tabs" })
+    await expect(temporary.getByRole("button", { name: "Page /a" })).toBeVisible()
+
+    await dropLink(temporary.getByRole("button", { name: "Page /a" }), `${site}/b`, "Page B")
+
+    await expect.poll(() => pagesInBrowser(background, site)).toContain("/b active")
+    await expect(temporaryTitles(sidebar)).toHaveText(["Page /a", "Page /b"])
+  })
+
+  test("on the pinned area keeps it as a pin named after the link, without opening it", async ({
+    site,
+    sidebar,
+    background,
+  }) => {
+    const pinned = sidebar.getByRole("region", { name: "Pinned" })
+
+    await dropLink(pinned.getByText("Drag tabs here to pin them"), `${site}/b`, "Page B")
+
+    await expect(pinned.getByRole("button", { name: "Page B" })).toBeVisible()
+    await expect.poll(() => pinnedBookmarks(background)).toStrictEqual(["Page B"])
+    await expect.poll(() => pagesInBrowser(background, site)).toStrictEqual([])
   })
 })
 

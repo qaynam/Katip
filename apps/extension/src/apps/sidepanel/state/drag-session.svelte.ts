@@ -12,6 +12,7 @@ import {
   type PanelBounds,
   type RowZone,
 } from "../logic/drag-drop"
+import { carriesLink, droppedLinkOf } from "../logic/dropped-link"
 
 export type DropZone = RowZone | FolderZone
 
@@ -25,13 +26,19 @@ export interface PageDropHandler {
   readonly run: (command: SidebarCommand) => void
 }
 
+// Until it's dropped, a link from a page is known only to be a link
+const LINK_BEFORE_DROP: DragSource = { _tag: "Link", url: "", title: "" }
+
 // Native drag and drop doesn't let drop targets read the dataTransfer contents, so the drag
-// source is kept here. External drags (links, files) leave source null and can be ignored
+// source is kept here. Drags from outside the side panel leave source null: a link from a page is
+// taken by its types until it's dropped, and anything else, such as a file, is ignored
 export class DragSession {
   source = $state.raw<DragSource | null>(null)
   sourceKey = $state.raw<string | null>(null)
   indicator = $state.raw<DropIndicator | null>(null)
   #outcome: DropOutcome | null = null
+  #target: DropTarget | null = null
+  #isLinkDrag = false
   #hover: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null
   #panel: PanelBounds | null = null
   #grabX: number | null = null
@@ -86,14 +93,17 @@ export class DragSession {
   offer(event: DragEvent, key: string, zone: DropZone, target: DropTarget | null) {
     event.stopPropagation()
     if (this.#hover !== null && this.#hover.key !== key) this.cancelHover()
+    this.#isLinkDrag = this.source === null && carriesLink([...(event.dataTransfer?.types ?? [])])
     const outcome = target === null ? Option.none() : this.#outcomeFor(target)
-    if (Option.isNone(outcome)) {
+    if (Option.isNone(outcome) || target === null) {
       this.reject()
       return
     }
     event.preventDefault()
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move"
+    // A page lets its links be copied or linked to, not moved: offering a move would refuse them
+    if (event.dataTransfer) event.dataTransfer.dropEffect = this.#isLinkDrag ? "copy" : "move"
     this.#outcome = outcome.value
+    this.#target = target
     if (this.indicator?.key !== key || this.indicator.zone !== zone) {
       this.indicator = { key, zone }
     }
@@ -109,7 +119,8 @@ export class DragSession {
   }
 
   #outcomeFor(target: DropTarget): Option.Option<DropOutcome> {
-    return this.source === null ? Option.none() : dropOutcome(this.source, target, this.#context())
+    const source = this.source ?? (this.#isLinkDrag ? LINK_BEFORE_DROP : null)
+    return source === null ? Option.none() : dropOutcome(source, target, this.#context())
   }
 
   /**
@@ -123,6 +134,7 @@ export class DragSession {
 
   reject() {
     this.#outcome = null
+    this.#target = null
     this.indicator = null
   }
 
@@ -130,16 +142,34 @@ export class DragSession {
     return this.indicator?.key === key ? this.indicator.zone : null
   }
 
-  /** Takes the outcome for the last accepted drop target and ends the drag. */
-  takeOutcome(): DropOutcome | null {
+  /**
+   * Takes the outcome for the last accepted drop target and ends the drag. A link from a page is
+   * read from the drop now, which is the first moment it can be.
+   */
+  takeOutcome(drop: DragEvent): DropOutcome | null {
     const outcome = this.#outcome
+    const target = this.#target
+    const isLinkDrag = this.#isLinkDrag
     this.end()
-    return outcome
+    if (!isLinkDrag || target === null || drop.dataTransfer === null) return outcome
+    const { dataTransfer } = drop
+    const link = droppedLinkOf({
+      uriList: dataTransfer.getData("text/uri-list"),
+      html: dataTransfer.getData("text/html"),
+      text: dataTransfer.getData("text/plain"),
+    })
+    return Option.getOrNull(
+      Option.flatMap(link, (dropped) =>
+        dropOutcome({ _tag: "Link", ...dropped }, target, this.#context()),
+      ),
+    )
   }
 
   end() {
     this.cancelHover()
     this.#outcome = null
+    this.#target = null
+    this.#isLinkDrag = false
     this.#panel = null
     this.#grabX = null
     this.indicator = null

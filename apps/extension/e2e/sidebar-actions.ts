@@ -84,6 +84,29 @@ export const dragOnto = async (source: Locator, target: Locator, ratio: number, 
   await source.dragTo(target, { targetPosition: { x: box.width * across, y: box.height * ratio } })
 }
 
+/**
+ * Drops a link on `target` as one dragged from a page does, with the data Chrome gives such a drag.
+ * Dispatched in the side panel's page: a real drag from another page can't be driven from a test.
+ */
+export const dropLink = async (target: Locator, url: string, text: string) => {
+  const box = await target.boundingBox()
+  if (box === null) throw new Error("the drop target is not visible")
+  const dataTransfer = await target.page().evaluateHandle(
+    ([url, text]) => {
+      const data = new DataTransfer()
+      data.setData("text/uri-list", url)
+      data.setData("text/html", `<meta charset="utf-8"><a href="${url}">${text}</a>`)
+      data.setData("text/plain", url)
+      return data
+    },
+    [url, text] as const,
+  )
+  const at = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 }
+  await target.dispatchEvent("dragenter", { dataTransfer, ...at })
+  await target.dispatchEvent("dragover", { dataTransfer, ...at })
+  await target.dispatchEvent("drop", { dataTransfer, ...at })
+}
+
 export const renameRow = async (sidebar: Page, row: Locator, title: string) => {
   await row.dblclick()
   await sidebar.keyboard.press("ControlOrMeta+A")

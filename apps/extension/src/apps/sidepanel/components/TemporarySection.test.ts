@@ -3,7 +3,14 @@ import { tick } from "svelte"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { BookmarkId, SplitViewId, TabId } from "#platform/browser"
 import type { TemporaryEntry } from "#protocol"
-import { commandsOf, dragOverAt, dragStartAt, renderSidebar } from "../testing/render-sidebar"
+import {
+  commandsOf,
+  dragLinkOverAt,
+  dragOverAt,
+  dragStartAt,
+  dropLinkOn,
+  renderSidebar,
+} from "../testing/render-sidebar"
 import {
   pinnedFolder,
   pinnedItem,
@@ -403,6 +410,42 @@ describe("Drag and drop", () => {
         tabId: TabId.make(3),
         spaceId: "work",
         placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
+    ])
+  })
+
+  it("opens a link dragged in from a page where it is dropped among the temporary tabs", async () => {
+    const { connection } = await renderSidebar(viewWithTabs(tabView(1), tabView(2)))
+    const link = { url: "https://linked.example/", title: "Linked page" }
+
+    await dragLinkOverAt(rowOf("Tab 1"), 0.1, link)
+    await dropLinkOn(rowOf("Tab 1"), link)
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "OpenLinkInTemporary",
+        windowId: 1,
+        url: "https://linked.example/",
+        spaceId: "work",
+        placement: { _tag: "Above", tabId: TabId.make(1) },
+      },
+    ])
+  })
+
+  it("keeps a link dragged in from a page as a pin inside the pinned folder it is dropped on", async () => {
+    const { connection } = await renderSidebar(viewWithEntries([temporaryTab(tabView(1))]))
+    const folderHeader = screen.getByRole("button", { name: "Docs" })
+    const link = { url: "https://linked.example/", title: "Linked page" }
+
+    await dragLinkOverAt(folderHeader, 0.5, link)
+    await dropLinkOn(folderHeader, link)
+
+    expect(connection.sentCommands).toStrictEqual([
+      {
+        _tag: "PinLink",
+        url: "https://linked.example/",
+        title: "Linked page",
+        placement: { spaceId: "work", parentId: BookmarkId.make("folder"), index: 0 },
       },
     ])
   })

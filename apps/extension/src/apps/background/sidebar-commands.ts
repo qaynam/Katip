@@ -645,6 +645,26 @@ const tabCommands = {
     yield* placeInPinned(command.tabId, command.placement.spaceId, position)
   }),
 
+  OpenLinkInTemporary: Effect.fnUntraced(function* (
+    command: Extract<SidebarCommand, { _tag: "OpenLinkInTemporary" }>,
+  ) {
+    if (!isWebUrl(command.url)) return yield* reject("background.url.cannotOpen")
+    const tab = yield* (yield* Tabs).create({
+      windowId: command.windowId,
+      url: command.url,
+      active: true,
+    })
+    yield* placeInTemporary([tab.id], command.spaceId, command.placement)
+  }),
+
+  // A link's text can be blank, as for an image link, and a pin without a name shows nothing
+  PinLink: Effect.fnUntraced(function* (command: Extract<SidebarCommand, { _tag: "PinLink" }>) {
+    if (!isWebUrl(command.url)) return yield* reject("background.url.cannotOpen")
+    const position = yield* pinnedPosition(command.placement)
+    const title = command.title.trim() === "" ? command.url : command.title.trim()
+    yield* (yield* PinnedBookmarks).createBookmark(position, { title, url: command.url })
+  }),
+
   PinTab: Effect.fnUntraced(function* ({ tabId }: { tabId: TabId }) {
     const tracked = yield* trackedOrReject(tabId)
     // Not one tab of a split view alone: the other would stay temporary, and no split pin forms

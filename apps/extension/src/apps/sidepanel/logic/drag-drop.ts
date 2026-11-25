@@ -50,6 +50,8 @@ export type DragSource =
       readonly index: number
     }
   | { readonly _tag: "SpaceMark"; readonly spaceId: SpaceId; readonly index: number }
+  /** A link dragged in from a page. A blank title is left for the background to fill. */
+  | { readonly _tag: "Link"; readonly url: string; readonly title: string }
 
 // slot is the index of a gap in the current list, which still includes the dragged item.
 // Only commandForDrop converts it into the final destination index
@@ -61,6 +63,8 @@ export type DropTarget =
   | { readonly _tag: "SpaceBar"; readonly slot: number }
 
 export interface DropContext {
+  /** The window of the side panel, where a link dropped among the temporary tabs opens. */
+  readonly windowId: WindowId
   /** The Space on screen. Drops into its Favorites, pinned or temporary tabs land in it. */
   readonly spaceId: SpaceId
   readonly canSplit: boolean
@@ -166,6 +170,7 @@ const singleTabOf = (source: DragSource): Option.Option<TabId> =>
     PinnedFolder: () => Option.none(),
     Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId),
     SpaceMark: () => Option.none(),
+    Link: () => Option.none(),
   })
 
 const temporaryTabsOf = (source: DragSource): ReadonlyArray<TabId> =>
@@ -177,12 +182,13 @@ const temporaryTabsOf = (source: DragSource): ReadonlyArray<TabId> =>
     PinnedFolder: () => [],
     Favorite: () => [],
     SpaceMark: () => [],
+    Link: () => [],
   })
 
 const dropOnTemporary = (
   source: DragSource,
   placement: TemporaryPlacement,
-  spaceId: SpaceId,
+  { windowId, spaceId }: DropContext,
 ): Option.Option<SidebarCommand> => {
   const isNextToItself = temporaryTabsOf(source).some((tabId) =>
     isPlacementRelativeTo(placement, tabId),
@@ -209,6 +215,14 @@ const dropOnTemporary = (
     PinnedFolder: () => Option.none(),
     Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
     SpaceMark: () => Option.none(),
+    Link: ({ url }) =>
+      Option.some<SidebarCommand>({
+        _tag: "OpenLinkInTemporary",
+        windowId,
+        url,
+        spaceId,
+        placement,
+      }),
   })
 }
 
@@ -270,6 +284,13 @@ const dropOnPinned = (
     TemporaryTab: ({ tabId }) => Option.some(placeTab(tabId)),
     Favorite: ({ openTabId }) => Option.fromNullishOr(openTabId).pipe(Option.map(placeTab)),
     SpaceMark: () => Option.none(),
+    Link: ({ url, title }) =>
+      Option.some<SidebarCommand>({
+        _tag: "PinLink",
+        url,
+        title,
+        placement: placementAt(target.slot),
+      }),
   })
 }
 
@@ -306,7 +327,7 @@ export const commandForDrop = (
   context: DropContext,
 ): Option.Option<SidebarCommand> =>
   Match.valueTags(target, {
-    Temporary: ({ placement }) => dropOnTemporary(source, placement, context.spaceId),
+    Temporary: ({ placement }) => dropOnTemporary(source, placement, context),
     SplitWith: (split) => dropOnSplit(source, split, context.canSplit),
     Pinned: (pinned) => dropOnPinned(source, pinned, context.spaceId),
     Favorites: ({ slot }) => dropOnFavorites(source, slot, context.spaceId),

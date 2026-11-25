@@ -154,6 +154,63 @@ export const dragStartAt = async (element: HTMLElement, horizontalRatio: number)
   )
 }
 
+export interface DraggedLink {
+  readonly url: string
+  readonly title: string
+}
+
+// What Chrome hands a drop target for a link dragged from a page
+const linkTransfer = ({ url, title }: DraggedLink) => {
+  const data: Readonly<Record<string, string>> = {
+    "text/uri-list": url,
+    "text/html": `<meta charset="utf-8"><a href="${url}">${title}</a>`,
+    "text/plain": url,
+  }
+  return {
+    types: Object.keys(data),
+    effectAllowed: "copyLink",
+    dropEffect: "none",
+    getData: (type: string) => data[type] ?? "",
+  }
+}
+
+const withTransfer = (event: Event, link: DraggedLink) => {
+  Object.defineProperty(event, "dataTransfer", { value: linkTransfer(link) })
+  return event
+}
+
+/**
+ * Simulates dragging a link from a page over the element, at a height given as a ratio (0 to 1)
+ * of its height, as {@link dragOverAt} does for drags from the side panel.
+ */
+export const dragLinkOverAt = async (
+  element: HTMLElement,
+  verticalRatio: number,
+  link: DraggedLink,
+) => {
+  vi.spyOn(element, "getBoundingClientRect").mockReturnValue(rowBounds)
+  await fireEvent(
+    element,
+    withTransfer(
+      new MouseEvent("dragover", {
+        bubbles: true,
+        cancelable: true,
+        clientX: rowBounds.left + rowBounds.width / 2,
+        clientY: rowBounds.top + rowBounds.height * verticalRatio,
+      }),
+      link,
+    ),
+  )
+}
+
+/** Simulates letting a link dragged from a page go over the element. */
+export const dropLinkOn = async (element: HTMLElement, link: DraggedLink) => {
+  await fireEvent(
+    element,
+    withTransfer(new MouseEvent("drop", { bubbles: true, cancelable: true }), link),
+  )
+}
+
 /**
  * Simulates dragging over the element at a position given as ratios (0 to 1) of its size.
  * Horizontally it defaults to the right side.
