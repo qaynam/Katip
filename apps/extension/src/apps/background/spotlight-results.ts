@@ -38,6 +38,7 @@ import { type SearchCandidate, searchSpotlight, type SpotlightEntry } from "#mod
 import { activeSpaceOf, trackedTab, type Workspace } from "#modules/workspace"
 import {
   type BookmarkId,
+  type BookmarkNode,
   Bookmarks,
   type BrowserApiError,
   type BrowserTab,
@@ -210,13 +211,26 @@ const spaceCandidate =
 // Bookmarklets are left out: opened in a new tab, they don't work
 const isOpenableUrl = (url: string) => !url.toLowerCase().startsWith("javascript:")
 
-const bookmarkCandidates = Effect.fnUntraced(function* (
-  query: string,
-  pinnedIds: ReadonlySet<BookmarkId>,
-) {
+const searchBookmarksFor = Effect.fnUntraced(function* (query: string) {
   if (query.trim() === "") return []
-  const found = yield* (yield* Bookmarks).search(query)
-  return found.flatMap((node): ReadonlyArray<ResultCandidate> =>
+  return yield* (yield* Bookmarks).search(query)
+})
+
+const searchBookmarks = (query: string) =>
+  searchBookmarksFor(query).pipe(
+    Effect.catch((error) =>
+      Effect.as(
+        Effect.logWarning("Spotlight couldn't search bookmarks", error),
+        [] as ReadonlyArray<BookmarkNode>,
+      ),
+    ),
+  )
+
+const bookmarkCandidates = (
+  found: ReadonlyArray<BookmarkNode>,
+  pinnedIds: ReadonlySet<BookmarkId>,
+): ReadonlyArray<ResultCandidate> =>
+  found.flatMap((node): ReadonlyArray<ResultCandidate> =>
     node._tag === "Bookmark" && !pinnedIds.has(node.id) && isOpenableUrl(node.url)
       ? [
           {
@@ -230,7 +244,6 @@ const bookmarkCandidates = Effect.fnUntraced(function* (
         ]
       : [],
   )
-})
 
 const historyCandidate = (page: HistoryPage): ResultCandidate => {
   const title = page.title.trim() === "" ? page.url : page.title
@@ -248,23 +261,28 @@ const historyCandidate = (page: HistoryPage): ResultCandidate => {
 // is granted
 const searchesHistory = Permissions.use((permissions) => permissions.containsPermission("history"))
 
-const historyCandidates = Effect.fnUntraced(function* (
-  query: string,
-  shownUrls: ReadonlySet<string>,
-) {
+const searchHistoryFor = Effect.fnUntraced(function* (query: string) {
   if (query.trim() === "") return []
   if (!(yield* searchesHistory)) return []
-  const pages = yield* (yield* History).search({
+  return yield* (yield* History).search({
     text: query.trim(),
     maxResults: HISTORY_LIMIT,
     startTime: 0,
   })
-  return pages
-    .filter((page) => !shownUrls.has(page.url) && isOpenableUrl(page.url))
-    .map(historyCandidate)
 })
 
-const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, query: string) {
+const searchHistory = (query: string) =>
+  searchHistoryFor(query).pipe(
+    Effect.catch((error) =>
+      Effect.as(
+        Effect.logWarning("Spotlight couldn't search history", error),
+        [] as ReadonlyArray<HistoryPage>,
+      ),
+    ),
+  )
+
+/** The tabs, pins, Favorites and Spaces Spotlight offers, and what to leave out of the searches. */
+const openCandidateSources = Effect.fnUntraced(function* (callerWindowId: WindowId) {
   const state = yield* KatipState
   const spaces = yield* state.spaces.get
   const workspace = yield* state.workspace.get
@@ -311,11 +329,28 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
     pinTitles: pinnedTitles(pins),
     favoriteTabSpaces: yield* favoriteTabSpaces(tabs),
   })
-  const bookmarks = yield* bookmarkCandidates(query, pinnedIds).pipe(
-    Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight couldn't search bookmarks", error), []),
-    ),
+  return {
+    tabs,
+    pins,
+    closedPins,
+    closedFavorites,
+    pinnedIds,
+    toTabCandidate,
+    spaces,
+    activeSpaceId: activeSpaceOf(workspace, callerWindowId),
+  }
+})
+
+// Not one after another: over many pages, Chrome takes tens of milliseconds to search the bookmarks
+// and history, and everything else is read and prepared meanwhile. What to leave out of what the
+// searches find comes from those reads, so it is left out once all three are in
+const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, query: string) {
+  const [sources, foundBookmarks, visitedPages] = yield* Effect.all(
+    [openCandidateSources(callerWindowId), searchBookmarks(query), searchHistory(query)],
+    { concurrency: "unbounded" },
   )
+  const { tabs, pins, closedPins, closedFavorites, pinnedIds, toTabCandidate, spaces } = sources
+  const bookmarks = bookmarkCandidates(foundBookmarks, pinnedIds)
   // History also holds the pages of open tabs and pins; they're removed so no page is listed twice
   const shownUrls = new Set([
     ...tabs.map(urlOf),
@@ -323,16 +358,14 @@ const gatherCandidates = Effect.fnUntraced(function* (callerWindowId: WindowId, 
     ...closedFavorites.map(({ favorite }) => favorite.url),
     ...bookmarks.map((bookmark) => bookmark.url),
   ])
-  const history = yield* historyCandidates(query, shownUrls).pipe(
-    Effect.catch((error) =>
-      Effect.as(Effect.logWarning("Spotlight couldn't search history", error), []),
-    ),
-  )
+  const history = visitedPages
+    .filter((page) => !shownUrls.has(page.url) && isOpenableUrl(page.url))
+    .map(historyCandidate)
   return [
     ...tabs.map(toTabCandidate),
     ...closedPins.map(pinCandidate),
     ...closedFavorites.map(favoriteCandidate),
-    ...spaces.map(spaceCandidate(activeSpaceOf(workspace, callerWindowId))),
+    ...spaces.map(spaceCandidate(sources.activeSpaceId)),
     ...bookmarks,
     ...history,
   ]
@@ -629,30 +662,36 @@ export const findSpotlightResults = Effect.fnUntraced(function* (
     }
   }
   const wantsActions = mode === "Actions" || query.trim() !== ""
-  const actions = wantsActions
-    ? yield* actionCandidates(callerWindowId).pipe(
-        Effect.catch((error) =>
-          Effect.as(Effect.logWarning("Couldn't gather Spotlight commands", error), []),
-        ),
-      )
-    : []
-  const siteCommands = wantsActions
-    ? yield* siteCommandCandidates.pipe(
-        Effect.catch((error) =>
-          Effect.as(Effect.logWarning("Couldn't gather the site commands", error), []),
-        ),
-      )
-    : []
-  // In command mode too: a bang typed there is chosen into the usual search
-  const bangs = yield* bangResultsOrEmpty(query)
-  const others =
-    mode === "All"
-      ? yield* gatherCandidates(callerWindowId, query).pipe(
-          Effect.catch((error) =>
-            Effect.as(Effect.logWarning("Couldn't gather Spotlight results", error), []),
-          ),
-        )
-      : []
+  const nothing = Effect.succeed<ReadonlyArray<ResultCandidate>>([])
+  // Not one after another: no part needs what another reads
+  const [actions, siteCommands, bangs, others] = yield* Effect.all(
+    [
+      wantsActions
+        ? actionCandidates(callerWindowId).pipe(
+            Effect.catch((error) =>
+              Effect.as(Effect.logWarning("Couldn't gather Spotlight commands", error), []),
+            ),
+          )
+        : nothing,
+      wantsActions
+        ? siteCommandCandidates.pipe(
+            Effect.catch((error) =>
+              Effect.as(Effect.logWarning("Couldn't gather the site commands", error), []),
+            ),
+          )
+        : nothing,
+      // In command mode too: a bang typed there is chosen into the usual search
+      bangResultsOrEmpty(query),
+      mode === "All"
+        ? gatherCandidates(callerWindowId, query).pipe(
+            Effect.catch((error) =>
+              Effect.as(Effect.logWarning("Couldn't gather Spotlight results", error), []),
+            ),
+          )
+        : nothing,
+    ],
+    { concurrency: "unbounded" },
+  )
   const now = yield* Clock.currentTimeMillis
   // A ! alone is a bang about to be typed: pages with a ! in them, or a web search for it, would
   // only stand between it and the bangs
