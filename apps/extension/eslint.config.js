@@ -43,6 +43,21 @@ export default ts.config(
     },
   },
   {
+    files: ["src/modules/**/*.ts", "src/platform/**/*.ts", "src/protocol/**/*.ts"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Program > :not(ImportDeclaration, ExportNamedDeclaration, ExportDefaultDeclaration, ExportAllDeclaration, VariableDeclaration, FunctionDeclaration, ClassDeclaration, TSTypeAliasDeclaration, TSInterfaceDeclaration, TSModuleDeclaration, TSEnumDeclaration, TSDeclareFunction)",
+          message:
+            "Only declarations at the top level: the build drops these modules from pages that use none of their exports (see vite.config.ts), and a statement run here would go with them",
+        },
+      ],
+    },
+  },
+  {
     files: ["src/modules/*/*/*.ts", "src/platform/*/*/*.ts"],
     rules: {
       "no-restricted-imports": [

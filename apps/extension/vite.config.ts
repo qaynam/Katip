@@ -11,6 +11,9 @@ const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 const manifestSource = fromRoot("./src/apps/manifest.ts")
 const packageJsonPath = fromRoot("./package.json")
 
+// Their modules only declare things at the top level, which eslint.config.js holds them to
+const sideEffectFreeRoots = ["./src/modules/", "./src/protocol/", "./src/platform/"].map(fromRoot)
+
 type BuildMode = Manifest.BuildMode
 
 // Not imported statically: a watch build would keep the manifest, version and translations it
@@ -132,6 +135,13 @@ export default defineConfig(({ mode }) => {
       // A service worker has no document, so Vite must not inject its preload polyfill
       modulePreload: { polyfill: false },
       rolldownOptions: {
+        // Not assumed to have side effects, as every module is by default: a module that a page
+        // imports through a barrel but doesn't use would then be loaded and run on that page too,
+        // such as the XML parser of live folders in Spotlight
+        treeshake: {
+          moduleSideEffects: (id: string) =>
+            !sideEffectFreeRoots.some((root) => id.startsWith(root)),
+        },
         input: {
           sidepanel: fromRoot("./src/apps/sidepanel/index.html"),
           options: fromRoot("./src/apps/options/index.html"),
