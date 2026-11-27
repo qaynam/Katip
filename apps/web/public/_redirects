@@ -1,5 +1,6 @@
-# Addresses from when every page had an English and a Japanese version, which links such as the
-# Chrome Web Store listing's privacy policy still point to. /ja/privacy/ is still a page
+# Addresses from when every page had an English and a Japanese version. Not dropped: links on other
+# sites and search engines' records still point to them, and a permanent redirect moves those to
+# the page that replaced it, where a missing page would lose them. /ja/privacy/ is still a page
 /en /  301
 /en/ /  301
 /en/privacy /privacy/  301
