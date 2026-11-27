@@ -58,6 +58,24 @@ describe("Favorites", () => {
     expect(tile("Mail").getAttribute("aria-current")).toBe("true")
   })
 
+  it("leaves the tile of a tab that another tab replaced as the active one elsewhere", async () => {
+    const activeMail = favoriteView(1, {
+      title: "Mail",
+      openTab: { tabId: TabId.make(1), isActive: true },
+    })
+    const { pushView } = await renderSidebar(withFavorites([activeMail, favoriteView(2)]))
+    tile("Mail").focus()
+
+    await pushView(
+      withFavorites([
+        favoriteView(1, { title: "Mail" }),
+        favoriteView(2, { openTab: { tabId: TabId.make(2), isActive: true } }),
+      ]),
+    )
+
+    expect(document.activeElement).not.toBe(tile("Mail"))
+  })
+
   it("removes a Favorite from its menu", async () => {
     const { connection } = await renderSidebar(
       withFavorites([favoriteView(1, { title: "Mail", openTab: null })]),

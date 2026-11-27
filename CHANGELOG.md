@@ -8,6 +8,28 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、変更ごとに短い見出しを付けて説明します。1.14.0 までは、短い太字の見出しを付けた箇条書きで記載していました。
 
+## Unreleased
+
+## English
+
+Pressing Space after switching tabs from the Command Palette no longer switches back to the previous tab.
+
+### 🐛 Fixed
+
+#### Space switching back to the previous tab
+
+After you clicked a tab in the sidebar and then switched to another tab from the Command Palette, pressing Space switched back to the tab you had clicked. Pressing Space no longer switches back to it.
+
+## 日本語
+
+コマンドパレットでタブを切り替えたあとに Space キーを押すと、前のタブに戻ってしまう問題を修正しました。
+
+### 🐛 修正
+
+#### Space キーで前のタブに戻る問題の修正
+
+サイドバーでタブをクリックしたあと、コマンドパレットで別のタブに切り替えてから Space キーを押すと、サイドバーでクリックしたタブに戻ってしまう問題がありました。今回の修正で、Space キーを押しても前のタブに戻らなくなりました。
+
 ## 1.14.1 — 2026-11-27
 
 ## English

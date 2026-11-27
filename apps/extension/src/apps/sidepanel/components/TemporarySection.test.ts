@@ -289,6 +289,33 @@ describe("Renaming a tab", () => {
   })
 })
 
+describe("Keyboard focus on a tab row", () => {
+  it("leaves the row of a tab that another tab replaced as the active one elsewhere", async () => {
+    const { pushView } = await renderSidebar(
+      viewWithTabs(tabView(1, { isActive: true }), tabView(2)),
+    )
+    const first = screen.getByRole("button", { name: "Tab 1" })
+    first.focus()
+
+    await pushView(viewWithTabs(tabView(1), tabView(2, { isActive: true })))
+
+    expect(document.activeElement).not.toBe(first)
+  })
+
+  it("stays on the row of the tab chosen in the sidebar", async () => {
+    const { pushView } = await renderSidebar(
+      viewWithTabs(tabView(1, { isActive: true }), tabView(2)),
+    )
+    const second = screen.getByRole("button", { name: "Tab 2" })
+    second.focus()
+    await fireEvent.click(second)
+
+    await pushView(viewWithTabs(tabView(1), tabView(2, { isActive: true })))
+
+    expect(document.activeElement).toBe(second)
+  })
+})
+
 describe("Scrolling to the active tab", () => {
   it("scrolls the row into view when another tab becomes active", async () => {
     const { pushView } = await renderSidebar(

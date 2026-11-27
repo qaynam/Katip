@@ -64,6 +64,7 @@
   import ClosePanelButton from "./ClosePanelButton.svelte"
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
+  import { dropFocusOnceNotCurrent } from "./drop-stale-focus"
   import FavoritesGrid from "./FavoritesGrid.svelte"
   import FolderIconPicker from "./FolderIconPicker.svelte"
   import NewSpacePage from "./NewSpacePage.svelte"
@@ -291,6 +292,7 @@
 >
   <main
     bind:this={sidebar}
+    {@attach dropFocusOnceNotCurrent}
     class="sidebar"
     inert={dialog.current !== null ||
       liveFolderDialog.current !== null ||
