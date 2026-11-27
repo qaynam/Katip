@@ -8,6 +8,28 @@ Katip のアップデート内容をバージョンごとにまとめていま�
 
 各言語の冒頭にそのバージョンの要約を 1 文で記載し、その下に変更内容を「新機能」「改善」「修正」に分類して、短い太字の見出しとともに説明します。
 
+## Unreleased
+
+## English
+
+The Command Palette keeps up with your typing even over a long history, Katip’s pages load about half the code they did, and the sidebar opens over many tabs without stalling.
+
+### ✨ Improved
+
+- **Command Palette results keep up with typing** — With history search on, the results for what you typed last now show without waiting for those of every key before it. Over a long history they could come a second or more after you stopped typing. Typing 17 characters at 80 ms a key, with 5,000 pages of history, 3,000 bookmarks and 250 tabs, the results came 0.33 seconds after the last key instead of 1.14 seconds (measured in Helium, Chromium 158).
+- **Lighter pages** — The Command Palette, the sidebar, the settings and the welcome tour load about half the code they did as they open. The sidebar, the settings and the welcome tour read the translations of only the language they show, the Command Palette carries only its own, and the sidebar loads its dialogs and its Archive and Downloads panels just after it opens. Their scripts are now 242 KB instead of 543 KB for the Command Palette, 364 KB instead of 689 KB for the sidebar, 337 KB instead of 613 KB for the settings and 297 KB instead of 574 KB for the welcome tour. As it opens, the Command Palette spends about 8 ms running scripts instead of 12 ms (measured in Helium, Chromium 158).
+- **The sidebar opens without stalling** — The colors of the tabs’ icons, which decide whether an icon is inverted to stay visible on the Space’s theme, are now worked out away from the page. Opening the sidebar over 250 tabs, the page’s own work fell from 278 ms to 128 ms, and no single task took longer than 50 ms, where the longest had taken 56 ms (measured in Helium, Chromium 158).
+
+## 日本語
+
+長い履歴を検索するときでもコマンドパレットの入力が遅れないようにし、Katip の各画面で読み込むコードを約半分に減らしました。タブが多くてもサイドバーが引っかからずに開きます。
+
+### ✨ 改善
+
+- **入力遅れのないコマンドパレット** — 履歴検索をオンにしているとき、入力途中の文字ごとの結果を待たずに、最後に入力した文字の結果を表示するようにしました。これまでは履歴が多いと、入力を止めてから結果が出るまでに 1 秒以上かかることがありました。履歴 5,000 ページ、ブックマーク 3,000 件、タブ 250 個の状態で 17 文字を 1 文字 80 ミリ秒ずつ入力した場合、最後の文字を入力してから結果が出るまでの時間が 1.14 秒から 0.33 秒になりました（Helium、Chromium 158 で計測）。
+- **画面を軽く** — コマンドパレット、サイドバー、設定、ようこそツアーを開くときに読み込むコードを約半分にしました。サイドバー、設定、ようこそツアーでは表示する言語の翻訳だけを読み込み、コマンドパレットは自身の翻訳だけを持つようにしました。サイドバーのダイアログとアーカイブ・ダウンロードの画面は、サイドバーが開いた直後に読み込むようにしています。スクリプトのサイズは、コマンドパレットで 543 KB から 242 KB、サイドバーで 689 KB から 364 KB、設定で 613 KB から 337 KB、ようこそツアーで 574 KB から 297 KB になりました。コマンドパレットを開くときにスクリプトの実行にかかる時間も、約 12 ミリ秒から約 8 ミリ秒になりました（Helium、Chromium 158 で計測）。
+- **引っかからずに開くサイドバー** — タブのアイコンの色合い（Space のテーマの上で見えるようにアイコンを反転するかどうかを決めるもの）を、ページとは別の場所で調べるようにしました。タブ 250 個の状態でサイドバーを開いたとき、ページ自体の処理が 278 ミリ秒から 128 ミリ秒になり、50 ミリ秒を超える処理がなくなりました（これまでは最長 56 ミリ秒）（Helium、Chromium 158 で計測）。
+
 ## 1.14.0 — 2026-11-25
 
 ## English
