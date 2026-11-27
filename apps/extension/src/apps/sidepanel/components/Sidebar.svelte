@@ -1,3 +1,24 @@
+<script module lang="ts">
+  // Not imported with the rest: none of them shows as the panel opens, so their code loads beside
+  // the first frame rather than holding it back
+  const panels = {
+    archive: import("./ArchivePanel.svelte"),
+    downloads: import("./DownloadsPanel.svelte"),
+  }
+  const dialogs = {
+    folderSearch: import("./FolderSearch.svelte"),
+    liveFolder: import("./LiveFolderDialog.svelte"),
+    sound: import("./SoundDialog.svelte"),
+    themePicker: import("./ThemePicker.svelte"),
+  }
+
+  /** Settles once the parts of the side panel that load after the rest have loaded. */
+  export const laterParts: Promise<unknown> = Promise.all([
+    ...Object.values(panels),
+    ...Object.values(dialogs),
+  ])
+</script>
+
 <script lang="ts">
   import { Option } from "effect"
   import { untrack } from "svelte"
@@ -39,17 +60,12 @@
   import { ThemePickerController } from "../state/theme-picker.svelte"
   import type { ToastQueue } from "../state/toast-queue.svelte"
   import { TooltipController } from "../state/tooltip.svelte"
-  import ArchivePanel from "./ArchivePanel.svelte"
   import BottomBar from "./BottomBar.svelte"
   import ClosePanelButton from "./ClosePanelButton.svelte"
   import ConfirmDialog from "./ConfirmDialog.svelte"
   import ContextMenu from "./ContextMenu.svelte"
-  import DownloadsPanel from "./DownloadsPanel.svelte"
   import FavoritesGrid from "./FavoritesGrid.svelte"
   import FolderIconPicker from "./FolderIconPicker.svelte"
-  import FolderSearch from "./FolderSearch.svelte"
-  import LiveFolderDialog from "./LiveFolderDialog.svelte"
-  import SoundDialog from "./SoundDialog.svelte"
   import NewSpacePage from "./NewSpacePage.svelte"
   import PinnedSection from "./PinnedSection.svelte"
   import { nudgeToward, slideAcross } from "./slide-across"
@@ -57,7 +73,6 @@
   import SpotlightButton from "./SpotlightButton.svelte"
   import TemporarySection from "./TemporarySection.svelte"
   import ThemedSurface from "./ThemedSurface.svelte"
-  import ThemePicker from "./ThemePicker.svelte"
   import Toasts from "./Toasts.svelte"
   import Tooltip from "./Tooltip.svelte"
   import UpdateCard from "./UpdateCard.svelte"
@@ -322,10 +337,16 @@
                       data-space-body
                       transition:slideAcross={{ side: "left" }}
                     >
-                      <ArchivePanel spaceId={activeSpace.id} />
+                      {#await panels.archive then { default: ArchivePanel }}
+                        <ArchivePanel spaceId={activeSpace.id} />
+                      {/await}
                     </div>
                   {:else if bodyPanel.current === "Downloads"}
-                    <div class="space-body"><DownloadsPanel /></div>
+                    <div class="space-body">
+                      {#await panels.downloads then { default: DownloadsPanel }}
+                        <DownloadsPanel />
+                      {/await}
+                    </div>
                   {:else}
                     <div
                       class="space-body"
@@ -367,12 +388,12 @@
     {/key}
   </main>
 
-  <ThemePicker />
+  {#await dialogs.themePicker then { default: ThemePicker }}<ThemePicker />{/await}
   <ContextMenu />
-  <FolderSearch />
+  {#await dialogs.folderSearch then { default: FolderSearch }}<FolderSearch />{/await}
   <FolderIconPicker />
-  <LiveFolderDialog />
-  <SoundDialog />
+  {#await dialogs.liveFolder then { default: LiveFolderDialog }}<LiveFolderDialog />{/await}
+  {#await dialogs.sound then { default: SoundDialog }}<SoundDialog />{/await}
   <ConfirmDialog />
   <Tooltip />
 </ThemedSurface>

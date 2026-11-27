@@ -6,6 +6,7 @@ import type { LocalePreference } from "#modules/i18n"
 import type { Release } from "#modules/updates"
 import type { SidebarCommand, SidebarView } from "#protocol"
 import App from "../App.svelte"
+import { laterParts } from "../components/Sidebar.svelte"
 import {
   createMemoryConnection,
   type MemoryConnectionOptions,
@@ -85,6 +86,8 @@ export const renderSidebar = async (
   const translationsSettled = async () => {
     for (let turn = 0; turn < 5; turn++) await tick()
   }
+  // As a person sees the panel a moment after it opens, with every part of it loaded
+  await laterParts
   const result = render(App, {
     props: {
       connection,
