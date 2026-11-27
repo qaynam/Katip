@@ -58,13 +58,58 @@ describe("releasesIn", () => {
         {
           kind: "improved",
           changes: [
-            { name: "Faster", description: "It is faster." },
-            { name: "Smaller", description: "It is smaller." },
+            { name: "Faster", paragraphs: ["It is faster."] },
+            { name: "Smaller", paragraphs: ["It is smaller."] },
           ],
         },
-        { kind: "fixed", changes: [{ name: "Crash", description: "It no longer crashes." }] },
+        { kind: "fixed", changes: [{ name: "Crash", paragraphs: ["It no longer crashes."] }] },
       ],
     })
+  })
+
+  it("reads a change under a heading of its own, with the paragraphs under it", () => {
+    const [release] = releasesIn(
+      notes(
+        "## 1.2.0 — 2026-11-05\n\n## English\n\nSummary.\n\n### ✨ Improved\n\n" +
+          "#### Faster\n\nIt is faster\nthan it was.\n\nTwice as **fast**.\n\n" +
+          "#### Smaller\n\nIt is smaller.\n",
+      ),
+    )
+
+    expect(release?.groups).toEqual([
+      {
+        kind: "improved",
+        changes: [
+          {
+            name: "Faster",
+            paragraphs: ["It is faster than it was.", "Twice as <strong>fast</strong>."],
+          },
+          { name: "Smaller", paragraphs: ["It is smaller."] },
+        ],
+      },
+    ])
+  })
+
+  it("refuses a change's heading with nothing under it", () => {
+    expect(() =>
+      releasesIn(
+        notes(
+          "## 1.6.0 — 2026-11-06\n\n## English\n\nSummary.\n\n### 🚀 New\n\n" +
+            "#### Empty\n\n#### Full\n\nIt is here.\n",
+        ),
+      ),
+    ).toThrow(/nothing under "Empty" in 1\.6\.0/)
+  })
+
+  it("refuses a list under a change's heading, which the site would show as plain text", () => {
+    expect(() =>
+      releasesIn(
+        notes(
+          "## 1.7.0 — 2026-11-06\n\n## English\n\nSummary.\n\n### 🚀 New\n\n" +
+            "#### Lists\n\nIt has:\n\n- an item\n",
+        ),
+      ),
+    ).toThrow(/1\.7\.0 that can't be read: - an item/)
   })
 
   it("refuses a line it can't place, rather than leave it out", () => {

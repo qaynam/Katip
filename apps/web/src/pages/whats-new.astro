@@ -57,7 +57,9 @@ const anchorOf = (version: string) => `v${version}`
             {group.changes.map((change) => (
               <li>
                 <h4 set:html={change.name} />
-                <p set:html={change.description} />
+                {change.paragraphs.map((paragraph) => (
+                  <p set:html={paragraph} />
+                ))}
               </li>
             ))}
           </ul>
@@ -90,7 +92,9 @@ const anchorOf = (version: string) => `v${version}`
                   {group.changes.map((change) => (
                     <li>
                       <h4 set:html={change.name} />
-                      <p set:html={change.description} />
+                      {change.paragraphs.map((paragraph) => (
+                        <p set:html={paragraph} />
+                      ))}
                     </li>
                   ))}
                 </ul>
@@ -197,6 +201,10 @@ const anchorOf = (version: string) => `v${version}`
     color: var(--ink-soft);
     font-size: 0.9375rem;
     line-height: 1.65;
+  }
+
+  .group li p + p {
+    margin-top: 0.75rem;
   }
 
   .notes :global(code) {

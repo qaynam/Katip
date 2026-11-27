@@ -75,7 +75,7 @@ const release = z.object({
   groups: z.array(
     z.object({
       kind: z.enum(["new", "improved", "fixed"]),
-      changes: z.array(z.object({ name: z.string(), description: z.string() })),
+      changes: z.array(z.object({ name: z.string(), paragraphs: z.array(z.string()) })),
     }),
   ),
 })
