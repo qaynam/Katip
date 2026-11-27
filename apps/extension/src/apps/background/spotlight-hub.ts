@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Match, Option, Schema, Stream } from "effect"
+import { Context, Effect, Layer, Match, Option, Ref, Schema, Stream } from "effect"
 import type { BrowserPort, WindowId } from "#platform/browser"
 import {
   SpotlightClientMessage,
@@ -25,7 +25,8 @@ export class SpotlightHub extends Context.Service<
   {
     /**
      * Serves a Spotlight connection until it disconnects, handling messages one at a time in the
-     * order they arrive.
+     * order they arrive. A search that a later one on the connection replaced before its turn came
+     * goes unanswered.
      *
      * @param choose - Opens the chosen result. `windowId` is the window Spotlight was opened over.
      *   Failures must be returned inside the `SpotlightOutcome`.
@@ -57,29 +58,56 @@ export class SpotlightHub extends Context.Service<
       ) =>
         // Read for each Spotlight opened rather than kept between them, which would leave out the
         // pages visited since
-        Effect.flatMap(Effect.cached(readRecentHistory), (recentHistory) => {
-          const handle = (message: SpotlightClientMessage) =>
-            Match.valueTags(message, {
-              Search: ({ requestId, windowId, query, mode }) =>
-                findSpotlightResults(windowId, query, mode, recentHistory).pipe(
-                  Effect.provideContext(searchContext),
-                  Effect.flatMap(({ results, spaceTheme }) =>
-                    reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),
+        Effect.flatMap(
+          Effect.all([Effect.cached(readRecentHistory), Ref.make(0)]),
+          ([recentHistory, searchesArrived]) => {
+            const handle = (message: SpotlightClientMessage) =>
+              Match.valueTags(message, {
+                Search: ({ requestId, windowId, query, mode }) =>
+                  findSpotlightResults(windowId, query, mode, recentHistory).pipe(
+                    Effect.provideContext(searchContext),
+                    Effect.flatMap(({ results, spaceTheme }) =>
+                      reply(port, { _tag: "SearchResults", requestId, results, spaceTheme }),
+                    ),
                   ),
-                ),
-              Choose: ({ requestId, windowId, result, target }) =>
-                Effect.flatMap(choose(windowId, result, target), (outcome) =>
-                  reply(port, { _tag: "ChoiceSettled", requestId, outcome }),
-                ),
+                Choose: ({ requestId, windowId, result, target }) =>
+                  Effect.flatMap(choose(windowId, result, target), (outcome) =>
+                    reply(port, { _tag: "ChoiceSettled", requestId, outcome }),
+                  ),
+              })
+            const arrive = Effect.fnUntraced(function* (raw: unknown) {
+              const message = yield* Effect.option(decodeClientMessage(raw))
+              if (Option.isNone(message) || message.value._tag !== "Search") {
+                return { message, searchNumber: null }
+              }
+              return {
+                message,
+                searchNumber: yield* Ref.updateAndGet(searchesArrived, (n) => n + 1),
+              }
             })
-          return port.messages.pipe(
-            Stream.runForEach((raw) =>
-              Effect.flatMap(Effect.option(decodeClientMessage(raw)), (message) =>
-                Option.match(message, { onNone: () => Effect.void, onSome: handle }),
+            // Not every search is answered in turn: over a long history each takes a tenth of a
+            // second or more, so the searches typed meanwhile would queue up, and the answer to
+            // what was typed last, the only one Spotlight shows, would come a second or more late
+            const isReplaced = (searchNumber: number | null) =>
+              Effect.map(
+                Ref.get(searchesArrived),
+                (arrived) => searchNumber !== null && searchNumber < arrived,
+              )
+            return port.messages.pipe(
+              Stream.mapEffect(arrive),
+              // Read ahead of the answers: read only as each turn came, the later searches would
+              // still be unread, and no search would look replaced
+              Stream.buffer({ capacity: "unbounded" }),
+              Stream.runForEach(({ message, searchNumber }) =>
+                Effect.flatMap(isReplaced(searchNumber), (replaced) =>
+                  replaced
+                    ? Effect.void
+                    : Option.match(message, { onNone: () => Effect.void, onSome: handle }),
+                ),
               ),
-            ),
-          )
-        })
+            )
+          },
+        )
 
       return SpotlightHub.of({ serve })
     }),

@@ -4,6 +4,7 @@ import {
   Deferred,
   Effect,
   Fiber,
+  Latch,
   Layer,
   Option,
   Queue,
@@ -513,6 +514,81 @@ describe("Spotlight search", () => {
         const { spaceTheme } = yield* spotlight.search("")
 
         expect(spaceTheme).toStrictEqual(theme)
+      }),
+    ),
+  )
+
+  it.effect(
+    "of the searches typed while an earlier request is still being handled, answers only the last",
+    () =>
+      inBackground(
+        Effect.gen(function* () {
+          const fake = yield* FakeBrowser
+          const { windowId } = yield* fake.seedWindow({
+            tabs: [{ url: "https://docs.example/", title: "Design document" }],
+          })
+          yield* initialize
+          const { client, server } = makePortPair(SPOTLIGHT_PORT_NAME, spotlightPageSender)
+          const post = (message: SpotlightClientMessage) =>
+            Effect.flatMap(encodeClientMessage(message), (encoded) => client.post(encoded))
+          const search = (requestId: number, query: string) =>
+            post({
+              _tag: "Search",
+              requestId: RequestId.make(requestId),
+              windowId,
+              query,
+              mode: "All",
+            })
+          const choiceMayFinish = yield* Latch.make()
+          yield* Effect.forkScoped(
+            (yield* SpotlightHub).serve(server, () =>
+              Effect.as(choiceMayFinish.await, { _tag: "Succeeded" } as const),
+            ),
+          )
+          const answers = yield* Queue.unbounded<SpotlightServerMessage>()
+          yield* client.messages.pipe(
+            Stream.mapEffect((raw) => decodeServerMessage(raw)),
+            Stream.runForEach((message) => Queue.offer(answers, message)),
+            Effect.forkScoped,
+          )
+
+          yield* post({
+            _tag: "Choose",
+            requestId: RequestId.make(1),
+            windowId,
+            result: { _tag: "OpenUrl", url: "https://a.example/" },
+            target: "NewTab",
+          })
+          yield* search(2, "d")
+          yield* search(3, "de")
+          yield* search(4, "des")
+          // The hub reads them while still handling the choice, as it does keys typed meanwhile
+          yield* Effect.yieldNow
+          yield* Latch.open(choiceMayFinish)
+
+          const [first, second] = [yield* Queue.take(answers), yield* Queue.take(answers)]
+          expect(first.requestId).toBe(1)
+          expect(second._tag === "SearchResults" && second.requestId).toBe(4)
+          expect(second._tag === "SearchResults" && openTabs(second.results)).toMatchObject([
+            { title: "Design document" },
+          ])
+        }),
+      ),
+  )
+
+  it.effect("answers each search typed after the one before it was answered", () =>
+    inBackground(
+      Effect.gen(function* () {
+        const fake = yield* FakeBrowser
+        const { windowId } = yield* fake.seedWindow({
+          tabs: [{ url: "https://docs.example/", title: "Design document" }],
+        })
+        yield* initialize
+        const spotlight = yield* connectSpotlight(windowId)
+
+        const answered = [yield* spotlight.search("d"), yield* spotlight.search("de")]
+
+        expect(answered.map(({ results }) => openTabs(results).length)).toStrictEqual([1, 1])
       }),
     ),
   )

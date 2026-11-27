@@ -10,9 +10,9 @@ export interface SearchResponse {
 
 export interface SpotlightConnection {
   /**
-   * Never rejects. Resolves to null when the search didn't reach the background, or the connection
-   * closed before the response. Searches may overlap; the caller decides which response belongs to
-   * the latest input.
+   * Never rejects. Resolves to null when the search didn't reach the background, the connection
+   * closed before the response, or the background skipped it for a later search. Searches may
+   * overlap; the caller decides which response belongs to the latest input.
    */
   readonly search: (query: string, mode: SpotlightMode) => Promise<SearchResponse | null>
   /**
