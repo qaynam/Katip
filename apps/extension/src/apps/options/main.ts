@@ -1,4 +1,5 @@
 import { mount } from "svelte"
+import { fetchCatalog, makeTranslatorLoader, resolveLocale } from "#modules/i18n"
 import App from "./App.svelte"
 import { makeOptionsRuntime } from "./options-runtime"
 
@@ -11,6 +12,9 @@ const faviconUrl = (pageUrl: string) => {
   return url.toString()
 }
 
+const loadTranslator = makeTranslatorLoader(fetchCatalog)
+const initialTranslator = await loadTranslator(resolveLocale("auto", navigator.languages))
+
 mount(App, {
   target: document.body,
   props: {
@@ -21,6 +25,8 @@ mount(App, {
     updatedFromGitHub: import.meta.env.KATIP_UPDATED_FROM_GITHUB,
     repositoryUrl: chrome.runtime.getManifest().homepage_url ?? null,
     browserLanguages: navigator.languages,
+    loadTranslator,
+    initialTranslator,
     faviconUrl,
   },
 })

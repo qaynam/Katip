@@ -4,11 +4,13 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig, type Plugin, runnerImport } from "vite"
 import type * as Manifest from "./src/apps/manifest"
+import type * as I18n from "./src/modules/i18n/index.ts"
 import { packageRootOf, thirdPartyNotices } from "./scripts/third-party-notices.ts"
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 const manifestSource = fromRoot("./src/apps/manifest.ts")
+const i18nSource = fromRoot("./src/modules/i18n/index.ts")
 const packageJsonPath = fromRoot("./package.json")
 
 // Their modules only declare things at the top level, which eslint.config.js holds them to
@@ -37,6 +39,26 @@ const emitManifest = (mode: BuildMode): Plugin => ({
         type: "asset",
         fileName: `_locales/${directory}/messages.json`,
         source: JSON.stringify(messages, null, 2),
+      })
+    }
+  },
+})
+
+// Pages read the one language they show from these files rather than carry every language's
+// catalog in their scripts. Loaded afresh for each build, as the manifest is
+const emitCatalogs = (): Plugin => ({
+  name: "katip:emit-catalogs",
+  async buildStart() {
+    const { module, dependencies } = await runnerImport<typeof I18n>(i18nSource, {
+      root: fromRoot("."),
+      logLevel: "warn",
+    })
+    for (const file of [i18nSource, ...dependencies]) this.addWatchFile(file)
+    for (const locale of module.Locale.literals) {
+      this.emitFile({
+        type: "asset",
+        fileName: module.catalogFilePath(locale),
+        source: JSON.stringify(module.catalogs[locale]),
       })
     }
   },
@@ -121,6 +143,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       svelte({ configFile: fromRoot("./svelte.config.js") }),
       emitManifest(buildMode),
+      emitCatalogs(),
       emitThirdPartyNotices(),
       holdSpotlightFirstFrame(),
       ...(buildMode === "development" ? [stampDevBuild()] : []),

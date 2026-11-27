@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { mount } from "svelte"
-import { makeTranslator, resolveLocale } from "#modules/i18n"
+import { fetchCatalog, resolveLocale, translatorOf } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
 import { WindowId } from "#platform/browser"
 import { SIDEBAR_PORT_NAME } from "#protocol"
@@ -17,7 +17,8 @@ const { locale } = await runtime.runPromise(
     Effect.orElseSucceed(() => defaultSettings),
   ),
 )
-const translator = makeTranslator(resolveLocale(locale, navigator.languages))
+const shown = resolveLocale(locale, navigator.languages)
+const translator = translatorOf(shown, await fetchCatalog(shown))
 document.documentElement.lang = translator.languageTag
 document.title = translator.t("onboarding.documentTitle")
 

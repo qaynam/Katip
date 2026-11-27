@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte"
-  import type { Translator } from "#modules/i18n"
+  import type { SpotlightMessageKey, Translator } from "#modules/i18n"
   import {
     SPOTLIGHT_LAYOUTS,
     SPOTLIGHT_SEARCH_HEIGHT,
@@ -31,7 +31,7 @@
     faviconUrl: FaviconResolver
     /** Closes Spotlight's window. */
     close: () => void
-    translator: Translator
+    translator: Translator<SpotlightMessageKey>
     size: SpotlightSize
     /**
      * Shrinks the window to the search field, or opens it out again. Called only for a size

@@ -1,6 +1,6 @@
 import { Array, Match, Option } from "effect"
 import { inputForTrigger } from "#modules/bangs"
-import type { MessageKey, Translator } from "#modules/i18n"
+import type { SpotlightMessageKey, Translator } from "#modules/i18n"
 import { swatchOf } from "#modules/theme"
 import type { SpotlightResult } from "#protocol"
 import { type ActionGlyph, actionGlyphOf } from "./action-glyph"
@@ -57,7 +57,7 @@ const kindLabels = {
   TurnOnHistorySearch: "spotlight.kind.command",
   OpenUrl: "spotlight.kind.openUrl",
   SearchWeb: "spotlight.kind.searchWeb",
-} as const satisfies Record<SpotlightResult["_tag"], MessageKey>
+} as const satisfies Record<SpotlightResult["_tag"], SpotlightMessageKey>
 
 const titleOrUrl = (title: string, url: string) => (title.trim() === "" ? readableUrl(url) : title)
 
@@ -70,7 +70,7 @@ const neutralSwatch = swatchOf({ hue: 0, chroma: 0 })
 export const displayOf = (
   result: SpotlightResult,
   now: number,
-  translator: Translator,
+  translator: Translator<SpotlightMessageKey>,
 ): ResultDisplay => {
   const { t } = translator
   const kindLabel = t(kindLabels[result._tag])

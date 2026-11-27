@@ -1,6 +1,6 @@
 import { Effect, Layer, Option } from "effect"
 import { mount } from "svelte"
-import { makeTranslator, resolveLocale } from "#modules/i18n"
+import { resolveLocale, spotlightCatalogs, translatorOf } from "#modules/i18n"
 import { defaultSettings, SettingsRepository } from "#modules/settings"
 import { SPOTLIGHT_LAYOUTS, SPOTLIGHT_SEARCH_HEIGHT } from "#modules/spotlight"
 import { Storage, WindowId } from "#platform/browser"
@@ -65,7 +65,8 @@ if (opening === null) {
   window.close()
 } else {
   const { callerWindowId, spaceTheme, size, locale, address } = opening
-  const translator = makeTranslator(resolveLocale(locale, navigator.languages))
+  const shown = resolveLocale(locale, navigator.languages)
+  const translator = translatorOf(shown, spotlightCatalogs[shown])
   document.documentElement.lang = translator.languageTag
   document.title = translator.t("spotlight.documentTitle")
   mount(App, {

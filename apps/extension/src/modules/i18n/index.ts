@@ -1,4 +1,12 @@
-export type { MessageKey } from "./catalog"
+export { makeTranslator } from "./bundled-translator"
+export { type Catalog, catalogs, type MessageKey } from "./catalog"
+export {
+  catalogFilePath,
+  fetchCatalog,
+  makeTranslatorLoader,
+  type TranslatorLoader,
+} from "./catalog-file"
+export { type SpotlightMessageKey, spotlightCatalogs } from "./spotlight-catalogs"
 export {
   languageTagOf,
   Locale,
@@ -6,4 +14,4 @@ export {
   nativeLanguageNames,
   resolveLocale,
 } from "./locale"
-export { type Duration, makeTranslator, type MessageArgs, type Translator } from "./translator"
+export { type Duration, type MessageArgs, type Translator, translatorOf } from "./translator"

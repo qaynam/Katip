@@ -10,6 +10,7 @@ import { createMemoryScrollPositions } from "./connection/memory-scroll-position
 import { createMemorySidePanel } from "./connection/memory-side-panel"
 import { createMemoryUpdateNotices } from "./connection/memory-update-notices"
 import type { SidebarConnection } from "./connection/sidebar-connection"
+import { bundledTranslators } from "./testing/bundled-translators"
 import { renderSidebar } from "./testing/render-sidebar"
 import {
   liveItem,
@@ -109,6 +110,7 @@ describe("Commands that never reach the background", () => {
         downloads: createMemoryDownloads(),
         localePreferences: createMemoryLocalePreferences("en"),
         browserLanguages: [],
+        ...bundledTranslators([]),
         scrollPositions: createMemoryScrollPositions(),
         updateNotices: createMemoryUpdateNotices(null),
         sidePanel: createMemorySidePanel(),

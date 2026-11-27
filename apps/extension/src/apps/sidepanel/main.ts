@@ -1,4 +1,5 @@
 import { mount } from "svelte"
+import { fetchCatalog, makeTranslatorLoader, resolveLocale } from "#modules/i18n"
 import { WindowId } from "#platform/browser"
 import { SIDEBAR_PORT_NAME } from "#protocol"
 import App from "./App.svelte"
@@ -26,7 +27,11 @@ const faviconUrl = (pageUrl: string) => {
   return url.toString()
 }
 
-const currentWindow = await chrome.windows.getCurrent()
+const loadTranslator = makeTranslatorLoader(fetchCatalog)
+const [currentWindow, initialTranslator] = await Promise.all([
+  chrome.windows.getCurrent(),
+  loadTranslator(resolveLocale("auto", navigator.languages)),
+])
 
 mount(App, {
   target: document.body,
@@ -42,6 +47,8 @@ mount(App, {
     }),
     localePreferences: makeStoredLocalePreferences(),
     browserLanguages: navigator.languages,
+    loadTranslator,
+    initialTranslator,
     faviconUrl,
     scrollPositions: makeSessionScrollPositions(),
     sidePanel: chromeSidePanel,

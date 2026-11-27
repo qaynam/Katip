@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Translator } from "#modules/i18n"
+  import type { SpotlightMessageKey, Translator } from "#modules/i18n"
   import type { SpotlightResult } from "#protocol"
   import type { FaviconResolver } from "../logic/favicon"
   import { displayOf } from "../logic/result-display"
@@ -11,7 +11,7 @@
     isSelected: boolean
     /** The time a history page's "days ago" counts from, in epoch milliseconds. */
     now: number
-    translator: Translator
+    translator: Translator<SpotlightMessageKey>
     /** Whether to show the kind at the right end. Hidden when every row is known to be one kind. */
     showsKind?: boolean
     faviconUrl: FaviconResolver

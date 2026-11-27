@@ -2,10 +2,11 @@
   import "./theme.css"
   import { Option } from "effect"
   import {
-    makeTranslator,
     resolveLocale,
     type LocalePreference,
     type MessageKey,
+    type Translator,
+    type TranslatorLoader,
   } from "#modules/i18n"
   import { neutralTheme } from "#modules/theme"
   import type { Release } from "#modules/updates"
@@ -25,6 +26,7 @@
   import { findActiveSpace } from "./logic/view-queries"
   import { BodyPanelController } from "./state/body-panel.svelte"
   import { PendingActivation } from "./state/pending-activation.svelte"
+  import { ShownTranslator } from "./state/shown-translator.svelte"
   import { ToastQueue } from "./state/toast-queue.svelte"
 
   interface Props {
@@ -39,6 +41,10 @@
      * setting is auto.
      */
     browserLanguages: ReadonlyArray<string>
+    /** The translator into each language, read from that language's catalog. */
+    loadTranslator: TranslatorLoader
+    /** The translator into the language the auto setting picks from `browserLanguages`. */
+    initialTranslator: Translator
     faviconUrl?: FaviconResolver
     scrollPositions: ScrollPositions
     updateNotices: UpdateNotices
@@ -53,6 +59,8 @@
     downloads,
     localePreferences,
     browserLanguages,
+    loadTranslator,
+    initialTranslator,
     faviconUrl = noFaviconResolver,
     scrollPositions,
     updateNotices,
@@ -64,7 +72,12 @@
   // hide that the panel is loading
   let localePreference = $state<LocalePreference>("auto")
   $effect(() => localePreferences.listen((preference) => (localePreference = preference)))
-  const translator = $derived(makeTranslator(resolveLocale(localePreference, browserLanguages)))
+  // Only the translator and the loader it opened with: neither changes while the page is open
+  // svelte-ignore state_referenced_locally
+  const shownTranslator = new ShownTranslator(initialTranslator, loadTranslator, () =>
+    resolveLocale(localePreference, browserLanguages),
+  )
+  const translator = $derived(shownTranslator.current)
 
   $effect(() => {
     document.documentElement.lang = translator.languageTag

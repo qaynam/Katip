@@ -1,4 +1,4 @@
-import { catalogs, type EnglishMessage, type MessageKey } from "./catalog"
+import type { Catalog, EnglishMessage, MessageKey } from "./catalog"
 import { languageTagOf, type Locale } from "./locale"
 import type { Message, MessageParams, PlaceholderNames } from "./message"
 
@@ -28,11 +28,14 @@ const durationMessages = {
   week: "common.duration.week",
 } as const satisfies Record<Duration["unit"], MessageKey>
 
-export interface Translator {
+type DurationKey = (typeof durationMessages)[Duration["unit"]]
+
+/** Translates the keys `K`, every key unless narrowed. */
+export interface Translator<K extends MessageKey = MessageKey> {
   readonly locale: Locale
   /** The language tag for `<html lang>` and `lang` attributes. */
   readonly languageTag: string
-  t<K extends MessageKey>(key: K, ...args: MessageArgs<K>): string
+  t<Key extends K>(key: Key, ...args: MessageArgs<Key>): string
   /**
    * A negative `value` is in the past, a positive one in the future. Where the language has a
    * wording without a number, such as "yesterday" or "now", that wording is used.
@@ -44,9 +47,15 @@ export interface Translator {
   languageName(locale: Locale): string
 }
 
-export const makeTranslator = (locale: Locale): Translator => {
+/**
+ * A translator into `locale`, from that language's catalog or the part of it holding the keys `K`.
+ */
+export const translatorOf = <K extends MessageKey>(
+  locale: Locale,
+  catalog: Pick<Catalog, K | DurationKey>,
+): Translator<K> => {
   const languageTag = languageTagOf(locale)
-  const messages: Readonly<Record<MessageKey, Message>> = catalogs[locale]
+  const messages: Readonly<Record<K | DurationKey, Message>> = catalog
   const pluralRules = new Intl.PluralRules(languageTag)
   const numberFormat = new Intl.NumberFormat(languageTag)
   // Not made with the translator: the first of each in a process takes milliseconds to set up, and
@@ -68,7 +77,7 @@ export const makeTranslator = (locale: Locale): Translator => {
       return typeof value === "number" ? numberFormat.format(value) : value
     })
 
-  const t = (key: MessageKey, params: ParamValues = {}) =>
+  const t = (key: K | DurationKey, params: ParamValues = {}) =>
     fillPlaceholders(textFor(messages[key], params), params)
 
   return {

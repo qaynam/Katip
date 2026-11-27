@@ -1,4 +1,4 @@
-import type { Translator } from "#modules/i18n"
+import type { SpotlightMessageKey, Translator } from "#modules/i18n"
 
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
@@ -15,7 +15,11 @@ const units = [
 ] as const
 
 /** How long before `now` `then` is, rounded down in the largest unit that fits. */
-export const relativeTimeLabel = (then: number, now: number, translator: Translator): string => {
+export const relativeTimeLabel = (
+  then: number,
+  now: number,
+  translator: Translator<SpotlightMessageKey>,
+): string => {
   const elapsed = Math.max(0, now - then)
   const unit = units.find(([, unitMs]) => elapsed >= unitMs)
   if (unit === undefined) return translator.t("spotlight.time.justNow")

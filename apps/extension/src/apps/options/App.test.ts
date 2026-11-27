@@ -13,6 +13,7 @@ import { FakeHttp, httpResponse, unreachable } from "#platform/http"
 import { KeyboardShortcuts } from "#platform/keyboard-shortcuts"
 import { EXPORT_PORT_NAME, ExportServerMessage } from "#protocol"
 import arcSidebar from "../../modules/arc-import/fixtures/arc-sidebar.json?raw"
+import { bundledTranslators } from "../sidepanel/testing/bundled-translators"
 import App from "./App.svelte"
 import { CurrentWindow } from "./current-window"
 import { FakeFileDownloads } from "./testing/fake-file-downloads"
@@ -173,6 +174,7 @@ const renderOptions = async ({
       updatedFromGitHub,
       repositoryUrl: REPOSITORY_URL,
       browserLanguages,
+      ...bundledTranslators(browserLanguages),
       faviconUrl: () => null,
     },
   })

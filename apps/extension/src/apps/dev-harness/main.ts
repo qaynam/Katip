@@ -14,6 +14,7 @@ import { createMemoryUpdateNotices } from "../sidepanel/connection/memory-update
 import { createPortConnection } from "../sidepanel/connection/port-connection"
 import type { SidebarConnection } from "../sidepanel/connection/sidebar-connection"
 import type { SidePanel } from "../sidepanel/connection/side-panel"
+import { bundledTranslators } from "../sidepanel/testing/bundled-translators"
 import { respondInFixture } from "./fixture-backend"
 import { fixtureDownloads } from "./fixture-downloads"
 import { fixtureView } from "./fixture-view"
@@ -184,6 +185,7 @@ if (connection === null) {
       downloads,
       localePreferences,
       browserLanguages: navigator.languages,
+      ...bundledTranslators(navigator.languages),
       scrollPositions: createMemoryScrollPositions(),
       sidePanel,
       updateNotices: createMemoryUpdateNotices(params.has("update") ? harnessRelease : null),

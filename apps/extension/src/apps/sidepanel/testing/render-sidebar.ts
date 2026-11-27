@@ -21,6 +21,7 @@ import { createMemoryScrollPositions } from "../connection/memory-scroll-positio
 import { createMemorySidePanel } from "../connection/memory-side-panel"
 import { createMemoryUpdateNotices } from "../connection/memory-update-notices"
 import type { ScrollPositions } from "../connection/scroll-positions"
+import { bundledTranslators } from "./bundled-translators"
 
 // jsdom has no layout and doesn't implement scrollIntoView
 beforeEach(() => {
@@ -79,6 +80,11 @@ export const renderSidebar = async (
   const updateNotices = createMemoryUpdateNotices(updateNotice)
   const sidePanel = createMemorySidePanel()
   const onReload = vi.fn()
+  // The catalog of a language arrives a few promise turns after it is asked for. Not waited for
+  // with a timer, which tests with fake timers would never let fire
+  const translationsSettled = async () => {
+    for (let turn = 0; turn < 5; turn++) await tick()
+  }
   const result = render(App, {
     props: {
       connection,
@@ -87,13 +93,14 @@ export const renderSidebar = async (
       downloads,
       localePreferences,
       browserLanguages,
+      ...bundledTranslators(browserLanguages),
       scrollPositions,
       updateNotices,
       sidePanel,
       onReload,
     },
   })
-  await tick()
+  await translationsSettled()
   return {
     ...result,
     connection,
@@ -106,7 +113,7 @@ export const renderSidebar = async (
     /** Simulates changing the language setting while the panel stays open. */
     changeLocale: async (preference: LocalePreference) => {
       localePreferences.set(preference)
-      await tick()
+      await translationsSettled()
     },
     pushView: async (next: SidebarView) => {
       connection.pushView(next)

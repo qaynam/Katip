@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { Locale } from "./locale"
-import { makeTranslator } from "./translator"
+import { makeTranslator } from "./bundled-translator"
 
 describe("messages", () => {
   it("are in each language's wording", () => {

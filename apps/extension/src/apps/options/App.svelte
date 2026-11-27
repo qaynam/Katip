@@ -5,10 +5,11 @@
     languageTagOf,
     Locale,
     type LocalePreference,
-    makeTranslator,
     type MessageKey,
     nativeLanguageNames,
     resolveLocale,
+    type Translator,
+    type TranslatorLoader,
   } from "#modules/i18n"
   import {
     applySettingsPatch,
@@ -23,6 +24,7 @@
   import { Tabs } from "#platform/browser"
   import { KeyboardShortcuts, openChromeShortcutSettings } from "#platform/keyboard-shortcuts"
   import { onboardingPageUrl } from "#protocol"
+  import { ShownTranslator } from "../sidepanel/state/shown-translator.svelte"
   import {
     CATEGORIES,
     type Category,
@@ -58,6 +60,8 @@
     updatedFromGitHub,
     repositoryUrl,
     browserLanguages,
+    loadTranslator,
+    initialTranslator,
     faviconUrl,
   }: {
     runtime: OptionsRuntime
@@ -69,6 +73,10 @@
     repositoryUrl: string | null
     /** BCP 47 language tags in order of preference, like `navigator.languages`. */
     browserLanguages: ReadonlyArray<string>
+    /** The translator into each language, read from that language's catalog. */
+    loadTranslator: TranslatorLoader
+    /** The translator into the language the auto setting picks from `browserLanguages`. */
+    initialTranslator: Translator
     /** Makes a favicon image URL from a page URL. Null where none can be made. */
     faviconUrl: (pageUrl: string) => string | null
   } = $props()
@@ -132,9 +140,12 @@
     | { readonly _tag: "Limited"; readonly until: number }
   let updateCheck = $state.raw<UpdateCheck>({ _tag: "NotChecked" })
 
-  const translator = $derived(
-    makeTranslator(resolveLocale(settings?.locale ?? "auto", browserLanguages)),
+  // Only the translator and the loader it opened with: neither changes while the page is open
+  // svelte-ignore state_referenced_locally
+  const shownTranslator = new ShownTranslator(initialTranslator, loadTranslator, () =>
+    resolveLocale(settings?.locale ?? "auto", browserLanguages),
   )
+  const translator = $derived(shownTranslator.current)
   const t = $derived(translator.t)
 
   const note = $derived<Note | null>(
