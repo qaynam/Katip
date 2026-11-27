@@ -45,8 +45,11 @@ export const mergeNewestFirst = (
   lists: ReadonlyArray<ReadonlyArray<LiveItem>>,
 ): ReadonlyArray<LiveItem> => Array.dedupeWith(interleave(lists), (a, b) => a.id === b.id)
 
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
+// Not made as the module loads: the first collator in a process takes milliseconds to set up, which
+// the service worker would spend each time it starts, while only sorting by text needs it
+let collator: Intl.Collator | undefined
 const byText = Order.make<string>((a, b) => {
+  collator ??= new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
   const compared = collator.compare(a, b)
   return compared < 0 ? -1 : compared > 0 ? 1 : 0
 })

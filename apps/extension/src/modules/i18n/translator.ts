@@ -49,8 +49,10 @@ export const makeTranslator = (locale: Locale): Translator => {
   const messages: Readonly<Record<MessageKey, Message>> = catalogs[locale]
   const pluralRules = new Intl.PluralRules(languageTag)
   const numberFormat = new Intl.NumberFormat(languageTag)
-  const relativeTimeFormat = new Intl.RelativeTimeFormat(languageTag, { numeric: "auto" })
-  const languageNames = new Intl.DisplayNames([languageTag], { type: "language" })
+  // Not made with the translator: the first of each in a process takes milliseconds to set up, and
+  // most translators never write a relative time or a language's name
+  let relativeTimeFormat: Intl.RelativeTimeFormat | undefined
+  let languageNames: Intl.DisplayNames | undefined
 
   const textFor = (message: Message, params: ParamValues): string => {
     if (typeof message === "string") return message
@@ -73,8 +75,14 @@ export const makeTranslator = (locale: Locale): Translator => {
     locale,
     languageTag,
     t,
-    relativeTime: (value, unit) => relativeTimeFormat.format(value, unit),
+    relativeTime: (value, unit) => {
+      relativeTimeFormat ??= new Intl.RelativeTimeFormat(languageTag, { numeric: "auto" })
+      return relativeTimeFormat.format(value, unit)
+    },
     duration: ({ value, unit }) => t(durationMessages[unit], { count: value }),
-    languageName: (named) => languageNames.of(languageTagOf(named)) ?? languageTagOf(named),
+    languageName: (named) => {
+      languageNames ??= new Intl.DisplayNames([languageTag], { type: "language" })
+      return languageNames.of(languageTagOf(named)) ?? languageTagOf(named)
+    },
   }
 }
